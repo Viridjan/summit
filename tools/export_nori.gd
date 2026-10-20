@@ -1,0 +1,17 @@
+extends SceneTree
+# Rebuild the reference atlas after editing the code-authored character art:
+# godot --headless --path . --script res://tools/export_nori.gd
+
+const CharacterArt := preload("res://scripts/character_art.gd")
+
+func _initialize() -> void:
+	var image := CharacterArt.build_atlas()
+	var result := image.save_png("res://assets/nori/nori.png")
+	if result != OK:
+		push_error("Could not export Nori atlas: %s" % result)
+		quit(1)
+		return
+	image.resize(image.get_width() * 4, image.get_height() * 4, Image.INTERPOLATE_NEAREST)
+	image.save_png("/tmp/summit-nori-atlas-preview.png")
+	print("Exported Nori: 128x208 atlas, 13 animation rows")
+	quit()

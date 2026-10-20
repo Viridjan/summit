@@ -1,0 +1,17 @@
+{
+	"start": "a1_first_steps",
+	"rooms": {
+		"a1_first_steps": [
+			0,
+			0
+		],
+		"a2_little_gap": [
+			40,
+			0
+		],
+		"a3_stairs": [
+			80,
+			0
+		]
+	}
+}
