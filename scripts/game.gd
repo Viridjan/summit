@@ -15,7 +15,7 @@ var save_path := SAVE_PATH  # tests point this at a scratch file
 const DEFAULT_KEYS := {
 	"left": KEY_LEFT, "right": KEY_RIGHT, "up": KEY_UP, "down": KEY_DOWN,
 	"jump": KEY_C, "dash": KEY_X, "grab": KEY_Z, "pause": KEY_ESCAPE,
-	"map": KEY_M, "debug": KEY_F1, "attack": KEY_A,
+	"map": KEY_M, "debug": KEY_F1, "attack": KEY_A, "hitboxes": KEY_F2,
 }
 const ALT_KEYS := {"jump": KEY_SPACE, "dash": KEY_SHIFT, "grab": KEY_V}
 # Gamepad: one button per action (JOY_BUTTON_*), PAD_AXIS + axis for a trigger, -1 = none.
@@ -25,7 +25,7 @@ const DEFAULT_PAD := {
 	"up": JOY_BUTTON_DPAD_UP, "down": JOY_BUTTON_DPAD_DOWN,
 	"jump": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "dash": JOY_BUTTON_RIGHT_SHOULDER,
 	"grab": PAD_AXIS + JOY_AXIS_TRIGGER_RIGHT, "pause": JOY_BUTTON_START,
-	"map": JOY_BUTTON_BACK, "debug": -1,
+	"map": JOY_BUTTON_BACK, "debug": -1, "hitboxes": -1,
 }
 const PAD_NAMES := {
 	JOY_BUTTON_A: "A / Cross", JOY_BUTTON_B: "B / Circle", JOY_BUTTON_X: "X / Square", JOY_BUTTON_Y: "Y / Triangle",
@@ -36,7 +36,7 @@ const PAD_NAMES := {
 	JOY_BUTTON_DPAD_UP: "D-pad Up", JOY_BUTTON_DPAD_DOWN: "D-pad Down",
 	JOY_BUTTON_DPAD_LEFT: "D-pad Left", JOY_BUTTON_DPAD_RIGHT: "D-pad Right", -1: "-",
 }
-const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "pause", "map", "debug"]
+const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "pause", "map", "debug", "hitboxes"]
 
 var main: Node
 var theme: Theme

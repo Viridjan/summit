@@ -81,6 +81,12 @@ func _ready() -> void:
 	await _press("debug")
 	if world.map_view != null or world.debug_panel != null or world.paused or not world.hud.visible:
 		push_error("map/debug keys did not open and close cleanly")
+	var hb0: bool = Game.settings.hitboxes
+	await _press("hitboxes")
+	var hb1: bool = Game.settings.hitboxes
+	await _press("hitboxes")
+	if hb1 == hb0 or Game.settings.hitboxes != hb0:
+		push_error("hitboxes key did not toggle the overlay")
 	world._set_paused(true)
 	await _frames(5)
 	await _shot("pause")

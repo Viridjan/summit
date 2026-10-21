@@ -493,6 +493,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_toggle_debug()
 		return
+	elif event.is_action_pressed("hitboxes"):
+		get_viewport().set_input_as_handled()
+		Game.settings.hitboxes = not Game.settings.hitboxes
+		Game.save_settings()
+		if debug_panel != null:
+			debug_panel.hitbox_btn.set_pressed_no_signal(Game.settings.hitboxes)
+		return
 	# handled here (not in _physics_process) so the options screen can swallow Esc first
 	if event.is_action_pressed("pause") and not done and not (overlay is OptionsPanel):
 		get_viewport().set_input_as_handled()

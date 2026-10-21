@@ -15,6 +15,7 @@ const LIVE := [
 	["lift_speed", "lift_current"], ["co_step", "co_step"], ["star_fly_timer", "star_fly_timer"],
 ]
 
+var hitbox_btn: Button  # kept in sync when the hitboxes key toggles it
 var world
 var sim_paused := false  # world reads this; step_frames lets single ticks through
 var step_frames := 0
@@ -129,9 +130,10 @@ func _ready() -> void:
 	pause_box.toggled.connect(func(on: bool): sim_paused = on)
 	row.add_child(pause_box)
 	row.add_child(_button("Step", func(): step_frames += 1))
-	var hb := Button.new()
+	hitbox_btn = Button.new()
+	var hb := hitbox_btn
 	hb.toggle_mode = true
-	hb.text = "Hitboxes"
+	hb.text = "Hitboxes (%s)" % Game.key_name("hitboxes")
 	hb.tooltip_text = "Outline collision boxes: player (green), sword swing (red), objects (yellow), hazard/touch areas (orange)"
 	hb.focus_mode = Control.FOCUS_NONE
 	hb.button_pressed = Game.settings.hitboxes

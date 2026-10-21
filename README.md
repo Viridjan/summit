@@ -19,7 +19,7 @@ In the browser, saves, options and your own levels are kept by the browser; the 
     godot -e --path .         # open in editor
 
 ## Controls (remappable in Options)
-Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning. Gamepad: A jump · R1 dash · X attack · R2 grab · B back in menus (remap in Options → Controller Buttons).
+Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning · F2 hitboxes. Gamepad: A jump · R1 dash · X attack · R2 grab · B back in menus (remap in Options → Controller Buttons).
 
 ## Moves
 Run, variable jump, coyote time, input buffering, wall jump, wall slide, climb + stamina,
