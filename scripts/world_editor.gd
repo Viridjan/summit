@@ -131,7 +131,7 @@ func _draw() -> void:
 	for name in world.rooms:
 		var r: Dictionary = world.rooms[name]
 		var rect := Rect2(to_screen(Vector2(r.pos)), Vector2(r.level.w, r.level.h) * zoom)
-		draw_rect(rect, Color("262c4a") if name == selected else Color("1b2036"))
+		draw_rect(rect, Color("1e2442") if name == selected else Color("121526"))
 		draw_texture_rect(thumbs[name], rect, false)
 		var edge := Color.RED if bad.has(name) else (Color.WHITE if name == selected else Color(1, 1, 1, 0.3))
 		draw_rect(rect, edge, false, 2.0 if name == selected or bad.has(name) else 1.0)

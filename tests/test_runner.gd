@@ -21,6 +21,8 @@ class Bot extends "res://scripts/player.gd":
 		dash_buf -= dt
 		if tap.has("jump"): jump_buf = INPUT_BUFFER
 		if tap.has("dash"): dash_buf = INPUT_BUFFER
+		attack_buf -= dt
+		if tap.has("attack"): attack_buf = INPUT_BUFFER
 		tap.clear()
 		jump_check = hold.has("jump")
 		grab_check = hold.has("grab")
@@ -242,6 +244,22 @@ func check_shipped_world() -> void:
 			if e.t == "note":
 				check(str(e.get("text", "")) != "", "note in %s has text" % n)
 	check(counts.get("ability_dash", 0) == 1 and counts.get("ability_climb", 0) == 1 and counts.get("goal", 0) == 1, "shipped world has one dash orb, one climb orb, one goal")
+	# entrance spawns (tools/entrance_spawns.py): on ground with 2 tiles of headroom, in every world
+	for wp in [Game.ADVENTURE_DIR + "world.json"] + Game.world_list().slice(1).map(func(x): return x[1]):
+		var wd := Adventure.load_world(wp)
+		var bad_spawns := []
+		var n_spawns := 0
+		for rn in wd.rooms:
+			var lv: Dictionary = wd.rooms[rn].level
+			for e in lv.entities:
+				if e.t == "spawn" and e.get("entrance", false):
+					n_spawns += 1
+					var tx := int(e.x) / 8
+					var ty := int(e.y) / 8
+					var ok: bool = ty >= 1 and ty + 1 < lv.h and lv.tiles[ty][tx] == "0" and lv.tiles[ty - 1][tx] == "0" and lv.tiles[ty + 1][tx] == "1"
+					if not ok:
+						bad_spawns.append(rn)
+		check(n_spawns > 0 and bad_spawns.is_empty(), "%s: %d entrance spawns, all standing on ground (bad: %s)" % [wp.get_base_dir().get_file(), n_spawns, bad_spawns])
 	# reference worlds in res://worlds/ (a cross-room door in Zebes moves the player into the linked room)
 	var zebes := Adventure.load_world(Game.WORLDS_DIR + "metroid_zero_mission/world.json")
 	var src := ""
@@ -283,7 +301,48 @@ func check_shipped_world() -> void:
 				if e.t == "door":
 					ids[rn + ":" + e.id] = true
 					door_to.append(e.to)
-		check(not door_to.is_empty() and door_to.all(func(t): return ids.has(t)), "%s: all %d doors lead to a door that exists" % [w[0], door_to.size()])
+		check(door_to.all(func(t): return ids.has(t)), "%s: all %d doors lead to a door that exists" % [w[0], door_to.size()])
+		# room boxes never overlap, and every room is reachable from the start (passages + doors)
+		var names: Array = rw.rooms.keys()
+		var boxes_ok := true
+		for i in names.size():
+			for j in range(i + 1, names.size()):
+				if Adventure.room_rect(rw.rooms[names[i]]).intersects(Adventure.room_rect(rw.rooms[names[j]])):
+					boxes_ok = false
+		check(boxes_ok, "%s: no two room boxes overlap" % w[0])
+		var nb := {}
+		for a in names:  # touching rooms with open tiles on both sides of their shared edge
+			var ra: Rect2i = Rect2i(rw.rooms[a].pos, Vector2i(rw.rooms[a].level.w, rw.rooms[a].level.h))
+			for b in names:
+				var rb: Rect2i = Rect2i(rw.rooms[b].pos, Vector2i(rw.rooms[b].level.w, rw.rooms[b].level.h))
+				var linked := false
+				if ra.end.x == rb.position.x:
+					for ty in range(maxi(ra.position.y, rb.position.y), mini(ra.end.y, rb.end.y)):
+						if Adventure._open(rw.rooms[a], ra.end.x - 1, ty) and Adventure._open(rw.rooms[b], rb.position.x, ty):
+							linked = true
+							break
+				elif ra.end.y == rb.position.y:
+					for tx in range(maxi(ra.position.x, rb.position.x), mini(ra.end.x, rb.end.x)):
+						if Adventure._open(rw.rooms[a], tx, ra.end.y - 1) and Adventure._open(rw.rooms[b], tx, rb.position.y):
+							linked = true
+							break
+				if linked:
+					nb[a] = nb.get(a, []) + [b]
+					nb[b] = nb.get(b, []) + [a]
+		for rn in rw.rooms:
+			for e in rw.rooms[rn].level.entities:
+				if e.t == "door":
+					var tr: String = str(e.to).get_slice(":", 0)
+					nb[rn] = nb.get(rn, []) + [tr]
+					nb[tr] = nb.get(tr, []) + [rn]
+		var reach := {rw.start: true}
+		var queue := [rw.start]
+		while not queue.is_empty():
+			for n in nb.get(queue.pop_back(), []):
+				if n != "" and not reach.has(n):
+					reach[n] = true
+					queue.append(n)
+		check(reach.size() == rw.rooms.size(), "%s: every room is reachable from the start (%d/%d)" % [w[0], reach.size(), rw.rooms.size()])
 
 func check_doors() -> void:
 	# same level: door a -> b keeps speed and height in the doorway, no bounce back, and works the other way
@@ -318,6 +377,83 @@ func check_placeholders() -> void:
 	p().pos = Vector2(190, 216)
 	step()
 	check(p().dead, "acid kills on touch")
+
+func check_dirs() -> void:
+	make_world([])
+	var pl = p()
+	pl.facing = 1
+	pl.aim_raw = Vector2(1, -1).normalized()  # up-right held
+	var want := {1: Vector2.RIGHT, -1: Vector2.UP, 2: Vector2.UP, 3: Vector2(1, -1).normalized(), 4: Vector2(1, -1).normalized()}
+	for m in want:
+		check(pl.dir_for(m).is_equal_approx(want[m]), "dirs mode %d with up-right held -> %s (got %s)" % [m, want[m], pl.dir_for(m)])
+	pl.aim_raw = Vector2.ZERO
+	check(pl.dir_for(1) == Vector2.RIGHT and pl.dir_for(-1) == Vector2.UP and pl.dir_for(3) == Vector2.RIGHT, "no direction held: facing (vertical-only: up)")
+	pl.aim_free = Vector2(0.9, 0.3).normalized()
+	check(pl.dir_for(4).is_equal_approx(Vector2(0.9, 0.3).normalized()) and pl.dir_for(3) == Vector2.RIGHT, "free aim follows the stick; 8-way ignores it")
+	pl.aim_free = Vector2.ZERO
+	pl.DASH_DIRS = 0
+	pl.ATTACK_DIRS = 0
+	step(5)
+	pl.tap = {"dash": true}
+	step()
+	pl.tap = {"attack": true}
+	step()
+	check(pl.state == pl.ST_NORMAL, "mode 0 disables dash and attack")
+	pl.DASH_DIRS = 1
+	pl.hold = {"up": true}
+	pl.tap = {"dash": true}
+	step(8)
+	check(pl.state == pl.ST_DASH and pl.dash_dir == Vector2.RIGHT, "horizontal-only dash ignores up (%s, state %d)" % [pl.dash_dir, pl.state])
+
+func check_floor_gaps() -> void:
+	# an opening in the bottom row of a plain level is a pit (red marker)
+	if w:
+		w.queue_free()
+	var d := Game.new_level("gaps", 20, 10)
+	var row: String = d.tiles[9]
+	d.tiles[9] = row.substr(0, 5) + "00" + row.substr(7)
+	d.entities = [{"t": "spawn", "x": 16, "y": 64}]
+	Game.level = d
+	w = load("res://scripts/world.gd").new()
+	add_child(w)
+	w.set_physics_process(false)
+	check(w.floor_gaps == [[40, 56, false]], "bottom-edge opening is marked as a pit (%s)" % [w.floor_gaps])
+
+func check_attack() -> void:
+	# wall 2 tiles right of the spawn (player at x 80): three swings break it, it stays broken after a death
+	make_world([{"t": "breakwall", "x": 96, "y": 26 * 8, "w": 8, "h": 16}])
+	step(5)
+	var wall = w.ents.filter(func(e): return e.d.t == "breakwall")[0]
+	p().hold = {"right": true}
+	step(20)
+	check(p().hitbox().end.x == 96, "breakable wall is solid (%d)" % p().hitbox().end.x)
+	p().tap = {"attack": true}
+	step()
+	check(p().state == p().ST_ATTACK and wall.hp == 2, "attack key starts the Attack state and hits the wall once")
+	step(5)
+	p().tap = {"attack": true}
+	step()
+	check(wall.hp == 2, "one swing hits a thing only once; attack cooldown holds a quick re-press")
+	step(int(p().ATTACK_TIME / DT))
+	check(p().state == p().ST_NORMAL, "Attack returns to Normal when the swing ends")
+	for i in 2:
+		step(int(p().ATTACK_COOLDOWN / DT) + 1)
+		p().tap = {"attack": true}
+		step()
+	check(not wall.collidable and w.broken.size() == 1, "third hit breaks the wall")
+	step(20)
+	check(p().hitbox().end.x > 104, "player walks through the broken wall")
+	p().hold = {"left": true}
+	p().tap = {"attack": true}
+	step(int(p().ATTACK_COOLDOWN / DT) + 1)
+	p().tap = {"attack": true}
+	step()
+	check(p().attack_dir == Vector2.LEFT, "swing points where the player pushes")
+	p().tap = {"dash": true}
+	step()
+	check(p().state == p().ST_DASH, "a dash cancels the swing")
+	w._build()
+	check(w.ents.filter(func(e): return e.d.t == "breakwall")[0].collidable == false, "a broken wall stays broken after respawn")
 
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
@@ -452,7 +588,7 @@ func _ready() -> void:
 	# tuning: defaults are Celeste's values, overrides apply to new players, presets round-trip
 	var defs := Tuning.defaults()
 	check(defs.MAX_RUN == 90.0 and defs.GRAVITY == 900.0 and defs.DASH_SPEED == 240.0 and defs.JUMP_SPEED == -105.0 and defs.CLIMB_MAX_STAMINA == 110.0 and defs.INPUT_BUFFER == 0.08 and defs.DUCK_CORRECT_CHECK == 4 and defs.WALL_JUMP_H_SPEED == 130.0, "tuning defaults match the original constants")
-	check(Tuning.names().size() == 93 and Tuning.names().all(func(n): return Tuning.group_of(n) != "Other"), "93 tunables, all grouped (%d)" % Tuning.names().size())
+	check(Tuning.names().size() == 99 and Tuning.names().all(func(n): return Tuning.group_of(n) != "Other"), "99 tunables, all grouped (%d)" % Tuning.names().size())
 	check((Tuning.names() + Tuning.DERIVED).all(func(n): return Tuning.HELP.get(n, "") != ""), "every tunable has mouse-over help")
 	check(load("res://scripts/debug_panel.gd").StateGraph.HELP.size() == load("res://scripts/player.gd").STATE_NAMES.size(), "every state has mouse-over help")
 	Game.tuning = {"MAX_RUN": 120.0}
@@ -464,7 +600,7 @@ func _ready() -> void:
 	var preset := "__regress_tmp_preset"
 	check(Tuning.save_preset(preset, Game.tuning), "preset saves")
 	var back := Tuning.load_file(Tuning.preset_path(preset))
-	check(back.MAX_RUN == 120.0 and back.DUCK_CORRECT_CHECK is int and back.size() == 93, "preset loads typed values")
+	check(back.MAX_RUN == 120.0 and back.DUCK_CORRECT_CHECK is int and back.size() == 99, "preset loads typed values")
 	Tuning.delete_preset(preset)
 	check(not FileAccess.file_exists(Tuning.preset_path(preset)), "preset deletes")
 	Game.tuning = {}
@@ -798,6 +934,9 @@ func _ready() -> void:
 	check_shipped_world()
 	check_doors()
 	check_placeholders()
+	check_floor_gaps()
+	check_attack()
+	check_dirs()
 	check_adventure()
 
 	print("\n%d failure(s)" % fails)

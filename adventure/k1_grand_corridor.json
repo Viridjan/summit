@@ -30,6 +30,18 @@
 	"entities": [
 		{
 			"t": "spawn",
+			"x": 8,
+			"y": 152,
+			"entrance": true
+		},
+		{
+			"t": "spawn",
+			"x": 1264,
+			"y": 152,
+			"entrance": true
+		},
+		{
+			"t": "spawn",
 			"x": 32,
 			"y": 152
 		},

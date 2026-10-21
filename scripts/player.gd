@@ -7,8 +7,8 @@ const CharacterArt := preload("res://scripts/character_art.gd")
 # Position is the bottom-centre of the hitbox and always holds whole pixels;
 # sub-pixel movement lives in `rem`, like Monocle's Actor.
 
-enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY }
-const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly"]
+enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY, ST_ATTACK }
+const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly", "Attack"]
 
 # Movement tuning. These were Celeste's constants; they are vars so they can be tuned
 # in-game (see scripts/tuning.gd). Defaults below are the Celeste values.
@@ -108,6 +108,13 @@ var STAR_FLY_MAX_EXIT_Y := 0.0
 var STAR_FLY_MAX_EXIT_X := 140.0
 var STAR_FLY_EXIT_UP := -100.0
 var INPUT_BUFFER := 0.08
+var ATTACK_TIME := 0.2
+var ATTACK_COOLDOWN := 0.35
+var ATTACK_RANGE := 14.0
+var ATTACK_ARC := 120.0
+# Directions a move can go: 0 off, 1 horizontal, -1 vertical, 2 both (4-way), 3 + diagonals (8-way), 4 free aim (analog stick)
+var DASH_DIRS := 3
+var ATTACK_DIRS := 1
 
 const HB_NORMAL := Rect2i(-4, -11, 8, 11)
 const HB_DUCK := Rect2i(-4, -6, 8, 6)
@@ -167,6 +174,7 @@ var dash_started_on_ground := false
 var was_dash_b := false
 var called_dash_events := false
 var last_aim := Vector2.RIGHT
+var last_dash_aim := Vector2.RIGHT  # last_aim limited by DASH_DIRS
 var launched := false
 var lift_current := Vector2.ZERO
 var lift_last := Vector2.ZERO
@@ -182,6 +190,10 @@ var star_fly_timer := 0.0
 var star_fly_transforming := false
 var star_fly_speed_lerp := 0.0
 var star_fly_last_dir := Vector2.ZERO
+var attack_timer := 0.0
+var attack_cooldown_timer := 0.0
+var attack_dir := Vector2.RIGHT
+var attack_hit: Array = []  # entities already struck by this swing
 
 # coroutine emulation (Monocle Coroutine: yield null = next frame, yield t = wait t seconds)
 var co_active := false
@@ -192,8 +204,10 @@ var co_wait := 0.0
 var in_x := 0
 var in_y := 0
 var aim_raw := Vector2.ZERO
+var aim_free := Vector2.ZERO  # analog stick direction (free aim); zero on keyboard-only input
 var jump_buf := 0.0
 var dash_buf := 0.0
+var attack_buf := 0.0
 var jump_check := false
 var grab_check := false
 
@@ -306,7 +320,7 @@ func dash_attacking() -> bool:
 	return dash_attack_timer > 0 or state == ST_RED_DASH
 
 func can_dash() -> bool:
-	return dash_buf > 0 and dash_cooldown_timer <= 0 and dashes > 0
+	return dash_buf > 0 and dash_cooldown_timer <= 0 and dashes > 0 and DASH_DIRS != 0
 
 func jump_pressed() -> bool:
 	return jump_buf > 0
@@ -434,14 +448,38 @@ func _read_input(dt: float) -> void:
 	in_x = int(Input.is_action_pressed("right")) - int(Input.is_action_pressed("left"))
 	in_y = int(Input.is_action_pressed("down")) - int(Input.is_action_pressed("up"))
 	aim_raw = Vector2(in_x, in_y).normalized()
+	aim_free = Input.get_vector("left", "right", "up", "down")
 	jump_buf -= dt
 	dash_buf -= dt
 	if Input.is_action_just_pressed("jump"):
 		jump_buf = INPUT_BUFFER
 	if Input.is_action_just_pressed("dash"):
 		dash_buf = INPUT_BUFFER
+	attack_buf -= dt
+	if Input.is_action_just_pressed("attack"):
+		attack_buf = INPUT_BUFFER
 	jump_check = Input.is_action_pressed("jump")
 	grab_check = Input.is_action_pressed("grab")
+
+# Held direction limited to a *_DIRS mode (see DASH_DIRS). With no direction held: facing (vertical-only: up).
+func dir_for(mode: int) -> Vector2:
+	var v := aim_free if mode == 4 and aim_free != Vector2.ZERO else aim_raw
+	var face := Vector2(facing, 0)
+	match mode:
+		1:
+			return Vector2(signf(v.x), 0) if v.x != 0 else face
+		-1:
+			return Vector2(0, signf(v.y)) if v.y != 0 else Vector2.UP
+		2:
+			if v == Vector2.ZERO:
+				return face
+			return Vector2(0, signf(v.y)) if absf(v.y) >= absf(v.x) else Vector2(signf(v.x), 0)
+		3:
+			if v == Vector2.ZERO:
+				return face
+			var a := snappedf(v.angle(), PI / 4)
+			return Vector2(roundf(cos(a)), roundf(sin(a))).normalized()
+	return v.normalized() if v != Vector2.ZERO else face
 
 func aim_vector() -> Vector2:
 	return aim_raw if aim_raw != Vector2.ZERO else Vector2(facing, 0)
@@ -497,6 +535,8 @@ func update(dt: float) -> void:
 
 	if dash_cooldown_timer > 0:
 		dash_cooldown_timer -= dt
+	if attack_cooldown_timer > 0:
+		attack_cooldown_timer -= dt
 	if dash_refill_cooldown_timer > 0:
 		dash_refill_cooldown_timer -= dt
 	elif Game.settings.air_dashes == 2:
@@ -534,6 +574,7 @@ func update(dt: float) -> void:
 		facing = move_x
 
 	last_aim = aim_vector()
+	last_dash_aim = dir_for(DASH_DIRS)
 
 	if wall_speed_retention_timer > 0:
 		if signf(speed.x) == -signf(wall_speed_retained):
@@ -626,6 +667,9 @@ func _state_update(dt: float) -> void:
 		ST_LAUNCH: ns = _launch_update(dt)
 		ST_DREAM_DASH: ns = _dream_dash_update(dt)
 		ST_STAR_FLY: ns = _star_fly_update(dt)
+		ST_ATTACK: ns = _attack_update(dt)
+	if ns == ST_NORMAL and attack_buf > 0 and attack_cooldown_timer <= 0 and ATTACK_DIRS != 0 and not dead:
+		ns = ST_ATTACK
 	if dead:
 		return
 	_set_state(ns)
@@ -685,6 +729,8 @@ func _set_state(ns: int) -> void:
 			_dream_dash_begin()
 		ST_STAR_FLY:
 			_star_fly_begin()
+		ST_ATTACK:
+			_attack_begin()
 
 func _co_resume() -> void:
 	match state:
@@ -1328,7 +1374,7 @@ func _dash_begin() -> void:
 		set_ducking(false)
 
 func _dash_co_start() -> void:
-	var dir := last_aim
+	var dir := last_dash_aim
 	var new_speed := dir * DASH_SPEED
 	if signf(before_dash_speed.x) == signf(new_speed.x) and absf(before_dash_speed.x) > absf(new_speed.x):
 		new_speed.x = before_dash_speed.x
@@ -1607,6 +1653,52 @@ func _star_fly_update(dt: float) -> int:
 	return ST_STAR_FLY
 
 # ---------------- visuals ----------------
+# ---------------- attack (placeholder weapon: a triangle swung through ATTACK_ARC degrees) ----------------
+# Runs on top of Normal movement; a dash, climb or other state cancels the swing.
+func _attack_begin() -> void:
+	attack_buf = 0
+	attack_timer = ATTACK_TIME
+	attack_cooldown_timer = ATTACK_COOLDOWN
+	attack_dir = dir_for(ATTACK_DIRS)
+	attack_hit.clear()
+	_attack_hits()
+
+func _attack_update(dt: float) -> int:
+	var ns := _normal_update(dt)
+	if ns != ST_NORMAL:
+		return ns
+	attack_timer -= dt
+	_attack_hits()
+	return ST_ATTACK if attack_timer > 0 else ST_NORMAL
+
+# Entities with a hit() method inside the swing's sector (radius ATTACK_RANGE from the centre) get struck once.
+func _attack_hits() -> void:
+	if w == null:
+		return
+	var c := center()
+	var half := deg_to_rad(ATTACK_ARC) / 2.0
+	for e in w.ents:
+		if not e.collidable or not e.has_method("hit") or e in attack_hit:
+			continue
+		var r := Rect2(e.rect)
+		var v := Vector2(clampf(c.x, r.position.x, r.end.x), clampf(c.y, r.position.y, r.end.y)) - c
+		if v.length() <= ATTACK_RANGE and (v.length() < 1.0 or absf(attack_dir.angle_to(v)) <= half):
+			attack_hit.append(e)
+			e.hit(self)
+
+func _draw_attack(ci: CanvasItem) -> void:
+	var t := 1.0 - clampf(attack_timer / maxf(ATTACK_TIME, 0.001), 0, 1)
+	var half := deg_to_rad(ATTACK_ARC) / 2.0
+	var s := float(facing) if attack_dir.x == 0 else signf(attack_dir.x)  # overhead swing: starts above, ends below
+	var base := attack_dir.angle()
+	var a0 := base - s * half
+	var a := a0 + s * 2.0 * half * t
+	var c := center()
+	ci.draw_arc(c, ATTACK_RANGE - 2, minf(a0, a), maxf(a0, a), 12, Color(1, 1, 1, 0.35), 2.0)
+	var u := Vector2.from_angle(a)
+	var n := u.orthogonal()
+	ci.draw_colored_polygon(PackedVector2Array([c + u * ATTACK_RANGE, c + u * 4 + n * 2, c + u * 4 - n * 2]), Color("e8eef8"))
+
 func hair_color() -> Color:
 	if state == ST_STAR_FLY:
 		return HAIR_FLY if (star_fly_timer > STAR_FLY_END_FLASH or flash) else HAIR_NORMAL
@@ -1630,7 +1722,7 @@ func _update_visuals(dt: float) -> void:
 	flash_t += dt
 	anim_t += dt
 	landing_visual_timer = maxf(0.0, landing_visual_timer - dt)
-	if on_ground and not was_on_ground and state == ST_NORMAL:
+	if on_ground and not was_on_ground and state in [ST_NORMAL, ST_ATTACK]:
 		landing_visual_timer = 0.15
 	var animation := _animation()
 	if animation != visual_animation:
@@ -1734,3 +1826,5 @@ func draw(ci: CanvasItem) -> void:
 	ci.draw_set_transform(pos.round(), 0, sc)
 	ci.draw_texture_rect_region(CharacterArt.texture(hc), Rect2(-8, -16, 16, 16), Rect2(f * 16, Vector2(16, 16)), mod)
 	ci.draw_set_transform(Vector2.ZERO)
+	if state == ST_ATTACK:
+		_draw_attack(ci)

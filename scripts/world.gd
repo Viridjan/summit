@@ -38,10 +38,14 @@ var touchables: Array = []
 var player
 var spawn := Vector2.ZERO
 var total_berries := 0
+var broken := {}  # breakable wall ids (star_key) broken this run (adventure: run.broken)
 var collected := {}  # star id -> true, banked this run (adventure: run.stars, ids prefixed by room)
 # Adventure only: current room of Game.adv_world and its top-left in world pixels.
 var room := ""
 var room_origin := Vector2.ZERO
+var floor_gaps: Array = []  # openings in the room's bottom edge: [x0, x1 (px), leads to another room]
+var near_layers := {}  # adventure: room name -> TileLayer of a room within a screen of this one (terrain only)
+var near_queue: Array[String] = []  # neighbours still to build, one per frame (_process)
 
 var cam: Camera2D
 var cam_pos := Vector2.ZERO
@@ -88,6 +92,8 @@ func _ready() -> void:
 		room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
 		for k in Game.adv.stars:
 			collected[k] = true
+		for k in Game.adv.get("broken", []):
+			broken[k] = true
 		deaths = Game.adv.deaths
 		time = Game.adv.time
 	cam = Camera2D.new()
@@ -117,6 +123,8 @@ func _ready() -> void:
 	_build()
 	_create_tile_layer()
 	tile_layer.setup(tiles, gw, gh)
+	_load_near()
+	_scan_floor_gaps()
 	cam_pos = _clamp_cam(player.camera_target())
 
 func _build(keep_player := false) -> void:
@@ -225,6 +233,7 @@ func _go_door(door) -> void:
 func enter_room(next: String, at = null) -> void:
 	var global: Vector2 = room_origin + player.pos
 	var old_origin := room_origin
+	var old_room := room
 	var went_up: bool = player.center().y < 0
 	room = next
 	room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
@@ -250,10 +259,86 @@ func enter_room(next: String, at = null) -> void:
 	if not Game.adv.visited.has(room):
 		Game.adv.visited.append(room)
 	_save_run()
-	tile_layer.setup(tiles, gw, gh)
+	# the next room's terrain is usually drawn already as a neighbour: swap it in, keep the old room as one
+	if near_layers.has(room):
+		near_layers[old_room] = tile_layer
+		tile_layer = near_layers[room]
+		near_layers.erase(room)
+		tiles = tile_layer.tiles
+	else:
+		tile_layer.setup(tiles, gw, gh)
+	_load_near()
+	_scan_floor_gaps()
 	cam_pos -= room_origin - old_origin  # keep the view where it was, then ease into the new room
 	if map_view != null:
 		_toggle_map()
+
+# Terrain of the rooms around this one, so crossing into one shows no pop-in; entities load only on entry.
+# Built one room per frame so entering a room doesn't hitch.
+func _load_near() -> void:
+	if not adventure():
+		return
+	var rooms: Dictionary = Game.adv_world.rooms
+	var area := Adventure.room_rect(rooms[room]).grow_individual(int(VIEW.x), int(VIEW.y), int(VIEW.x), int(VIEW.y))
+	for n in near_layers.keys():
+		if not Adventure.room_rect(rooms[n]).intersects(area):
+			near_layers[n].queue_free()
+			near_layers.erase(n)
+	near_queue.clear()
+	for n in rooms:
+		if n != room and not near_layers.has(n) and Adventure.room_rect(rooms[n]).intersects(area):
+			near_queue.append(n)
+	tile_layer.position = Vector2.ZERO
+	for n in near_layers:
+		near_layers[n].position = Vector2(rooms[n].pos * T) - room_origin
+
+func _process(_delta: float) -> void:
+	if near_queue.is_empty():
+		return
+	var n: String = near_queue.pop_front()
+	if not adventure() or not Game.adv_world.rooms.has(n):
+		return
+	var r: Dictionary = Game.adv_world.rooms[n]
+	var l := TileLayer.new()
+	l.z_index = -1
+	l.position = Vector2(r.pos * T) - room_origin
+	add_child(l)
+	l.setup(r.level.tiles, int(r.level.w), int(r.level.h))
+	near_layers[n] = l
+
+func break_wall(id: String) -> void:
+	broken[id] = true
+	_save_run()
+
+# Falling out of the bottom edge kills unless another room is below: mark each opening as pit (red) or hole (cyan).
+func _scan_floor_gaps() -> void:
+	floor_gaps.clear()
+	var row: String = tiles[gh - 1]
+	var x := 0
+	while x < gw:
+		if row.unicode_at(x) == 49:
+			x += 1
+			continue
+		var hole := can_exit(Vector2(x * T + 4, gh * T + 4))
+		var x0 := x
+		while x < gw and row.unicode_at(x) != 49 and can_exit(Vector2(x * T + 4, gh * T + 4)) == hole:
+			x += 1
+		floor_gaps.append([x0 * T, x * T, hole])
+
+func _draw_floor_gaps() -> void:
+	var y := float(gh * T)
+	for g in floor_gaps:
+		var w: float = g[1] - g[0]
+		var col := Color("40e0ff") if g[2] else Color("ff3030")
+		for i in 4:  # glow fading upward from the edge
+			draw_rect(Rect2(g[0], y - 3 * (i + 1), w, 3), Color(col, 0.28 - i * 0.06))
+		if g[2]:  # hole: arrows pointing down
+			var bob := roundf(sin(time * 4.0))
+			for x in range(int(g[0]) + 4, int(g[1]), 8):
+				draw_colored_polygon(PackedVector2Array([Vector2(x - 2, y - 7 + bob), Vector2(x + 2, y - 7 + bob), Vector2(x, y - 4 + bob)]), Color(col, 0.8))
+		else:  # pit: red teeth along the edge
+			for x in range(int(g[0]), int(g[1]), 4):
+				draw_colored_polygon(PackedVector2Array([Vector2(x, y), Vector2(x + 4, y), Vector2(x + 2, y - 3)]), Color(col, 0.85))
 
 func show_note(text: String) -> void:
 	note_label.text = "Note: " + text
@@ -270,6 +355,7 @@ func _save_run() -> void:
 	Game.adv.deaths = deaths
 	Game.adv.time = time
 	Game.adv.stars = collected.keys()
+	Game.adv.broken = broken.keys()
 	Game.save_adventure()
 
 # ---------------- collision queries (used by player + entities) ----------------
@@ -447,6 +533,7 @@ func _draw() -> void:
 	for e in ents:
 		if e.vis_rect().intersects(cull):  # offscreen entities still update, just don't draw
 			e.draw(self)
+	_draw_floor_gaps()
 	for t in trails:
 		draw_rect(t[0], Color(t[1], minf(t[2] * 1.5, 0.6)))
 	player.draw(self)

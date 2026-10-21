@@ -15,17 +15,17 @@ var save_path := SAVE_PATH  # tests point this at a scratch file
 const DEFAULT_KEYS := {
 	"left": KEY_LEFT, "right": KEY_RIGHT, "up": KEY_UP, "down": KEY_DOWN,
 	"jump": KEY_C, "dash": KEY_X, "grab": KEY_Z, "pause": KEY_ESCAPE,
-	"map": KEY_M, "debug": KEY_F1,
+	"map": KEY_M, "debug": KEY_F1, "attack": KEY_A,
 }
 const ALT_KEYS := {"jump": KEY_SPACE, "dash": KEY_SHIFT, "grab": KEY_V}
 const PAD_BUTTONS := {
 	"left": [JOY_BUTTON_DPAD_LEFT], "right": [JOY_BUTTON_DPAD_RIGHT],
 	"up": [JOY_BUTTON_DPAD_UP], "down": [JOY_BUTTON_DPAD_DOWN],
-	"jump": [JOY_BUTTON_A, JOY_BUTTON_Y], "dash": [JOY_BUTTON_X, JOY_BUTTON_B],
+	"jump": [JOY_BUTTON_A], "attack": [JOY_BUTTON_Y], "dash": [JOY_BUTTON_X, JOY_BUTTON_B],
 	"grab": [JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_RIGHT_SHOULDER], "pause": [JOY_BUTTON_START],
 	"map": [JOY_BUTTON_BACK], "debug": [],
 }
-const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "pause", "map", "debug"]
+const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "pause", "map", "debug"]
 
 var main: Node
 var theme: Theme
@@ -217,6 +217,8 @@ static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 		for k in ["w", "h"]:  # optional
 			if e.has(k) and not _is_num(e[k], 1, MAX_LEVEL_SIZE * 8):
 				return {}
+		if e.has("hp") and not _is_num(e.hp, 1, 99):  # optional (breakable walls)
+			return {}
 	d.name = name
 	d.w = int(w)
 	d.h = int(h)

@@ -103,7 +103,13 @@ const HELP := {
 	"STAR_FLY_MAX_EXIT_Y": "Feather: max vertical speed when flight ends (px/s; 0 = can't keep rising).",
 	"STAR_FLY_MAX_EXIT_X": "Feather: max horizontal speed when flight ends (px/s).",
 	"STAR_FLY_EXIT_UP": "Feather: upward speed if you end flight holding up (px/s).",
-	"INPUT_BUFFER": "Jump/dash presses are remembered this long (s) so slightly early presses still count.",
+	"INPUT_BUFFER": "Jump/dash/attack presses are remembered this long (s) so slightly early presses still count.",
+	"ATTACK_TIME": "How long (s) one swing lasts; things are hit at any point during it.",
+	"ATTACK_COOLDOWN": "Minimum time (s) from the start of one swing to the next.",
+	"ATTACK_RANGE": "Reach of the swing from the player's centre (px).",
+	"ATTACK_ARC": "Width of the swing (degrees), centred on the direction held (or facing).",
+	"DASH_DIRS": "Dash directions: 0 no dash, 1 horizontal only, -1 vertical only, 2 horizontal + vertical, 3 + diagonals (8-way), 4 free aim (analog stick).",
+	"ATTACK_DIRS": "Attack directions: 0 no attack, 1 horizontal only, -1 vertical only, 2 horizontal + vertical, 3 + diagonals (8-way), 4 free aim (analog stick).",
 	"WALL_JUMP_H_SPEED": "Derived: max_run + jump_h_boost. Horizontal speed of a wall jump (px/s).",
 	"SUPER_WALL_JUMP_H": "Derived: max_run + 2 × jump_h_boost. Horizontal speed of a super wall jump (px/s).",
 	"STAR_FLY_SLOW_SPEED": "Derived: 0.65 × star_fly_target_speed. Feather speed when holding no direction (px/s).",
@@ -124,6 +130,7 @@ const GROUPS := [
 	["Feather", ["STAR_FLY_"]],
 	["Lift", ["LIFT_"]],
 	["Hit Squash", ["HIT_"]],
+	["Attack", ["ATTACK_"]],
 	["Input", ["INPUT_"]],
 ]
 
@@ -152,6 +159,8 @@ static func group_of(n: String) -> String:
 # [min, max, step] for the editor spin box
 static func range_of(n: String) -> Array:
 	var d = defaults()[n]
+	if n.ends_with("_DIRS"):
+		return [-1, 4, 1]
 	var hi := maxf(absf(d) * 4.0, 1.0)
 	var step := 1.0 if d is int else (0.001 if absf(d) < 1.0 else 0.1)
 	return [-hi, hi, step]

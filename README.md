@@ -13,7 +13,7 @@ Art: Paper Pixels (blue) by VEXED, CC0 — see `assets/paper-pixels/LICENSE.txt`
     godot -e --path .         # open in editor
 
 ## Controls (remappable in Options)
-Arrows move · C/Space jump · X/Shift dash · Z/V grab · Esc pause · M map · F1 state machine & tuning. Gamepad supported.
+Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning. Gamepad supported.
 
 ## Moves
 Run, variable jump, coyote time, input buffering, wall jump, wall slide, climb + stamina,
@@ -26,6 +26,7 @@ dash / climb ability orbs (adventure only), note (design reminder: "Needs double
 its text shows in the editor, and in game while standing on it), door (drag a rectangle; links to another door by
 "room:id" or "id": rooms that don't touch, elevators, shortcuts), water (looks only), acid (kills on touch),
 enemy and breakable placeholders (named boxes, harmless, stand-ins until real ones are coded).
+Breakable Wall: solid until hit 3 times with the attack (`hp` in the level file); stays broken for the run.
 
 ## Adventure
 Title screen → Adventure → New Game / Continue. The adventure is one big world of connected rooms (Metroid style):

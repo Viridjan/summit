@@ -372,6 +372,7 @@ class StateGraph extends Control:
 		"Launch: thrown by a bumper; air control is reduced until speed drops.",
 		"Dream Dash: dashing through a dream block, moving straight until you exit.",
 		"Star Fly: feather flight; steer freely until the timer runs out.",
+		"Attack: a swing in the held direction (attack key). Moves like Normal; a dash or grab cancels it.",
 	]
 
 	func _init() -> void:

@@ -1,2 +1,3 @@
 .godot/
 graphify-out/
+__pycache__/

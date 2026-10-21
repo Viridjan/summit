@@ -17,23 +17,37 @@ var dragging := false
 func _init(w) -> void:
 	world = w
 
+const OPEN := Color("3a5494")  # the player fits here (inside an open 2x2)
+const NARROW := Color(0.23, 0.33, 0.58, 0.4)  # open but too tight to enter
+const EDGE := Color("8d97d6")  # rock bordering open space
+
 static func terrain(lvl: Dictionary) -> ImageTexture:
-	# 1 pixel per tile, built once per opening (nothing changes while paused)
-	var img := Image.create(lvl.w, lvl.h, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	# rock is drawn only where it borders open space, so overlapping room boxes don't hide each other
+	# 1 pixel per tile, built once per opening (nothing changes while paused). Rock stays transparent (room colour).
+	var w: int = lvl.w
+	var h: int = lvl.h
+	var open := PackedByteArray()
+	open.resize(w * h)
 	var tiles: Array = lvl.tiles
-	for y in lvl.h:
+	for y in h:
 		var row: String = tiles[y]
-		var up: String = tiles[y - 1] if y > 0 else ""
-		var dn: String = tiles[y + 1] if y + 1 < lvl.h else ""
-		for x in lvl.w:
-			if row.unicode_at(x) != 49:
-				continue
-			var edge: bool = (x > 0 and row.unicode_at(x - 1) != 49) or (x + 1 < lvl.w and row.unicode_at(x + 1) != 49) \
-				or (up != "" and up.unicode_at(x) != 49) or (dn != "" and dn.unicode_at(x) != 49)
-			if edge:
-				img.set_pixel(x, y, Color("5a64a0"))
+		for x in w:
+			open[y * w + x] = 1 if row.unicode_at(x) != 49 else 0
+	var fits := PackedByteArray()  # open tiles inside a fully open 2x2
+	fits.resize(w * h)
+	for y in h - 1:
+		for x in w - 1:
+			var i := y * w + x
+			if open[i] and open[i + 1] and open[i + w] and open[i + w + 1]:
+				fits[i] = 1; fits[i + 1] = 1; fits[i + w] = 1; fits[i + w + 1] = 1
+	var img := Image.create(w, h, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	for y in h:
+		for x in w:
+			var i := y * w + x
+			if open[i]:
+				img.set_pixel(x, y, OPEN if fits[i] else NARROW)
+			elif (x > 0 and open[i - 1]) or (x + 1 < w and open[i + 1]) or (y > 0 and open[i - w]) or (y + 1 < h and open[i + w]):
+				img.set_pixel(x, y, EDGE)
 	return ImageTexture.create_from_image(img)
 
 func _ready() -> void:
@@ -62,7 +76,7 @@ func _draw() -> void:
 	var s := xf.get_scale().x
 	for l in layers:
 		var r := Rect2(xf * l[0].position, l[0].size * s)
-		draw_rect(r, Color("262c4a") if l[2] else Color("1b2036"))
+		draw_rect(r, Color("1a1e33") if l[2] else Color("121526"))
 		draw_texture_rect(l[1], r, false)
 		draw_rect(r, Color(1, 1, 1, 0.5 if l[2] else 0.15), false, 1.0)
 	# entities, spawn, camera view and player of the current room

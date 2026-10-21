@@ -39,6 +39,8 @@ const TYPES := {
 	# placeholders from reference maps: "text" names the thing (e.g. "Crawlid", "grub jar")
 	"enemy": ["Enemy (placeholder)", true, Color("e04848"), Placeholder],
 	"breakable": ["Breakable (placeholder)", true, Color("e09a40"), Placeholder],
+	# breakable wall: solid until struck "hp" times (default 3) by the attack; stays broken for the run
+	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
 	"water": ["Water", true, Color("4a8ae0"), Liquid],
 	"acid": ["Acid", true, Color("6ae070"), Liquid],
 	# design note: marks what a spot needs (a power-up not built yet, a boss, a secret...)
@@ -327,6 +329,43 @@ class Liquid extends Ent:  # water: looks only; acid: kills on touch (like spike
 		var c: Color = TYPES[d.t][2]
 		ci.draw_rect(Rect2(rect), Color(c, 0.35))
 		ci.draw_line(Vector2(rect.position), Vector2(rect.end.x, rect.position.y), Color(c.lightened(0.4), 0.9), 1.0)
+
+
+class BreakWall extends Ent:
+	var id := ""
+	var hp := 3
+	var flash := 0.0
+	func setup() -> void:
+		solid = true
+		hp = int(d.get("hp", 3))
+		id = "%d_%d" % [rect.position.x, rect.position.y]
+		if w != null:
+			id = w.star_key(id)
+			collidable = not w.broken.has(id)
+	func hit(_p) -> void:
+		hp -= 1
+		flash = 0.12
+		w.burst(center(), TYPES.breakwall[2], 4)
+		if hp <= 0:
+			collidable = false
+			w.break_wall(id)
+			w.burst(center(), TYPES.breakwall[2], 20)
+			w.shake_dir(Vector2.ZERO, 0.15)
+	func update(dt: float) -> void:
+		flash = maxf(flash - dt, 0)
+		shaken(dt, flash > 0)
+	func draw(ci: CanvasItem) -> void:
+		if not collidable:
+			return
+		for y in range(rect.position.y, rect.end.y, T):
+			for x in range(rect.position.x, rect.end.x, T):
+				Art.cell(ci, Art.STONE, Vector2(x, y) + shake)
+		var r := Rect2(rect)
+		for i in 3 - clampi(hp, 0, 3):  # a crack per hit taken
+			var x := r.position.x + r.size.x * (0.3 + 0.2 * i)
+			ci.draw_line(Vector2(x, r.position.y + 2), Vector2(x - 2, r.end.y - 2), Color(0, 0, 0, 0.6))
+		if flash > 0:
+			ci.draw_rect(r, Color(1, 1, 1, 0.5))
 
 
 class Note extends Ent:  # level-design reminder; text is shown in the HUD while the player stands on it

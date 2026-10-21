@@ -1,7 +1,7 @@
 # Rebuilds the four reference worlds (res://worlds/) from their map images, scaled so the player matches
-# each game's character. Rooms follow the originals (any size, true position, boxes may overlap where one
-# of them is rock) and are linked by door objects. Not navigable on purpose: shapes only, to be
-# playtested and fixed in the editors.
+# each game's character, then doubled (SCALE). Each world is cut into non-overlapping rectangular rooms along
+# its natural walls (see partition), every room is made reachable (passages, door links), and objects are
+# placed. Not navigable on purpose: shapes only, to be playtested and fixed in the editors.
 #
 # Usage: python3 -I tools/reference_worlds.py <maps_dir> worlds [world,world,...]   (default: all four)
 # Map images are not in the repo; download them into <maps_dir> under these names:
@@ -36,104 +36,450 @@ MAX_ROOM = 400  # Game.MAX_LEVEL_SIZE: bigger regions are cut into pieces that m
 
 
 # ---------------------------------------------------------------- shared output
-def write_world(out, solid, label, doors, title, start_near, notes=(), extra=()):
-    """solid: HxW bool. label: HxW int, room id per open tile (-1 = rock).
-    doors: [(room_a, rect_a, room_b, rect_b)] with rects (x0, y0, x1, y1) in tiles, inclusive; one link each way."""
+SCALE = 2  # everything twice the character-matched size: the originals have many passages 1 tile tall at 1x
+
+
+def partition(open_, comp, max_side=MAX_ROOM, min_side=24 * SCALE):
+    """Non-overlapping room rectangles covering every open tile. A box is cut along the row/column with the least
+    open space (natural rock lines) while it is too big, holds more than one separate region, or is mostly rock."""
+    H, W = open_.shape
+    leaves = []
+    stack = [(0, 0, W, H)]
+    while stack:
+        bx0, by0, bx1, by1 = stack.pop()
+        sub = open_[by0:by1, bx0:bx1]
+        if not sub.any():
+            continue
+        rows, cols = np.nonzero(sub.any(axis=1))[0], np.nonzero(sub.any(axis=0))[0]
+        # trim to the content plus one tile of the rock around it (floors!), never past this box
+        x0, x1 = max(bx0, bx0 + cols[0] - 1), min(bx1, bx0 + cols[-1] + 2)
+        y0, y1 = max(by0, by0 + rows[0] - 1), min(by1, by0 + rows[-1] + 2)
+        sub = open_[y0:y1, x0:x1]
+        w, h = x1 - x0, y1 - y0
+        must = w > max_side or h > max_side
+        lab = None if must else components(sub, 1)  # separate areas inside this box
+        nlab = 0 if lab is None else int(lab.max()) + 1
+        if nlab > 1:
+            # bits clipped off a passage that runs past this box: rock here (a room never holds two separate areas)
+            sizes = np.bincount(lab[lab >= 0])
+            big = int(np.argmax(sizes))
+            tiny = [i for i in range(nlab) if i != big and sizes[i] < 40 * SCALE * SCALE]
+            if tiny and len(tiny) == nlab - 1:
+                fill = np.isin(lab, tiny)
+                open_[y0:y1, x0:x1][fill] = False
+                stack.append((bx0, by0, bx1, by1))
+                continue
+        want = must or nlab > 1 or (sub.mean() < 0.15 and w * h > 4 * 40 * 23 * SCALE * SCALE)
+        band = None
+        # a band of solid rock a screen thick inside the box: cut through it whatever is left on either side,
+        # or the room becomes two passages with a wall of nothing between them
+        for axis, sums in (("x", sub.sum(axis=0)), ("y", sub.sum(axis=1))):
+            run, gap, cum = 0, 12 * SCALE, np.cumsum(sums)
+            for i, v in enumerate(sums):
+                run = run + 1 if v == 0 else 0
+                big = min(cum[i], cum[-1] - cum[i]) >= 30 * SCALE * SCALE  # no scraps
+                if run >= gap and big and (band is None or run > band[0][0]):
+                    band = ((run,), axis, i + 1 - run // 2)
+        if band is not None:
+            _, axis, c = band
+            stack += [(x0, y0, x0 + c, y1), (x0 + c, y0, x1, y1)] if axis == "x" else [(x0, y0, x1, y0 + c), (x0, y0 + c, x1, y1)]
+            continue
+        if not want:
+            leaves.append((int(x0), int(y0), int(x1), int(y1)))
+            continue
+        if nlab > 1:
+            # cut between the areas: prefer a line no area crosses, then the fewest crossing, then least open space
+            sel = lab >= 0
+            ys_, xs_ = np.nonzero(sel)
+            ls = lab[sel]
+            best = None
+            for axis, n, coord, sums in (("x", w, xs_, sub.sum(axis=0)), ("y", h, ys_, sub.sum(axis=1))):
+                lo = np.full(nlab, n); hi = np.full(nlab, -1)
+                np.minimum.at(lo, ls, coord); np.maximum.at(hi, ls, coord)
+                for c in range(1, n):
+                    cross = int(((lo < c) & (hi >= c)).sum())
+                    if not ((hi < c).any() or cross) or not ((lo >= c).any() or cross):
+                        continue
+                    thin = c < min_side or n - c < min_side
+                    score = (cross, thin, int(sums[c - 1]) + int(sums[c]) if c < n else 0, abs(c - n / 2) / n)
+                    if best is None or score < best[0]:
+                        best = (score, axis, c)
+            if best is not None:
+                _, axis, c = best
+                stack += [(x0, y0, x0 + c, y1), (x0 + c, y0, x1, y1)] if axis == "x" else [(x0, y0, x1, y0 + c), (x0, y0 + c, x1, y1)]
+                continue
+        best = None
+        for axis, n, sums in (("x", w, sub.sum(axis=0)), ("y", h, sub.sum(axis=1))):
+            if n < 2 * min_side or (must and (w > max_side) != (axis == "x") and max(w, h) > max_side and (w > max_side) ^ (h > max_side)):
+                continue
+            cum = np.cumsum(sums)
+            tot = int(cum[-1])
+            min_open = 150 * SCALE * SCALE  # never cut off a scrap: each side keeps a real amount of space
+            for c in range(min_side, n - min_side + 1):
+                left = int(cum[c - 1])
+                if not must and (0 < left < min_open or 0 < tot - left < min_open):
+                    continue
+                cost = int(sums[c - 1]) + int(sums[c]) if c < n else int(sums[c - 1])
+                score = (cost, abs(c - n / 2) / n)
+                if best is None or score < best[0]:
+                    best = (score, axis, c)
+        if best is None:
+            leaves.append((int(x0), int(y0), int(x1), int(y1)))
+            continue
+        _, axis, c = best
+        if axis == "x":
+            stack += [(x0, y0, x0 + c, y1), (x0 + c, y0, x1, y1)]
+        else:
+            stack += [(x0, y0, x1, y0 + c), (x0, y0 + c, x1, y1)]
+    kept = []
+    for (x0, y0, x1, y1) in leaves:  # slivers a cut left behind: too small to stand in, become rock
+        if open_[y0:y1, x0:x1].sum() < 10 * SCALE * SCALE:
+            open_[y0:y1, x0:x1] = False
+        else:
+            kept.append((x0, y0, x1, y1))
+    return kept
+
+
+def _win(o):
+    """Top-left corners of fully open 2x2 squares (the player fits there)."""
+    return o[:-1, :-1] & o[1:, :-1] & o[:-1, 1:] & o[1:, 1:]
+
+
+def _sh(a, dy, dx):
+    """out[y, x] = a[y + dy, x + dx], False outside."""
+    out = np.zeros_like(a)
+    H, W = a.shape
+    out[max(0, -dy):H - max(0, dy), max(0, -dx):W - max(0, dx)] = a[max(0, dy):H - max(0, -dy), max(0, dx):W - max(0, -dx)]
+    return out
+
+
+# window offset -> intermediate windows, one of which must exist for the two to be one passage
+_JOINS = {(1, 1): [(0, 1), (1, 0)], (1, -1): [(0, -1), (1, 0)], (1, 2): [(0, 1), (1, 1)], (1, -2): [(0, -1), (1, -1)],
+          (2, 1): [(1, 0), (1, 1)], (2, -1): [(1, 0), (1, -1)]}
+
+
+def widen(solid, protect=None, iters=60):
+    """Navigable = inside an open 2x2. Carves rock until every open tile is in an open 2x2 and 2x2 spots that touch
+    only at a corner, or through a 1-tile-high gap, are joined. Never carves `protect` tiles or the map border."""
+    solid = solid.copy()
+    H, W = solid.shape
+    block = np.zeros((H, W), bool) if protect is None else protect.copy()
+    block[[0, -1], :] = True
+    block[:, [0, -1]] = True
+    for _ in range(iters):
+        o = ~solid
+        win = _win(o)
+        s = solid.astype(np.int8)
+        sb = (solid & block).astype(np.int8)
+        cost = s[:-1, :-1] + s[1:, :-1] + s[:-1, 1:] + s[1:, 1:]
+        cost[(sb[:-1, :-1] + sb[1:, :-1] + sb[:-1, 1:] + sb[1:, 1:]) > 0] = 99
+        fat = np.zeros((H, W), bool)
+        fat[:-1, :-1] |= win; fat[1:, :-1] |= win; fat[:-1, 1:] |= win; fat[1:, 1:] |= win
+        todo = []
+        for y, x in zip(*np.nonzero(o & ~fat)):
+            todo.append([(y - 1, x - 1), (y - 1, x), (y, x - 1), (y, x)])
+        if not todo:
+            for (dy, dx), inter in _JOINS.items():
+                m = win & _sh(win, dy, dx)
+                for iy, ix in inter:
+                    m &= ~_sh(win, iy, ix)
+                for y, x in zip(*np.nonzero(m)):
+                    todo.append([(y + iy, x + ix) for iy, ix in inter])
+        changed = False
+        for cands in todo:
+            ok = [(int(cost[wy, wx]), wy, wx) for wy, wx in cands if 0 <= wy < H - 1 and 0 <= wx < W - 1]
+            if not ok:
+                continue
+            c, wy, wx = min(ok)
+            if 0 < c < 99 and solid[wy:wy + 2, wx:wx + 2].any():
+                solid[wy:wy + 2, wx:wx + 2] = False
+                cost[max(0, wy - 1):wy + 2, max(0, wx - 1):wx + 2] = np.minimum(cost[max(0, wy - 1):wy + 2, max(0, wx - 1):wx + 2], 98)
+                changed = True
+        if not changed:
+            break
+    return solid
+
+
+def _protect(shape, extra):
+    """Rock that objects rest on or sit in (spike supports, around liquids): widen() must not carve it."""
+    H, W = shape
+    p = np.zeros(shape, bool)
+    sup = {"spikes_up": (1, 0), "spikes_down": (-1, 0), "spikes_left": (0, 1), "spikes_right": (0, -1)}
+    for e in extra:
+        x, y = int(e["x"]), int(e["y"])
+        if e["t"] in sup:
+            dy, dx = sup[e["t"]]
+            if 0 <= y + dy < H and 0 <= x + dx < W:
+                p[y + dy, x + dx] = True
+        elif e["t"] in ("water", "acid"):
+            p[max(0, y - 1):min(H, y + int(e["h"]) + 1), max(0, x - 1):min(W, x + int(e["w"]) + 1)] = True
+    return p
+
+
+def unblock_acid(open_, extra, links):
+    """Acid kills, so a pool across the only way on cuts the map (in Hollow Knight those need Isma's Tear).
+    Areas split only by acid get joined: smallest pools first become water, each with a note; big lakes stay."""
+    H, W = open_.shape
+    acid = np.zeros((H, W), bool)
+    for e in extra:
+        if e["t"] == "acid":
+            acid[e["y"]:e["y"] + e["h"], e["x"]:e["x"] + e["w"]] = True
+    if not acid.any():
+        return extra
+    lab = components(open_ & ~acid, 1)
+    parent = {}
+
+    def find(a):
+        while parent.get(a, a) != a:
+            a = parent[a]
+        return a
+    for ra, rb in links:
+        la, lb = int(lab[ra[1], ra[0]]), int(lab[rb[1], rb[0]])
+        if la >= 0 and lb >= 0:
+            parent[find(la)] = find(lb)
+    # touching acid boxes are one pool
+    ys, xs = np.nonzero(acid)
+    y0, y1, x0, x1 = ys.min() - 1, ys.max() + 2, xs.min() - 1, xs.max() + 2
+    plab = np.full((H, W), -1, np.int32)
+    plab[y0:y1, x0:x1] = components(acid[y0:y1, x0:x1], 1)
+    pools = {}
+    for i, e in enumerate(extra):
+        if e["t"] == "acid":
+            pools.setdefault(int(plab[e["y"], e["x"]]), []).append(i)
+    sides = {}  # pool -> labels around it
+    for pid in pools:
+        py, px = np.nonzero(plab == pid)
+        r = lab[max(0, py.min() - 1):py.max() + 2, max(0, px.min() - 1):px.max() + 2]
+        sides[pid] = set(np.unique(r[r >= 0]).tolist())
+    base = dict(parent)
+
+    def joined(use):  # union-find over links + the given water pools
+        parent.clear(); parent.update(base)
+        for q in use:
+            ls = [find(l) for l in sides[q]]
+            for l in ls:
+                parent[l] = ls[0]
+    notes = []
+    for pid in sorted(pools, key=lambda p: int((plab == p).sum())):  # smallest pools first
+        m = plab == pid
+        py, px = np.nonzero(m)
+        ring = np.zeros((H, W), bool)
+        ring[max(0, py.min() - 1):py.max() + 2, max(0, px.min() - 1):px.max() + 2] = True
+        r = lab[ring]
+        roots = {find(l) for l in np.unique(r[r >= 0]).tolist()}
+        if len(roots) < 2:
+            continue
+        for l in roots:
+            parent[l] = min(roots)
+        for i in pools[pid]:
+            extra[i] = dict(extra[i], t="water")
+        e = extra[pools[pid][0]]
+        notes.append({"t": "note", "x": e["x"] + e["w"] // 2, "y": e["y"], "w": 1, "h": 1,
+                      "text": "Acid in the original (needs Isma's Tear). Water here so the way on stays open."})
+    # put back acid where its sides connect another way anyway (largest pools first)
+    water = [pid for pid in pools if extra[pools[pid][0]]["t"] == "water"]
+    for pid in sorted(water, key=lambda p: -int((plab == p).sum())):
+        rest = [q for q in water if q != pid]
+        joined(rest)
+        if len({find(l) for l in sides[pid]}) == 1:
+            water = rest
+            for i in pools[pid]:
+                extra[i] = dict(extra[i], t="acid")
+    keep = {(extra[pools[q][0]]["x"] + extra[pools[q][0]]["w"] // 2, extra[pools[q][0]]["y"]) for q in water}
+    notes = [n for n in notes if (n["x"], n["y"]) in keep]
+    print(f"  acid turned to water so nothing is cut off: {len(notes)} of {len(pools)} pools")
+    return extra + notes
+
+
+def drop_low_spikes(open_, extra, min_head=4, max_run=4):
+    """Floor spikes under a ceiling too low to jump over them, in runs longer than a dash crosses, block the way: drop them."""
+    low = {}
+    for i, e in enumerate(extra):
+        if e["t"] == "spikes_up":
+            x, y = e["x"], e["y"]
+            head = 0
+            while head < min_head and y - 1 - head >= 0 and open_[y - 1 - head, x]:
+                head += 1
+            if head < min_head:
+                low[(x, y)] = i
+    drop = set()
+    for (x, y), i in low.items():
+        if (x - 1, y) in low:
+            continue  # not the start of a run
+        run = [i]
+        while (x + len(run), y) in low:
+            run.append(low[(x + len(run), y)])
+        if len(run) > max_run:
+            drop.update(run)
+    print(f"  floor spikes under a low ceiling dropped: {len(drop)}")
+    return [e for i, e in enumerate(extra) if i not in drop]
+
+
+def _nearest(a_idx, b_idx, cap=1500):
+    """Closest pair of tiles between two (N, 2) arrays of (y, x)."""
+    rng = np.random.default_rng(0)
+    if len(a_idx) > cap:
+        a_idx = a_idx[rng.choice(len(a_idx), cap, replace=False)]
+    if len(b_idx) > cap * 4:
+        b_idx = b_idx[rng.choice(len(b_idx), cap * 4, replace=False)]
+    best = (1e18, None, None)
+    for i in range(0, len(a_idx), 256):
+        A = a_idx[i:i + 256]
+        d = ((A[:, None, :] - b_idx[None, :, :]) ** 2).sum(axis=2)
+        k = np.unravel_index(np.argmin(d), d.shape)
+        if d[k] < best[0]:
+            best = (d[k], A[k[0]], b_idx[k[1]])
+    return best[1], best[2]
+
+
+def write_world(out, solid, title, start_near, notes=(), extra=(), thin_links=False, min_island=None):
+    """solid: HxW bool rock map. Writes non-overlapping rectangular rooms (see partition), links them so every room
+    is reachable (edge passages, doors across thin walls when thin_links, and a door pair from any cut-off group to
+    the nearest reachable room), and places spawn, notes and extra objects ({"t", "x", "y", "w", "h"} in tiles)."""
     os.makedirs(out, exist_ok=True)
     for f in os.listdir(out):
         if f.endswith(".json"):
             os.remove(os.path.join(out, f))
     H, W = solid.shape
-    pieces = {}  # name -> (x0, y0, x1, y1, room label) in tiles, exclusive end
-    owner = {}   # (label, piece index) helper
-    by_label = {}
-    ys, xs = np.nonzero(label >= 0)
-    labs = label[ys, xs]
-    order = np.argsort(labs)
-    ys, xs, labs = ys[order], xs[order], labs[order]
-    bounds = np.flatnonzero(np.diff(labs)) + 1
-    for grp in np.split(np.arange(len(labs)), bounds):
-        if len(grp) == 0:
-            continue
-        L = int(labs[grp[0]])
-        x0, x1 = max(0, xs[grp].min() - 1), min(W, xs[grp].max() + 2)
-        y0, y1 = max(0, ys[grp].min() - 1), min(H, ys[grp].max() + 2)
-        nx, ny = -(-(x1 - x0) // MAX_ROOM), -(-(y1 - y0) // MAX_ROOM)
-        by_label[L] = []
-        for j in range(ny):
-            for i in range(nx):
-                px0 = x0 + (x1 - x0) * i // nx
-                px1 = x0 + (x1 - x0) * (i + 1) // nx
-                py0 = y0 + (y1 - y0) * j // ny
-                py1 = y0 + (y1 - y0) * (j + 1) // ny
-                if not (label[py0:py1, px0:px1] == L).any():
+    if min_island is None:
+        min_island = 120 * SCALE * SCALE
+    solid = widen(solid, _protect(solid.shape, extra))  # every passage at least 2x2
+    comp = components(~solid, min_island)  # specks (mostly in-game map icons) become rock
+    links = []  # (rect_a, rect_b) door pairs, rects (x0, y0, x1, y1) inclusive tiles
+    if thin_links:
+        # Regions facing each other across a thin wall at 2+ places are one map split by a line drawn on the source
+        # map: open the wall along those contacts. A single contact becomes a door link.
+        for _ in range(3):
+            cands = thin_wall_doors(comp, 2 * SCALE, 12 * SCALE)
+            pairs = {}
+            for la, ra, lb, rb in cands:
+                pairs.setdefault((min(la, lb), max(la, lb)), []).append((ra, rb))
+            merged = False
+            for key, cs in pairs.items():
+                if len(cs) < 2:
                     continue
-                name = f"r{L:03d}" if nx * ny == 1 else f"r{L:03d}_{i}{j}"
-                pieces[name] = (int(px0), int(py0), int(px1), int(py1), L)
-                by_label[L].append(name)
+                merged = True
+                for ra, rb in cs:
+                    if ra[0] == ra[2] and rb[0] == rb[2] and ra[0] != rb[0]:  # vertical wall between columns
+                        solid[ra[1]:ra[3] + 1, min(ra[0], rb[0]) + 1:max(ra[0], rb[0])] = False
+                    else:  # horizontal wall between rows
+                        solid[min(ra[1], rb[1]) + 1:max(ra[1], rb[1]), ra[0]:ra[2] + 1] = False
+            comp = components(~solid, min_island)
+            if not merged:
+                break
+        links = [(ra, rb) for (_, ra, _, rb) in thin_wall_doors(comp, 2 * SCALE, 12 * SCALE)]
+    open_ = comp >= 0
+    leaves = sorted(partition(open_, comp), key=lambda r: (r[1], r[0]))
+    names = [f"r{i:03d}" for i in range(len(leaves))]
+    owner = np.full((H, W), -1, np.int32)
+    for i, (x0, y0, x1, y1) in enumerate(leaves):
+        owner[y0:y1, x0:x1] = i
+    links = [(ra, rb) for ra, rb in links if owner[ra[1], ra[0]] >= 0 and owner[rb[1], rb[0]] >= 0 and open_[ra[1], ra[0]] and open_[rb[1], rb[0]]]
+    acid = np.zeros((H, W), bool)
+    for e in extra:
+        if e["t"] == "acid":
+            acid[e["y"]:e["y"] + e["h"], e["x"]:e["x"] + e["w"]] = True
+    extra = drop_low_spikes(open_, list(extra))
+    for e in extra:  # doors keep a tile away from spikes: arriving next to them kills
+        if e["t"].startswith("spikes_"):
+            acid[max(0, e["y"] - 1):e["y"] + 2, max(0, e["x"] - 1):e["x"] + 2] = True
+    links = [(ra, rb) for ra, rb in links if not acid[ra[1]:ra[3] + 1, ra[0]:ra[2] + 1].any() and not acid[rb[1]:rb[3] + 1, rb[0]:rb[2] + 1].any()]
+    extra = unblock_acid(open_, extra, links)
+    acid[:] = False
+    for e in extra:
+        if e["t"] == "acid":
+            acid[e["y"]:e["y"] + e["h"], e["x"]:e["x"] + e["w"]] = True
+    # room graph: open tiles of different rooms side by side = passage; plus door links
+    parent = list(range(len(leaves)))
 
-    def piece_of(L, x, y):
-        for name in by_label.get(L, []):
-            px0, py0, px1, py1, _ = pieces[name]
-            if px0 <= x < px1 and py0 <= y < py1:
-                return name
-        return None
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
 
-    ents = {name: [] for name in pieces}
-    n = 0
-    for (la, ra, lb, rb) in doors:
-        pa = piece_of(la, (ra[0] + ra[2]) // 2, (ra[1] + ra[3]) // 2)
-        pb = piece_of(lb, (rb[0] + rb[2]) // 2, (rb[1] + rb[3]) // 2)
-        if pa is None or pb is None:
-            continue
-        ia, ib = f"d{n}", f"d{n + 1}"
-        n += 2
-        for (p, r, i, to) in ((pa, ra, ia, f"{pb}:{ib}"), (pb, rb, ib, f"{pa}:{ia}")):
-            r = [int(v) for v in r]
-            px0, py0 = pieces[p][0], pieces[p][1]
-            ents[p].append({"t": "door", "x": (r[0] - px0) * T, "y": (r[1] - py0) * T,
-                            "w": (r[2] - r[0] + 1) * T, "h": (r[3] - r[1] + 1) * T, "id": i, "to": to})
+    def join(a, b):
+        parent[find(a)] = find(b)
+    for A, B, M in ((owner[:, :-1], owner[:, 1:], open_[:, :-1] & open_[:, 1:]), (owner[:-1], owner[1:], open_[:-1] & open_[1:])):
+        sel = M & (A != B) & (A >= 0) & (B >= 0)
+        for a, b in set(zip(A[sel].tolist(), B[sel].tolist())):
+            join(a, b)
+    for ra, rb in links:
+        join(int(owner[ra[1], ra[0]]), int(owner[rb[1], rb[0]]))
     # spawn: open spot with ground under it, closest to start_near
-    ok = ~solid[1:H - 1] & ~solid[0:H - 2] & solid[2:H]
-    for (la, ra, lb, rb) in doors:  # never spawn in a doorway (it would warp the player at once)
+    ok = open_[1:H - 1] & open_[0:H - 2] & ~open_[2:H]
+    for ra, rb in links:
         for r in (ra, rb):
             ok[max(0, r[1] - 3):r[3] + 2, max(0, r[0] - 2):r[2] + 3] = False
     sy, sx = np.nonzero(ok)
     k = int(np.argmin((sx - start_near[0]) ** 2 + (sy + 1 - start_near[1]) ** 2))
     spawn = (int(sx[k]), int(sy[k]) + 1)
-    start = piece_of(int(label[spawn[1], spawn[0]]), *spawn)
-    ents[start].append({"t": "spawn", "x": (spawn[0] - pieces[start][0]) * T, "y": (spawn[1] - pieces[start][1]) * T})
+    start = int(owner[spawn[1], spawn[0]])
+    # connect every cut-off group of rooms to the start's group with a door pair at their closest tiles
+    room_tiles = {i: None for i in range(len(leaves))}
+    for e in extra:
+        if e["t"].startswith("spikes_"):
+            acid[max(0, e["y"] - 1):e["y"] + 2, max(0, e["x"] - 1):e["x"] + 2] = True  # no door on or next to spikes
+    stand = open_ & ~acid & np.vstack([np.zeros((1, W), bool), open_[:-1] & ~acid[:-1]])  # fits the player, not in acid
+    while True:
+        groups = {}
+        for i in range(len(leaves)):
+            groups.setdefault(find(i), []).append(i)
+        main = find(start)
+        others = [g for g in groups if g != main]
+        if not others:
+            break
+        in_main = np.isin(owner, groups[main]) & stand
+        bi = np.argwhere(in_main)
+        g = max(others, key=lambda g: len(groups[g]))
+        ai = np.argwhere(np.isin(owner, groups[g]) & stand)
+        if len(ai) == 0 or len(bi) == 0:
+            for i in groups[g]:
+                parent[i] = main  # nowhere to stand: leave as is
+            continue
+        pa, pb = _nearest(ai, bi)
+        links.append(((int(pa[1]), int(pa[0]) - 1, int(pa[1]), int(pa[0])), (int(pb[1]), int(pb[0]) - 1, int(pb[1]), int(pb[0]))))
+        join(int(owner[pa[0], pa[1]]), main)
+    ents = {i: [] for i in range(len(leaves))}
+
+    def put(i, d):
+        x0, y0 = leaves[i][0], leaves[i][1]
+        d = dict(d)
+        d["x"] = int((d["x"] - x0) * T)
+        d["y"] = int((d["y"] - y0) * T)
+        if "w" in d:
+            d["w"], d["h"] = int(d["w"] * T), int(d["h"] * T)
+        ents[i].append(d)
+    for n, (ra, rb) in enumerate(links):
+        ia, ib = int(owner[ra[1], ra[0]]), int(owner[rb[1], rb[0]])
+        for (i, r, me, to) in ((ia, ra, f"d{2 * n}", f"{names[ib]}:d{2 * n + 1}"), (ib, rb, f"d{2 * n + 1}", f"{names[ia]}:d{2 * n}")):
+            put(i, {"t": "door", "x": r[0], "y": r[1], "w": r[2] - r[0] + 1, "h": r[3] - r[1] + 1, "id": me, "to": to})
+    put(start, {"t": "spawn", "x": spawn[0], "y": spawn[1]})
     for (nx_, ny_, text) in notes:
-        for name, (px0, py0, px1, py1, L) in pieces.items():
-            if px0 <= nx_ < px1 and py0 <= ny_ < py1 and (label[py0:py1, px0:px1] == L).any():
-                ents[name].append({"t": "note", "x": (nx_ - px0) * T, "y": (ny_ - py0) * T, "text": text})
-                break
-    # extra: [{"t", "x", "y", "w", "h" (tiles, world grid), ...}] -> the room piece that owns the open tile at its centre
+        if 0 <= ny_ < H and 0 <= nx_ < W and owner[ny_, nx_] >= 0:
+            put(int(owner[ny_, nx_]), {"t": "note", "x": nx_, "y": ny_, "text": text})
     for e in extra:
         cx, cy = int(e["x"] + e["w"] / 2), int(e["y"] + e["h"] / 2)
-        cx, cy = min(max(cx, 0), W - 1), min(max(cy, 0), H - 1)
-        L = int(label[cy, cx])
-        if L < 0:
+        if not (0 <= cx < W and 0 <= cy < H) or not open_[cy, cx] or owner[cy, cx] < 0:
             continue
-        p = piece_of(L, cx, cy)
-        if p is None:
-            continue
-        px0, py0 = pieces[p][0], pieces[p][1]
+        i = int(owner[cy, cx])
+        x0, y0, x1, y1 = leaves[i]
         d = dict(e)
-        d.update({"x": int((e["x"] - px0) * T), "y": int((e["y"] - py0) * T), "w": int(e["w"] * T), "h": int(e["h"] * T)})
+        d["x"], d["y"] = max(x0, d["x"]), max(y0, d["y"])  # keep it inside its room
+        d["w"], d["h"] = max(1, min(d["w"], x1 - d["x"])), max(1, min(d["h"], y1 - d["y"]))
         if d["t"].startswith("spikes_") or d["t"] == "note":
             d.pop("w"); d.pop("h")
-        ents[p].append(d)
+        put(i, d)
     rooms = {}
-    for name, (px0, py0, px1, py1, L) in pieces.items():
-        part = label[py0:py1, px0:px1] != L
-        lvl = {"name": f"{title} {name[1:]}", "w": int(px1 - px0), "h": int(py1 - py0),
-               "tiles": ["".join("1" if v else "0" for v in row) for row in part], "entities": ents[name]}
-        json.dump(lvl, open(os.path.join(out, name + ".json"), "w"), separators=(",", ":"))
-        rooms[name] = [int(px0), int(py0)]
-    json.dump({"start": start, "abilities": ["dash", "climb"], "rooms": rooms}, open(os.path.join(out, "world.json"), "w"), indent="\t")
-    sizes = sorted(((pieces[p][2] - pieces[p][0]) * (pieces[p][3] - pieces[p][1]) for p in pieces), reverse=True)
-    print(f"{title}: {W}x{H} tiles, {len(pieces)} rooms (largest {sizes[:3]} tiles), {n} door ends, start {start}")
+    for i, (x0, y0, x1, y1) in enumerate(leaves):
+        part = ~open_[y0:y1, x0:x1]
+        lvl = {"name": f"{title} {names[i][1:]}", "w": int(x1 - x0), "h": int(y1 - y0),
+               "tiles": ["".join("1" if v else "0" for v in row) for row in part], "entities": ents[i]}
+        json.dump(lvl, open(os.path.join(out, names[i] + ".json"), "w"), separators=(",", ":"))
+        rooms[names[i]] = [int(x0), int(y0)]
+    json.dump({"start": names[start], "abilities": ["dash", "climb"], "rooms": rooms}, open(os.path.join(out, "world.json"), "w"), indent="\t")
+    big = max(max(r[2] - r[0], r[3] - r[1]) for r in leaves)
+    print(f"{title}: {W}x{H} tiles, {len(leaves)} rooms (largest side {big}), {len(links)} door links, start {names[start]}")
 
 
 def components(open_mask, min_size):
@@ -305,7 +651,7 @@ def thin_wall_doors(label, max_wall=2, max_run=12):
 # registered area is kept. That drops background vistas and the in-game map's glow halos.
 HN_TILES = "https://lorthiz.github.io/MapRealm-HollowKnight/0/{z}/{y}/{x}.webp"
 HN_Z5_ROW0 = 4            # the z5 mosaic starts at tile row 4 (rows above are empty)
-HK_Z8_PER_TILE = 50.0     # real-map px (zoom 8) per tile: Knight ~1.3 units, ~60 px per unit at zoom 8
+HK_Z8_PER_TILE = 50.0 / SCALE  # real-map px (zoom 8) per tile: Knight ~1.3 units, ~60 px per unit at zoom 8
 
 
 def hn_mosaic(maps, z=5, rows=(4, 28), cols=(0, 32)):
@@ -369,12 +715,12 @@ def hk_real(maps):
     label = np.full((th, tw), -1, np.int32)
     score_at = np.full((th, tw), -1e9)
     shifts = {}  # in-game-map area -> (dy, dx) tiles
-    R = 12
+    R = 12 * SCALE
     for L in np.unique(lg[lg >= 0]):
         yy, xx = np.nonzero(lg == L)
         best, bd = -1e9, (0, 0)
-        for dy in range(-R, R + 1, 2):
-            for dx in range(-R, R + 1, 2):
+        for dy in range(-R, R + 1, 2 * SCALE):
+            for dx in range(-R, R + 1, 2 * SCALE):
                 y2, x2 = yy + dy, xx + dx
                 ok = (y2 >= 0) & (x2 >= 0) & (y2 < th) & (x2 < tw)
                 hit = ro[y2[ok], x2[ok]]
@@ -390,7 +736,7 @@ def hk_real(maps):
         score_at[y2[better], x2[better]] = best
     reg = label.copy()  # registered in-game-map shapes, before growing
     # grow areas by 4 tiles so rooms drawn slightly off on the in-game map still keep their real open edge
-    for _ in range(4):
+    for _ in range(4 * SCALE):
         g = label.copy()
         for dy, dx in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             sh = np.full_like(label, -1)
@@ -403,20 +749,20 @@ def hk_real(maps):
     # Upper dark areas are the in-game map's glow halos (background) and stay out.
     for L, (dy, dx) in shifts.items():
         m = reg == L
-        if m.sum() < 50:
+        if m.sum() < 50 * SCALE * SCALE:
             continue
         cy_sch = np.nonzero(lab_s == L)[0].mean() / s
         if ro[m].mean() < 0.35 and cy_sch > 2000:
             label[m & (label < 0)] = L
     # drop specks: regions of the same label smaller than 30 tiles
-    label = regions(label, 20)
+    label = regions(label, 20 * SCALE * SCALE)
 
     def to_tile(px, py):
         """In-game map (hk_clean) pixel -> tile, including that area's registration shift."""
         tx, ty = ((kx * px + ox) / f, (ky * py + oy) / f)
         sx, sy = int(px * s), int(py * s)
         best = None
-        for r in range(0, 6):  # nearest in-game-map area around the point
+        for r in range(0, 6):  # nearest in-game-map area around the point (in-game map tiles)
             win = lab_s[max(0, sy - r):sy + r + 1, max(0, sx - r):sx + r + 1]
             vals = win[win >= 0]
             if vals.size:
@@ -446,7 +792,7 @@ def hk_features(maps, solid, f, to_tile):
     def open_at(x, y):
         return 0 <= x < W and 0 <= y < H and not solid[y, x]
 
-    def snap(x, y, r=8, ground=False):
+    def snap(x, y, r=8 * SCALE, ground=False):
         """Nearest open tile (with ground under it when asked) to (x, y)."""
         x, y = int(round(x)), int(round(y))
         for d in range(r + 1):
@@ -497,12 +843,12 @@ def hk_features(maps, solid, f, to_tile):
                         continue
                     cols, rows = np.nonzero(sub.any(axis=0))[0], np.nonzero(sub.any(axis=1))[0]
                     lx0, lx1, ly0, ly1 = bx0 + cols[0], bx0 + cols[-1] + 1, by0 + rows[0], by0 + rows[-1] + 1
-                    for _ in range(3):
+                    for _ in range(3 * SCALE):
                         if ly1 < H and (~solid[ly1, lx0:lx1]).mean() > 0.5:
                             ly1 += 1
                     out.append({"t": t, "x": int(lx0), "y": int(ly0), "w": int(lx1 - lx0), "h": int(ly1 - ly0), "src": "map"})
                 elif t in ("enemy", "breakable"):
-                    c = snap((x0 + x1) / 2, (y0 + y1) / 2, 4)
+                    c = snap((x0 + x1) / 2, (y0 + y1) / 2, 4 * SCALE)
                     if c:
                         w_, h_ = max(1, int(round(x1 - x0))), max(1, int(round(y1 - y0)))
                         out.append({"t": t, "x": c[0] - w_ // 2, "y": c[1] - h_ + 1, "w": w_, "h": h_, "text": name, "src": "map"})
@@ -530,18 +876,19 @@ def hk_features(maps, solid, f, to_tile):
         py = (1 - math.log(math.tan(lat) + 1 / math.cos(lat)) / math.pi) / 2 * n - MG_TY0 * 256
         tx, ty = to_tile(kx * px + okx, ky * py + oky)
         t, fmt = kinds[cat]
-        c = snap(tx, ty, 10)
+        c = snap(tx, ty, 10 * SCALE)
         if not c:
             continue
         text = fmt.format(l.get("title") or cat)[:60]
         if t == "note":
             mg_items.append({"t": "note", "x": c[0], "y": c[1], "w": 1, "h": 1, "text": text, "src": "mapgenie"})
         else:
-            mg_items.append({"t": t, "x": c[0], "y": c[1] - 1, "w": 2 if t == "enemy" else 1, "h": 2 if t == "enemy" else 1, "text": text, "src": "mapgenie"})
+            sz = 2 * SCALE if t == "enemy" else SCALE
+            mg_items.append({"t": t, "x": c[0], "y": c[1] - sz + 1, "w": sz, "h": sz, "text": text, "src": "mapgenie"})
     # merge: a map-read box within 2 tiles of a Map Genie marker of the same type is the same thing
     keep = []
     for e in out:
-        if e["t"] in ("enemy", "breakable") and any(m["t"] == e["t"] and abs(m["x"] - e["x"]) <= 2 and abs(m["y"] - e["y"]) <= 2 for m in mg_items):
+        if e["t"] in ("enemy", "breakable") and any(m["t"] == e["t"] and abs(m["x"] - e["x"]) <= 2 * SCALE and abs(m["y"] - e["y"]) <= 2 * SCALE for m in mg_items):
             continue
         keep.append(e)
     allx = keep + mg_items
@@ -594,20 +941,22 @@ def cell_world(is_room, sides, sx, sy):
             inside = (nx, ny) in parent
             if k == "open" and inside and find((nx, ny)) == find((cx, cy)):
                 continue
-            # wall line on this side
-            if s == "l": label[y0:y1 + 1, x0] = -1
-            if s == "r": label[y0:y1 + 1, x1] = -1
-            if s == "t": label[y0, x0:x1 + 1] = -1
-            if s == "b": label[y1, x0:x1 + 1] = -1
+            # wall on this side, SCALE tiles thick
+            k_ = SCALE
+            if s == "l": label[y0:y1 + 1, x0:x0 + k_] = -1
+            if s == "r": label[y0:y1 + 1, x1 - k_ + 1:x1 + 1] = -1
+            if s == "t": label[y0:y0 + k_, x0:x1 + 1] = -1
+            if s == "b": label[y1 - k_ + 1:y1 + 1, x0:x1 + 1] = -1
             if k == "door" and inside and s in "rb":  # each door once, from its left/top cell
                 nx0, nx1, ny0, ny1 = xr[nx], xr[nx + 1] - 1, yr[ny], yr[ny + 1] - 1
                 Lb = label[(ny0 + ny1) // 2, (nx0 + nx1) // 2]
-                if s == "r":  # 3 tiles tall gap just above the floor, in both walls
-                    g0, g1 = max(y0 + 1, y1 - 3), y1 - 1
-                    doors.append([L, (x1, g0, x1, g1), Lb, (nx0, g0, nx0, g1)])
-                else:  # 3 tiles wide hole in the floor/ceiling
+                if s == "r":  # gap 3*SCALE tiles tall just above the floor, through both walls
+                    g0, g1 = max(y0 + k_, y1 - k_ - 3 * k_ + 1), y1 - k_
+                    doors.append([L, (x1 - k_ + 1, g0, x1, g1), Lb, (nx0, g0, nx0 + k_ - 1, g1)])
+                else:  # hole 3*SCALE tiles wide in the floor/ceiling
                     mid = (x0 + x1) // 2
-                    doors.append([L, (mid - 1, y1, mid + 1, y1), Lb, (mid - 1, ny0, mid + 1, ny0)])
+                    h = 3 * k_ // 2
+                    doors.append([L, (mid - h, y1 - k_ + 1, mid + h, y1), Lb, (mid - h, ny0, mid + h, ny0 + k_ - 1)])
     for la, ra, lb, rb in doors:  # carve the gaps after all walls are in
         label[ra[1]:ra[3] + 1, ra[0]:ra[2] + 1] = la
         label[rb[1]:rb[3] + 1, rb[0]:rb[2] + 1] = lb
@@ -712,39 +1061,61 @@ def build(maps, out, only=None):
         build_sotn(maps, out)
     if want("metroid_zero_mission"):
         build_mzm(maps, out)
+    # a spawn near every room entrance (dying or Retry puts the player back where they came in)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("entrance_spawns", os.path.join(os.path.dirname(os.path.abspath(__file__)), "entrance_spawns.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    for name in ("hollow_knight", "silksong", "symphony_of_the_night", "metroid_zero_mission"):
+        if want(name):
+            mod.add_spawns(os.path.join(out, name))
 
 
 def build_hk(maps, out):
     # Hollow Knight: real terrain from hallownest.net, areas from the in-game map
     solid, label, f, to_tile = hk_real(maps)
     objects = hk_features(maps, solid, f, to_tile)
+    objects += kings_pass(solid)
     sch = lambda x, y: (int((1.9995 * x - 691.1) / f), int((1.9552 * y + 259.2) / f))  # in-game map px -> tile
-    write_world(os.path.join(out, "hollow_knight"), solid, label, thin_wall_doors(label), "Hallownest",
+    write_world(os.path.join(out, "hollow_knight"), solid.copy(), "Hallownest",
                 sch(1657, 580), [
         (*sch(1650, 540), "King's Pass (start)"), (*sch(1620, 660), "Dirtmouth above, Forgotten Crossroads below"),
-        (*sch(2722, 1467), "City of Tears"), (*sch(710, 828), "Greenpath"), (*sch(3077, 2367), "The Abyss / Ancient Basin")], objects)
+        (*sch(2722, 1467), "City of Tears"), (*sch(710, 828), "Greenpath"), (*sch(3077, 2367), "The Abyss / Ancient Basin")], objects, thin_links=True)
+
+
+def kings_pass(solid):
+    """Hand fixes to the start area (world tiles), edits solid in place; returns objects to add.
+    The top-right corridor ends in a breakable wall; behind it a tunnel slopes down into the cave that leads to Dirtmouth."""
+    solid[475:478, 749:751] = False  # 1-tile pillar in the bottom tunnel
+    solid[417:428, 872] = False  # corridor end wall -> breakable wall
+    solid[417:428, 873:918] = False  # tunnel, then a 1-in-2 slope down into the cave
+    for x in range(918, 964):
+        top = 417 + (x - 918) // 2
+        solid[top:top + 11, x] = False
+    return [{"t": "breakwall", "x": 870, "y": 417, "w": 3, "h": 11}]
 
 
 def build_ss(maps, out):
-    s = 0.25
+    s = 0.25 * SCALE
     solid = hk_tiles(os.path.join(maps, "ss_clean.png"), s)
-    label = regions(hk_areas(os.path.join(maps, "ss_clean.png"), s, solid))
-    write_world(os.path.join(out, "silksong"), label < 0, label, thin_wall_doors(label), "Pharloom",
-                (int(1150 * s), int(2960 * s)), [(int(1150 * s), int(2940 * s), "Moss Grotto (start, approximate)")])
+    label = regions(hk_areas(os.path.join(maps, "ss_clean.png"), s, solid), 800 * SCALE * SCALE)  # drops glow halos
+    write_world(os.path.join(out, "silksong"), label < 0, "Pharloom",
+                (int(1150 * s), int(2960 * s)), [(int(1150 * s), int(2940 * s), "Moss Grotto (start, approximate)")], thin_links=True)
 
 
 def build_sotn(maps, out):
     # Symphony of the Night: Dracula's Castle (left half of the image)
     is_room, sides = sotn_cells(os.path.join(maps, "sotn_ingame.png"), 1390)
-    solid, label, doors = cell_world(is_room, sides, 7.5, 7.5)
-    write_world(os.path.join(out, "symphony_of_the_night"), solid, label, doors, "Dracula's Castle",
-                (int((140 - 9.25) / 21.73 * 7.5), int((910 - 14.75) / 20.11 * 7.5)),
-                [(int((150 - 9.25) / 21.73 * 7.5), int((905 - 14.75) / 20.11 * 7.5), "Entrance (start)")])
+    c = 7.5 * SCALE
+    solid, label, doors = cell_world(is_room, sides, c, c)
+    write_world(os.path.join(out, "symphony_of_the_night"), solid, "Dracula's Castle",
+                (int((140 - 9.25) / 21.73 * c), int((910 - 14.75) / 20.11 * c)),
+                [(int((150 - 9.25) / 21.73 * c), int((905 - 14.75) / 20.11 * c), "Entrance (start)")])
 
 
 def build_mzm(maps, out):
     # Metroid Zero Mission: the 7 areas laid out like the official guide map (in the game they link by elevators)
-    SX, SY = 15 * 0.6875, 10 * 0.6875
+    SX, SY = 15 * 0.6875 * SCALE, 10 * 0.6875 * SCALE
     layout = [["Crateria", "Chozodia"], ["Tourian", "Brinstar", "Norfair"], ["Kraid", "Ridley"]]
     areas = {a: mzm_cells(os.path.join(maps, f"mzm_{a}.png")) for row in layout for a in row}
     gap = 3  # cells between areas
@@ -771,9 +1142,9 @@ def build_mzm(maps, out):
     for a, (ox, oy) in origin.items():
         ys, xs = np.nonzero(areas[a][0])
         cx, cy = ox + int(xs.min()), oy + int(ys[xs == xs.min()].min())
-        notes.append((round(cx * SX) + 2, round((cy + 1) * SY) - 2, f"{a} (links to other areas by elevator in the original)"))
+        notes.append((round(cx * SX) + 2 * SCALE, round((cy + 1) * SY) - 2 * SCALE, f"{a} (links to other areas by elevator in the original)"))
     bx, by = origin["Brinstar"]
-    write_world(os.path.join(out, "metroid_zero_mission"), solid, label, doors, "Zebes",
+    write_world(os.path.join(out, "metroid_zero_mission"), solid, "Zebes",
                 (round((bx + 1) * SX), round((by + 15) * SY)), notes)
 
 
