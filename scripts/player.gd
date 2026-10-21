@@ -7,8 +7,8 @@ const CharacterArt := preload("res://scripts/character_art.gd")
 # Position is the bottom-centre of the hitbox and always holds whole pixels;
 # sub-pixel movement lives in `rem`, like Monocle's Actor.
 
-enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY, ST_ATTACK }
-const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly", "Attack"]
+enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY }
+const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly"]
 
 # Movement tuning. These were Celeste's constants; they are vars so they can be tuned
 # in-game (see scripts/tuning.gd). Defaults below are the Celeste values.
@@ -108,8 +108,8 @@ var STAR_FLY_MAX_EXIT_Y := 0.0
 var STAR_FLY_MAX_EXIT_X := 140.0
 var STAR_FLY_EXIT_UP := -100.0
 var INPUT_BUFFER := 0.08
-var ATTACK_TIME := 0.2
-var ATTACK_COOLDOWN := 0.35
+var ATTACK_TIME := 0.143  # 140% speed of the first 0.2s swing
+var ATTACK_COOLDOWN := 0.25
 var ATTACK_RANGE := 14.0
 var ATTACK_ARC := 120.0
 # Directions a move can go: 0 off, 1 horizontal, -1 vertical, 2 both (4-way), 3 + diagonals (8-way), 4 free aim (analog stick)
@@ -227,6 +227,7 @@ var followers: Array = []  # stars following the player
 # state machine record for the debug panel (bookkeeping only, never read by gameplay)
 var transitions := {}  # Vector2i(from, to) -> count
 var transition_log: Array = []  # last 10 [time, from, to]
+var attack_log: Array = []  # times of the last 10 swings
 
 func _init(world, spawn: Vector2) -> void:
 	w = world
@@ -622,6 +623,7 @@ func update(dt: float) -> void:
 	if dead:
 		return
 
+	_attack_update(dt)
 	w.player_touch(self)
 	if not dead and state != ST_DREAM_DASH:
 		_enforce_bounds()
@@ -668,9 +670,6 @@ func _state_update(dt: float) -> void:
 		ST_LAUNCH: ns = _launch_update(dt)
 		ST_DREAM_DASH: ns = _dream_dash_update(dt)
 		ST_STAR_FLY: ns = _star_fly_update(dt)
-		ST_ATTACK: ns = _attack_update(dt)
-	if ns == ST_NORMAL and attack_buf > 0 and attack_cooldown_timer <= 0 and ATTACK_DIRS != 0 and not dead:
-		ns = ST_ATTACK
 	if dead:
 		return
 	_set_state(ns)
@@ -730,8 +729,6 @@ func _set_state(ns: int) -> void:
 			_dream_dash_begin()
 		ST_STAR_FLY:
 			_star_fly_begin()
-		ST_ATTACK:
-			_attack_begin()
 
 func _co_resume() -> void:
 	match state:
@@ -1655,22 +1652,29 @@ func _star_fly_update(dt: float) -> int:
 
 # ---------------- visuals ----------------
 # ---------------- attack (placeholder weapon: a triangle swung through ATTACK_ARC degrees) ----------------
-# Runs on top of Normal movement; a dash, climb or other state cancels the swing.
-func _attack_begin() -> void:
-	attack_buf = 0
-	attack_timer = ATTACK_TIME
-	attack_cooldown_timer = ATTACK_COOLDOWN
-	attack_dir = dir_for(ATTACK_DIRS)
-	attack_hit.clear()
-	_attack_hits()
+# A layer on top of the movement state: swing while running, dashing (a dash attack), climbing or flying.
+# Not inside bubbles or dream blocks. Movement is never changed by it.
+const NO_ATTACK_STATES := [ST_BOOST, ST_RED_DASH, ST_DREAM_DASH]
 
-func _attack_update(dt: float) -> int:
-	var ns := _normal_update(dt)
-	if ns != ST_NORMAL:
-		return ns
-	attack_timer -= dt
-	_attack_hits()
-	return ST_ATTACK if attack_timer > 0 else ST_NORMAL
+func attacking() -> bool:
+	return attack_timer > 0
+
+func _attack_update(dt: float) -> void:
+	if attack_timer > 0:
+		attack_timer -= dt
+		if state in NO_ATTACK_STATES:
+			attack_timer = 0
+	elif attack_buf > 0 and attack_cooldown_timer <= 0 and ATTACK_DIRS != 0 and state not in NO_ATTACK_STATES:
+		attack_buf = 0
+		attack_timer = ATTACK_TIME
+		attack_cooldown_timer = ATTACK_COOLDOWN
+		attack_dir = dir_for(ATTACK_DIRS)
+		attack_hit.clear()
+		attack_log.append(w.time if w != null else 0.0)
+		if attack_log.size() > 10:
+			attack_log.pop_front()
+	if attack_timer > 0:
+		_attack_hits()
 
 # Entities with a hit() method inside the swing's sector (radius ATTACK_RANGE from the centre) get struck once.
 func _attack_hits() -> void:
@@ -1723,7 +1727,7 @@ func _update_visuals(dt: float) -> void:
 	flash_t += dt
 	anim_t += dt
 	landing_visual_timer = maxf(0.0, landing_visual_timer - dt)
-	if on_ground and not was_on_ground and state in [ST_NORMAL, ST_ATTACK]:
+	if on_ground and not was_on_ground and state == ST_NORMAL:
 		landing_visual_timer = 0.15
 	var animation := _animation()
 	if animation != visual_animation:
@@ -1827,5 +1831,5 @@ func draw(ci: CanvasItem) -> void:
 	ci.draw_set_transform(pos.round(), 0, sc)
 	ci.draw_texture_rect_region(CharacterArt.texture(hc), Rect2(-8, -16, 16, 16), Rect2(f * 16, Vector2(16, 16)), mod)
 	ci.draw_set_transform(Vector2.ZERO)
-	if state == ST_ATTACK:
+	if attacking():
 		_draw_attack(ci)

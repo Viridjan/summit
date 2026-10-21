@@ -89,12 +89,12 @@ Fix them by playtesting in the level editor and the world editor.
 **Scale:** first matched by character height (the character's height becomes our player's 1.375 tiles), then **doubled**.
 At the matched size the originals had too many passages only 1 tile tall. `SCALE` in the converter sets the factor.
 
-| World | Source map | Matched scale (×2 applied) | Rooms / door links |
+| World | Source map | Matched scale (×2 applied) | Rooms |
 |---|---|---|---|
-| Metroid Zero Mission (Zebes) | vgmaps in-game maps, 7 areas | Samus' standing hitbox is 2 blocks (mzm decomp `sSamusHitboxData`); a map tile is one 15×10-block screen (`minimap.c`) → a screen = 10.3×6.9 tiles, ×2 | 150 / 61 |
-| Symphony of the Night (Dracula's Castle) | vgmaps in-game map | Alucard's collision box is 47 px (sotn-decomp `g_SensorsCeilingDefault` −22 to `g_SensorsFloorDefault` +25); a map square = 256 px → 7.5 tiles, ×2 | 48 / 12 |
-| Hollow Knight (Hallownest) | hallownest.net (real screenshots) + wiki "Clean map updated" + Map Genie markers | Knight ≈ 1.3 units; 50 px of the hallownest.net map (full zoom) = 1 tile (estimate), ×2 | 232 / 54 |
-| Silksong (Pharloom) | wiki "Silksong Full Map Clean" | same map drawing scale assumed as Hollow Knight, Hornet ≈ 1.6 units → 0.25 tiles/px (least certain), ×2 | 201 / 9 |
+| Metroid Zero Mission (Zebes) | vgmaps in-game maps, 7 areas | Samus' standing hitbox is 2 blocks (mzm decomp `sSamusHitboxData`); a map tile is one 15×10-block screen (`minimap.c`) → a screen = 10.3×6.9 tiles, ×2 | 134 rooms |
+| Symphony of the Night (Dracula's Castle) | vgmaps in-game map | Alucard's collision box is 47 px (sotn-decomp `g_SensorsCeilingDefault` −22 to `g_SensorsFloorDefault` +25); a map square = 256 px → 7.5 tiles, ×2 | 48 rooms |
+| Hollow Knight (Hallownest) | hallownest.net (real screenshots) + wiki "Clean map updated" + Map Genie markers | Knight ≈ 1.3 units; 50 px of the hallownest.net map (full zoom) = 1 tile (estimate), ×2 | 225 rooms |
+| Silksong (Pharloom) | wiki "Silksong Full Map Clean" | same map drawing scale assumed as Hollow Knight, Hornet ≈ 1.6 units → 0.25 tiles/px (least certain), ×2 | 197 rooms |
 
 **How rooms are made (all four worlds):**
 - **Every passage is at least 2×2:** an open tile counts as navigable only inside a fully open 2×2 square. Rock is carved until every open tile is, and 2×2 spots that touch only at a corner or through a 1-tile-high gap are joined.
@@ -138,11 +138,13 @@ Source images, the scale reasoning and rebuild instructions are in `tools/refere
 Rebuilding overwrites every room in those folders, including any edits.
 
 **Hazards never cut the map** (checked with acid and spikes treated as walls):
-- **Acid:** where an acid pool is the only way between two parts, it becomes water with a note: "Acid in the original (needs Isma's Tear)". In Hollow Knight that's 54 of 83 pools; the other 29 stay acid.
+- **Water and acid fill their basin:** every row of a pool runs wall to wall, never into rock or open air. A pool that would spill out of its room lowers its surface; one that can't be held at any level is removed (24 in Hollow Knight, mostly pools across a room boundary). Only a pool's top row draws the surface line.
+- **Acid:** where an acid pool is the only way between two parts, or covers a door, it becomes water with a note: "Acid in the original (needs Isma's Tear)". In Hollow Knight, 13 of the 27 settled pools.
+- **Unreachable rooms are deleted:** rooms you can't reach from the start (through open space and doors, acid as a wall) are removed with the doors into them: 7 in Hollow Knight, 4 in Silksong, 16 in Metroid.
 - **Spikes:** a run of 5 or more floor spikes under a ceiling too low to jump over them is removed; a dash crosses shorter runs. Generated doors never go in acid, on spikes, or next to spikes.
 
 **Entrance spawns:** every room gets a spawn marker near each entrance: an edge passage or a door. Each sits on the nearest ground with 2 tiles of headroom, away from hazards. When you enter a room, dying or **Retry** in the pause menu puts you back at the spawn nearest where you came in. Rooms with no floor, such as straight shafts, have none.
-- `tools/world_fixups.py <world_dir>` adds them (marked `"entrance": true`) and replaces old ones. It first seals side and top edge openings that face no room or the next room's rock, which used to act as invisible walls. The converter runs it after a rebuild; run it yourself after editing a world.
+- `tools/world_fixups.py <world_dir>` adds them (marked `"entrance": true`) and replaces old ones. Before that it seals side and top edge openings that face no room or the next room's rock (they acted as invisible walls), settles water and acid, unblocks acid and deletes unreachable rooms (see above). The converter runs it after a rebuild; run it yourself after editing a world.
 
 **Pits and holes:** an opening in a room's bottom edge shows red teeth when falling through kills (no room below), and cyan arrows when it leads to another room.
 

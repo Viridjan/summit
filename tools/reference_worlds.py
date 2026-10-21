@@ -1069,6 +1069,9 @@ def build(maps, out, only=None):
     for name in ("hollow_knight", "silksong", "symphony_of_the_night", "metroid_zero_mission"):
         if want(name):
             mod.seal_edges(os.path.join(out, name))
+            mod.settle_liquids(os.path.join(out, name))
+            mod.unblock_acid(os.path.join(out, name))
+            mod.drop_unreachable(os.path.join(out, name))
             mod.add_spawns(os.path.join(out, name))
 
 

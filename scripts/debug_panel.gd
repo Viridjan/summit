@@ -338,7 +338,7 @@ func _process(_dt: float) -> void:
 	for e in p.transition_log:
 		t += "%.2fs  %s -> %s\n" % [e[0], PlayerScript.STATE_NAMES[e[1]], PlayerScript.STATE_NAMES[e[2]]]
 	log_label.text = t
-	live_vals[0].text = PlayerScript.STATE_NAMES[p.state] + ("  (dead)" if p.dead else "")
+	live_vals[0].text = PlayerScript.STATE_NAMES[p.state] + ("  + Attack" if p.attacking() else "") + ("  (dead)" if p.dead else "")
 	for i in LIVE.size():
 		var prop: String = LIVE[i][1]
 		live_vals[i + 1].text = _fmt(p.ducking() if prop == "collider" else p.get(prop))
@@ -372,17 +372,20 @@ class StateGraph extends Control:
 		"Launch: thrown by a bumper; air control is reduced until speed drops.",
 		"Dream Dash: dashing through a dream block, moving straight until you exit.",
 		"Star Fly: feather flight; steer freely until the timer runs out.",
-		"Attack: a swing in the held direction (attack key). Moves like Normal; a dash or grab cancels it.",
 	]
+	# The attack is a layer on top of the state machine (drawn in its own row under it), not a state.
+	const ATTACK_HELP := "Attack (layer): a swing in the held direction (attack key). It runs on top of the current state: while running, dashing (a dash attack), climbing or flying. Not inside bubbles or dream blocks. Lit while swinging."
 
 	func _init() -> void:
 		tooltip_text = " "  # non-empty, so Godot asks _get_tooltip
 
 	func _get_tooltip(at: Vector2) -> String:
 		var n: int = PlayerScript.STATE_NAMES.size()
-		var i := clampi(int(at.y / (size.y / n)), 0, n - 1)
+		var i := clampi(int(at.y / (size.y / (n + 1))), 0, n)
 		if absf(at.x - size.x / 2.0) > HW or player == null:
 			return ""
+		if i == n:
+			return "%s\nSwings this life: %d." % [ATTACK_HELP, player.attack_log.size()]
 		var into := 0
 		var out := 0
 		for key in player.transitions:
@@ -395,7 +398,7 @@ class StateGraph extends Control:
 			return
 		var names: Array = PlayerScript.STATE_NAMES
 		var cx := size.x / 2.0
-		var row := size.y / names.size()
+		var row := size.y / (names.size() + 1)  # last row: the attack layer
 		var ys := []
 		for i in names.size():
 			ys.append(row * (i + 0.5))
@@ -432,3 +435,14 @@ class StateGraph extends Control:
 			var label: String = names[i]
 			var sz := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
 			draw_string(font, Vector2(cx - sz.x / 2, ys[i] + 4), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK if cur else Color.WHITE)
+		# attack layer: separate from the states (dashed line), lit while a swing is active
+		var ly := row * (names.size() + 0.5)
+		for x in range(int(cx - HW - 20), int(cx + HW + 20), 6):
+			draw_line(Vector2(x, ly - row * 0.5), Vector2(x + 3, ly - row * 0.5), Color(0.6, 0.6, 0.7, 0.6))
+		var on: bool = player.attacking()
+		var lbox := Rect2(cx - HW, ly - row * 0.36, HW * 2, row * 0.72)
+		draw_rect(lbox, Color("ff8a5c") if on else Color(0.2, 0.22, 0.35))
+		draw_rect(lbox, Color.WHITE if on else Color(0.6, 0.6, 0.7), false, 1.0)
+		var lt := "Attack (layer)"
+		var lsz := font.get_string_size(lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+		draw_string(font, Vector2(cx - lsz.x / 2, ly + 4), lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK if on else Color.WHITE)

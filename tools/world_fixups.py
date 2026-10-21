@@ -2,7 +2,16 @@
 # 1. seal_edges: an open tile on a room's left, right or top edge that faces no room, or rock in the next room, becomes
 #    rock (it looked like a way through but was an invisible wall or led into rock). Bottom openings over nothing stay:
 #    they are pits.
-# 2. add_spawns: a spawn marker near every entrance of every room, so dying or pressing Retry puts the
+# 2. settle_liquids: water and acid fill their basin like real water: every row of a pool spans rock to rock
+#    (never overlapping walls, never ending in mid-air). A row that would run out of the room or far past the pool
+#    lowers the surface; a pool that can't be held at any level is removed. Pools become one rectangle per run of
+#    equal rows; only a pool's top draws the surface line ("top": false on the others).
+# 3. unblock_acid: acid kills, so a pool across the only way between two parts cuts the map (in Hollow Knight those
+#    need Isma's Tear). Such pools become water with a note; smallest first, then any whose sides connect another way
+#    turn back to acid. Door links count as connections; a pool covering a door is always water.
+# 4. drop_unreachable: rooms the player can't reach from the start (through open space and doors, acid counts as
+#    a wall) are deleted, with any doors leading into them.
+# 5. add_spawns: a spawn marker near every entrance of every room, so dying or pressing Retry puts the
 #    player back at the way they came in (World.enter_room picks the spawn closest to the entry point).
 # An entrance is an open stretch of a room's edge that continues into another room, or a door.
 # The spawn is the nearest spot inside the room, by path through open tiles, where the player stands on ground with
@@ -53,6 +62,260 @@ def seal_edges(world_dir):
         with open(os.path.join(world_dir, n + ".json"), "w") as f:
             json.dump(L, f, indent="\t" if pretty else None, separators=None if pretty else (",", ":"))
     print(f"{world_dir}: {total} edge tiles sealed")
+
+
+def _load(world_dir):
+    W = json.load(open(os.path.join(world_dir, "world.json")))
+    rooms = {}
+    for n in W["rooms"]:
+        text = open(os.path.join(world_dir, n + ".json")).read()
+        rooms[n] = (json.loads(text), "\n" in text.strip())
+    return W, rooms
+
+
+def _save(world_dir, rooms):
+    for n, (L, pretty) in rooms.items():
+        with open(os.path.join(world_dir, n + ".json"), "w") as f:
+            json.dump(L, f, indent="\t" if pretty else None, separators=None if pretty else (",", ":"))
+
+
+def settle_pool(tiles, w, h, x0, y0, pw, ph, taken):
+    """Rows of a pool whose surface box is (x0, y0, pw, ph) in tiles: {y: [(xa, xb), ...]} (xb exclusive), or None."""
+    is_open = lambda x, y: 0 <= x < w and 0 <= y < h and tiles[y][x] == "0" and (x, y) not in taken
+    for level in range(y0, y0 + ph):
+        seeds = [(x, y) for y in range(level, y0 + ph) for x in range(x0, x0 + pw) if is_open(x, y)]
+        if not seeds:
+            continue
+        seen, q, leak = set(seeds), deque(seeds), False
+        while q and not leak:
+            x, y = q.popleft()
+            if x <= 0 or x >= w - 1 or x < x0 - pw - 20 or x >= x0 + 2 * pw + 20:
+                leak = True  # runs out of the room or far past the pool: not a basin at this level
+                break
+            for ax, ay in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if level <= ay < y0 + ph and is_open(ax, ay) and (ax, ay) not in seen:
+                    seen.add((ax, ay))
+                    q.append((ax, ay))
+        if leak:
+            continue
+        rows = {}
+        for y in sorted({y for _, y in seen}):
+            xs = sorted(x for x, yy in seen if yy == y)
+            runs, start = [], xs[0]
+            for a, b in zip(xs, xs[1:] + [None]):
+                if b != a + 1:
+                    runs.append((start, a + 1))
+                    start = b
+            rows[y] = runs
+        return rows
+    return None
+
+
+def settle_liquids(world_dir):
+    W, rooms = _load(world_dir)
+    kept = dropped = 0
+    for n, (L, _) in rooms.items():
+        w, h, tiles = L["w"], L["h"], L["tiles"]
+        out, taken = [], set()
+        pools = [e for e in L["entities"] if e["t"] in ("acid", "water")]
+        pools.sort(key=lambda e: e["t"] != "acid")  # acid first: where both claim a tile, it stays acid
+        for e in pools:
+            x0, y0 = int(e["x"]) // T, int(e["y"]) // T
+            pw, ph = max(1, int(e.get("w", T)) // T), max(1, int(e.get("h", T)) // T)
+            rows = settle_pool(tiles, w, h, x0, y0, pw, ph, taken)
+            if rows is None:
+                dropped += 1
+                continue
+            kept += 1
+            # merge equal runs in consecutive rows into rectangles
+            open_rects = {}
+            for y in sorted(rows):
+                nxt = {}
+                for run in rows[y]:
+                    for x in range(*run):
+                        taken.add((x, y))
+                    if run in open_rects:
+                        nxt[run] = open_rects.pop(run)
+                        nxt[run][1] = y + 1
+                    else:
+                        nxt[run] = [y, y + 1]
+                for run, (ya, yb) in open_rects.items():
+                    out.append((e, run, ya, yb))
+                open_rects = nxt
+            for run, (ya, yb) in open_rects.items():
+                out.append((e, run, ya, yb))
+        L["entities"] = [x for x in L["entities"] if x["t"] not in ("acid", "water")]
+        surface = {}
+        for src, run, ya, yb in out:
+            surface.setdefault(id(src), min(r[2] for r in out if r[0] is src))
+        for src, run, ya, yb in out:
+            d = {"t": src["t"], "x": run[0] * T, "y": ya * T, "w": (run[1] - run[0]) * T, "h": (yb - ya) * T}
+            if ya != surface[id(src)]:
+                d["top"] = False
+            L["entities"].append(d)
+    _save(world_dir, rooms)
+    print(f"{world_dir}: {kept} pools settled, {dropped} that could not be held removed")
+
+
+def _label(free, H, W):
+    """4-connected labels of the True cells of a flat list (row-major); -1 elsewhere."""
+    lab = [-1] * (H * W)
+    k = 0
+    for i in range(H * W):
+        if free[i] and lab[i] < 0:
+            lab[i] = k
+            q = [i]
+            while q:
+                j = q.pop()
+                y, x = divmod(j, W)
+                for a in ((j - 1) if x > 0 else -1, (j + 1) if x < W - 1 else -1, j - W, j + W):
+                    if 0 <= a < H * W and free[a] and lab[a] < 0:
+                        lab[a] = k
+                        q.append(a)
+            k += 1
+    return lab
+
+
+def unblock_acid(world_dir):
+    W_, rooms = _load(world_dir)
+    pos = {n: W_["rooms"][n] for n in rooms}
+    X0 = min(p[0] for p in pos.values()) - 1
+    Y0 = min(p[1] for p in pos.values()) - 1
+    W = max(pos[n][0] + rooms[n][0]["w"] for n in rooms) - X0 + 1
+    H = max(pos[n][1] + rooms[n][0]["h"] for n in rooms) - Y0 + 1
+    open_ = [False] * (W * H)
+    acid = [False] * (W * H)
+    rects = []  # (room, entity) acid rects
+    doors = {}
+    door_tiles = []
+    for n, (L, _) in rooms.items():
+        ox, oy = pos[n][0] - X0, pos[n][1] - Y0
+        for y, row in enumerate(L["tiles"]):
+            base = (oy + y) * W + ox
+            for x, c in enumerate(row):
+                if c == "0":
+                    open_[base + x] = True
+        for e in L["entities"]:
+            ex, ey = ox + int(e["x"]) // T, oy + int(e["y"]) // T
+            if e["t"] == "acid":
+                rects.append((n, e))
+                for y in range(ey, ey + int(e["h"]) // T):
+                    for x in range(ex, ex + int(e["w"]) // T):
+                        acid[y * W + x] = True
+            elif e["t"] == "door":
+                doors[n + ":" + e["id"]] = (ey * W + ex, e["to"] if ":" in e["to"] else n + ":" + e["to"])
+                door_tiles.extend((y * W + x) for y in range(ey, ey + int(e.get("h", T)) // T) for x in range(ex, ex + int(e.get("w", T)) // T))
+    if not rects:
+        return
+    lab = _label([o and not a for o, a in zip(open_, acid)], H, W)
+    plab = _label(acid, H, W)
+    parent = {}
+
+    def find(a):
+        while parent.get(a, a) != a:
+            a = parent[a]
+        return a
+    base_links = []
+    for k, (i, to) in doors.items():
+        if to in doors and lab[i] >= 0 and lab[doors[to][0]] >= 0:
+            base_links.append((lab[i], lab[doors[to][0]]))
+    sides, size = {}, {}
+    for i in range(W * H):
+        p = plab[i]
+        if p >= 0:
+            size[p] = size.get(p, 0) + 1
+            for a in (i - 1, i + 1, i - W, i + W):
+                if 0 <= a < W * H and lab[a] >= 0:
+                    sides.setdefault(p, set()).add(lab[a])
+
+    def joined(use):
+        parent.clear()
+        for a, b in base_links:
+            parent[find(a)] = find(b)
+        for q in use:
+            ls = [find(l) for l in sides.get(q, ())]
+            for l in ls:
+                parent[l] = ls[0]
+    forced = {plab[i] for i in door_tiles if plab[i] >= 0}  # arriving through a door into acid kills: water there
+    water = list(forced)
+    joined(water)
+    for p in sorted(sides, key=lambda p: size[p]):
+        if p not in forced and len({find(l) for l in sides[p]}) > 1:
+            water.append(p)
+            ls = [find(l) for l in sides[p]]
+            for l in ls:
+                parent[l] = ls[0]
+    for p in sorted(water, key=lambda p: -size[p]):  # put back acid whose sides connect another way anyway
+        if p in forced:
+            continue
+        rest = [q for q in water if q != p]
+        joined(rest)
+        if len({find(l) for l in sides[p]}) == 1:
+            water = rest
+    water = set(water)
+    noted = set()
+    for n, e in rects:
+        ox, oy = pos[n][0] - X0, pos[n][1] - Y0
+        p = plab[(oy + int(e["y"]) // T) * W + ox + int(e["x"]) // T]
+        if p in water:
+            e["t"] = "water"
+            if e.get("top", True) and p not in noted:
+                noted.add(p)
+                rooms[n][0]["entities"].append({"t": "note", "x": int(e["x"]) + int(e["w"]) // 2 // T * T, "y": int(e["y"]),
+                                               "text": "Acid in the original (needs Isma's Tear). Water here so the way on stays open."})
+    _save(world_dir, rooms)
+    print(f"{world_dir}: {len(water)} of {len(sides)} acid pools turned to water so nothing is cut off")
+
+
+def drop_unreachable(world_dir):
+    W_, rooms = _load(world_dir)
+    pos = W_["rooms"]
+    cell = {}  # global tile -> (room, open and not acid)
+    doors = {}
+    start = None
+    for n, (L, _) in rooms.items():
+        ox, oy = pos[n]
+        acid = set()
+        for e in L["entities"]:
+            ex, ey = ox + int(e["x"]) // T, oy + int(e["y"]) // T
+            if e["t"] == "acid":
+                acid.update((x, y) for y in range(ey, ey + int(e["h"]) // T) for x in range(ex, ex + int(e["w"]) // T))
+            elif e["t"] == "door":
+                doors[n + ":" + e["id"]] = ((ex, ey), e["to"] if ":" in e["to"] else n + ":" + e["to"])
+            elif e["t"] == "spawn" and n == W_["start"] and not e.get("entrance"):
+                start = (ex, ey)
+        for y, row in enumerate(L["tiles"]):
+            for x, c in enumerate(row):
+                cell[(ox + x, oy + y)] = (n, c == "0" and (ox + x, oy + y) not in acid)
+    if start is None:
+        print(f"{world_dir}: no start spawn, nothing removed")
+        return
+    jump = {at: doors[to][0] for at, to in doors.values() if to in doors}
+    seen = {start}
+    q = [start]
+    while q:
+        x, y = q.pop()
+        nb = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+        for t in ((x, y), (x, y - 1)):  # a door's top tile, reached standing on it or just below
+            if t in jump:
+                nb.append(jump[t])
+        for a in nb:
+            c = cell.get(a)
+            if c and c[1] and a not in seen:
+                seen.add(a)
+                q.append(a)
+    reached = {cell[t][0] for t in seen}
+    gone = [n for n in rooms if n not in reached]
+    for n in gone:
+        del pos[n]
+        del rooms[n]
+        os.remove(os.path.join(world_dir, n + ".json"))
+    for n, (L, _) in rooms.items():
+        L["entities"] = [e for e in L["entities"] if not (e["t"] == "door" and ":" in e["to"] and e["to"].split(":")[0] in gone)]
+    _save(world_dir, rooms)
+    with open(os.path.join(world_dir, "world.json"), "w") as f:
+        json.dump(W_, f, indent="\t")
+    print(f"{world_dir}: {len(gone)} rooms that can't be reached removed {gone}")
 
 
 def add_spawns(world_dir):
@@ -129,4 +392,7 @@ def add_spawns(world_dir):
 if __name__ == "__main__":
     for d in sys.argv[1:]:
         seal_edges(d)
+        settle_liquids(d)
+        unblock_acid(d)
+        drop_unreachable(d)
         add_spawns(d)

@@ -260,6 +260,20 @@ func check_shipped_world() -> void:
 					if not ok:
 						bad_spawns.append(rn)
 		check(n_spawns > 0 and bad_spawns.is_empty(), "%s: %d entrance spawns, all standing on ground (bad: %s)" % [wp.get_base_dir().get_file(), n_spawns, bad_spawns])
+		# water and acid (tools/world_fixups.py settle_liquids): every row open, with rock just left and right of it
+		var bad_liquid := []
+		for rn in wd.rooms:
+			var lv: Dictionary = wd.rooms[rn].level
+			for e in lv.entities:
+				if e.t in ["water", "acid"]:
+					var x0 := int(e.x) / 8
+					var x1 := x0 + int(e.w) / 8
+					for y in range(int(e.y) / 8, (int(e.y) + int(e.h)) / 8):
+						var row: String = lv.tiles[y]
+						if row.substr(x0, x1 - x0).contains("1") or x0 < 1 or x1 >= lv.w or row[x0 - 1] != "1" or row[x1] != "1":
+							bad_liquid.append(rn)
+							break
+		check(bad_liquid.is_empty(), "%s: water/acid rows run wall to wall (bad: %s)" % [wp.get_base_dir().get_file(), bad_liquid])
 	# reference worlds in res://worlds/ (a cross-room door in Zebes moves the player into the linked room)
 	var zebes := Adventure.load_world(Game.WORLDS_DIR + "metroid_zero_mission/world.json")
 	var src := ""
@@ -459,13 +473,13 @@ func check_attack() -> void:
 	check(p().hitbox().end.x == 96, "breakable wall is solid (%d)" % p().hitbox().end.x)
 	p().tap = {"attack": true}
 	step()
-	check(p().state == p().ST_ATTACK and wall.hp == 2, "attack key starts the Attack state and hits the wall once")
+	check(p().attacking() and p().state == p().ST_NORMAL and wall.hp == 2, "attack is a layer: state stays Normal while swinging, wall hit once")
 	step(5)
 	p().tap = {"attack": true}
 	step()
 	check(wall.hp == 2, "one swing hits a thing only once; attack cooldown holds a quick re-press")
 	step(int(p().ATTACK_TIME / DT))
-	check(p().state == p().ST_NORMAL, "Attack returns to Normal when the swing ends")
+	check(not p().attacking(), "the swing ends after ATTACK_TIME")
 	for i in 2:
 		step(int(p().ATTACK_COOLDOWN / DT) + 1)
 		p().tap = {"attack": true}
@@ -479,9 +493,10 @@ func check_attack() -> void:
 	p().tap = {"attack": true}
 	step()
 	check(p().attack_dir == Vector2.LEFT, "swing points where the player pushes")
-	p().tap = {"dash": true}
-	step()
-	check(p().state == p().ST_DASH, "a dash cancels the swing")
+	step(int(p().ATTACK_COOLDOWN / DT) + 1)
+	p().tap = {"attack": true, "dash": true}
+	step(3)
+	check(p().state == p().ST_DASH and p().attacking(), "dash attack: the swing goes on during a dash (state %d)" % p().state)
 	w._build()
 	check(w.ents.filter(func(e): return e.d.t == "breakwall")[0].collidable == false, "a broken wall stays broken after respawn")
 

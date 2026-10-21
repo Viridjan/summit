@@ -328,7 +328,8 @@ class Liquid extends Ent:  # water: looks only; acid: kills on touch (like spike
 	func draw(ci: CanvasItem) -> void:
 		var c: Color = TYPES[d.t][2]
 		ci.draw_rect(Rect2(rect), Color(c, 0.35))
-		ci.draw_line(Vector2(rect.position), Vector2(rect.end.x, rect.position.y), Color(c.lightened(0.4), 0.9), 1.0)
+		if d.get("top", true):  # only a pool's surface row draws the line (tools/world_fixups.py settle_liquids)
+			ci.draw_line(Vector2(rect.position), Vector2(rect.end.x, rect.position.y), Color(c.lightened(0.4), 0.9), 1.0)
 
 
 class BreakWall extends Ent:
