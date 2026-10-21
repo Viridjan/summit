@@ -32,8 +32,13 @@ class ProbeWorld extends "res://scripts/world.gd":
 	var cache := {}
 	func _save_run() -> void:
 		pass
-	func _load_near() -> void:
-		pass
+	var near_cache := {}
+	func _load_near() -> void:  # neighbour collision data as in the game, without tile layers; cached per room
+		if not near_cache.has(room):
+			super._load_near()
+			near_queue.clear()
+			near_cache[room] = near_rooms
+		near_rooms = near_cache[room]
 	func _scan_floor_gaps() -> void:
 		pass
 	func show_note(text: String) -> void:
@@ -78,6 +83,7 @@ func select_room(room: String) -> void:
 	world.data = Game.adv_world.rooms[room].level
 	world.tiles = []
 	world._build(true)
+	world._load_near()  # same neighbour setup as World.enter_room
 	world.pending_door = null
 	world.door_block = Rect2i()
 	world.done = false

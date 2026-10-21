@@ -302,7 +302,7 @@ class Door extends Ent:  # touching it moves the player to the linked door (Worl
 		ci.draw_rect(Rect2(rect), Color(c, 0.12 if w != null else 0.25))
 		ci.draw_rect(Rect2(rect), Color(c, 0.6), false, 1.0)
 		if w == null:  # editor: "id -> target"
-			var t := "%s → %s" % [d.get("id", "?"), d.get("to", "?")]
+			var t := "%s -> %s" % [d.get("id", "?"), d.get("to", "?")]
 			var f := ThemeDB.fallback_font
 			ci.draw_string(f, Vector2(rect.position) + Vector2(0, -2), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 6, c)
 

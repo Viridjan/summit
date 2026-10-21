@@ -48,7 +48,7 @@ func _adventure() -> void:
 	body.add_child(Game.label("Adventure", 44))
 	var worlds: Array = Game.world_list()
 	var wi := maxi(0, worlds.map(func(w): return w[1]).find(Game.world_path))
-	var pick := Game.button("World:  %s  ▸" % worlds[wi][0], func():
+	var pick := Game.button("World:  %s  >" % worlds[wi][0], func():
 		var nxt: Array = worlds[(wi + 1) % worlds.size()]
 		Game.world_path = nxt[1]
 		Game.settings.world = "" if nxt[1] == Game.ADVENTURE_DIR + "world.json" else nxt[1]

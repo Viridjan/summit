@@ -43,7 +43,7 @@ func _ready() -> void:
 	box.add_child(Game.label("World Editor", 24))
 	box.add_child(Game.button("+ Add empty room", func(): _add_index(0)))
 	add_menu = MenuButton.new()
-	add_menu.text = "+ Add copy of my level ▾"
+	add_menu.text = "+ Add copy of my level..."
 	add_menu.flat = false
 	add_menu.about_to_popup.connect(_fill_add_menu)
 	add_menu.get_popup().index_pressed.connect(func(i: int): _add_index(i + 1))
@@ -135,7 +135,7 @@ func _draw() -> void:
 		draw_texture_rect(thumbs[name], rect, false)
 		var edge := Color.RED if bad.has(name) else (Color.WHITE if name == selected else Color(1, 1, 1, 0.3))
 		draw_rect(rect, edge, false, 2.0 if name == selected or bad.has(name) else 1.0)
-		var label: String = ("★ " if name == world.start else "") + name
+		var label: String = ("* " if name == world.start else "") + name
 		draw_string(font, rect.position + Vector2(4, 16), label, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 8, 14, Color.WHITE)
 	for seg in cache_ways:
 		draw_line(to_screen(seg[0] / T), to_screen(seg[1] / T), Color("4ee05a"), 3.0)

@@ -45,6 +45,7 @@ var room := ""
 var room_origin := Vector2.ZERO
 var floor_gaps: Array = []  # openings in the room's bottom edge: [x0, x1 (px), leads to another room]
 var near_layers := {}  # adventure: room name -> TileLayer of a room within a screen of this one (terrain only)
+var near_rooms: Array = []  # adventure: [Rect2i in this room's tile coords, tiles] of rooms around, for collisions past the edge
 var near_queue: Array[String] = []  # neighbours still to build, one per frame (_process)
 
 var cam: Camera2D
@@ -226,6 +227,7 @@ func _go_door(door) -> void:
 		clampf(off.y, minf(11, dr.size.y), dr.size.y))
 	if target_room == room:
 		player.pos = at
+		_unstick()
 	else:
 		enter_room(target_room, at)
 	door_block = Rect2i(dr)
@@ -269,6 +271,7 @@ func enter_room(next: String, at = null) -> void:
 		tile_layer.setup(tiles, gw, gh)
 	_load_near()
 	_scan_floor_gaps()
+	_unstick()
 	cam_pos -= room_origin - old_origin  # keep the view where it was, then ease into the new room
 	if map_view != null:
 		_toggle_map()
@@ -280,6 +283,12 @@ func _load_near() -> void:
 		return
 	var rooms: Dictionary = Game.adv_world.rooms
 	var area := Adventure.room_rect(rooms[room]).grow_individual(int(VIEW.x), int(VIEW.y), int(VIEW.x), int(VIEW.y))
+	near_rooms = []
+	var here: Vector2i = rooms[room].pos
+	for n in rooms:
+		if n != room and Adventure.room_rect(rooms[n]).intersects(area.grow(T * 4)):
+			var lv: Dictionary = rooms[n].level
+			near_rooms.append([Rect2i(rooms[n].pos - here, Vector2i(lv.w, lv.h)), lv.tiles])
 	for n in near_layers.keys():
 		if not Adventure.room_rect(rooms[n]).intersects(area):
 			near_layers[n].queue_free()
@@ -360,18 +369,43 @@ func _save_run() -> void:
 
 # ---------------- collision queries (used by player + entities) ----------------
 func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
-	var x0 := maxi(floori(r.position.x / float(T)), 0)
-	var x1 := mini(floori((r.end.x - 1) / float(T)), gw - 1)
-	var y0 := maxi(floori(r.position.y / float(T)), 0)
-	var y1 := mini(floori((r.end.y - 1) / float(T)), gh - 1)
+	var x0 := floori(r.position.x / float(T))
+	var x1 := floori((r.end.x - 1) / float(T))
+	var y0 := floori(r.position.y / float(T))
+	var y1 := floori((r.end.y - 1) / float(T))
 	for y in range(y0, y1 + 1):
 		for x in range(x0, x1 + 1):
-			if grid[y * gw + x] == 1:
+			if x >= 0 and y >= 0 and x < gw and y < gh:
+				if grid[y * gw + x] == 1:
+					return "tile"
+			elif _near_solid(x, y):  # past this room's edge: the next room's rock blocks too
 				return "tile"
 	for s in solids:
 		if s.collidable and s != ignore and not (skip_dream and s.dream) and s.rect.intersects(r):
 			return s
 	return null
+
+# Tile (x, y) in this room's coordinates, outside it: rock in a neighbouring room? No room there = open.
+func _near_solid(x: int, y: int) -> bool:
+	for nr in near_rooms:
+		var rr: Rect2i = nr[0]
+		if rr.has_point(Vector2i(x, y)):
+			return (nr[1][y - rr.position.y] as String).unicode_at(x - rr.position.x) == 49
+	return false
+
+# After a room change or door arrival: if the body overlaps rock, move it to the nearest free spot (16px at most)
+# whose centre is inside a room. Back across the edge is allowed: an object the player couldn't see from there
+# (a breakable wall) then simply blocks the way.
+func _unstick() -> void:
+	if collide_solid(player.hitbox()) == null:
+		return
+	for d in range(1, 17):
+		for off in [Vector2(0, -d), Vector2(-d, 0), Vector2(d, 0), Vector2(0, d), Vector2(-d, -d), Vector2(d, -d), Vector2(-d, d), Vector2(d, d)]:
+			var r: Rect2i = player.rect_at(player.pos + off)
+			var c := Vector2(r.get_center())
+			if (Rect2(bounds).has_point(c) or can_exit(c)) and collide_solid(r) == null:  # stay inside some room
+				player.pos += off
+				return
 
 func collide_jumpthru_outside(r_at: Rect2i, r_now: Rect2i):
 	for j in jumpthrus:

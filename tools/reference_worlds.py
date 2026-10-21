@@ -1061,13 +1061,14 @@ def build(maps, out, only=None):
         build_sotn(maps, out)
     if want("metroid_zero_mission"):
         build_mzm(maps, out)
-    # a spawn near every room entrance (dying or Retry puts the player back where they came in)
+    # seal edge openings that lead nowhere, then a spawn near every room entrance (dying or Retry returns you there)
     import importlib.util
-    spec = importlib.util.spec_from_file_location("entrance_spawns", os.path.join(os.path.dirname(os.path.abspath(__file__)), "entrance_spawns.py"))
+    spec = importlib.util.spec_from_file_location("world_fixups", os.path.join(os.path.dirname(os.path.abspath(__file__)), "world_fixups.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     for name in ("hollow_knight", "silksong", "symphony_of_the_night", "metroid_zero_mission"):
         if want(name):
+            mod.seal_edges(os.path.join(out, name))
             mod.add_spawns(os.path.join(out, name))
 
 

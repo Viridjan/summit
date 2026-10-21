@@ -182,7 +182,7 @@ func _build_tunables(list: VBoxContainer) -> void:
 			continue
 		var head := Button.new()
 		var open: bool = Game.settings.tuning_open_groups.has(g)  # collapsed unless opened before
-		head.text = ("▾ " if open else "▸ ") + g
+		head.text = ("- " if open else "+ ") + g
 		head.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		head.focus_mode = Control.FOCUS_NONE
 		list.add_child(head)
@@ -192,7 +192,7 @@ func _build_tunables(list: VBoxContainer) -> void:
 		list.add_child(grid)
 		head.pressed.connect(func():
 			grid.visible = not grid.visible
-			head.text = ("▾ " if grid.visible else "▸ ") + g
+			head.text = ("- " if grid.visible else "+ ") + g
 			if filter.text == "":  # remember only the user's own choice, not filter auto-expansion
 				var groups: Array = Game.settings.tuning_open_groups
 				groups.erase(g)
@@ -247,7 +247,7 @@ func _apply_filter() -> void:
 					c.visible = show
 		if s[3] != "":  # filtering opens groups with matches; clearing it restores the saved state
 			grid.visible = any if f != "" else Game.settings.tuning_open_groups.has(s[3])
-			s[0].text = ("▾ " if grid.visible else "▸ ") + s[3]
+			s[0].text = ("- " if grid.visible else "+ ") + s[3]
 
 # ---------------- tuning ----------------
 func _on_value(v: float, n: String) -> void:
@@ -336,7 +336,7 @@ func _process(_dt: float) -> void:
 	graph.queue_redraw()
 	var t := ""
 	for e in p.transition_log:
-		t += "%.2fs  %s → %s\n" % [e[0], PlayerScript.STATE_NAMES[e[1]], PlayerScript.STATE_NAMES[e[2]]]
+		t += "%.2fs  %s -> %s\n" % [e[0], PlayerScript.STATE_NAMES[e[1]], PlayerScript.STATE_NAMES[e[2]]]
 	log_label.text = t
 	live_vals[0].text = PlayerScript.STATE_NAMES[p.state] + ("  (dead)" if p.dead else "")
 	for i in LIVE.size():

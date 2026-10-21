@@ -142,7 +142,7 @@ Rebuilding overwrites every room in those folders, including any edits.
 - **Spikes:** a run of 5 or more floor spikes under a ceiling too low to jump over them is removed; a dash crosses shorter runs. Generated doors never go in acid, on spikes, or next to spikes.
 
 **Entrance spawns:** every room gets a spawn marker near each entrance: an edge passage or a door. Each sits on the nearest ground with 2 tiles of headroom, away from hazards. When you enter a room, dying or **Retry** in the pause menu puts you back at the spawn nearest where you came in. Rooms with no floor, such as straight shafts, have none.
-- `tools/entrance_spawns.py <world_dir>` adds them (marked `"entrance": true`) and replaces old ones. The converter runs it after a rebuild; run it yourself after editing a world.
+- `tools/world_fixups.py <world_dir>` adds them (marked `"entrance": true`) and replaces old ones. It first seals side and top edge openings that face no room or the next room's rock, which used to act as invisible walls. The converter runs it after a rebuild; run it yourself after editing a world.
 
 **Pits and holes:** an opening in a room's bottom edge shows red teeth when falling through kills (no room below), and cyan arrows when it leads to another room.
 

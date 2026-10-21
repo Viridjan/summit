@@ -244,7 +244,7 @@ func check_shipped_world() -> void:
 			if e.t == "note":
 				check(str(e.get("text", "")) != "", "note in %s has text" % n)
 	check(counts.get("ability_dash", 0) == 1 and counts.get("ability_climb", 0) == 1 and counts.get("goal", 0) == 1, "shipped world has one dash orb, one climb orb, one goal")
-	# entrance spawns (tools/entrance_spawns.py): on ground with 2 tiles of headroom, in every world
+	# entrance spawns (tools/world_fixups.py): on ground with 2 tiles of headroom, in every world
 	for wp in [Game.ADVENTURE_DIR + "world.json"] + Game.world_list().slice(1).map(func(x): return x[1]):
 		var wd := Adventure.load_world(wp)
 		var bad_spawns := []
@@ -418,6 +418,36 @@ func check_floor_gaps() -> void:
 	add_child(w)
 	w.set_physics_process(false)
 	check(w.floor_gaps == [[40, 56, false]], "bottom-edge opening is marked as a pit (%s)" % [w.floor_gaps])
+
+func check_room_seams() -> void:
+	# two rooms stacked: room a's floor is open at x 2..3 (above rock in b) and at x 6..7 (above open space in b)
+	const Adventure := preload("res://scripts/adventure.gd")
+	var la := Game.new_level("a", 10, 6)
+	var lb := Game.new_level("b", 10, 6)
+	la.tiles = ["1111111111", "1000000001", "1000000001", "1000000001", "1000000001", "1100110011"]
+	lb.tiles = ["1111110011", "1000000001", "1000000001", "1000000001", "1111111111", "1111111111"]
+	la.entities = [{"t": "spawn", "x": 8, "y": 32}]
+	lb.entities = []
+	var world := {"start": "a", "abilities": [], "rooms": {"a": {"pos": Vector2i(0, 0), "level": la}, "b": {"pos": Vector2i(0, 6), "level": lb}}}
+	Game.adv_world = world
+	Game.adv = Adventure.new_run(world)
+	Game.adv_temp = true
+	Game.level = la
+	if w:
+		w.queue_free()
+	w = load("res://scripts/world.gd").new()
+	add_child(w)
+	w.set_physics_process(false)
+	w.player = Bot.new(w, w.spawn)
+	p().pos = Vector2(24, 40)  # above the hole whose floor below is the next room's rock
+	step(30)
+	check(w.room == "a" and w.collide_solid(p().hitbox()) == null and not p().dead, "the next room's rock blocks at the edge: no falling into it (room %s, at %s)" % [w.room, p().pos])
+	p().pos = Vector2(56, 40)  # above the hole that opens into b
+	step(40)
+	check(w.room == "b" and w.collide_solid(p().hitbox()) == null, "an open seam still leads into the next room (room %s)" % w.room)
+	w.queue_free()
+	w = null
+	Game.adv = {}
 
 func check_attack() -> void:
 	# wall 2 tiles right of the spawn (player at x 80): three swings break it, it stays broken after a death
@@ -935,6 +965,7 @@ func _ready() -> void:
 	check_doors()
 	check_placeholders()
 	check_floor_gaps()
+	check_room_seams()
 	check_attack()
 	check_dirs()
 	check_adventure()

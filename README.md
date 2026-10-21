@@ -6,6 +6,12 @@ Player physics are a GDScript port of Celeste's `Player.cs`
 (MIT, Maddy Makes Games — https://github.com/NoelFB/Celeste).
 Art: Paper Pixels (blue) by VEXED, CC0 — see `assets/paper-pixels/LICENSE.txt`.
 
+## Play in the browser
+https://viridjan.github.io/summit/ — built and published by `.github/workflows/pages.yml` on every push to `main`
+(Godot web export, preset "Web" in `export_presets.cfg`). Click the game once so it gets keyboard focus.
+In the browser, saves, options and your own levels are kept by the browser; the world editor and
+"Add to Adventure" can't write the shipped files there, so do that work in the desktop version.
+
 ## Run
     sudo pacman -S godot
     godot --path . --import   # first time only: imports the sprite sheets

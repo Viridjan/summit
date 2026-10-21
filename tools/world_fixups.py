@@ -1,15 +1,58 @@
-# Adds a spawn marker near every entrance of every room of an adventure world, so dying or pressing Retry puts the
-# player back at the way they came in (World.enter_room picks the spawn closest to the entry point).
+# Fix-ups for an adventure world, run after building or editing it:
+# 1. seal_edges: an open tile on a room's left, right or top edge that faces no room, or rock in the next room, becomes
+#    rock (it looked like a way through but was an invisible wall or led into rock). Bottom openings over nothing stay:
+#    they are pits.
+# 2. add_spawns: a spawn marker near every entrance of every room, so dying or pressing Retry puts the
+#    player back at the way they came in (World.enter_room picks the spawn closest to the entry point).
 # An entrance is an open stretch of a room's edge that continues into another room, or a door.
 # The spawn is the nearest spot inside the room, by path through open tiles, where the player stands on ground with
 # 2 tiles of headroom, away from hazards. Generated markers carry "entrance": true and are replaced on every run.
-# Usage: python3 tools/entrance_spawns.py <world_dir> [<world_dir> ...]
+# Usage: python3 tools/world_fixups.py <world_dir> [<world_dir> ...]
 import json, os, sys
 from collections import deque
 
 T = 8
 HAZARD = ("acid", "water", "spikes_up", "spikes_down", "spikes_left", "spikes_right")
 SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru")
+
+
+def seal_edges(world_dir):
+    W = json.load(open(os.path.join(world_dir, "world.json")))
+    rooms = {}
+    for n in W["rooms"]:
+        text = open(os.path.join(world_dir, n + ".json")).read()
+        rooms[n] = (json.loads(text), "\n" in text.strip())
+    cell = {}
+    for n, (x, y) in W["rooms"].items():
+        for ty, row in enumerate(rooms[n][0]["tiles"]):
+            for tx, c in enumerate(row):
+                cell[(x + tx, y + ty)] = c
+    total = 0
+    for _ in range(4):  # sealing can expose the tile behind it; repeat until stable
+        changed = 0
+        for n, (x, y) in W["rooms"].items():
+            L = rooms[n][0]
+            w, h, tiles = L["w"], L["h"], L["tiles"]
+            seal = set()
+            for side, pts, (ox, oy) in (("l", [(0, i) for i in range(h)], (-1, 0)), ("r", [(w - 1, i) for i in range(h)], (1, 0)),
+                                        ("t", [(i, 0) for i in range(w)], (0, -1))):
+                for tx, ty in pts:
+                    if tiles[ty][tx] != "0":
+                        continue
+                    o = cell.get((x + tx + ox, y + ty + oy))
+                    if o == "1" or (o is None and side != "t"):  # the top may face nothing: you can jump a bit above it
+                        seal.add((tx, ty))
+            for tx, ty in seal:
+                tiles[ty] = tiles[ty][:tx] + "1" + tiles[ty][tx + 1:]
+                cell[(x + tx, y + ty)] = "1"
+            changed += len(seal)
+        total += changed
+        if not changed:
+            break
+    for n, (L, pretty) in rooms.items():
+        with open(os.path.join(world_dir, n + ".json"), "w") as f:
+            json.dump(L, f, indent="\t" if pretty else None, separators=None if pretty else (",", ":"))
+    print(f"{world_dir}: {total} edge tiles sealed")
 
 
 def add_spawns(world_dir):
@@ -85,4 +128,5 @@ def add_spawns(world_dir):
 
 if __name__ == "__main__":
     for d in sys.argv[1:]:
+        seal_edges(d)
         add_spawns(d)

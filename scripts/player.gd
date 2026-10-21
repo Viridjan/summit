@@ -642,7 +642,8 @@ func _enforce_bounds() -> void:
 	elif r.end.x > b.end.x and not w.can_exit(Vector2(r.end.x, c.y)):
 		pos.x -= r.end.x - b.end.x
 		_on_bounds_h()
-	if r.position.y < b.position.y - 24 and not w.can_exit(Vector2(c.x, r.position.y)):
+	# up past the 24px allowance only where another room touches this one's top edge directly
+	if r.position.y < b.position.y - 24 and not w.can_exit(Vector2(c.x, b.position.y - 1)):
 		pos.y += b.position.y - 24 - r.position.y
 		speed.y = 0
 	elif r.position.y > b.end.y and not w.can_exit(Vector2(c.x, r.position.y)):

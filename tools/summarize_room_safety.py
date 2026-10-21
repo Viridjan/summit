@@ -31,13 +31,13 @@ def main():
     bounds = [g for g in groups if g['kind'] != 'embedded_arrival']
     causes = Counter(f['reason'] for f in openings['findings'])
     lines = ['# Hallownest room-transition and boundary safety', '',
-             f"World: `{runtime['world']}` — {runtime['room_count']} rooms. Game data and gameplay code were not changed.", '',
+             f"World: `{runtime['world']}` — {runtime['room_count']} rooms. This report only reads the game; it changes nothing.", '',
              '## Results', '',
              f"- **{len(seam)} directed room-edge connections** produced collision-overlapping arrivals ({sum(g['occurrences'] for g in seam):,} failing probes).",
              f"- **{len(door)} door connection** produced collision-overlapping arrivals ({sum(g['occurrences'] for g in door):,} failing probes).",
              f"- **{len(bounds)} upward boundary locations** allowed the player past the normal 24px ceiling allowance with the centre outside every room.",
              f"- **{len(openings['findings'])} bad left/right opening spans in {len({f['source'] for f in openings['findings']})} rooms:** {causes['no_adjacent_room']} face no neighbouring room; {causes['neighbour_wall']} face a neighbour's solid terrain.", '',
-             'The five representative 60 Hz replays below reproduce failures using actual player updates, dash input, collision callbacks, entity touches, room changes, and dash freeze timing. They start from seeded collision-free local positions, not from a demonstrated route from the world spawn. All five remained embedded through tick 89 while the scripted direction was held. This confirms local failures without claiming every seed is reachable in normal progression or that no recovery input could ever work.', '',
+             'The 60 Hz replays below run the original failure cases with actual player updates, dash input, collision callbacks, entity touches, room changes, and dash freeze timing. They start from seeded local positions, not from a demonstrated route from the world spawn. A seed that is inside rock before moving is out of date (its spot changed), not a failure.', '',
              '## Reproduced examples', '',
              '| Source and action | Start feet position, local px | Result |', '|---|---|---|']
     for case in replay['replays']:
@@ -46,11 +46,16 @@ def main():
         overlap = next((t for t in trace if t['embedded']), None)
         escaped = next((t for t in trace if t['outside_allowance']), None)
         result = f"Embedded in `{overlap['room']}` at {overlap['position']} on tick {overlap['tick']}" if overlap else 'No overlap reproduced'
+        if overlap and overlap['tick'] == 0 and list(overlap['position']) == list(source['at']):
+            result = 'Seed out of date: the start spot is rock now (opening sealed), nothing to replay'
         if escaped:
             result += f"; outside room union beyond ceiling allowance on tick {escaped['tick']}"
         lines.append(f"| `{source['room']}` — {source['label']} | {source['at']} | {result} |")
     lines += ['', 'Tick numbers are zero-based, at 60 Hz. Start coordinates refer to the player’s feet, not the top-left of the sprite.', '',
-              '## Why these fail', '',
+              '## What failed before, and the fix', '',
+              '- Fixed: collisions past a room edge now test the next room\'s tiles (`World._near_solid`), so its rock blocks before the room changes. After a room change or door arrival `World._unstick` moves the body out of any overlap. You can rise above a room\'s top only where another room touches it directly. Side and top openings facing no room or rock are sealed by `tools/world_fixups.py`.',
+              '',
+              'The original findings:', '',
               '- Edge movement collides only against the current room. The room changes after the player centre crosses the boundary; terrain in the destination can already overlap the body. `Adventure.room_at` can also return a solid-room fallback. Entry does not reject or resolve the collision.',
               '- Door arrivals clamp the player to the target doorway rectangle but do not validate that the hitbox is free of terrain. The reproduced `r023:d8 → r039:d9` case places the player at `(156,24)` inside terrain.',
               '- Ceiling bounds consult a point at the top of the hitbox, while room changes use the centre. Across a gap between room rectangles, that point can already be in another room while the centre is still in unassigned space. In the three replayed cases this lasts one frame and is followed by embedding in the upper room.',
