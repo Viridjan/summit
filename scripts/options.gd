@@ -1,13 +1,15 @@
 extends ColorRect
 # Options screen: video, assist mode and key remapping. Used by the main menu and the pause menu.
+# With pad_page set it is the controller button page instead (opened from "Controller Buttons").
 
 signal closed
 
 var waiting_for := ""  # action being rebound
 var key_buttons := {}
+var pad_page := false
 
 func _ready() -> void:
-	color = Color(0.05, 0.05, 0.12, 0.95)
+	color = Color(0.05, 0.05, 0.12, 1.0 if pad_page else 0.95)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = Game.theme
 	var scroll := ScrollContainer.new()
@@ -23,6 +25,9 @@ func _ready() -> void:
 	box.add_theme_constant_override("separation", 6)
 	center.add_child(box)
 
+	if pad_page:
+		_build_pad(box)
+		return
 	box.add_child(Game.label("Options", 44))
 	box.add_child(Game.label("Video", 22))
 	var first := _toggle(box, "Fullscreen", "fullscreen")
@@ -34,6 +39,7 @@ func _ready() -> void:
 	_toggle(box, "Infinite Stamina", "infinite_stamina")
 	_choice(box, "Air Dashes", "air_dashes", ["Default", "Two", "Infinite"], [0, 1, 2])
 	_toggle(box, "Invincibility", "invincible")
+	_toggle(box, "Show Hitboxes", "hitboxes")
 
 	box.add_child(Game.label("Controls (keyboard)", 22))
 	for a in Game.ACTION_NAMES:
@@ -48,6 +54,36 @@ func _ready() -> void:
 		key_buttons[a] = b
 		box.add_child(row)
 	box.add_child(Game.button("Reset Controls", _reset_keys))
+	var pad_btn := Game.button("Controller Buttons", func(): pass)
+	pad_btn.pressed.connect(_open_pad.bind(pad_btn))
+	box.add_child(pad_btn)
+	box.add_child(Game.button("Back", _close))
+	first.grab_focus()
+
+func _open_pad(from: Button) -> void:
+	var o: Control = (get_script() as GDScript).new()
+	o.pad_page = true
+	add_child(o)
+	o.closed.connect(from.grab_focus)
+
+func _build_pad(box: VBoxContainer) -> void:
+	box.add_child(Game.label("Controller Buttons", 44))
+	box.add_child(Game.label("Pick an action, then press a button or trigger. The left stick always moves.", 16))
+	var first: Button = null
+	for a in Game.ACTION_NAMES:
+		var row := HBoxContainer.new()
+		var l := Label.new()
+		l.text = a.capitalize()
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(l)
+		var b := Game.button(Game.pad_name(a), _rebind.bind(a))
+		b.custom_minimum_size = Vector2(240, 0)
+		row.add_child(b)
+		key_buttons[a] = b
+		box.add_child(row)
+		if first == null:
+			first = b
+	box.add_child(Game.button("Reset Buttons", _reset_keys))
 	box.add_child(Game.button("Back", _close))
 	first.grab_focus()
 
@@ -87,22 +123,44 @@ func _apply(key: String, v) -> void:
 
 func _rebind(action: String) -> void:
 	waiting_for = action
-	key_buttons[action].text = "Press a key..."
+	key_buttons[action].text = "Press a button..." if pad_page else "Press a key..."
 
 func _input(event: InputEvent) -> void:
-	if waiting_for == "" or not (event is InputEventKey) or not event.pressed:
+	if waiting_for == "":
+		return
+	var code := -2
+	if pad_page:
+		if event is InputEventJoypadButton and event.pressed:
+			code = event.button_index
+		elif event is InputEventJoypadMotion and event.axis in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT] and event.axis_value > 0.6:
+			code = Game.PAD_AXIS + event.axis
+		elif event is InputEventKey and event.pressed:  # any key cancels
+			get_viewport().set_input_as_handled()
+			key_buttons[waiting_for].text = Game.pad_name(waiting_for)
+			waiting_for = ""
+			return
+	elif event is InputEventKey and event.pressed:
+		code = event.physical_keycode
+	if code == -2:
 		return
 	get_viewport().set_input_as_handled()
-	Game.settings.keys[waiting_for] = event.physical_keycode
-	key_buttons[waiting_for].text = Game.key_name(waiting_for)
+	if pad_page:
+		Game.settings.pad[waiting_for] = code
+		key_buttons[waiting_for].text = Game.pad_name(waiting_for)
+	else:
+		Game.settings.keys[waiting_for] = code
+		key_buttons[waiting_for].text = Game.key_name(waiting_for)
 	waiting_for = ""
 	Game.apply_settings()
 	Game.save_settings()
 
 func _reset_keys() -> void:
-	Game.settings.keys = Game.DEFAULT_KEYS.duplicate()
+	if pad_page:
+		Game.settings.pad = Game.DEFAULT_PAD.duplicate()
+	else:
+		Game.settings.keys = Game.DEFAULT_KEYS.duplicate()
 	for a in key_buttons:
-		key_buttons[a].text = Game.key_name(a)
+		key_buttons[a].text = Game.pad_name(a) if pad_page else Game.key_name(a)
 	Game.apply_settings()
 	Game.save_settings()
 

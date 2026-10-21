@@ -19,7 +19,7 @@ In the browser, saves, options and your own levels are kept by the browser; the 
     godot -e --path .         # open in editor
 
 ## Controls (remappable in Options)
-Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning. Gamepad supported.
+Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning. Gamepad: A jump · R1 dash · X attack · R2 grab · B back in menus (remap in Options → Controller Buttons).
 
 ## Moves
 Run, variable jump, coyote time, input buffering, wall jump, wall slide, climb + stamina,
@@ -56,7 +56,7 @@ F1 opens the debug panel: the player's state machine (live state, transitions se
 and every movement variable as an editable value. Edits apply immediately and survive respawns and playtests.
 Save them as a named preset in `user://tuning/` (the last saved/loaded preset is active at startup);
 "Export to project" writes `res://config/tuning.cfg`, the project-wide defaults (only when run from source).
-"Pause sim" and "Step" advance the game one tick at a time.
+"Pause sim" and "Step" advance the game one tick at a time. "Hitboxes" (also Options → Show Hitboxes) outlines the player (green), the sword swing (red) and objects (yellow/orange).
 
 ## Adding objects
 See `docs/ADDING_ENTITIES.md`.

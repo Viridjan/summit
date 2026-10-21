@@ -4,6 +4,7 @@ extends RefCounted
 
 const T := 8
 const Art := preload("res://scripts/art.gd")
+const EnemyArt := preload("res://scripts/enemy_art.gd")
 
 # The entity registry: the one place a type is declared.
 # type id (saved in level JSON) -> [editor label, sized (drag a rect in the editor), palette color, class]
@@ -38,6 +39,11 @@ const TYPES := {
 	"door": ["Door", true, Color("40e0ff"), Door],
 	# placeholders from reference maps: "text" names the thing (e.g. "Crawlid", "grub jar")
 	"enemy": ["Enemy (placeholder)", true, Color("e04848"), Placeholder],
+	"enemy_ripper": ["Ripper · patrol", false, Color("e6a76c"), RipperEnemy],
+	"enemy_skree": ["Skree · ceiling dive", false, Color("e8bd78"), SkreeEnemy],
+	"enemy_bat": ["Bat · swoop", false, Color("9872af"), BatEnemy],
+	"enemy_skeleton": ["Skeleton · bone throw", false, Color("d8d8bd"), SkeletonEnemy],
+	"enemy_medusa": ["Medusa · wave flight", false, Color("83b7a0"), MedusaEnemy],
 	"breakable": ["Breakable (placeholder)", true, Color("e09a40"), Placeholder],
 	# breakable wall: solid until struck "hp" times (default 3) by the attack; stays broken for the run
 	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
@@ -318,6 +324,264 @@ class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, ha
 		ci.draw_rect(Rect2(rect), c, false, 1.0)
 		if w == null and str(d.get("text", "")) != "":
 			ci.draw_string(ThemeDB.fallback_font, Vector2(rect.position) + Vector2(0, -2), str(d.text), HORIZONTAL_ALIGNMENT_LEFT, -1, 6, c)
+
+
+# Small, deterministic enemies: hit() integrates with the existing melee sector.
+class CombatEnemy extends Ent:
+	var hp := 1
+	var facing := -1
+	var clock := 0.0
+	var flash := 0.0
+	var home := Vector2.ZERO
+	var phase := "idle"
+	var timer := 0.0
+
+	func setup() -> void:
+		rect.size = Vector2i(8, 12)
+		facing = -1 if int(d.get("facing", -1)) < 0 else 1
+		home = Vector2(rect.position)
+
+	func active(dt: float) -> bool:
+		clock += dt
+		flash = maxf(0, flash - dt)
+		return collidable and w != null and w.player != null and not w.player.dead and center().distance_to(w.player.center()) < 320
+
+	func blocked(at: Rect2i) -> bool:
+		return w != null and (not w.bounds.encloses(at) or w.collide_solid(at) != null)
+
+	func move_enemy(delta: Vector2) -> bool:
+		rem += delta
+		var amount := Vector2i(roundi(rem.x), roundi(rem.y))
+		rem -= Vector2(amount)
+		var hit := false
+		for axis in 2:
+			var count: int = amount.x if axis == 0 else amount.y
+			var step := Vector2i(signi(count), 0) if axis == 0 else Vector2i(0, signi(count))
+			for i in absi(count):
+				var next := Rect2i(rect.position + step, rect.size)
+				if blocked(next):
+					hit = true
+					if axis == 0: rem.x = 0
+					else: rem.y = 0
+					break
+				rect = next
+				contact()
+		return hit
+
+	func contact() -> void:
+		if w != null and w.player != null and not w.player.dead and rect.intersects(w.player.hurt_rect()):
+			touch(w.player)
+
+	func sees_player(distance: float) -> bool:
+		if w == null or w.player == null or w.player.dead:
+			return false
+		var target: Vector2 = w.player.center()
+		var start := center()
+		if start.distance_to(target) > distance:
+			return false
+		var steps := maxi(1, ceili(start.distance_to(target) / 4))
+		for i in range(1, steps):
+			var spot := start.lerp(target, float(i) / steps)
+			if w.collide_solid(Rect2i(Vector2i(spot), Vector2i.ONE)) != null:
+				return false
+		return true
+
+	func hit(_p) -> void:
+		if not collidable or flash > 0:
+			return
+		hp -= 1
+		flash = 0.12
+		if hp <= 0:
+			collidable = false
+			if w != null:
+				w.burst(center(), EnemyArt.COLORS["y"], 6)
+
+	func touch(p) -> void:
+		if collidable:
+			p.die((p.center() - center()).normalized())
+
+	func draw(ci: CanvasItem) -> void:
+		if not collidable:
+			return
+		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0)
+		if phase == "windup":
+			ci.draw_rect(Rect2(center().x - 1, rect.position.y - 4, 2, 2), Color("f8d89b"))
+
+
+class RipperEnemy extends CombatEnemy:
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(12, 8)
+		hp = 2
+	func update(dt: float) -> void:
+		if not active(dt): return
+		var reach := clampf(float(d.get("patrol", 64)), 16, 160)
+		if absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing:
+			facing *= -1
+		if move_enemy(Vector2(facing * 24 * dt, 0)):
+			facing *= -1
+
+
+class SkreeEnemy extends CombatEnemy:
+	var vertical_speed := 0.0
+	func update(dt: float) -> void:
+		if not active(dt): return
+		match phase:
+			"idle":
+				var offset: Vector2 = w.player.center() - center()
+				if offset.y > 6 and absf(offset.x) < 28 and sees_player(112):
+					phase = "windup"
+					timer = 0.35
+			"windup":
+				timer -= dt
+				if timer <= 0:
+					phase = "dive"
+					vertical_speed = 50
+			"dive":
+				vertical_speed = minf(180, vertical_speed + 360 * dt)
+				if move_enemy(Vector2(0, vertical_speed * dt)):
+					phase = "rest"
+					timer = 0.8
+			"rest":
+				timer -= dt
+				if timer <= 0: phase = "return"
+			"return":
+				if rect.position.y <= home.y:
+					rect.position.y = int(home.y)
+					rem.y = 0
+					phase = "idle"
+				else:
+					move_enemy(Vector2(0, -36 * dt))
+
+
+class BatEnemy extends CombatEnemy:
+	var velocity := Vector2.ZERO
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(10, 8)
+	func update(dt: float) -> void:
+		if not active(dt): return
+		if phase == "idle":
+			if sees_player(96):
+				phase = "windup"
+				timer = 0.4
+		elif phase == "windup":
+			timer -= dt
+			if timer <= 0:
+				velocity = (w.player.center() - center()).normalized() * 65
+				phase = "swoop"
+				timer = 0.9
+		elif phase == "swoop":
+			facing = -1 if velocity.x < 0 else 1
+			timer -= dt
+			if move_enemy(velocity * dt) or timer <= 0:
+				phase = "return"
+		elif phase == "return":
+			var delta := home - Vector2(rect.position)
+			if delta.length() < 2:
+				phase = "idle"
+			elif move_enemy(delta.normalized() * 30 * dt):
+				# A blocked direct return perches at the new location instead of phasing through rock.
+				home = Vector2(rect.position)
+				phase = "idle"
+
+
+class MedusaEnemy extends CombatEnemy:
+	var wave := 0.0
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(10, 10)
+		hp = 2
+	func update(dt: float) -> void:
+		if not active(dt): return
+		wave += dt * 3.0
+		var y := home.y + sin(wave) * 8
+		var reach := clampf(float(d.get("patrol", 56)), 16, 160)
+		if absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing:
+			facing *= -1
+		if move_enemy(Vector2(facing * 28 * dt, y - rect.position.y)):
+			facing *= -1
+
+
+class SkeletonEnemy extends CombatEnemy:
+	var gravity_speed := 0.0
+	var bones: Array = []  # owned projectiles: [position, velocity, remaining seconds]
+	func setup() -> void:
+		super.setup()
+		hp = 3
+		timer = 1.0
+	func safe_step() -> bool:
+		var foot := Rect2i(rect.position.x + facing * 2, rect.end.y, rect.size.x, 2)
+		if w.collide_solid(foot) == null:
+			return false
+		for entity in w.touchables:
+			if entity.collidable and (entity.d.t == "acid" or entity.d.t.begins_with("spikes_")) and entity.rect.intersects(Rect2i(rect.position + Vector2i(facing * 2, 0), rect.size).grow(2)):
+				return false
+		return true
+	func update(dt: float) -> void:
+		if not active(dt): return
+		update_bones(dt)
+		gravity_speed = minf(140, gravity_speed + 400 * dt)
+		if move_enemy(Vector2(0, gravity_speed * dt)): gravity_speed = 0
+		var offset: Vector2 = w.player.center() - center()
+		if phase == "windup":
+			timer -= dt
+			if timer <= 0:
+				bones.append([center() + Vector2(facing * 5, -2), Vector2(facing * 60, -65), 2.0])
+				phase = "idle"
+				timer = 1.7
+			return
+		timer -= dt
+		if absf(offset.y) < 40 and sees_player(104):
+			facing = -1 if offset.x < 0 else 1
+			if timer <= 0 and bones.size() < 3:
+				phase = "windup"
+				timer = 0.45
+			return
+		var reach := clampf(float(d.get("patrol", 40)), 8, 96)
+		if not safe_step() or (absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing):
+			facing *= -1
+		elif move_enemy(Vector2(facing * 14 * dt, 0)):
+			facing *= -1
+	func hit(p) -> void:
+		super.hit(p)
+		if not collidable: bones.clear()
+	func update_bones(dt: float) -> void:
+		for i in range(bones.size() - 1, -1, -1):
+			var bone: Array = bones[i]
+			bone[2] -= dt
+			bone[1].y += 150 * dt
+			var delta: Vector2 = bone[1] * dt
+			var count := maxi(1, ceili(delta.length()))
+			var remove: bool = bone[2] <= 0
+			for j in count:
+				bone[0] += delta / count
+				var box := Rect2i(Vector2i(bone[0]) - Vector2i.ONE, Vector2i(3, 3))
+				if blocked(box):
+					remove = true
+					break
+				var p = w.player
+				var to_bone: Vector2 = bone[0] - p.center()
+				if p.attacking() and to_bone.length() <= p.ATTACK_RANGE and absf(p.attack_dir.angle_to(to_bone)) <= deg_to_rad(p.ATTACK_ARC) / 2:
+					remove = true
+					break
+				if box.intersects(p.hurt_rect()):
+					p.die(Vector2(facing, 0))
+					remove = true
+					break
+			if remove: bones.remove_at(i)
+	func vis_rect() -> Rect2i:
+		var area := rect.grow(8)
+		for bone in bones:
+			area = area.merge(Rect2i(Vector2i(bone[0]) - Vector2i(3, 3), Vector2i(6, 6)))
+		return area
+	func draw(ci: CanvasItem) -> void:
+		super.draw(ci)
+		for bone in bones:
+			var at: Vector2 = bone[0].round()
+			ci.draw_rect(Rect2(at - Vector2(2, 0), Vector2(4, 1)), Color("d8d8bd"))
+			ci.draw_rect(Rect2(at - Vector2(2, 1), Vector2(1, 3)), Color("d8d8bd"))
+			ci.draw_rect(Rect2(at + Vector2(1, -1), Vector2(1, 3)), Color("d8d8bd"))
 
 
 class Liquid extends Ent:  # water: looks only; acid: kills on touch (like spikes)

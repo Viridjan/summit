@@ -110,7 +110,7 @@ var STAR_FLY_EXIT_UP := -100.0
 var INPUT_BUFFER := 0.08
 var ATTACK_TIME := 0.143  # 140% speed of the first 0.2s swing
 var ATTACK_COOLDOWN := 0.25
-var ATTACK_RANGE := 14.0
+var ATTACK_RANGE := 15.4  # 110% of the first 14 px
 var ATTACK_ARC := 120.0
 # Directions a move can go: 0 off, 1 horizontal, -1 vertical, 2 both (4-way), 3 + diagonals (8-way), 4 free aim (analog stick)
 var DASH_DIRS := 3

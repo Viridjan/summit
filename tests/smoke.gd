@@ -42,6 +42,16 @@ func _ready() -> void:
 		await _frames(25)
 		await _shot_player("char_" + pose[0], world)
 	world.player = real_player
+	Game.settings.hitboxes = true
+	var keep_pos: Vector2 = world.player.pos
+	world.player.pos = Vector2(330, 150)  # floating below the objects, in view
+	world.player.attack_timer = world.player.ATTACK_TIME
+	world.queue_redraw()
+	await _frames(1)
+	await _shot("hitboxes")
+	Game.settings.hitboxes = false
+	world.player.attack_timer = 0
+	world.player.pos = keep_pos
 	world.player.transitions[Vector2i(0, 2)] = 3  # draw-only bookkeeping: exercise edge drawing
 	world.player.transitions[Vector2i(2, 0)] = 3
 	world.player.transitions[Vector2i(0, 1)] = 1
@@ -77,6 +87,27 @@ func _ready() -> void:
 	world._open_options()
 	await _frames(5)
 	await _shot("options")
+	var saved_pad: Dictionary = Game.settings.pad.duplicate()
+	var back_to := Button.new()
+	world.overlay.add_child(back_to)
+	world.overlay._open_pad(back_to)
+	await _frames(5)
+	await _shot("options_pad")
+	var pad = world.overlay.get_child(world.overlay.get_child_count() - 1)
+	pad._rebind("jump")
+	var trig := InputEventJoypadMotion.new()
+	trig.axis = JOY_AXIS_TRIGGER_LEFT
+	trig.axis_value = 1.0
+	pad._input(trig)
+	if Game.settings.pad.jump != Game.PAD_AXIS + JOY_AXIS_TRIGGER_LEFT or pad.key_buttons.jump.text != "LT / L2":
+		push_error("controller page did not rebind jump to L2")
+	pad._reset_keys()
+	if Game.settings.pad != Game.DEFAULT_PAD:
+		push_error("controller page reset failed")
+	Game.settings.pad = saved_pad
+	Game.apply_settings()
+	Game.save_settings()
+	pad._close()
 	world._show_complete()
 	await _frames(5)
 	Game.goto("editor")

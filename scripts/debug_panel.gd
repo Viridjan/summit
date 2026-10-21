@@ -129,6 +129,16 @@ func _ready() -> void:
 	pause_box.toggled.connect(func(on: bool): sim_paused = on)
 	row.add_child(pause_box)
 	row.add_child(_button("Step", func(): step_frames += 1))
+	var hb := Button.new()
+	hb.toggle_mode = true
+	hb.text = "Hitboxes"
+	hb.tooltip_text = "Outline collision boxes: player (green), sword swing (red), objects (yellow), hazard/touch areas (orange)"
+	hb.focus_mode = Control.FOCUS_NONE
+	hb.button_pressed = Game.settings.hitboxes
+	hb.toggled.connect(func(on: bool):
+		Game.settings.hitboxes = on
+		Game.save_settings())
+	row.add_child(hb)
 	status = _label("", Color(0.6, 1, 0.6))
 	rbox.add_child(status)
 	filter = LineEdit.new()

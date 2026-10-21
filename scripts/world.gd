@@ -573,6 +573,28 @@ func _draw() -> void:
 	player.draw(self)
 	for pt in parts:
 		draw_rect(Rect2(pt[0].floor(), Vector2.ONE), Color(pt[3], clampf(pt[2] * 3, 0, 1)))
+	if Game.settings.hitboxes:
+		_draw_hitboxes(cull)
+
+# Debug overlay (Options / F1 "Hitboxes"): the rects collision and touches actually use.
+func _draw_hitboxes(cull: Rect2i) -> void:
+	for e in ents:
+		if not e.vis_rect().intersects(cull):
+			continue
+		if e.collidable:
+			draw_rect(Rect2(e.rect), Color(1, 0.9, 0.2, 0.8), false, 1.0)
+		var t: Rect2i = e.touch_rect()
+		if t != e.rect or not e.collidable:
+			draw_rect(Rect2(t), Color(1, 0.5, 0.1, 0.8), false, 1.0)
+	draw_rect(Rect2(player.hitbox()), Color(0.2, 1, 0.3, 0.9), false, 1.0)
+	if player.attacking():
+		var c: Vector2 = player.center()
+		var half := deg_to_rad(player.ATTACK_ARC) / 2.0
+		var pts := PackedVector2Array([c])
+		for i in 13:
+			pts.append(c + Vector2.from_angle(player.attack_dir.angle() - half + 2.0 * half * i / 12.0) * player.ATTACK_RANGE)
+		pts.append(c)
+		draw_polyline(pts, Color(1, 0.2, 0.2, 0.9), 1.0)
 
 # ---------------- menus ----------------
 func _clear_overlay() -> void:

@@ -18,21 +18,33 @@ const DEFAULT_KEYS := {
 	"map": KEY_M, "debug": KEY_F1, "attack": KEY_A,
 }
 const ALT_KEYS := {"jump": KEY_SPACE, "dash": KEY_SHIFT, "grab": KEY_V}
-const PAD_BUTTONS := {
-	"left": [JOY_BUTTON_DPAD_LEFT], "right": [JOY_BUTTON_DPAD_RIGHT],
-	"up": [JOY_BUTTON_DPAD_UP], "down": [JOY_BUTTON_DPAD_DOWN],
-	"jump": [JOY_BUTTON_A], "attack": [JOY_BUTTON_Y], "dash": [JOY_BUTTON_X, JOY_BUTTON_B],
-	"grab": [JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_RIGHT_SHOULDER], "pause": [JOY_BUTTON_START],
-	"map": [JOY_BUTTON_BACK], "debug": [],
+# Gamepad: one button per action (JOY_BUTTON_*), PAD_AXIS + axis for a trigger, -1 = none.
+const PAD_AXIS := 100
+const DEFAULT_PAD := {
+	"left": JOY_BUTTON_DPAD_LEFT, "right": JOY_BUTTON_DPAD_RIGHT,
+	"up": JOY_BUTTON_DPAD_UP, "down": JOY_BUTTON_DPAD_DOWN,
+	"jump": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "dash": JOY_BUTTON_RIGHT_SHOULDER,
+	"grab": PAD_AXIS + JOY_AXIS_TRIGGER_RIGHT, "pause": JOY_BUTTON_START,
+	"map": JOY_BUTTON_BACK, "debug": -1,
+}
+const PAD_NAMES := {
+	JOY_BUTTON_A: "A / Cross", JOY_BUTTON_B: "B / Circle", JOY_BUTTON_X: "X / Square", JOY_BUTTON_Y: "Y / Triangle",
+	JOY_BUTTON_LEFT_SHOULDER: "LB / L1", JOY_BUTTON_RIGHT_SHOULDER: "RB / R1",
+	PAD_AXIS + JOY_AXIS_TRIGGER_LEFT: "LT / L2", PAD_AXIS + JOY_AXIS_TRIGGER_RIGHT: "RT / R2",
+	JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3", JOY_BUTTON_BACK: "Back / Select",
+	JOY_BUTTON_START: "Start", JOY_BUTTON_GUIDE: "Home",
+	JOY_BUTTON_DPAD_UP: "D-pad Up", JOY_BUTTON_DPAD_DOWN: "D-pad Down",
+	JOY_BUTTON_DPAD_LEFT: "D-pad Left", JOY_BUTTON_DPAD_RIGHT: "D-pad Right", -1: "-",
 }
 const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "pause", "map", "debug"]
 
 var main: Node
 var theme: Theme
 var settings := {
-	"fullscreen": false, "vsync": true, "shake": true,
+	"fullscreen": false, "vsync": true, "shake": true, "hitboxes": false,
 	"game_speed": 1.0, "infinite_stamina": false, "air_dashes": 0, "invincible": false,
 	"keys": DEFAULT_KEYS.duplicate(),
+	"pad": DEFAULT_PAD.duplicate(),
 	"tuning_preset": "",  # active movement preset in user://tuning/ ("" = project defaults)
 	"tuning_open_groups": [],  # debug panel variable groups left open (all collapsed by default)
 	"world": "",  # adventure world picked in the menu ("" = the main one in ADVENTURE_DIR)
@@ -83,6 +95,8 @@ func _load_settings() -> void:
 	for a in DEFAULT_KEYS:  # keep any new actions added after the file was saved
 		if not settings.keys.has(a):
 			settings.keys[a] = DEFAULT_KEYS[a]
+		if not settings.pad.has(a):
+			settings.pad[a] = DEFAULT_PAD[a]
 
 func save_settings() -> void:
 	var cf := ConfigFile.new()
@@ -110,19 +124,21 @@ func _apply_input() -> void:
 			var k2 := InputEventKey.new()
 			k2.physical_keycode = ALT_KEYS[a]
 			InputMap.action_add_event(a, k2)
-		for b in PAD_BUTTONS[a]:
+		var pb: int = settings.pad[a]
+		if pb >= PAD_AXIS:
+			var t := InputEventJoypadMotion.new()
+			t.axis = pb - PAD_AXIS
+			t.axis_value = 1.0
+			InputMap.action_add_event(a, t)
+		elif pb >= 0:
 			var jb := InputEventJoypadButton.new()
-			jb.button_index = b
+			jb.button_index = pb
 			InputMap.action_add_event(a, jb)
 	for pair in [["left", JOY_AXIS_LEFT_X, -1.0], ["right", JOY_AXIS_LEFT_X, 1.0], ["up", JOY_AXIS_LEFT_Y, -1.0], ["down", JOY_AXIS_LEFT_Y, 1.0]]:
 		var m := InputEventJoypadMotion.new()
 		m.axis = pair[1]
 		m.axis_value = pair[2]
 		InputMap.action_add_event(pair[0], m)
-	var trig := InputEventJoypadMotion.new()
-	trig.axis = JOY_AXIS_TRIGGER_RIGHT
-	trig.axis_value = 1.0
-	InputMap.action_add_event("grab", trig)
 	# Menus: jump key confirms, dash key goes back (like Celeste), on top of Enter/Esc.
 	for m in [["ui_accept", "jump", [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE], JOY_BUTTON_A], ["ui_cancel", "dash", [KEY_ESCAPE], JOY_BUTTON_B]]:
 		InputMap.action_erase_events(m[0])
@@ -136,6 +152,9 @@ func _apply_input() -> void:
 
 func key_name(action: String) -> String:
 	return OS.get_keycode_string(settings.keys[action])
+
+func pad_name(action: String) -> String:
+	return PAD_NAMES.get(settings.pad[action], "Button %d" % settings.pad[action])
 
 # ---------- levels ----------
 static func new_level(level_name := "untitled", w := 40, h := 23) -> Dictionary:
