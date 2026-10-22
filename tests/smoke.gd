@@ -29,7 +29,7 @@ func _ready() -> void:
 		d.entities.append({"t": t, "x": x, "y": 120, "w": 16, "h": 16, "tx": x, "ty": 60})
 		x += 24
 	# Put every new combat behaviour on screen as well as in the generic registry row.
-	for enemy in [["enemy_ripper", 56, 160], ["enemy_skree", 168, 72], ["enemy_bat", 200, 96], ["enemy_skeleton", 264, 180], ["enemy_medusa", 320, 120]]:
+	for enemy in [["enemy_thornmite", 56, 160], ["enemy_skree", 168, 72], ["enemy_bat", 200, 96], ["enemy_skeleton", 264, 180], ["enemy_hornback", 120, 180], ["enemy_fuzzbob", 320, 120]]:
 		for suffix in ["", "_swift", "_armored"]:
 			d.entities.append({"t": enemy[0] + suffix, "x": enemy[1], "y": enemy[2]})
 	# Connected surfaces: wide, tall and shallow pieces, including the 5px one-way rail.
@@ -191,6 +191,35 @@ func _ready() -> void:
 	await _shot("world_editor")
 	DirAccess.remove_absolute(Game.save_path)
 	Game.save_path = Game.SAVE_PATH
+	# Real HK rooms: all themed renderers, neighbour caches and room swaps.
+	var hk := Game.Adventure.load_world("res://worlds/hollow_knight/world.json")
+	var examples := {}
+	for room_name in hk.rooms:
+		var environment: String = hk.rooms[room_name].level.get("environment", "")
+		if not examples.has(environment): examples[environment] = room_name
+	Game.settings.invincible = true
+	Game.playtest_adventure(hk, hk.start)
+	await _frames(8)
+	var themed_world = get_child(get_child_count()-1)
+	for environment in examples:
+		var room_name: String = examples[environment]
+		var at := Vector2(16,16)
+		for entity in hk.rooms[room_name].level.entities:
+			if entity.t == "spawn":
+				at = Vector2(entity.x+4,entity.y+8)
+				break
+		themed_world.enter_room(room_name, at)
+		await _frames(3)
+		if themed_world.tile_layer.chunks[0].environment != environment:
+			_fail("HK room terrain did not switch to " + environment)
+		for neighbour in themed_world.near_layers:
+			var expected: String = hk.rooms[neighbour].level.get("environment", "")
+			if themed_world.near_layers[neighbour].chunks[0].environment != expected:
+				_fail("neighbour terrain lost its own environment")
+		await _shot("environment_"+environment)
+	Game.settings.invincible = previous_invincible
+	Game.adv = {}
+	Game.adv_world = {}
 	print("SMOKE OK" if failures == 0 else "SMOKE FAILED: %d" % failures)
 	get_tree().quit(failures)
 

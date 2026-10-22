@@ -142,7 +142,7 @@ func _monsters() -> void:
 	_clear()
 	body.add_child(Game.label("Monsters", 44))
 	var b := Bestiary.new()
-	b.custom_minimum_size = Vector2(860, 500)
+	b.custom_minimum_size = Vector2(860, 505)
 	body.add_child(b)
 	var back := Game.button("Back", _main)
 	body.add_child(back)

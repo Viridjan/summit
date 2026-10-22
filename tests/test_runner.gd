@@ -147,6 +147,30 @@ func check_tile_layer() -> void:
 	check(invalidated, "only marked chunks record draw commands again")
 	layer.free()
 
+func check_environment_themes() -> void:
+	var world := Game.Adventure.load_world("res://worlds/hollow_knight/world.json")
+	var counts := {}
+	var allowed := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building"]
+	var valid := true
+	for room_data in world.rooms.values():
+		var environment: String = room_data.level.get("environment", "")
+		valid = valid and environment in allowed
+		counts[environment] = int(counts.get(environment, 0)) + 1
+	check(valid, "every HK room has a supported environment")
+	check(counts.size() == 7 and not counts.has(""), "HK rooms include all seven environment themes")
+	var sample := Game.new_level("theme validation", 8, 8)
+	sample.environment = "../../invalid"
+	check(Game.validate_level(sample).is_empty(), "level validation rejects unknown environment paths")
+	sample.environment = "building"
+	check(Game.validate_level(sample).get("environment") == "building", "level validation preserves rural environment")
+	var layer = load("res://scripts/tile_layer.gd").new()
+	layer.setup(Game.new_level("themed chunks", 70, 70).tiles, 70, 70, "sea")
+	check(layer.chunks[0].environment == "sea", "terrain chunks preserve their own room theme")
+	check(Vector2i(0,0) in layer.mark_cell_dirty(Vector2i(32,32)), "themed corner edits invalidate diagonal caps")
+	layer.setup(Game.new_level("rural chunks", 70, 70).tiles, 70, 70, "building")
+	check(layer.chunks[0].environment == "building", "room changes replace the cached chunk theme")
+	layer.free()
+
 func check_character_animation() -> void:
 	var art = load("res://scripts/character_art.gd")
 	var atlas: Image = art.build_atlas()
@@ -543,7 +567,7 @@ func check_enemy_facing_alignment() -> void:
 	art._texture = recording
 	# Literal centres from each enemy's real spawn collision dimensions at (100,90).
 	var fixtures := []
-	for base in [["enemy_ripper", Vector2(106, 94)], ["enemy_skree", Vector2(104, 96)], ["enemy_bat", Vector2(105, 94)], ["enemy_skeleton", Vector2(104, 96)], ["enemy_medusa", Vector2(105, 95)]]:
+	for base in [["enemy_thornmite", Vector2(104, 94)], ["enemy_skree", Vector2(104, 96)], ["enemy_bat", Vector2(105, 94)], ["enemy_skeleton", Vector2(104, 96)], ["enemy_hornback", Vector2(106, 95)], ["enemy_fuzzbob", Vector2(105, 95)]]:
 		for suffix in ["", "_swift", "_armored"]:
 			fixtures.append([base[0] + suffix, base[1]])
 	for fixture in fixtures:
@@ -569,59 +593,96 @@ func check_enemy_facing_alignment() -> void:
 func check_combat_enemies() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
-	check(atlas.get_size() == Vector2i(64, 240), "fifteen enemy variants share a four-frame pixel atlas")
-	for row in 15:
+	check(atlas.get_size() == Vector2i(64, 288), "eighteen enemy variants share a four-frame pixel atlas")
+	for row in 18:
 		check(atlas.get_region(Rect2i(0, row * 16, 16, 16)).get_used_rect().has_area(), "enemy sprite row %d contains visible artwork" % row)
 	Game.settings.invincible = true
-	make_world([{"t": "enemy_ripper", "x": 160, "y": 112, "facing": 1}], [[26, 14], [26, 15]])
-	var enemy = w.ents.filter(func(e): return e.d.t == "enemy_ripper")[0]
-	for i in 125: enemy.update(DT)
-	check(enemy.facing == -1 and enemy.rect.end.x <= 208 and not enemy.blocked(enemy.rect), "Ripper reverses at terrain without tunnelling")
+	# Thornmite crawls up, over and down a block on the floor without entering it
+	make_world([{"t": "enemy_thornmite", "x": 200, "y": 216, "facing": 1}], [[30, 26], [31, 26], [30, 27], [31, 27]])
+	var enemy = w.ents.filter(func(e): return e.d.t == "enemy_thornmite")[0]
+	p().pos = Vector2(80, 216)
+	var topped := false
+	var inside := false
+	for i in 600:
+		enemy.update(DT)
+		topped = topped or enemy.rect.position.y <= 200
+		inside = inside or enemy.blocked(enemy.rect)
+	check(topped and enemy.rect.position.x >= 256 and enemy.rect.position.y == 216 and not inside, "Thornmite crawls over a block and back down to the floor (at %s)" % enemy.rect.position)
+	make_world([{"t": "enemy_thornmite", "x": 200, "y": 100}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_thornmite")[0]
+	for i in 200: enemy.update(DT)
+	check(enemy.rect.position.y == 216, "Thornmite placed in the air drops to the floor and clings to it (y %d)" % enemy.rect.position.y)
+
+	# Hornback spots the player at its height, warns, then charges and stops at a wall
+	make_world([{"t": "enemy_hornback", "x": 160, "y": 214, "facing": 1}], [[30, 26], [30, 27]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_hornback")[0]
+	p().pos = Vector2(232, 224)
+	enemy.update(DT)
+	check(enemy.phase == "windup", "Hornback warns before charging a player at its height")
+	var start_x: int = enemy.rect.position.x
+	for i in 20: enemy.update(DT)
+	check(enemy.phase == "windup" and enemy.rect.position.x == start_x, "Hornback holds still during its warning")
+	for i in 20: enemy.update(DT)
+	check(enemy.phase == "charge" and enemy.rect.position.x > start_x, "then it charges")
+	p().pos = Vector2(400, 100)
+	for i in 120: enemy.update(DT)
+	check(enemy.rect.end.x <= 240 and enemy.phase != "charge" and not enemy.blocked(enemy.rect), "Hornback's charge stops at a wall without tunnelling")
+	make_world([{"t": "enemy_hornback", "x": 164, "y": 150, "facing": 1}], [[20, 20], [21, 20], [22, 20]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_hornback")[0]
+	p().pos = Vector2(280, 160)
+	var charged := false
+	for i in 300:
+		enemy.update(DT)
+		charged = charged or enemy.phase == "charge"
+	check(charged, "Hornback charges a player across the gap")
+	check(enemy.rect.position.y == 150, "Hornback's charge stops at a ledge instead of running off it")
+
+	# Fuzzbob drifts diagonally and bounces off walls and floors
+	make_world([{"t": "enemy_fuzzbob", "x": 170, "y": 100, "facing": 1}], [[24, 8], [24, 9], [24, 10], [24, 11], [24, 12], [24, 13], [24, 14], [24, 15], [24, 16]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_fuzzbob")[0]
+	var flipped_x := false
+	var flipped_y := false
+	var stuck := false
+	for i in 600:
+		var v: Vector2 = enemy.velocity
+		enemy.update(DT)
+		flipped_x = flipped_x or signf(enemy.velocity.x) != signf(v.x)
+		flipped_y = flipped_y or signf(enemy.velocity.y) != signf(v.y)
+		stuck = stuck or enemy.blocked(enemy.rect)
+	check(flipped_x and flipped_y and not stuck, "Fuzzbob bounces off walls and floors without entering rock")
 
 	make_world([{"t": "enemy_skree", "x": 160, "y": 64}])
 	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skree")[0]
 	p().pos = Vector2(164, 148)
 	enemy.update(DT)
-	check(enemy.phase == "windup", "Skree notices a player below and telegraphs the dive")
+	check(enemy.phase == "windup", "Dropwing notices a player below and telegraphs the dive")
 	for i in 10: enemy.update(DT)
-	check(enemy.rect.position.y == 64, "Skree stays on the ceiling during its warning")
+	check(enemy.rect.position.y == 64, "Dropwing stays on the ceiling during its warning")
 	p().pos = Vector2(80, 216)
 	for i in 500: enemy.update(DT)
-	check(enemy.phase == "idle" and enemy.rect.position.y == 64, "Skree lands, rests, and returns to its ceiling perch")
+	check(enemy.phase == "idle" and enemy.rect.position.y == 64, "Dropwing lands, rests, and returns to its ceiling perch")
 
 	make_world([{"t": "enemy_bat", "x": 136, "y": 112}], [[20, 14], [20, 15], [20, 16]])
 	enemy = w.ents.filter(func(e): return e.d.t == "enemy_bat")[0]
 	p().pos = Vector2(184, 128)
 	for i in 90: enemy.update(DT)
-	check(enemy.phase == "idle", "Bat cannot acquire a target through solid terrain")
+	check(enemy.phase == "idle", "Duskflit cannot acquire a target through solid terrain")
 	make_world([{"t": "enemy_bat", "x": 136, "y": 80}])
 	enemy = w.ents.filter(func(e): return e.d.t == "enemy_bat")[0]
 	p().pos = Vector2(160, 140)
 	enemy.update(DT)
-	check(enemy.phase == "windup", "Bat warns before swooping at a visible target")
+	check(enemy.phase == "windup", "Duskflit warns before swooping at a visible target")
 	for i in 26: enemy.update(DT)
 	var locked: Vector2 = enemy.velocity
 	p().pos = Vector2(80, 216)
 	enemy.update(DT)
-	check(enemy.phase == "swoop" and enemy.velocity == locked and not enemy.blocked(enemy.rect), "Bat commits to its swoop instead of homing unfairly")
-
-	make_world([{"t": "enemy_medusa", "x": 160, "y": 96, "facing": 1, "patrol": 40}])
-	enemy = w.ents.filter(func(e): return e.d.t == "enemy_medusa")[0]
-	var min_y := 1000
-	var max_y := -1000
-	var escaped := false
-	for i in 360:
-		enemy.update(DT)
-		min_y = mini(min_y, enemy.rect.position.y)
-		max_y = maxi(max_y, enemy.rect.position.y)
-		escaped = escaped or enemy.blocked(enemy.rect)
-	check(min_y <= 89 and max_y >= 103 and not escaped, "Medusa follows a bounded sine-wave flight without crossing rock or room bounds")
+	check(enemy.phase == "swoop" and enemy.velocity == locked and not enemy.blocked(enemy.rect), "Duskflit commits to its swoop instead of homing unfairly")
 
 	make_world([{"t": "enemy_skeleton", "x": 180, "y": 204}])
 	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skeleton")[0]
 	p().pos = Vector2(80, 216)
 	for i in 100: enemy.update(DT)
-	check(not enemy.bones.is_empty() and enemy.phase == "idle", "Skeleton winds up, then throws a timed ballistic bone toward the player")
+	check(not enemy.bones.is_empty() and enemy.phase == "idle", "Ossling winds up, then throws a timed ballistic bone toward the player")
 	enemy.bones = [[p().center() + Vector2(10, 0), Vector2.ZERO, 1.0]]
 	p().attack_timer = 0.1
 	p().attack_dir = Vector2.RIGHT
@@ -630,15 +691,15 @@ func check_combat_enemies() -> void:
 	p().attack_timer = 0
 	enemy.bones = [[Vector2(10, 80), Vector2(-180, 0), 1.0]]
 	for i in 10: enemy.update_bones(DT)
-	check(enemy.bones.is_empty(), "Skeleton projectiles are removed at room bounds")
+	check(enemy.bones.is_empty(), "Ossling projectiles are removed at room bounds")
 	make_world([{"t": "enemy_skeleton", "x": 180, "y": 204}], [[25, 18], [25, 19]])
 	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skeleton")[0]
 	enemy.bones = [[Vector2(195, 150), Vector2(180, 0), 1.0]]
 	for i in 5: enemy.update_bones(DT)
 	check(enemy.bones.is_empty(), "Bones collide with intervening terrain instead of passing through it")
 
-	make_world([{"t": "enemy_ripper", "x": 92, "y": 204}])
-	enemy = w.ents.filter(func(e): return e.d.t == "enemy_ripper")[0]
+	make_world([{"t": "enemy_thornmite", "x": 92, "y": 216}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_thornmite")[0]
 	p().pos = Vector2(80, 216)
 	p().attack_dir = Vector2.RIGHT
 	p()._attack_hits()
@@ -647,7 +708,7 @@ func check_combat_enemies() -> void:
 	enemy.flash = 0
 	p().attack_hit.clear()
 	p()._attack_hits()
-	check(not enemy.collidable, "A second melee swing defeats the two-hit patroller")
+	check(not enemy.collidable, "A second melee swing defeats the two-hit crawler")
 	Game.settings.invincible = false
 	enemy.touch(p())
 	check(not p().dead, "Defeated enemies no longer deal contact damage")
@@ -660,19 +721,19 @@ func check_combat_enemies() -> void:
 	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skeleton")[0]
 	p().pos = Vector2(400, 216)
 	for i in 240: enemy.update(DT)
-	check(enemy.rect.position.y == 148 and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Skeleton patrol turns at ledges rather than walking into a pit")
+	check(enemy.rect.position.y == 148 and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Ossling patrol turns at ledges rather than walking into a pit")
 
 func check_enemy_variants() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
-	for rows in [[0, 5, 6], [1, 7, 8], [2, 9, 10], [3, 11, 12], [4, 13, 14]]:
+	for rows in [[0, 6, 7], [1, 8, 9], [2, 10, 11], [3, 12, 13], [4, 14, 15], [5, 16, 17]]:
 		var original_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[0] * 16, 16, 16)).get_data()
 		var swift_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[1] * 16, 16, 16)).get_data()
 		var armored_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[2] * 16, 16, 16)).get_data()
 		check(original_pixels != swift_pixels and swift_pixels != armored_pixels and original_pixels != armored_pixels, "enemy family at row %d has three visually distinct variants" % rows[0])
 	Game.settings.invincible = true
 	make_world([])
-	for base in ["ripper", "skree", "bat", "skeleton", "medusa"]:
+	for base in ["thornmite", "skree", "bat", "skeleton", "hornback", "fuzzbob"]:
 		var original_id: String = "enemy_" + base
 		var swift_id: String = original_id + "_swift"
 		var armored_id: String = original_id + "_armored"
@@ -684,27 +745,24 @@ func check_enemy_variants() -> void:
 		var armored = E.make(w, {"t": armored_id, "x": 160, "y": 112, "facing": 1})
 		check(swift.hp <= original.hp and armored.hp > original.hp, "%s variants offer lighter and tougher enemies" % base)
 		check(swift.rect == original.rect and armored.rect == original.rect, "%s variants preserve the aligned collision size" % base)
-		if base == "ripper":
+		if base == "thornmite":
+			for e in [original, swift, armored]:
+				e.rect.position = Vector2i(160, 216)
+			p().pos = Vector2(80, 216)
 			for i in 30:
 				original.update(DT); swift.update(DT); armored.update(DT)
-			check(swift.rect.position.x > original.rect.position.x and armored.rect.position.x < original.rect.position.x, "Swift patroller moves faster; Armored cruises slower")
-			p().pos = Vector2(220, 120)
-			armored.timer = 0
-			armored.update(DT)
-			check(armored.phase == "windup", "Armored Ripper warns before charging a nearby player")
-			for i in 32: armored.update(DT)
-			check(armored.phase == "charge", "Armored Ripper commits to its telegraphed charge")
+			check(swift.rect.position.x > original.rect.position.x and armored.rect.position.x < original.rect.position.x, "Swift crawler moves faster; Armored crawls slower")
 		elif base == "skeleton":
 			armored.rect.position = Vector2i(180, 204)
 			p().pos = Vector2(80, 216)
 			armored.phase = "windup"
 			armored.timer = DT / 2
 			armored.update(DT)
-			check(armored.bones.size() == 2, "Armored Skeleton throws a two-arc volley")
+			check(armored.bones.size() == 2, "Armored Ossling throws a two-arc volley")
 			armored.timer = DT / 2
 			armored.phase = "windup"
 			armored.update(DT)
-			check(armored.bones.size() <= 3, "Armored Skeleton respects the three-projectile cap")
+			check(armored.bones.size() <= 3, "Armored Ossling respects the three-projectile cap")
 	Game.settings.invincible = false
 
 func check_hk_combat_placements() -> void:
@@ -735,7 +793,7 @@ func check_hk_combat_placements() -> void:
 				if enemy.blocked(enemy.rect):
 					failures.append(room_name + ": enemy entered terrain/bounds")
 					break
-	check(count.size() == 15 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the fifteen combat variants (%s)" % count)
+	check(count.size() == 18 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the eighteen combat variants (%s)" % count)
 	check(failures.is_empty(), "HK enemy placements stay clear of entrances, terrain, and room bounds (%s)" % [failures])
 	Game.settings.invincible = false
 
@@ -781,23 +839,23 @@ func check_bugfixes() -> void:
 	w.after_player_move()
 	check(p().dead and p().pos.distance_to(Vector2(204, 220)) < 1, "a dead player isn't moved by a door (at %s)" % p().pos)
 
-	# Skree returning home under a ceiling gives up instead of pushing forever
+	# Dropwing returning home under a ceiling gives up instead of pushing forever
 	make_world([{"t": "enemy_skree", "x": 200, "y": 100}], [[25, 11], [26, 11]])
 	var sk = w.ents.filter(func(e): return e.d.t == "enemy_skree")[0]
 	sk.home.y = 40
 	sk.phase = "return"
 	step(30)
-	check(sk.phase != "return", "Skree blocked on its way home stops returning (phase %s)" % sk.phase)
+	check(sk.phase != "return", "Dropwing blocked on its way home stops returning (phase %s)" % sk.phase)
 
 	# level validation rejects wrong types for enemy fields
 	for bad in [{"facing": [1]}, {"patrol": {}}, {"top": "false"}]:
 		var lv := Game.new_level("v", 10, 5)
-		var e := {"t": "enemy_ripper", "x": 8, "y": 8}
+		var e := {"t": "enemy_skree", "x": 8, "y": 8}
 		e.merge(bad)
 		lv.entities = [e]
 		check(Game.validate_level(lv).is_empty(), "level with %s is rejected" % [bad])
 	var ok := Game.new_level("v", 10, 5)
-	ok.entities = [{"t": "enemy_ripper", "x": 8, "y": 8, "facing": 1, "patrol": 40}, {"t": "acid", "x": 8, "y": 16, "top": false}]
+	ok.entities = [{"t": "enemy_skree", "x": 8, "y": 8, "facing": 1, "patrol": 40}, {"t": "acid", "x": 8, "y": 16, "top": false}]
 	check(not Game.validate_level(ok).is_empty(), "valid facing/patrol/top still load")
 
 	# a partial or hand-edited adventure save is filled from a fresh run instead of crashing
@@ -887,8 +945,12 @@ func check_bugfixes() -> void:
 func check_bestiary() -> void:
 	var b = load("res://scripts/bestiary.gd").new()
 	add_child(b)
-	check(b.rows.size() >= 5 and b.rows[0] == "enemy_ripper" and not b.rows.has("enemy"), "monsters page lists each enemy kind once (%s)" % [b.rows])
-	check(b.hp.get("enemy_ripper", 0) == 2, "monsters page shows enemy HP")
+	check(b.rows.size() == 6 and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy kind once (%s)" % [b.rows])
+	check(b.hp.get("enemy_thornmite", 0) == 2, "monsters page shows enemy HP")
+	var borrowed := ["Ripper", "Medusa", "Skree", "Bat ", "Skeleton", "Puffling"]
+	for t in E.TYPES:
+		if t.begins_with("enemy_"):
+			check(not borrowed.any(func(n): return (E.TYPES[t][0] + " ").contains(n)), "%s has an original name (%s)" % [t, E.TYPES[t][0]])
 	b.queue_free()
 	make_world([])
 	var mv = load("res://scripts/map_view.gd").new(w)
@@ -1014,6 +1076,7 @@ func _ready() -> void:
 	Game.settings.invincible = false
 	Game.settings.shake = false
 
+	check_environment_themes()
 	check_character_animation()
 	check_connected_block_art()
 	await check_enemy_facing_alignment()

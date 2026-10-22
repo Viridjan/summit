@@ -2,6 +2,8 @@ extends RefCounted
 # Sprite drawing helpers for the Paper Pixels pack (CC0, VEXED) in assets/paper-pixels.
 # Sheet coordinates below are 8x8 cells unless noted as pixel rects.
 
+const EnvironmentArt := preload("res://scripts/environment_art.gd")
+
 const TILES := preload("res://assets/paper-pixels/Tiles.png")
 const PLAYER := preload("res://assets/paper-pixels/Player.png")
 const T := 8
@@ -73,7 +75,10 @@ static func draw_tiles(ci: CanvasItem, tiles: Array, gw: int, gh: int, view: Rec
 	draw_tile_range(ci, tiles, gw, gh, x0, y0, x1, y1)
 
 # Half-open cell range; neighbours are read from the full level, not the chunk.
-static func draw_tile_range(ci: CanvasItem, tiles: Array, gw: int, gh: int, x0: int, y0: int, x1: int, y1: int) -> void:
+static func draw_tile_range(ci: CanvasItem, tiles: Array, gw: int, gh: int, x0: int, y0: int, x1: int, y1: int, environment := "") -> void:
+	if environment in EnvironmentArt.THEMES:
+		EnvironmentArt.draw_range(ci, tiles, gw, gh, x0, y0, x1, y1, environment)
+		return
 	# Neighbour checks are inlined (a lambda call per lookup dominated zoomed-out views).
 	# The level border counts as solid, so no edges are drawn there.
 	for y in range(y0, y1):
@@ -114,7 +119,10 @@ static func draw_tile_range(ci: CanvasItem, tiles: Array, gw: int, gh: int, x0: 
 				ci.draw_rect(Rect2(at.x, at.y + T - 1, T, 1), BOTTOM_EDGE)
 
 # Parallax backdrop: moon, drifting clouds, tree line.
-static func draw_background(ci: CanvasItem, view: Rect2, t: float) -> void:
+static func draw_background(ci: CanvasItem, view: Rect2, t: float, environment := "") -> void:
+	if environment in EnvironmentArt.THEMES:
+		EnvironmentArt.draw_background(ci, view, environment)
+		return
 	ci.draw_rect(view.grow(16), SKY)
 	var moon_at := view.position + Vector2(view.size.x * 0.72, 18) - view.position * 0.03
 	region(ci, MOON, moon_at.floor(), Color(1, 1, 1, 0.8))

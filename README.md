@@ -68,10 +68,11 @@ Levels save as JSON in `user://levels/` (Linux: `~/.local/share/godot/app_userda
 
 ## Combat enemies
 
-The HK reference world includes 90 active enemies: Rippers, Skrees, bats, skeletons
-and wave-flying Medusa heads, adapted from Metroid: Zero Mission and Castlevania.
-Attack with A; skeleton bones can be swatted away. Each family has Original, Swift and Armored versions; all 15 types are available in
-the editor. See [behaviour and placement notes](docs/ENEMIES.md) and the
+The HK reference world includes 108 active enemies in six original families:
+Thornmite (wall crawler), Dropwing (ceiling dive), Duskflit (swoop), Ossling (bone
+throw), Hornback (charge) and Fuzzbob (bouncing flight). Attack with A; Ossling bones
+can be swatted away. Each family has Original, Swift and Armored versions; all 18
+types are in the editor and on the Monsters page (main menu, or the map's second tab). See [behaviour and placement notes](docs/ENEMIES.md) and the
 [animated sprite gallery](assets/enemies/preview.html).
 
 ## Tests

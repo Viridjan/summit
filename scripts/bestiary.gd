@@ -8,10 +8,10 @@ const VARIANTS := ["", "_swift", "_armored"]
 const VARIANT_NAMES := ["Original", "Swift", "Armored"]
 const NAME_W := 230.0
 const COL_W := 200.0
-const ROW_H := 92.0
+const ROW_H := 80.0
 const SCALE := 4.0
 
-var rows: Array[String] = []  # base type ids ("enemy_ripper"), registry order
+var rows: Array[String] = []  # base type ids ("enemy_thornmite"), registry order
 var hp := {}  # type id -> hit points
 var clock := 0.0
 

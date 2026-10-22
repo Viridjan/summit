@@ -129,7 +129,7 @@ func _ready() -> void:
 		snow.append(Vector2(randf() * VIEW.x, randf() * VIEW.y))
 	_build()
 	_create_tile_layer()
-	tile_layer.setup(tiles, gw, gh)
+	tile_layer.setup(tiles, gw, gh, data.get("environment", ""))
 	_load_near()
 	_scan_floor_gaps()
 	cam_pos = _clamp_cam(player.camera_target())
@@ -275,7 +275,7 @@ func enter_room(next: String, at = null) -> void:
 		near_layers.erase(room)
 		tiles = tile_layer.tiles
 	else:
-		tile_layer.setup(tiles, gw, gh)
+		tile_layer.setup(tiles, gw, gh, data.get("environment", ""))
 	_load_near()
 	_scan_floor_gaps()
 	_unstick()
@@ -321,7 +321,7 @@ func _process(_delta: float) -> void:
 	l.z_index = -1
 	l.position = Vector2(r.pos * T) - room_origin
 	add_child(l)
-	l.setup(r.level.tiles, int(r.level.w), int(r.level.h))
+	l.setup(r.level.tiles, int(r.level.w), int(r.level.h), r.level.get("environment", ""))
 	near_layers[n] = l
 
 func break_wall(id: String) -> void:
@@ -571,8 +571,8 @@ func _clamp_cam(t: Vector2) -> Vector2:
 
 func _draw_background(ci: CanvasItem) -> void:
 	var view := Rect2(cam.position - VIEW / 2.0, VIEW)
-	Art.draw_background(ci, view, time)
-	for s in snow:
+	Art.draw_background(ci, view, time, data.get("environment", ""))
+	for s in (snow if data.get("environment", "") == "" else []):
 		ci.draw_rect(Rect2((view.position + s).floor(), Vector2.ONE), Color(1, 1, 1, 0.35))
 
 func _draw() -> void:

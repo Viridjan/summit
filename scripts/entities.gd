@@ -40,21 +40,24 @@ const TYPES := {
 	"door": ["Door", true, Color("40e0ff"), Door],
 	# placeholders from reference maps: "text" names the thing (e.g. "Crawlid", "grub jar")
 	"enemy": ["Enemy (placeholder)", true, Color("e04848"), Placeholder],
-	"enemy_ripper": ["Ripper · patrol", false, Color("e6a76c"), RipperEnemy],
-	"enemy_skree": ["Skree · ceiling dive", false, Color("e8bd78"), SkreeEnemy],
-	"enemy_bat": ["Bat · swoop", false, Color("9872af"), BatEnemy],
-	"enemy_skeleton": ["Skeleton · bone throw", false, Color("d8d8bd"), SkeletonEnemy],
-	"enemy_medusa": ["Medusa · wave flight", false, Color("83b7a0"), MedusaEnemy],
-	"enemy_ripper_swift": ["Ripper · Swift", false, Color("f08d87"), RipperEnemy],
-	"enemy_ripper_armored": ["Ripper · Armored", false, Color("899cae"), RipperEnemy],
-	"enemy_skree_swift": ["Skree · Swift", false, Color("f08d87"), SkreeEnemy],
-	"enemy_skree_armored": ["Skree · Armored", false, Color("899cae"), SkreeEnemy],
-	"enemy_bat_swift": ["Bat · Swift", false, Color("f08d87"), BatEnemy],
-	"enemy_bat_armored": ["Bat · Armored", false, Color("899cae"), BatEnemy],
-	"enemy_skeleton_swift": ["Skeleton · Swift", false, Color("f08d87"), SkeletonEnemy],
-	"enemy_skeleton_armored": ["Skeleton · Armored", false, Color("899cae"), SkeletonEnemy],
-	"enemy_medusa_swift": ["Medusa · Swift", false, Color("f08d87"), MedusaEnemy],
-	"enemy_medusa_armored": ["Medusa · Armored", false, Color("899cae"), MedusaEnemy],
+	"enemy_thornmite": ["Thornmite · wall crawler", false, Color("e6a76c"), ThornmiteEnemy],
+	"enemy_skree": ["Dropwing · ceiling dive", false, Color("e8bd78"), SkreeEnemy],
+	"enemy_bat": ["Duskflit · swoop", false, Color("9872af"), BatEnemy],
+	"enemy_skeleton": ["Ossling · bone throw", false, Color("d8d8bd"), SkeletonEnemy],
+	"enemy_hornback": ["Hornback · charge", false, Color("6483aa"), HornbackEnemy],
+	"enemy_fuzzbob": ["Fuzzbob · bouncing flight", false, Color("83b7a0"), FuzzbobEnemy],
+	"enemy_thornmite_swift": ["Thornmite · Swift", false, Color("f08d87"), ThornmiteEnemy],
+	"enemy_thornmite_armored": ["Thornmite · Armored", false, Color("899cae"), ThornmiteEnemy],
+	"enemy_skree_swift": ["Dropwing · Swift", false, Color("f08d87"), SkreeEnemy],
+	"enemy_skree_armored": ["Dropwing · Armored", false, Color("899cae"), SkreeEnemy],
+	"enemy_bat_swift": ["Duskflit · Swift", false, Color("f08d87"), BatEnemy],
+	"enemy_bat_armored": ["Duskflit · Armored", false, Color("899cae"), BatEnemy],
+	"enemy_skeleton_swift": ["Ossling · Swift", false, Color("f08d87"), SkeletonEnemy],
+	"enemy_skeleton_armored": ["Ossling · Armored", false, Color("899cae"), SkeletonEnemy],
+	"enemy_hornback_swift": ["Hornback · Swift", false, Color("f08d87"), HornbackEnemy],
+	"enemy_hornback_armored": ["Hornback · Armored", false, Color("899cae"), HornbackEnemy],
+	"enemy_fuzzbob_swift": ["Fuzzbob · Swift", false, Color("f08d87"), FuzzbobEnemy],
+	"enemy_fuzzbob_armored": ["Fuzzbob · Armored", false, Color("899cae"), FuzzbobEnemy],
 	"breakable": ["Breakable (placeholder)", true, Color("e09a40"), Placeholder],
 	# breakable wall: solid until struck "hp" times (default 3) by the attack; stays broken for the run
 	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
@@ -397,6 +400,16 @@ class CombatEnemy extends Ent:
 				contact()
 		return hit
 
+	# Floor walkers: the next step has floor under it and no acid or spikes.
+	func safe_step() -> bool:
+		var foot := Rect2i(rect.position.x + facing * 2, rect.end.y, rect.size.x, 2)
+		if w.collide_solid(foot) == null:
+			return false
+		for entity in w.touchables:
+			if entity.collidable and (entity.d.t == "acid" or entity.d.t.begins_with("spikes_")) and entity.rect.intersects(Rect2i(rect.position + Vector2i(facing * 2, 0), rect.size).grow(2)):
+				return false
+		return true
+
 	func contact() -> void:
 		if w != null and w.player != null and not w.player.dead and rect.intersects(w.player.hurt_rect()):
 			touch(w.player)
@@ -435,39 +448,6 @@ class CombatEnemy extends Ent:
 		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0)
 		if phase == "windup" and int(clock * 12) % 2 == 0:
 			ci.draw_rect(Rect2(center().x - 1, rect.position.y - 4, 2, 2), Color("f8d89b"))
-
-
-class RipperEnemy extends CombatEnemy:
-	func setup() -> void:
-		super.setup()
-		rect.size = Vector2i(12, 8)
-		hp = variant_hp(2)
-	func update(dt: float) -> void:
-		if not active(dt): return
-		if variant == "armored":
-			if phase == "windup":
-				timer -= dt
-				if timer <= 0:
-					phase = "charge"
-					timer = 0.6
-				return
-			if phase == "charge":
-				timer -= dt
-				if move_enemy(Vector2(facing * 80 * dt, 0)) or timer <= 0:
-					phase = "idle"
-					timer = 1.8
-				return
-			timer -= dt
-			if timer <= 0 and absf(w.player.center().y - center().y) < 16 and sees_player(96):
-				facing = -1 if w.player.center().x < center().x else 1
-				phase = "windup"
-				timer = 0.5
-				return
-		var reach := clampf(float(d.get("patrol", 64)), 16, 160)
-		if absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing:
-			facing *= -1
-		if move_enemy(Vector2(facing * 24 * speed_multiplier * dt, 0)):
-			facing *= -1
 
 
 class SkreeEnemy extends CombatEnemy:
@@ -534,24 +514,6 @@ class BatEnemy extends CombatEnemy:
 				phase = "idle"
 
 
-class MedusaEnemy extends CombatEnemy:
-	var wave := 0.0
-	func setup() -> void:
-		super.setup()
-		rect.size = Vector2i(10, 10)
-		hp = variant_hp(2)
-	func update(dt: float) -> void:
-		if not active(dt): return
-		wave += dt * 3.0 * speed_multiplier
-		var amplitude := 6.0 if variant == "swift" else 12.0 if variant == "armored" else 8.0
-		var y := home.y + sin(wave) * amplitude
-		var reach := clampf(float(d.get("patrol", 56)), 16, 160)
-		if absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing:
-			facing *= -1
-		if move_enemy(Vector2(facing * 28 * speed_multiplier * dt, y - rect.position.y)):
-			facing *= -1
-
-
 class SkeletonEnemy extends CombatEnemy:
 	var gravity_speed := 0.0
 	var bones: Array = []  # owned projectiles: [position, velocity, remaining seconds]
@@ -559,14 +521,6 @@ class SkeletonEnemy extends CombatEnemy:
 		super.setup()
 		hp = variant_hp(3)
 		timer = 1.0 * recovery_multiplier
-	func safe_step() -> bool:
-		var foot := Rect2i(rect.position.x + facing * 2, rect.end.y, rect.size.x, 2)
-		if w.collide_solid(foot) == null:
-			return false
-		for entity in w.touchables:
-			if entity.collidable and (entity.d.t == "acid" or entity.d.t.begins_with("spikes_")) and entity.rect.intersects(Rect2i(rect.position + Vector2i(facing * 2, 0), rect.size).grow(2)):
-				return false
-		return true
 	func update(dt: float) -> void:
 		if not active(dt): return
 		update_bones(dt)
@@ -633,6 +587,108 @@ class SkeletonEnemy extends CombatEnemy:
 			ci.draw_rect(Rect2(at - Vector2(2, 0), Vector2(4, 1)), Color("d8d8bd"))
 			ci.draw_rect(Rect2(at - Vector2(2, 1), Vector2(1, 3)), Color("d8d8bd"))
 			ci.draw_rect(Rect2(at + Vector2(1, -1), Vector2(1, 3)), Color("d8d8bd"))
+
+
+class ThornmiteEnemy extends CombatEnemy:
+	# Crawls around terrain like a mite on a rock: floors, walls and ceilings, turning at every corner.
+	var dir := Vector2i.RIGHT  # crawl direction
+	var down := Vector2i.DOWN  # the surface it clings to
+	var crawl := 0.0  # sub-pixel movement owed
+	var fall := 0.0
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(8, 8)
+		hp = variant_hp(2)
+		dir = Vector2i(facing, 0)
+	func clings() -> bool:
+		return blocked(Rect2i(rect.position + down, rect.size))
+	func update(dt: float) -> void:
+		if not active(dt): return
+		if not clings():
+			down = Vector2i.DOWN
+			if not clings():  # nothing to hold: drop to the floor below
+				fall = minf(160, fall + 400 * dt)
+				if move_enemy(Vector2(0, fall * dt)):
+					fall = 0
+					dir = Vector2i(facing, 0)
+				return
+		crawl += 20 * speed_multiplier * dt
+		while crawl >= 1:
+			crawl -= 1
+			var ahead := Rect2i(rect.position + dir, rect.size)
+			if blocked(ahead):  # inner corner: climb the wall ahead
+				var turned := -down
+				down = dir
+				dir = turned
+				continue
+			rect = ahead
+			contact()
+			if not clings():  # outer corner: turn and step around the edge in one move, so it never lets go
+				var turned := down
+				down = -dir
+				dir = turned
+				var around := Rect2i(rect.position + dir, rect.size)
+				if not blocked(around):
+					rect = around
+					contact()
+		facing = 1 if down.x * dir.y - down.y * dir.x < 0 else -1
+	func draw(ci: CanvasItem) -> void:
+		if down == Vector2i.DOWN or not collidable:
+			super.draw(ci)
+			return
+		ci.draw_set_transform(center(), Vector2(Vector2i.DOWN).angle_to(Vector2(down)), Vector2.ONE)  # feet on its surface
+		EnemyArt.draw(ci, d.t, Vector2.ZERO, facing, clock, flash > 0)
+		ci.draw_set_transform(Vector2.ZERO)
+
+
+class HornbackEnemy extends CombatEnemy:
+	# Walks its floor. A player at its height in sight gets a warning, then a fast charge that stops at walls and ledges.
+	var gravity_speed := 0.0
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(12, 10)
+		hp = variant_hp(3)
+	func update(dt: float) -> void:
+		if not active(dt): return
+		gravity_speed = minf(140, gravity_speed + 400 * dt)
+		if move_enemy(Vector2(0, gravity_speed * dt)): gravity_speed = 0
+		timer -= dt
+		match phase:
+			"windup":
+				if timer <= 0:
+					phase = "charge"
+					timer = 1.2
+			"charge":
+				if not safe_step() or move_enemy(Vector2(facing * 110 * speed_multiplier * dt, 0)) or timer <= 0:
+					phase = "rest"
+					timer = 0.9 * recovery_multiplier
+			"rest":
+				if timer <= 0: phase = "idle"
+			_:
+				var offset: Vector2 = w.player.center() - center()
+				if absf(offset.y) < 12 and sees_player(120):
+					facing = -1 if offset.x < 0 else 1
+					phase = "windup"
+					timer = 0.5 * warning_multiplier
+				elif not safe_step():
+					facing *= -1
+				elif move_enemy(Vector2(facing * 16 * speed_multiplier * dt, 0)):
+					facing *= -1
+
+
+class FuzzbobEnemy extends CombatEnemy:
+	# Drifts diagonally and bounces off anything solid; it never chases, its path is the threat.
+	var velocity := Vector2.ZERO
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(10, 10)
+		hp = variant_hp(2)
+		velocity = Vector2(facing, 1).normalized() * 30 * speed_multiplier
+	func update(dt: float) -> void:
+		if not active(dt): return
+		if move_enemy(Vector2(velocity.x * dt, 0)): velocity.x = -velocity.x
+		if move_enemy(Vector2(0, velocity.y * dt)): velocity.y = -velocity.y
+		facing = 1 if velocity.x > 0 else -1
 
 
 class Liquid extends Ent:  # water: looks only; acid: kills on touch (like spikes)

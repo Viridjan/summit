@@ -1,6 +1,7 @@
 extends Node
 # Autoload "Game": settings, controls, level files, save progress, screen switching.
 
+const ArtEnvironment := preload("res://scripts/environment_art.gd")
 const Entities := preload("res://scripts/entities.gd")
 const Tuning := preload("res://scripts/tuning.gd")
 const Adventure := preload("res://scripts/adventure.gd")
@@ -205,6 +206,9 @@ const MAX_COORD := 1 << 20  # pixels; far beyond any level, keeps int() conversi
 # Normalizes a parsed level in place and returns it, or {} if anything is malformed.
 static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 	if not d is Dictionary:
+		return {}
+	var environment = d.get("environment", "")
+	if not environment is String or (environment != "" and environment not in ArtEnvironment.THEMES):
 		return {}
 	var w = d.get("w")
 	var h = d.get("h")

@@ -9,18 +9,21 @@ class Chunk extends Node2D:
 	var level_size: Vector2i
 	var cells: Rect2i
 	var draw_count := 0
+	var environment := ""
 
 	func _draw() -> void:
 		draw_count += 1
 		Art.draw_tile_range(self, tiles, level_size.x, level_size.y,
-			cells.position.x, cells.position.y, cells.end.x, cells.end.y)
+			cells.position.x, cells.position.y, cells.end.x, cells.end.y, environment)
 
+var environment := ""
 var tiles: Array = []
 var level_size := Vector2i.ZERO
 var chunk_grid := Vector2i.ZERO
 var chunks: Array[Chunk] = []
 
-func setup(level_tiles: Array, w: int, h: int) -> void:
+func setup(level_tiles: Array, w: int, h: int, room_environment := "") -> void:
+	environment = room_environment
 	for chunk in chunks:
 		remove_child(chunk)
 		chunk.free()
@@ -31,6 +34,7 @@ func setup(level_tiles: Array, w: int, h: int) -> void:
 	for y in chunk_grid.y:
 		for x in chunk_grid.x:
 			var chunk := Chunk.new()
+			chunk.environment = environment
 			chunk.tiles = tiles
 			chunk.level_size = level_size
 			var start := Vector2i(x, y) * CHUNK_SIZE
@@ -45,7 +49,13 @@ func mark_cell_dirty(c: Vector2i) -> Array[Vector2i]:
 	var marked: Array[Vector2i] = []
 	if not Rect2i(Vector2i.ZERO, level_size).has_point(c):
 		return marked
-	for offset in [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+	var offsets := [Vector2i.ZERO, Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
+	if environment != "":
+		# Concave caps read diagonals; 16px surface props also read two cells above.
+		for dy in range(-2, 3):
+			for dx in range(-1, 2):
+				if Vector2i(dx, dy) not in offsets: offsets.append(Vector2i(dx, dy))
+	for offset in offsets:
 		var cell: Vector2i = c + offset
 		if not Rect2i(Vector2i.ZERO, level_size).has_point(cell):
 			continue

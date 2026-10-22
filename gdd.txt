@@ -66,8 +66,10 @@ block, zip mover, dream block, green/red bubble, bumper, feather, crystal heart
 (links rooms that don't touch), water (looks only), acid (kills), breakable wall
 (3 hits, stays broken for the run), enemy/breakable placeholders, spawn markers
 (one per entrance; Retry respawns there).
-Enemies (docs/ENEMIES.md): Ripper, Skree, Bat, Skeleton (throws bones), Medusa.
-30 placed in the Hollow Knight world.
+Enemies (docs/ENEMIES.md), original names, each in Original/Swift/Armored:
+Thornmite (crawls floors, walls, ceilings), Dropwing (ceiling dive), Duskflit
+(swoop), Ossling (throws bones), Hornback (warns, then charges), Fuzzbob
+(bounces diagonally). 108 placed in the Hollow Knight world.
 Adding a new object: docs/ADDING_ENTITIES.md (one class + one registry line).
 
 
@@ -216,3 +218,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
   CI runs the tests. Fixed: free-aim super jumps, red bubble aim, climbing walls
   on a room seam, restart/door/camera/save/editor bugs.
 - 2026-10-22: Monsters page in the main menu and as a map-screen tab (L1/R1).
+- 2026-10-22: Ripper and Medusa removed; Thornmite, Hornback and Fuzzbob added
+  (Hollow Knight-inspired); all enemies renamed to original names.

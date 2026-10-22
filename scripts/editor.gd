@@ -65,7 +65,7 @@ func _ready() -> void:
 	cam.position = Vector2(level.w * T, level.h * T) / 2.0
 	_build_ui()
 	_create_tile_layer()
-	tile_layer.setup(level.tiles, level.w, level.h)
+	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
 
 # ---------------- UI ----------------
@@ -216,7 +216,7 @@ func _set_level(d: Dictionary) -> void:
 	zip_pending = null
 	rect_start = null
 	_sync_fields()
-	tile_layer.setup(level.tiles, level.w, level.h)
+	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
 
 func _save() -> void:
@@ -253,7 +253,7 @@ func _resize() -> void:
 	level.h = nh
 	level.entities = level.entities.filter(func(e): return int(e.x) < nw * T and int(e.y) < nh * T)
 	zip_pending = null
-	tile_layer.setup(level.tiles, level.w, level.h)
+	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
 
 func _playtest() -> void:
@@ -536,7 +536,10 @@ func _draw_background(ci: CanvasItem) -> void:
 	var view := Rect2(cam.position - vs / 2.0, vs)
 	ci.draw_rect(view, Color("0c0c1e"))
 	var b := Rect2(0, 0, level.w * T, level.h * T)
-	ci.draw_rect(b, Art.SKY)
+	if level.get("environment", "") != "":
+		Art.draw_background(ci, view, 0.0, level.environment)
+	else:
+		ci.draw_rect(b, Art.SKY)
 	if cam.zoom.x >= 2:
 		var gc := Color(1, 1, 1, 0.05)
 		for x in range(0, level.w + 1):

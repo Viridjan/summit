@@ -1,5 +1,6 @@
 """Install a small, deterministic enemy set by replacing existing HK placeholders.
 Only entities change. Re-run safely: converted placeholders are tagged and not duplicated.
+Placements of kinds no longer in SIZES turn back into their original placeholder first.
 """
 import argparse
 from collections import Counter
@@ -7,7 +8,9 @@ import json
 import math
 from pathlib import Path
 
-BASE_SIZES = {'ripper': (12, 8), 'skree': (8, 12), 'bat': (10, 8), 'skeleton': (8, 12), 'medusa': (10, 10)}
+BASE_SIZES = {'thornmite': (8, 8), 'skree': (8, 12), 'bat': (10, 8), 'skeleton': (8, 12), 'hornback': (12, 10), 'fuzzbob': (10, 10)}
+NAMES = {'thornmite': 'Thornmite', 'skree': 'Dropwing', 'bat': 'Duskflit', 'skeleton': 'Ossling', 'hornback': 'Hornback', 'fuzzbob': 'Fuzzbob'}
+FLOOR_WALKERS = ('thornmite', 'skeleton', 'hornback')
 SIZES = {base + suffix: size for base, size in BASE_SIZES.items() for suffix in ('', '_swift', '_armored')}
 ROOMS = ['r005', 'r007', 'r012', 'r017', 'r018', 'r023', 'r025', 'r027', 'r029', 'r038', 'r039', 'r041', 'r045', 'r057', 'r062', 'r064', 'r067', 'r069', 'r070', 'r083', 'r090', 'r097']
 
@@ -26,11 +29,11 @@ def free(level, box):
 def valid(level, kind, x, y):
     width, height = SIZES[kind]
     base = kind.split('_')[0]
-    reach = 40 if base in ('ripper', 'medusa') else 24
+    reach = 40 if base == 'fuzzbob' else 24
     box = (x, y, width, height)
     if not free(level, box):
         return False
-    if base == 'skeleton':
+    if base in FLOOR_WALKERS:
         floor = (y + height) // 8
         tx = x // 8
         if (y + height) % 8 or not (3 <= tx < level['w'] - 4) or floor >= level['h']:
@@ -48,7 +51,7 @@ def valid(level, kind, x, y):
             return False
         area = (x - 20, y, width + 40, 80)
     else:
-        padding = (12 if kind.endswith('_armored') else 8) if base == 'medusa' else 0
+        padding = 12 if base == 'fuzzbob' else 0
         area = (x - reach, y - padding, width + reach * 2, height + padding * 2)
         if not free(level, area):
             return False
@@ -69,8 +72,20 @@ def install(root, per_type=6, apply=False):
     manifest = json.loads((root / 'world.json').read_text())
     ordered_rooms = ROOMS + [room for room in manifest['rooms'] if room not in ROOMS]
     levels = {room: json.loads((root / (room + '.json')).read_text()) for room in ordered_rooms}
-    counts = Counter(e['t'].removeprefix('enemy_') for level in levels.values() for e in level['entities'] if e.get('summit_enemy_set'))
     changed = set()
+    for room, level in levels.items():
+        for i, e in enumerate(level['entities']):
+            if not e.get('summit_enemy_set'):
+                continue
+            kind = e['t'].removeprefix('enemy_')
+            if kind not in SIZES:  # a removed kind: back to the reference map's placeholder
+                w, h = e.get('reference_size', (16, 16))
+                level['entities'][i] = {'t': 'enemy', 'x': e['reference_position'][0], 'y': e['reference_position'][1], 'w': w, 'h': h, 'text': e['reference_text']}
+                changed.add(room)
+            elif e.get('text') != NAMES[kind.split('_')[0]]:
+                e['text'] = NAMES[kind.split('_')[0]]
+                changed.add(room)
+    counts = Counter(e['t'].removeprefix('enemy_') for level in levels.values() for e in level['entities'] if e.get('summit_enemy_set'))
     placements = []
     # Interleave types/rooms so one room does not become a crowded enemy showcase.
     for iteration in range(per_type):
@@ -88,11 +103,11 @@ def install(root, per_type=6, apply=False):
                     offsets = sorted(((dx, dy) for dx in range(-6, 7) for dy in range(-8, 9)), key=lambda p: (abs(p[0]) + abs(p[1]), p[1], p[0]))
                     for dx, dy in offsets:
                         x, y = (ex + dx) * 8, (ey + dy) * 8
-                        if kind.split('_')[0] == 'skeleton':
-                            y += 4  # 12px body with feet on an 8px floor grid
+                        if kind.split('_')[0] in FLOOR_WALKERS:
+                            y += -SIZES[kind][1] % 8  # feet on the 8px floor grid
                         if valid(level, kind, x, y):
                             entity = dict(original)
-                            entity.update(t='enemy_' + kind, x=x, y=y, w=SIZES[kind][0], h=SIZES[kind][1], text=kind.title(), summit_enemy_set=1, reference_text=original.get('text', ''), reference_position=[original['x'], original['y']], patrol=40)
+                            entity.update(t='enemy_' + kind, x=x, y=y, w=SIZES[kind][0], h=SIZES[kind][1], text=NAMES[kind.split('_')[0]], summit_enemy_set=1, reference_text=original.get('text', ''), reference_position=[original['x'], original['y']], reference_size=[original.get('w', 16), original.get('h', 16)], patrol=40)
                             level['entities'][index] = entity
                             changed.add(room)
                             counts[kind] += 1

@@ -36,7 +36,7 @@ The weak spots were save and editor robustness, a few gameplay edge cases, a tes
 - **Restart Level** now clears broken walls and a pending door.
 - **Dead player and doors.** A player who died this tick is no longer moved by a door.
 - **Camera through doors.** A door into a far room now snaps the camera instead of sweeping it across the world.
-- **Skree** no longer gets stuck pushing forever against a ceiling on its way home.
+- **Dropwing** (then called Skree) no longer gets stuck pushing forever against a ceiling on its way home.
 - **Level validation** now rejects bad `facing`, `patrol` and `top` values.
 - **Old saves.** Continue on an old or hand-edited save no longer crashes: `Adventure.restore_run` fills in missing fields.
 - **Editor:**
@@ -83,7 +83,7 @@ In dependency order. Hurt/HP unlocks most of `TODO.md`.
 3. **Typed state enum.** Replace the anonymous enum with `enum State {...}` and build `STATE_NAMES` from `State.keys()`. Adding a state currently means updating about 9 places in `player.gd`.
 4. **Enemies in one place.**
    - Phase enums instead of strings.
-   - One shared patrol/turn helper, which Ripper, Medusa and Skeleton each copy today.
+   - One shared patrol/turn helper for the floor walkers (Ossling, Hornback).
    - Move the `EnemyArt.KINDS/SPRITES` lookups into the `TYPES` row.
 5. **Typed API.**
    - Add `class_name` and types for `w`, `player` and `ents`.

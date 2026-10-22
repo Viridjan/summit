@@ -228,9 +228,29 @@ No map or gameplay fixes are applied by these tools.
 
 ## Active enemies in the HK world
 
-Ninety reference placeholders have been replaced by fifteen combat variants (six each):
-Metroid-inspired Rippers and Skrees, and Castlevania-inspired bats, skeletons and
-wave-flying Medusa heads. Each family has Original, Swift and Armored versions. They occupy 51 rooms, including one introductory Ripper
-in King's Pass. The remaining reference enemy/boss markers retain their placeholder
+108 reference placeholders have been replaced by eighteen combat variants (six each)
+of six original families: Thornmite, Dropwing, Duskflit, Ossling, Hornback and Fuzzbob.
+Each family has Original, Swift and Armored versions. They occupy 68 rooms, including one
+introductory Thornmite in King's Pass. The remaining reference enemy/boss markers retain their placeholder
 behaviour. See [ENEMIES.md](ENEMIES.md) for controls, AI, tests, and how to reapply
 these placements after rebuilding the reference terrain.
+
+## Room environment artwork
+
+A level's optional `environment` field selects `sand`, `sea`, `cavern`,
+`cavern_deep`, `sky`, `temple`, or `building`. Omit it (or use an empty string)
+for the original Paper Pixels terrain and backdrop. Unsupported values are
+rejected by level validation. Saving and undo preserve this field.
+
+The HK world uses all seven: rural buildings near the start, sky at the top,
+sea in western rooms, sand in eastern rooms, temple rooms in the middle,
+and deep cavern rooms below. Room geometry, entities and connections are
+unchanged. `reports/hk-environment-themes.json` lists assignments;
+`assets/themes/preview.html` includes a coloured room map and art previews.
+
+`environment_art.gd` handles atlas edges, concave corners, decorative props
+and two background layers. Each retained terrain chunk keeps its own theme,
+including neighbouring rooms cached before a transition. The editor renders
+the same theme and invalidates neighbouring chunks for concave caps and props.
+The building theme depicts a rural settlement with timber/plaster walls,
+pitched-roof cottages, fences, barrels, wheat and signposts.
