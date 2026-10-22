@@ -30,6 +30,8 @@ static func atlas() -> Image:
 				var wing_y: int = [3, 5, 7, 5][frame]
 				img.fill_rect(Rect2i(origin + Vector2i(1, wing_y), Vector2i(5, 2)), COLORS["P"])
 				img.fill_rect(Rect2i(origin + Vector2i(10, wing_y), Vector2i(5, 2)), COLORS["P"])
+				img.fill_rect(Rect2i(origin + Vector2i(4, mini(wing_y + 1, 7)), Vector2i(2, maxi(1, 8 - wing_y))), COLORS["P"])
+				img.fill_rect(Rect2i(origin + Vector2i(10, mini(wing_y + 1, 7)), Vector2i(2, maxi(1, 8 - wing_y))), COLORS["P"])
 				img.fill_rect(Rect2i(origin + Vector2i(2, wing_y), Vector2i(3, 1)), COLORS["p"])
 				img.fill_rect(Rect2i(origin + Vector2i(11, wing_y), Vector2i(3, 1)), COLORS["p"])
 			for y in sprite.size():
@@ -37,9 +39,14 @@ static func atlas() -> Image:
 					var ch: String = sprite[y][x]
 					if COLORS.has(ch):
 						var offset := 0
+						if kind == "enemy_medusa" and y >= 7:
+							offset = (1 if x < 6 else -1) if frame % 2 else 0
 						if kind == "enemy_skeleton" and y >= 9:
 							offset = (1 if x < 6 else -1) if frame % 2 else 0
 						img.set_pixelv(origin + Vector2i(x + 2 + offset, y + top), COLORS[ch])
+			if kind == "enemy_skree" and frame % 2:
+				img.fill_rect(Rect2i(origin + Vector2i(4, 8), Vector2i(2, 2)), COLORS["b"])
+				img.fill_rect(Rect2i(origin + Vector2i(10, 8), Vector2i(2, 2)), COLORS["b"])
 			if kind == "enemy_ripper":
 				img.fill_rect(Rect2i(origin + Vector2i(4 + frame % 2, 11), Vector2i(2, 1)), COLORS["b"])
 	return img

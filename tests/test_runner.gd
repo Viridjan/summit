@@ -500,6 +500,134 @@ func check_attack() -> void:
 	w._build()
 	check(w.ents.filter(func(e): return e.d.t == "breakwall")[0].collidable == false, "a broken wall stays broken after respawn")
 
+func check_combat_enemies() -> void:
+	var art = load("res://scripts/enemy_art.gd")
+	var atlas: Image = art.atlas()
+	check(atlas.get_size() == Vector2i(64, 80), "five original enemy sprites share a four-frame pixel atlas")
+	for row in 5:
+		check(atlas.get_region(Rect2i(0, row * 16, 16, 16)).get_used_rect().has_area(), "enemy sprite row %d contains visible artwork" % row)
+	Game.settings.invincible = true
+	make_world([{"t": "enemy_ripper", "x": 160, "y": 112, "facing": 1}], [[26, 14], [26, 15]])
+	var enemy = w.ents.filter(func(e): return e.d.t == "enemy_ripper")[0]
+	for i in 125: enemy.update(DT)
+	check(enemy.facing == -1 and enemy.rect.end.x <= 208 and not enemy.blocked(enemy.rect), "Ripper reverses at terrain without tunnelling")
+
+	make_world([{"t": "enemy_skree", "x": 160, "y": 64}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skree")[0]
+	p().pos = Vector2(164, 148)
+	enemy.update(DT)
+	check(enemy.phase == "windup", "Skree notices a player below and telegraphs the dive")
+	for i in 10: enemy.update(DT)
+	check(enemy.rect.position.y == 64, "Skree stays on the ceiling during its warning")
+	p().pos = Vector2(80, 216)
+	for i in 500: enemy.update(DT)
+	check(enemy.phase == "idle" and enemy.rect.position.y == 64, "Skree lands, rests, and returns to its ceiling perch")
+
+	make_world([{"t": "enemy_bat", "x": 136, "y": 112}], [[20, 14], [20, 15], [20, 16]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_bat")[0]
+	p().pos = Vector2(184, 128)
+	for i in 90: enemy.update(DT)
+	check(enemy.phase == "idle", "Bat cannot acquire a target through solid terrain")
+	make_world([{"t": "enemy_bat", "x": 136, "y": 80}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_bat")[0]
+	p().pos = Vector2(160, 140)
+	enemy.update(DT)
+	check(enemy.phase == "windup", "Bat warns before swooping at a visible target")
+	for i in 26: enemy.update(DT)
+	var locked: Vector2 = enemy.velocity
+	p().pos = Vector2(80, 216)
+	enemy.update(DT)
+	check(enemy.phase == "swoop" and enemy.velocity == locked and not enemy.blocked(enemy.rect), "Bat commits to its swoop instead of homing unfairly")
+
+	make_world([{"t": "enemy_medusa", "x": 160, "y": 96, "facing": 1, "patrol": 40}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_medusa")[0]
+	var min_y := 1000
+	var max_y := -1000
+	var escaped := false
+	for i in 360:
+		enemy.update(DT)
+		min_y = mini(min_y, enemy.rect.position.y)
+		max_y = maxi(max_y, enemy.rect.position.y)
+		escaped = escaped or enemy.blocked(enemy.rect)
+	check(min_y <= 89 and max_y >= 103 and not escaped, "Medusa follows a bounded sine-wave flight without crossing rock or room bounds")
+
+	make_world([{"t": "enemy_skeleton", "x": 180, "y": 204}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skeleton")[0]
+	p().pos = Vector2(80, 216)
+	for i in 100: enemy.update(DT)
+	check(not enemy.bones.is_empty() and enemy.phase == "idle", "Skeleton winds up, then throws a timed ballistic bone toward the player")
+	enemy.bones = [[p().center() + Vector2(10, 0), Vector2.ZERO, 1.0]]
+	p().attack_timer = 0.1
+	p().attack_dir = Vector2.RIGHT
+	enemy.update_bones(DT)
+	check(enemy.bones.is_empty(), "Melee swings can swat an incoming bone")
+	p().attack_timer = 0
+	enemy.bones = [[Vector2(10, 80), Vector2(-180, 0), 1.0]]
+	for i in 10: enemy.update_bones(DT)
+	check(enemy.bones.is_empty(), "Skeleton projectiles are removed at room bounds")
+	make_world([{"t": "enemy_skeleton", "x": 180, "y": 204}], [[25, 18], [25, 19]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skeleton")[0]
+	enemy.bones = [[Vector2(195, 150), Vector2(180, 0), 1.0]]
+	for i in 5: enemy.update_bones(DT)
+	check(enemy.bones.is_empty(), "Bones collide with intervening terrain instead of passing through it")
+
+	make_world([{"t": "enemy_ripper", "x": 92, "y": 204}])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_ripper")[0]
+	p().pos = Vector2(80, 216)
+	p().attack_dir = Vector2.RIGHT
+	p()._attack_hits()
+	p()._attack_hits()
+	check(enemy.hp == 1, "Existing melee sector damages a real enemy once per swing")
+	enemy.flash = 0
+	p().attack_hit.clear()
+	p()._attack_hits()
+	check(not enemy.collidable, "A second melee swing defeats the two-hit patroller")
+	Game.settings.invincible = false
+	enemy.touch(p())
+	check(not p().dead, "Defeated enemies no longer deal contact damage")
+	var live = E.make(w, {"t": "enemy_bat", "x": 80, "y": 200})
+	live.touch(p())
+	check(p().dead, "Live enemy contact uses the existing player death system")
+
+	# A ledge walker may turn, but must never step off the end of its floor.
+	make_world([{"t": "enemy_skeleton", "x": 160, "y": 148}], [[20, 20], [21, 20]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_skeleton")[0]
+	p().pos = Vector2(400, 216)
+	for i in 240: enemy.update(DT)
+	check(enemy.rect.position.y == 148 and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Skeleton patrol turns at ledges rather than walking into a pit")
+
+func check_hk_combat_placements() -> void:
+	var world_data: Dictionary = load("res://scripts/adventure.gd").load_world("res://worlds/hollow_knight/world.json")
+	var count := {}
+	var failures := []
+	Game.settings.invincible = true
+	for room_name in world_data.rooms:
+		var level: Dictionary = world_data.rooms[room_name].level
+		if not level.entities.any(func(e): return e.get("summit_enemy_set", 0) == 1):
+			continue
+		if w: w.queue_free()
+		Game.level = level
+		w = load("res://scripts/world.gd").new()
+		add_child(w)
+		w.set_physics_process(false)
+		w.player = Bot.new(w, w.spawn)
+		for enemy in w.ents:
+			if not enemy.d.get("summit_enemy_set", false): continue
+			count[enemy.d.t] = count.get(enemy.d.t, 0) + 1
+			if enemy.blocked(enemy.rect): failures.append(room_name + ": solid spawn")
+			for marker in level.entities:
+				if marker.t in ["spawn", "door"] and Vector2(marker.x, marker.y).distance_to(Vector2(enemy.rect.position)) < 96:
+					failures.append(room_name + ": enemy too close to entrance")
+			w.player.pos = enemy.center() + Vector2(0, 40)
+			for i in 240:
+				enemy.update(DT)
+				if enemy.blocked(enemy.rect):
+					failures.append(room_name + ": enemy entered terrain/bounds")
+					break
+	check(count.size() == 5 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the five combat enemies (%s)" % count)
+	check(failures.is_empty(), "HK enemy placements stay clear of entrances, terrain, and room bounds (%s)" % [failures])
+	Game.settings.invincible = false
+
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	Game.world_path = FIXTURE_WORLD + "world.json"
@@ -982,6 +1110,8 @@ func _ready() -> void:
 	check_floor_gaps()
 	check_room_seams()
 	check_attack()
+	check_combat_enemies()
+	check_hk_combat_placements()
 	check_dirs()
 	check_adventure()
 

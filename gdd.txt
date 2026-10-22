@@ -1,0 +1,205 @@
+SUMMIT - GAME DESIGN DOCUMENT
+=============================
+Living document. Updated whenever something important is added or changed;
+newest entries at the bottom of the DEVELOPMENT LOG (section 12).
+Last update: 2026-10-22
+
+
+1. CONCEPT
+----------
+Summit is a 2D precision platformer with Celeste's movement (a GDScript port of
+Celeste's Player.cs) placed inside Metroidvania worlds. Level design studies Hollow
+Knight, Hollow Knight: Silksong, Castlevania: Symphony of the Night and Metroid
+Zero Mission. It ships with a level editor and a world editor, so content is
+built inside the game.
+
+Pillars
+- Tight, pixel-exact movement at a fixed 60 Hz, readable and tunable live.
+- One connected world: walk off a room's edge into the next, no loading screens.
+- Abilities gate the world (Metroid-style); every ability is coded methodically.
+- Tools are in the game: map, state machine, tuning, hitboxes, editors.
+
+Platform: Godot 4.7.2 (also tested on 4.4.1). Desktop (Linux) and web
+(https://viridjan.github.io/summit/). Repo: github.com/Viridjan/summit (public).
+
+
+2. CONTROLS
+-----------
+Keyboard (remappable in Options):
+  Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack
+  Esc pause · M map · F1 state machine & tuning · F2 hitboxes
+Gamepad (remappable in Options > Controller Buttons):
+  D-pad/left stick move · A jump · R1 dash · X attack · R2 grab
+  Start pause · Back/Select map · B back in menus
+Touch (phones/tablets, shown only on touchscreens):
+  Left stick (8 directions) · Jump, Dash, Atk, Grab on the right · Map, Pause top right
+
+
+3. PLAYER
+---------
+Hitbox 8x11 px, 8 px tiles. Position = bottom-centre of the hitbox, whole pixels.
+Moves: run, variable jump, coyote time, input buffering, wall jump, wall slide,
+climb with stamina, climb hop, 8-way dash, super/hyper jump, wavedash, super wall
+jump, corner correction, duck, fast fall.
+
+State machine (9 states): Normal, Climb, Dash, Boost, Red Dash, Dream Dash,
+Star Fly, and the rest of the Celeste set. Visible live in the F1 panel.
+
+Attack: a LAYER on top of the current state (not a state), so dash-attack,
+climb-attack etc. work. Blocked during Boost, Red Dash, Dream Dash.
+  - Swing: triangle blade sweeping a 120° arc toward the held direction.
+  - ATTACK_TIME 0.143 s (140% speed of the first 0.2 s), cooldown 0.25 s.
+  - ATTACK_RANGE 15.4 px (110% of the first 14 px).
+  - ATTACK_DIRS / DASH_DIRS limit directions: 0 off, 1 horizontal, -1 vertical,
+    2 four-way, 3 eight-way, 4 free aim. Defaults: ATTACK_DIRS 1, DASH_DIRS 3.
+  - Each target is hit at most once per swing.
+
+Character: animated sprite with Celeste-style hair whose colour shows dash count.
+
+
+4. OBJECTS (entity registry in scripts/entities.gd)
+--------------------------------------------------
+Spikes (4 dirs), springs (3 dirs), dash crystal, double-dash crystal, star
+(collectible; replaced the strawberry), jump-through, crumble block, falling
+block, zip mover, dream block, green/red bubble, bumper, feather, crystal heart
+(goal), dash/climb ability orbs (adventure), note (design reminder text), door
+(links rooms that don't touch), water (looks only), acid (kills), breakable wall
+(3 hits, stays broken for the run), enemy/breakable placeholders, spawn markers
+(one per entrance; Retry respawns there).
+Enemies (docs/ENEMIES.md): Ripper, Skree, Bat, Skeleton (throws bones), Medusa.
+30 placed in the Hollow Knight world.
+Adding a new object: docs/ADDING_ENTITIES.md (one class + one registry line).
+
+
+5. WORLDS AND LEVEL DESIGN
+--------------------------
+Adventure world: world.json {start, abilities, rooms} + one level file per room.
+Rooms are disjoint rectangles on a global tile grid; touching open edges are
+passages. Neighbour rooms load seamlessly; collision past an edge checks the
+next room's tiles; arrivals are un-stuck automatically.
+
+Shipped adventure (res://adventure/): 14 rooms in 4 areas borrowing from the four
+games (docs/WORLD_DESIGN.md): village and well, crossroads hub, dash-orb arena,
+vertical shaft, climb vault, castle corridor, clock tower, spire, crown (goal).
+
+Reference worlds (res://worlds/, picked in Adventure > World):
+  Hallownest (Hollow Knight) 225 rooms, Pharloom (Silksong) 197,
+  Dracula's Castle (SotN) 48, Zebes (Metroid ZM) 134.
+  Original room layouts traced at each game's character scale, at 2x scale,
+  linked by doors, no overlaps, merged redundant maps, thin strips fixed.
+  King's Pass hand-fixed (breakable wall, entrance).
+
+World rules enforced by tools/world_fixups.py:
+  1. seal_edges: side/top openings facing nothing or rock become rock.
+  2. settle_liquids: water/acid settles like real liquid, wall to wall on every
+     row; pools crossing room edges were removed (24).
+  3. unblock_acid: acid that would cut off rooms becomes water (13 of 27 kept).
+  4. drop_unreachable: rooms not reachable from the start are deleted.
+  5. add_spawns: one spawn marker per entrance.
+Navigability: every room must allow a 2x2-tile body through one connected area.
+
+Map (M): full-screen, zoom and pan; shows navigable space (blue) vs walls,
+pits (death) vs holes (lead to another room), explored rooms.
+
+
+6. EDITORS AND DEV TOOLS (all in-game)
+--------------------------------------
+Level editor: paint tiles, place/size objects, notes, undo, playtest (F5).
+World editor: drag rooms on the grid, add empty/copied rooms, edit a room,
+playtest from a room, set start; door links shown as cyan lines.
+F1 debug panel: live state machine (with Attack layer row), transitions log,
+live variables, every movement variable editable; presets saved to
+user://tuning/, export to res://config/tuning.cfg; Pause sim / Step; Hitboxes.
+F2 / Options > Show Hitboxes: player (green), sword arc (red), objects
+(yellow), touch/hazard areas (orange).
+Reports: reports/hk-room-safety.md (transition/bounds checker, 0 findings),
+hk-accessibility, hk-enemy-placements.
+
+
+7. PRESENTATION
+---------------
+Art: Paper Pixels (VEXED, CC0) + original pixel art for enemies.
+Camera: 1280x720 window, zoom 4.8 (120%) = 267x150 game pixels visible.
+Screen shake (toggle), snow particles, background parallax.
+Options: fullscreen, vsync, shake, assist mode (game speed, infinite stamina,
+air dashes, invincibility), keyboard and controller remapping.
+
+
+8. PROGRESSION AND SAVE
+-----------------------
+Start without dash and climb; orbs unlock them. Save: user://save.cfg
+[adventure]; settings: user://settings.cfg; levels: user://levels/.
+In the browser, saves live in browser storage; editors can't write game files.
+
+
+9. TECH NOTES
+-------------
+Fixed 60 Hz physics, pixel-based movement. Rendering culls offscreen objects
+but keeps them simulating. Tile chunks, incremental editor previews
+(OPTIMIZATION_RESULTS.md). Web: Godot web export without threads, deployed by
+GitHub Actions (.github/workflows/pages.yml) on every push to main.
+Tests: tests/test.tscn (exit code = failures), tests/smoke.tscn (every screen).
+
+
+10. PLANNED (see TODO.md)
+------------------------
+- Power-ups from the four reference games (grouped by game). Dropped: Space Jump,
+  Screw Attack, SotN bat/wolf/mist forms, Dreamgate, Morph Ball.
+- Health/hurt state, event flags, map stations, save slots (docs/METROID_NOTES.md).
+- Replace placeholder rooms with real ones; turn reference worlds into playable ones.
+
+
+11. OPEN QUESTIONS
+------------------
+- Touch controls: layout and comfort not yet tried on a real phone.
+- Zoom 4.8 is not a whole number: some game pixels show 4 px wide, some 5.
+  125% (zoom 5) would keep them even.
+
+
+12. DEVELOPMENT LOG
+-------------------
+Phase 1 - Core game
+- Celeste movement port, level editor, menus, options, remapping.
+- Performance pass: benchmarks, culling, tile chunks, editor batching.
+- In-game state machine view + editable variables with presets and config file.
+- In-game map. Strawberry replaced by a star. Entity registry for new objects.
+
+Phase 2 - Adventure
+- Adventure mode, then a Metroid-style connected world with a world editor.
+- Character animation and hair, stamina; UI fixes; F1 panel transparency.
+- Note object for design reminders; level design study of HK/Silksong/SotN/MZM.
+
+Phase 3 - Reference worlds
+- Recreated the four games' global maps, fixed scale, doors between rooms.
+- Hollow Knight focus: enemies, spikes, water/acid, breakables as placeholders.
+- 2x scale, no overlaps, fewer disconnected rooms, merged maps, no thin strips.
+- 2026-10-21: public GitHub repo "summit" (graphify-out excluded).
+
+Phase 4 - Combat and safety (2026-10-21)
+- Attack with 120° triangle swing; breakable wall; DASH_DIRS/ATTACK_DIRS.
+- Seamless neighbour-room loading; 2x2 navigability, one connected area/room.
+- Acid/spike accessibility fixes; pit vs hole markers; entrance spawns + Retry.
+- Map shows navigable space vs walls.
+- Room-safety checker findings fixed (edge collision, door arrival, ceilings).
+- Web build on GitHub Pages.
+- Attack became a layer over states; liquids settle wall to wall; unreachable
+  rooms removed; attack speed 140%.
+
+Phase 5 - Input and tooling (2026-10-21/22)
+- Controller defaults R1 dash, X attack, R2 grab; Controller Buttons page.
+- Hitbox overlay (F1 button, Options, F2 key); sword range +10%.
+- Five original enemies placed in the HK world (Ripper, Skree, Bat, Skeleton, Medusa).
+- Touch controls for phones; camera zoom 120%.
+- TODO: power-up list from all four games.
+- This GDD created.
+- 2026-10-22: dropped from the power-up plan: Space Jump, Screw Attack,
+  bat/wolf/mist forms, Dreamgate.
+- 2026-10-22: TODO power-ups regrouped by scope (jumps, dashes, liquids, gates,
+  combat base, melee, projectiles, capacity, loadouts) instead of by game.
+- 2026-10-22: Morph Ball dropped from the power-up plan.
+- 2026-10-22: music doors (Needolin) dropped; hidden wall added to the plan.
+- 2026-10-22: direction upgrades for dash and attack added to the plan
+  (pickups stepping DASH_DIRS / ATTACK_DIRS up: horizontal, four-way, eight-way, free aim).
+- 2026-10-22: Sylphsong, Beastling Call, Elegy of the Deep dropped from the plan.
+- 2026-10-22: loadout systems expanded in TODO: all HK charms by effect,
+  SS crests and tools by colour, SotN familiars.

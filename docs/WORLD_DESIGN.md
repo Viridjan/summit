@@ -225,3 +225,12 @@ that face either no room or a neighbour's wall. No-room openings are often safel
 clamped by bounds, so they are distinct from confirmed out-of-bounds exploits.
 The generated `reports/hk-room-safety.md` combines both audits and replay examples.
 No map or gameplay fixes are applied by these tools.
+
+## Active enemies in the HK world
+
+Thirty reference placeholders have been replaced by five combat types (six each):
+Metroid-inspired Rippers and Skrees, and Castlevania-inspired bats, skeletons and
+wave-flying Medusa heads. They occupy 17 rooms, including one introductory Ripper
+in King's Pass. The remaining reference enemy/boss markers retain their placeholder
+behaviour. See [ENEMIES.md](ENEMIES.md) for controls, AI, tests, and how to reapply
+these placements after rebuilding the reference terrain.

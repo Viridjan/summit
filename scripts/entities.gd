@@ -404,7 +404,7 @@ class CombatEnemy extends Ent:
 		if not collidable:
 			return
 		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0)
-		if phase == "windup":
+		if phase == "windup" and int(clock * 12) % 2 == 0:
 			ci.draw_rect(Rect2(center().x - 1, rect.position.y - 4, 2, 2), Color("f8d89b"))
 
 

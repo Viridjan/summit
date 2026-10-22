@@ -28,11 +28,33 @@ func _ready() -> void:
 	for t in E.TYPES:
 		d.entities.append({"t": t, "x": x, "y": 120, "w": 16, "h": 16, "tx": x, "ty": 60})
 		x += 24
+	# Put every new combat behaviour on screen as well as in the generic registry row.
+	for enemy in [["enemy_ripper", 56, 160], ["enemy_skree", 168, 72], ["enemy_bat", 200, 96], ["enemy_skeleton", 264, 180], ["enemy_medusa", 320, 120]]:
+		d.entities.append({"t": enemy[0], "x": enemy[1], "y": enemy[2]})
+	var previous_invincible: bool = Game.settings.invincible
+	Game.settings.invincible = true
 	Game.editor_level = d
 	Game.play(d, true)
 	await _frames(90)
 	await _shot("world")
+	Game.settings.invincible = previous_invincible
 	var world = get_child(0)
+	var tc = world.TouchControls.new()  # desktop has no touchscreen: force the phone controls on
+	world.touch = tc
+	world.ui.add_child(tc)
+	var tap := InputEventScreenTouch.new()
+	tap.position = Vector2(1150, 600)  # Jump
+	tap.pressed = true
+	tc._input(tap)
+	await _frames(2)
+	await _shot("touch")
+	if not Input.is_action_pressed("jump"):
+		push_error("touch Jump did not press jump")
+	tap.pressed = false
+	tc._input(tap)
+	await _frames(2)
+	if Input.is_action_pressed("jump"):
+		push_error("touch Jump stayed held")
 	# character close-ups: standing, running, climbing the platform wall at x=264 (tiles 33-34)
 	var real_player = world.player
 	world.player = Bot.new(world, Vector2(200, 27 * 8))
@@ -186,7 +208,7 @@ func _shot_player(name: String, world) -> void:
 	if dir != "" and DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		var img := get_viewport().get_texture().get_image()
-		var c := Vector2i((world.player.pos - world.cam.position) * 4 + Vector2(img.get_size()) / 2)
+		var c := Vector2i((world.player.pos - world.cam.position) * world.ZOOM + Vector2(img.get_size()) / 2)
 		img.get_region(Rect2i(c - Vector2i(100, 110), Vector2i(200, 140)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))).save_png(dir.path_join(name + ".png"))
 
 func _shot(name: String) -> void:

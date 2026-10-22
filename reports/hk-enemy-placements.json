@@ -1,0 +1,510 @@
+{
+  "counts": {
+    "ripper": 6,
+    "skree": 6,
+    "bat": 6,
+    "skeleton": 6,
+    "medusa": 6
+  },
+  "changed_rooms": [
+    "r005",
+    "r012",
+    "r017",
+    "r023",
+    "r027",
+    "r029",
+    "r038",
+    "r041",
+    "r045",
+    "r057",
+    "r062",
+    "r067",
+    "r069",
+    "r070",
+    "r083",
+    "r090",
+    "r097"
+  ],
+  "placements": [
+    {
+      "room": "r005",
+      "t": "enemy_ripper",
+      "x": 840,
+      "y": 1016,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper",
+      "summit_enemy_set": 1,
+      "reference_text": "husk",
+      "reference_position": [
+        840,
+        1016
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r012",
+      "t": "enemy_skeleton",
+      "x": 856,
+      "y": 348,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton",
+      "summit_enemy_set": 1,
+      "reference_text": "Nightmare King",
+      "reference_position": [
+        856,
+        328
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r017",
+      "t": "enemy_skree",
+      "x": 128,
+      "y": 256,
+      "w": 8,
+      "h": 12,
+      "text": "Skree",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        136,
+        320
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r017",
+      "t": "enemy_bat",
+      "x": 280,
+      "y": 328,
+      "w": 10,
+      "h": 8,
+      "text": "Bat",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        288,
+        384
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r023",
+      "t": "enemy_medusa",
+      "x": 216,
+      "y": 536,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa",
+      "summit_enemy_set": 1,
+      "reference_text": "small orange creature",
+      "reference_position": [
+        216,
+        520
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r023",
+      "t": "enemy_ripper",
+      "x": 192,
+      "y": 416,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        192,
+        416
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r027",
+      "t": "enemy_skree",
+      "x": 64,
+      "y": 32,
+      "w": 8,
+      "h": 12,
+      "text": "Skree",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        64,
+        72
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r027",
+      "t": "enemy_bat",
+      "x": 728,
+      "y": 72,
+      "w": 10,
+      "h": 8,
+      "text": "Bat",
+      "summit_enemy_set": 1,
+      "reference_text": "small pale creature",
+      "reference_position": [
+        704,
+        112
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r029",
+      "t": "enemy_medusa",
+      "x": 424,
+      "y": 136,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa",
+      "summit_enemy_set": 1,
+      "reference_text": "round purple creature",
+      "reference_position": [
+        424,
+        120
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r029",
+      "t": "enemy_ripper",
+      "x": 664,
+      "y": 352,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        664,
+        352
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r038",
+      "t": "enemy_skeleton",
+      "x": 408,
+      "y": 428,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton",
+      "summit_enemy_set": 1,
+      "reference_text": "small pale flyer",
+      "reference_position": [
+        408,
+        392
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r038",
+      "t": "enemy_skree",
+      "x": 600,
+      "y": 320,
+      "w": 8,
+      "h": 12,
+      "text": "Skree",
+      "summit_enemy_set": 1,
+      "reference_text": "small pale flyer",
+      "reference_position": [
+        592,
+        384
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r041",
+      "t": "enemy_medusa",
+      "x": 624,
+      "y": 192,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa",
+      "summit_enemy_set": 1,
+      "reference_text": "Gruzzer",
+      "reference_position": [
+        624,
+        192
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r041",
+      "t": "enemy_ripper",
+      "x": 912,
+      "y": 256,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper",
+      "summit_enemy_set": 1,
+      "reference_text": "Husk Hornhead",
+      "reference_position": [
+        960,
+        216
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r045",
+      "t": "enemy_bat",
+      "x": 128,
+      "y": 136,
+      "w": 10,
+      "h": 8,
+      "text": "Bat",
+      "summit_enemy_set": 1,
+      "reference_text": "Obble",
+      "reference_position": [
+        136,
+        144
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r045",
+      "t": "enemy_medusa",
+      "x": 88,
+      "y": 216,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa",
+      "summit_enemy_set": 1,
+      "reference_text": "small orange flyer",
+      "reference_position": [
+        112,
+        152
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r057",
+      "t": "enemy_skeleton",
+      "x": 648,
+      "y": 260,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton",
+      "summit_enemy_set": 1,
+      "reference_text": "small pink creature",
+      "reference_position": [
+        648,
+        240
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r057",
+      "t": "enemy_skree",
+      "x": 808,
+      "y": 200,
+      "w": 8,
+      "h": 12,
+      "text": "Skree",
+      "summit_enemy_set": 1,
+      "reference_text": "small crawler",
+      "reference_position": [
+        824,
+        240
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r062",
+      "t": "enemy_bat",
+      "x": 40,
+      "y": 264,
+      "w": 10,
+      "h": 8,
+      "text": "Bat",
+      "summit_enemy_set": 1,
+      "reference_text": "Uoma",
+      "reference_position": [
+        48,
+        288
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r062",
+      "t": "enemy_ripper",
+      "x": 152,
+      "y": 368,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper",
+      "summit_enemy_set": 1,
+      "reference_text": "Uoma",
+      "reference_position": [
+        136,
+        368
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r067",
+      "t": "enemy_medusa",
+      "x": 56,
+      "y": 40,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa",
+      "summit_enemy_set": 1,
+      "reference_text": "Uoma",
+      "reference_position": [
+        56,
+        48
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r069",
+      "t": "enemy_skree",
+      "x": 520,
+      "y": 40,
+      "w": 8,
+      "h": 12,
+      "text": "Skree",
+      "summit_enemy_set": 1,
+      "reference_text": "Uoma",
+      "reference_position": [
+        520,
+        104
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r069",
+      "t": "enemy_bat",
+      "x": 536,
+      "y": 280,
+      "w": 10,
+      "h": 8,
+      "text": "Bat",
+      "summit_enemy_set": 1,
+      "reference_text": "Ooma",
+      "reference_position": [
+        552,
+        312
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r070",
+      "t": "enemy_ripper",
+      "x": 176,
+      "y": 16,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper",
+      "summit_enemy_set": 1,
+      "reference_text": "Ooma",
+      "reference_position": [
+        176,
+        16
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r070",
+      "t": "enemy_skeleton",
+      "x": 656,
+      "y": 412,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton",
+      "summit_enemy_set": 1,
+      "reference_text": "small husk",
+      "reference_position": [
+        656,
+        384
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r083",
+      "t": "enemy_skree",
+      "x": 960,
+      "y": 312,
+      "w": 8,
+      "h": 12,
+      "text": "Skree",
+      "summit_enemy_set": 1,
+      "reference_text": "Ooma",
+      "reference_position": [
+        960,
+        336
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r083",
+      "t": "enemy_skeleton",
+      "x": 456,
+      "y": 300,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton",
+      "summit_enemy_set": 1,
+      "reference_text": "Fungling",
+      "reference_position": [
+        496,
+        288
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r090",
+      "t": "enemy_bat",
+      "x": 624,
+      "y": 16,
+      "w": 10,
+      "h": 8,
+      "text": "Bat",
+      "summit_enemy_set": 1,
+      "reference_text": "Winged Sentry",
+      "reference_position": [
+        624,
+        56
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r090",
+      "t": "enemy_skeleton",
+      "x": 440,
+      "y": 284,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton",
+      "summit_enemy_set": 1,
+      "reference_text": "husk",
+      "reference_position": [
+        400,
+        272
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r097",
+      "t": "enemy_medusa",
+      "x": 176,
+      "y": 40,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa",
+      "summit_enemy_set": 1,
+      "reference_text": "Fungling",
+      "reference_position": [
+        128,
+        32
+      ],
+      "patrol": 40
+    }
+  ]
+}

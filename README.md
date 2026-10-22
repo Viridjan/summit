@@ -66,6 +66,14 @@ LMB paint/place (drag to size blocks; zip mover asks for a target click) · RMB 
 MMB or Space+drag pan · wheel zoom · Ctrl+Z undo · Ctrl+S save · F5 playtest.
 Levels save as JSON in `user://levels/` (Linux: `~/.local/share/godot/app_userdata/Summit/levels/`).
 
+## Combat enemies
+
+The HK reference world includes 30 active enemies: Rippers, Skrees, bats, skeletons
+and wave-flying Medusa heads, adapted from Metroid: Zero Mission and Castlevania.
+Attack with A; skeleton bones can be swatted away. Five types are also available in
+the editor. See [behaviour and placement notes](docs/ENEMIES.md) and the
+[animated sprite gallery](assets/enemies/preview.html).
+
 ## Tests
     godot --headless --path . res://tests/test.tscn    # physics checks, exit code = failures
     godot --headless --path . res://tests/smoke.tscn   # opens every screen

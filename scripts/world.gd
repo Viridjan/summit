@@ -8,10 +8,12 @@ const PlayerScript := preload("res://scripts/player.gd")
 const OptionsPanel := preload("res://scripts/options.gd")
 const DebugPanel := preload("res://scripts/debug_panel.gd")
 const MapView := preload("res://scripts/map_view.gd")
+const TouchControls := preload("res://scripts/touch_controls.gd")
 const Adventure := preload("res://scripts/adventure.gd")
 const T := 8
 const DT := 1.0 / 60.0
-const VIEW := Vector2(320, 180)
+const ZOOM := 4.8  # screen pixels per game pixel (4 = the original 320x180 view; 4.8 = 120%)
+const VIEW := Vector2(1280, 720) / ZOOM
 
 # Background is behind retained terrain; parent draws entities and overlays.
 class Background extends Node2D:
@@ -62,6 +64,7 @@ var paused := false
 var done := false
 
 var ui: CanvasLayer
+var touch: Control  # phone controls, only on touchscreens
 var hud: Label
 var note_label: Label  # design note under the player (entities.gd Note)
 var note_t := 0.0
@@ -98,7 +101,7 @@ func _ready() -> void:
 		deaths = Game.adv.deaths
 		time = Game.adv.time
 	cam = Camera2D.new()
-	cam.zoom = Vector2(4, 4)
+	cam.zoom = Vector2(ZOOM, ZOOM)
 	add_child(cam)
 	cam.make_current()
 	ui = CanvasLayer.new()
@@ -109,6 +112,9 @@ func _ready() -> void:
 	hud.add_theme_color_override("font_outline_color", Color.BLACK)
 	hud.add_theme_constant_override("outline_size", 6)
 	ui.add_child(hud)
+	if TouchControls.wanted():
+		touch = TouchControls.new()
+		ui.add_child(touch)
 	note_label = Label.new()
 	note_label.theme = Game.theme
 	note_label.add_theme_color_override("font_color", Color("ffe08a"))
@@ -302,6 +308,8 @@ func _load_near() -> void:
 		near_layers[n].position = Vector2(rooms[n].pos * T) - room_origin
 
 func _process(_delta: float) -> void:
+	if touch != null:
+		touch.visible = not (paused or done or map_view != null or debug_panel != null)
 	if near_queue.is_empty():
 		return
 	var n: String = near_queue.pop_front()
