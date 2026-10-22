@@ -805,6 +805,33 @@ func check_bugfixes() -> void:
 	Game.adv = {}
 	Game.adv_temp = false
 
+	# a wall that is the next room's rock, right on the shared edge, can be climbed and wall-jumped like any wall
+	var ra := Game.new_level("a", 10, 8)
+	var rb := Game.new_level("b", 10, 8)
+	ra.tiles = ["1111111111", "1000000000", "1000000000", "1000000000", "1000000000", "1000000000", "1111111111", "1111111111"]
+	rb.tiles = ["1111111111", "1100000001", "1100000001", "1100000001", "1100000001", "1100000001", "1111111111", "1111111111"]
+	ra.entities = [{"t": "spawn", "x": 16, "y": 40}]
+	rb.entities = []
+	Game.adv_world = {"start": "a", "abilities": ["climb"], "rooms": {"a": {"pos": Vector2i(0, 0), "level": ra}, "b": {"pos": Vector2i(10, 0), "level": rb}}}
+	Game.adv = Adventure.new_run(Game.adv_world)
+	Game.adv_temp = true
+	Game.level = ra
+	w = load("res://scripts/world.gd").new()
+	add_child(w)
+	w.set_physics_process(false)
+	w.player = Bot.new(w, w.spawn)
+	p().pos = Vector2(74, 30)  # in the air against the seam wall at x 80
+	p().hold = {"right": true, "grab": true}
+	var climbed := false
+	for i in 20:
+		step()
+		climbed = climbed or p().state == p().ST_CLIMB
+	check(climbed and w.room == "a", "grab a wall on the shared room edge (state %d, at %s)" % [p().state, p().pos])
+	w.queue_free()
+	w = null
+	Game.adv = {}
+	Game.adv_temp = false
+
 	# editor: New/Load never keep a world room's file name; a drag released over the UI ends
 	Game.editor_level = Game.new_level("room", 20, 10)
 	Game.editor_dir = FIXTURE_WORLD

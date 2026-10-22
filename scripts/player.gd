@@ -342,9 +342,12 @@ func lift_boost() -> Vector2:
 	v.y = clampf(v.y, LIFT_Y_CAP, 0.0)
 	return v
 
+# Celeste: no grabbing past the level edge. Past this room's edge lies the next room's rock, which is a real wall.
 func climb_bounds_check(dir: int) -> bool:
 	var r := hitbox()
-	return r.position.x + dir * CLIMB_CHECK_DIST >= w.bounds.position.x and r.end.x + dir * CLIMB_CHECK_DIST < w.bounds.end.x
+	if r.position.x + dir * CLIMB_CHECK_DIST >= w.bounds.position.x and r.end.x + dir * CLIMB_CHECK_DIST < w.bounds.end.x:
+		return true
+	return w.can_exit(Vector2(r.end.x + CLIMB_CHECK_DIST if dir > 0 else r.position.x - CLIMB_CHECK_DIST, r.get_center().y))
 
 func climb_check(dir: int, y_add := 0) -> bool:
 	return climb_bounds_check(dir) and solid_at(Vector2(dir * CLIMB_CHECK_DIST, y_add))
