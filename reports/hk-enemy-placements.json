@@ -1,48 +1,49 @@
 {
   "counts": {
-    "skeleton": 6,
-    "skree": 6,
-    "bat": 6,
-    "skree_swift": 6,
-    "skree_armored": 6,
-    "bat_swift": 6,
-    "bat_armored": 6,
-    "skeleton_swift": 6,
-    "skeleton_armored": 6,
-    "thornmite": 6,
-    "thornmite_swift": 6,
-    "thornmite_armored": 6,
-    "hornback": 6,
-    "hornback_swift": 6,
-    "hornback_armored": 6,
-    "fuzzbob": 6,
-    "fuzzbob_swift": 6,
-    "fuzzbob_armored": 6
+    "thornmite": 3,
+    "skeleton": 3,
+    "skree": 3,
+    "bat": 3,
+    "thornmite_swift": 3,
+    "fuzzbob": 3,
+    "hornback": 3,
+    "skree_swift": 3,
+    "skree_armored": 3,
+    "bat_swift": 3,
+    "skeleton_armored": 3,
+    "hornback_swift": 3,
+    "thornmite_venom": 3,
+    "thornmite_brood": 3,
+    "thornmite_giant": 3,
+    "skree_venom": 3,
+    "bat_brood": 3,
+    "skeleton_shielded": 3,
+    "skeleton_giant": 3,
+    "hornback_shielded": 3,
+    "hornback_giant": 3,
+    "fuzzbob_brood": 3,
+    "fuzzbob_venom": 3,
+    "fuzzbob_giant": 3,
+    "cragjaw": 3,
+    "cragjaw_armored": 3,
+    "cragjaw_shielded": 3,
+    "murkspore": 3,
+    "murkspore_swift": 3,
+    "murkspore_venom": 3,
+    "murkspore_brood": 3
   },
   "changed_rooms": [
-    "r001",
-    "r002",
     "r003",
     "r004",
-    "r005",
     "r006",
-    "r010",
-    "r011",
-    "r012",
     "r016",
-    "r017",
     "r021",
     "r023",
-    "r027",
     "r028",
     "r029",
-    "r032",
-    "r033",
     "r034",
-    "r035",
     "r036",
     "r037",
-    "r038",
     "r040",
     "r041",
     "r042",
@@ -50,32 +51,24 @@
     "r044",
     "r045",
     "r046",
-    "r047",
     "r048",
     "r051",
     "r052",
     "r053",
-    "r054",
-    "r055",
     "r057",
-    "r060",
     "r061",
     "r062",
     "r065",
-    "r067",
     "r069",
     "r070",
     "r071",
     "r072",
     "r073",
     "r083",
-    "r088",
     "r090",
     "r092",
     "r097",
-    "r101",
     "r103",
-    "r109",
     "r111",
     "r115",
     "r116",
@@ -196,7 +189,7 @@
     },
     {
       "room": "r023",
-      "t": "enemy_thornmite_armored",
+      "t": "enemy_thornmite_venom",
       "x": 864,
       "y": 792,
       "w": 8,
@@ -276,20 +269,20 @@
     },
     {
       "room": "r029",
-      "t": "enemy_fuzzbob_swift",
-      "x": 664,
-      "y": 360,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "t": "enemy_skree_venom",
+      "x": 880,
+      "y": 320,
+      "w": 8,
+      "h": 12,
+      "text": "Dropwing",
       "summit_enemy_set": 1,
-      "reference_text": "small white flyer",
+      "reference_text": "small flyer",
       "reference_position": [
-        664,
-        352
+        888,
+        320
       ],
       "reference_size": [
-        16,
+        8,
         16
       ],
       "patrol": 40
@@ -336,7 +329,7 @@
     },
     {
       "room": "r041",
-      "t": "enemy_fuzzbob_armored",
+      "t": "enemy_fuzzbob_brood",
       "x": 624,
       "y": 192,
       "w": 10,
@@ -396,7 +389,7 @@
     },
     {
       "room": "r045",
-      "t": "enemy_fuzzbob_swift",
+      "t": "enemy_fuzzbob_venom",
       "x": 88,
       "y": 216,
       "w": 10,
@@ -436,27 +429,27 @@
     },
     {
       "room": "r057",
-      "t": "enemy_skree",
-      "x": 808,
-      "y": 200,
+      "t": "enemy_thornmite_brood",
+      "x": 824,
+      "y": 264,
       "w": 8,
-      "h": 12,
-      "text": "Dropwing",
+      "h": 8,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "small crawler",
       "reference_position": [
         824,
         240
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r062",
-      "t": "enemy_bat",
+      "t": "enemy_bat_brood",
       "x": 40,
       "y": 264,
       "w": 10,
@@ -468,19 +461,19 @@
         48,
         288
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         40
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r062",
-      "t": "enemy_fuzzbob_armored",
+      "t": "enemy_fuzzbob_giant",
       "x": 152,
       "y": 368,
-      "w": 10,
-      "h": 10,
+      "w": 20,
+      "h": 20,
       "text": "Fuzzbob",
       "summit_enemy_set": 1,
       "reference_text": "Uoma",
@@ -516,52 +509,52 @@
     },
     {
       "room": "r069",
-      "t": "enemy_skree",
-      "x": 520,
-      "y": 40,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
+      "t": "enemy_murkspore",
+      "x": 432,
+      "y": 112,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "Uoma",
       "reference_position": [
-        520,
-        104
+        384,
+        88
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         40
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r069",
-      "t": "enemy_bat",
-      "x": 536,
-      "y": 280,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "t": "enemy_murkspore_swift",
+      "x": 504,
+      "y": 56,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
-      "reference_text": "Ooma",
+      "reference_text": "Uoma",
       "reference_position": [
-        552,
-        312
+        456,
+        112
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         40
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r070",
-      "t": "enemy_fuzzbob_swift",
+      "t": "enemy_murkspore_venom",
       "x": 176,
       "y": 32,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "Ooma",
       "reference_position": [
@@ -576,47 +569,47 @@
     },
     {
       "room": "r070",
-      "t": "enemy_skeleton",
+      "t": "enemy_thornmite_giant",
       "x": 656,
-      "y": 412,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "y": 408,
+      "w": 16,
+      "h": 16,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "small husk",
       "reference_position": [
         656,
         384
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         24
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r083",
-      "t": "enemy_skree",
+      "t": "enemy_murkspore_brood",
       "x": 960,
-      "y": 312,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
+      "y": 336,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "Ooma",
       "reference_position": [
         960,
         336
       ],
-      "patrol": 40,
       "reference_size": [
         24,
         24
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r083",
-      "t": "enemy_skeleton",
+      "t": "enemy_skeleton_shielded",
       "x": 456,
       "y": 300,
       "w": 8,
@@ -628,60 +621,60 @@
         496,
         288
       ],
-      "patrol": 40,
       "reference_size": [
         24,
         16
-      ]
-    },
-    {
-      "room": "r090",
-      "t": "enemy_bat",
-      "x": 624,
-      "y": 16,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
-      "summit_enemy_set": 1,
-      "reference_text": "Winged Sentry",
-      "reference_position": [
-        624,
-        56
       ],
-      "patrol": 40,
-      "reference_size": [
-        24,
-        24
-      ]
+      "patrol": 40
     },
     {
       "room": "r090",
-      "t": "enemy_skeleton",
+      "t": "enemy_thornmite_venom",
       "x": 440,
-      "y": 284,
+      "y": 288,
       "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "h": 8,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "husk",
       "reference_position": [
         400,
         272
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r090",
+      "t": "enemy_skeleton_giant",
+      "x": 864,
+      "y": 648,
+      "w": 16,
+      "h": 24,
+      "text": "Ossling",
+      "summit_enemy_set": 1,
+      "reference_text": "Winged Sentry",
+      "reference_position": [
+        864,
+        688
+      ],
+      "reference_size": [
+        40,
+        32
+      ],
+      "patrol": 40
     },
     {
       "room": "r097",
-      "t": "enemy_fuzzbob_armored",
-      "x": 176,
-      "y": 48,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "t": "enemy_skree_venom",
+      "x": 152,
+      "y": 32,
+      "w": 8,
+      "h": 12,
+      "text": "Dropwing",
       "summit_enemy_set": 1,
       "reference_text": "Fungling",
       "reference_position": [
@@ -696,12 +689,12 @@
     },
     {
       "room": "r097",
-      "t": "enemy_fuzzbob",
+      "t": "enemy_bat_brood",
       "x": 112,
-      "y": 200,
+      "y": 184,
       "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "h": 8,
+      "text": "Duskflit",
       "summit_enemy_set": 1,
       "reference_text": "blue blob",
       "reference_position": [
@@ -796,28 +789,28 @@
     },
     {
       "room": "r003",
-      "t": "enemy_bat_armored",
-      "x": 920,
-      "y": 216,
+      "t": "enemy_fuzzbob_brood",
+      "x": 904,
+      "y": 280,
       "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "h": 10,
+      "text": "Fuzzbob",
       "summit_enemy_set": 1,
       "reference_text": "Husk Miner",
       "reference_position": [
         872,
         280
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r003",
-      "t": "enemy_fuzzbob_swift",
-      "x": 984,
+      "t": "enemy_fuzzbob_venom",
+      "x": 992,
       "y": 280,
       "w": 10,
       "h": 10,
@@ -836,23 +829,23 @@
     },
     {
       "room": "r004",
-      "t": "enemy_skeleton_swift",
-      "x": 1440,
-      "y": 380,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "t": "enemy_hornback_shielded",
+      "x": 1432,
+      "y": 382,
+      "w": 12,
+      "h": 10,
+      "text": "Hornback",
       "summit_enemy_set": 1,
       "reference_text": "Tiktik",
       "reference_position": [
         1448,
         328
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r004",
@@ -896,21 +889,21 @@
     },
     {
       "room": "r006",
-      "t": "enemy_hornback_armored",
-      "x": 1536,
-      "y": 726,
-      "w": 12,
-      "h": 10,
+      "t": "enemy_hornback_giant",
+      "x": 608,
+      "y": 1804,
+      "w": 24,
+      "h": 20,
       "text": "Hornback",
       "summit_enemy_set": 1,
       "reference_text": "Glimback",
       "reference_position": [
-        1536,
-        680
+        608,
+        1784
       ],
       "reference_size": [
-        24,
-        32
+        32,
+        24
       ],
       "patrol": 40
     },
@@ -996,51 +989,51 @@
     },
     {
       "room": "r016",
-      "t": "enemy_bat_armored",
-      "x": 2736,
-      "y": 1640,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "t": "enemy_cragjaw",
+      "x": 928,
+      "y": 444,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
-      "reference_text": "Mosscreep",
+      "reference_text": "Moss Charger",
       "reference_position": [
-        2760,
-        1648
+        928,
+        496
       ],
-      "patrol": 40,
       "reference_size": [
         40,
         32
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r016",
-      "t": "enemy_skeleton_swift",
-      "x": 776,
-      "y": 452,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "t": "enemy_cragjaw_armored",
+      "x": 1176,
+      "y": 308,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
-      "reference_text": "Moss Knight",
+      "reference_text": "Moss Charger",
       "reference_position": [
-        776,
-        408
+        1176,
+        288
       ],
-      "patrol": 40,
       "reference_size": [
-        24,
-        32
-      ]
+        32,
+        24
+      ],
+      "patrol": 40
     },
     {
       "room": "r021",
-      "t": "enemy_fuzzbob_armored",
+      "t": "enemy_fuzzbob_giant",
       "x": 240,
       "y": 288,
-      "w": 10,
-      "h": 10,
+      "w": 20,
+      "h": 20,
       "text": "Fuzzbob",
       "summit_enemy_set": 1,
       "reference_text": "spiky flyer",
@@ -1056,12 +1049,12 @@
     },
     {
       "room": "r021",
-      "t": "enemy_fuzzbob",
+      "t": "enemy_murkspore",
       "x": 328,
       "y": 264,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "Aluba",
       "reference_position": [
@@ -1076,12 +1069,12 @@
     },
     {
       "room": "r028",
-      "t": "enemy_fuzzbob_swift",
+      "t": "enemy_murkspore_swift",
       "x": 144,
       "y": 384,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "Gruzzer",
       "reference_position": [
@@ -1096,12 +1089,12 @@
     },
     {
       "room": "r028",
-      "t": "enemy_fuzzbob_armored",
+      "t": "enemy_murkspore_venom",
       "x": 144,
       "y": 88,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "small crawler",
       "reference_position": [
@@ -1156,12 +1149,12 @@
     },
     {
       "room": "r034",
-      "t": "enemy_fuzzbob",
-      "x": 360,
-      "y": 144,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
+      "t": "enemy_murkspore_brood",
+      "x": 368,
+      "y": 72,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "spiky creature",
       "reference_position": [
@@ -1171,26 +1164,6 @@
       "reference_size": [
         40,
         40
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r034",
-      "t": "enemy_fuzzbob_swift",
-      "x": 400,
-      "y": 64,
-      "w": 10,
-      "h": 10,
-      "text": "Fuzzbob",
-      "summit_enemy_set": 1,
-      "reference_text": "spiky creature",
-      "reference_position": [
-        408,
-        120
-      ],
-      "reference_size": [
-        40,
-        32
       ],
       "patrol": 40
     },
@@ -1236,47 +1209,47 @@
     },
     {
       "room": "r036",
-      "t": "enemy_skeleton_swift",
+      "t": "enemy_thornmite_brood",
       "x": 232,
-      "y": 516,
+      "y": 520,
       "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "h": 8,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "Goam",
       "reference_position": [
         216,
         496
       ],
-      "patrol": 40,
       "reference_size": [
         56,
         24
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r036",
-      "t": "enemy_bat_armored",
-      "x": 464,
-      "y": 104,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "t": "enemy_skeleton_shielded",
+      "x": 40,
+      "y": 252,
+      "w": 8,
+      "h": 12,
+      "text": "Ossling",
       "summit_enemy_set": 1,
-      "reference_text": "Vengefly",
+      "reference_text": "Husk Guard",
       "reference_position": [
-        440,
-        40
+        88,
+        184
       ],
-      "patrol": 40,
       "reference_size": [
-        16,
-        16
-      ]
+        56,
+        48
+      ],
+      "patrol": 40
     },
     {
       "room": "r037",
-      "t": "enemy_fuzzbob_armored",
+      "t": "enemy_fuzzbob_brood",
       "x": 472,
       "y": 112,
       "w": 10,
@@ -1296,7 +1269,7 @@
     },
     {
       "room": "r040",
-      "t": "enemy_skree_swift",
+      "t": "enemy_skree_venom",
       "x": 720,
       "y": 248,
       "w": 8,
@@ -1308,11 +1281,11 @@
         720,
         256
       ],
-      "patrol": 40,
       "reference_size": [
         24,
         24
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r040",
@@ -1336,91 +1309,111 @@
     },
     {
       "room": "r042",
-      "t": "enemy_skree_armored",
+      "t": "enemy_bat_brood",
       "x": 256,
       "y": 232,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
+      "w": 10,
+      "h": 8,
+      "text": "Duskflit",
       "summit_enemy_set": 1,
       "reference_text": "Goam",
       "reference_position": [
         264,
         256
       ],
-      "patrol": 40,
       "reference_size": [
         24,
         56
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r042",
-      "t": "enemy_bat_swift",
-      "x": 160,
-      "y": 448,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "t": "enemy_cragjaw_shielded",
+      "x": 104,
+      "y": 324,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
       "reference_text": "small husk",
       "reference_position": [
-        144,
-        472
+        80,
+        328
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r043",
-      "t": "enemy_bat_armored",
-      "x": 960,
-      "y": 408,
+      "t": "enemy_fuzzbob_venom",
+      "x": 1136,
+      "y": 504,
       "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "h": 10,
+      "text": "Fuzzbob",
       "summit_enemy_set": 1,
-      "reference_text": "small grey flyer",
+      "reference_text": "Entombed Husk",
       "reference_position": [
-        1000,
-        440
+        1088,
+        480
       ],
-      "patrol": 40,
       "reference_size": [
-        24,
-        24
-      ]
+        16,
+        32
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r043",
+      "t": "enemy_fuzzbob_giant",
+      "x": 568,
+      "y": 224,
+      "w": 20,
+      "h": 20,
+      "text": "Fuzzbob",
+      "summit_enemy_set": 1,
+      "reference_text": "Xero",
+      "reference_position": [
+        568,
+        224
+      ],
+      "reference_size": [
+        32,
+        32
+      ],
+      "patrol": 40
     },
     {
       "room": "r044",
-      "t": "enemy_skeleton_swift",
+      "t": "enemy_thornmite_giant",
       "x": 288,
-      "y": 316,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "y": 312,
+      "w": 16,
+      "h": 16,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "Entombed Husk",
       "reference_position": [
         264,
         272
       ],
-      "patrol": 40,
       "reference_size": [
         32,
         32
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r046",
-      "t": "enemy_skeleton_armored",
+      "t": "enemy_skeleton_giant",
       "x": 248,
-      "y": 100,
-      "w": 8,
-      "h": 12,
+      "y": 88,
+      "w": 16,
+      "h": 24,
       "text": "Ossling",
       "summit_enemy_set": 1,
       "reference_text": "small white flyer",
@@ -1428,11 +1421,11 @@
         200,
         56
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r046",
@@ -1475,244 +1468,204 @@
       "patrol": 40
     },
     {
-      "room": "r051",
-      "t": "enemy_skree_swift",
+      "room": "r048",
+      "t": "enemy_murkspore",
       "x": 56,
-      "y": 16,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
+      "y": 144,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue flyer",
+      "reference_position": [
+        8,
+        144
+      ],
+      "reference_size": [
+        32,
+        32
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r048",
+      "t": "enemy_murkspore_swift",
+      "x": 144,
+      "y": 152,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue flyer",
+      "reference_position": [
+        104,
+        152
+      ],
+      "reference_size": [
+        32,
+        32
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r051",
+      "t": "enemy_murkspore_venom",
+      "x": 56,
+      "y": 64,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
       "reference_text": "Gruzzer",
       "reference_position": [
         56,
         64
       ],
-      "patrol": 40,
       "reference_size": [
         24,
         24
-      ]
-    },
-    {
-      "room": "r052",
-      "t": "enemy_skree_armored",
-      "x": 320,
-      "y": 352,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
-      "summit_enemy_set": 1,
-      "reference_text": "Wandering Husk",
-      "reference_position": [
-        360,
-        408
       ],
-      "patrol": 40,
-      "reference_size": [
-        16,
-        24
-      ]
+      "patrol": 40
     },
     {
       "room": "r052",
-      "t": "enemy_bat_swift",
-      "x": 264,
-      "y": 168,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "t": "enemy_murkspore_brood",
+      "x": 256,
+      "y": 40,
+      "w": 16,
+      "h": 14,
+      "text": "Murkspore",
       "summit_enemy_set": 1,
-      "reference_text": "Gruz Mother",
+      "reference_text": "Gruzzer",
       "reference_position": [
         280,
-        168
+        40
       ],
-      "patrol": 40,
-      "reference_size": [
-        32,
-        32
-      ]
-    },
-    {
-      "room": "r053",
-      "t": "enemy_bat_armored",
-      "x": 776,
-      "y": 96,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
-      "summit_enemy_set": 1,
-      "reference_text": "small white flyer",
-      "reference_position": [
-        784,
-        112
-      ],
-      "patrol": 40,
       "reference_size": [
         16,
         16
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r061",
-      "t": "enemy_skeleton_swift",
+      "t": "enemy_hornback_shielded",
       "x": 608,
-      "y": 508,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "y": 510,
+      "w": 12,
+      "h": 10,
+      "text": "Hornback",
       "summit_enemy_set": 1,
       "reference_text": "spiky blue creature",
       "reference_position": [
         608,
         464
       ],
-      "patrol": 40,
       "reference_size": [
         32,
         24
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r061",
-      "t": "enemy_skeleton_armored",
-      "x": 736,
-      "y": 508,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "t": "enemy_hornback_giant",
+      "x": 720,
+      "y": 500,
+      "w": 24,
+      "h": 20,
+      "text": "Hornback",
       "summit_enemy_set": 1,
       "reference_text": "spiky blue creature",
       "reference_position": [
         768,
         464
       ],
-      "patrol": 40,
       "reference_size": [
         32,
         24
-      ]
-    },
-    {
-      "room": "r065",
-      "t": "enemy_skree_swift",
-      "x": 208,
-      "y": 24,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
-      "summit_enemy_set": 1,
-      "reference_text": "Ooma",
-      "reference_position": [
-        208,
-        48
       ],
-      "patrol": 40,
-      "reference_size": [
-        24,
-        16
-      ]
-    },
-    {
-      "room": "r065",
-      "t": "enemy_skree_armored",
-      "x": 136,
-      "y": 128,
-      "w": 8,
-      "h": 12,
-      "text": "Dropwing",
-      "summit_enemy_set": 1,
-      "reference_text": "Ooma",
-      "reference_position": [
-        136,
-        152
-      ],
-      "patrol": 40,
-      "reference_size": [
-        24,
-        24
-      ]
+      "patrol": 40
     },
     {
       "room": "r071",
-      "t": "enemy_bat_swift",
-      "x": 176,
-      "y": 1584,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
+      "t": "enemy_cragjaw",
+      "x": 104,
+      "y": 836,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
-      "reference_text": "Husk",
+      "reference_text": "Soul Twister",
       "reference_position": [
-        192,
-        1616
+        96,
+        816
       ],
-      "patrol": 40,
+      "reference_size": [
+        32,
+        24
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r071",
+      "t": "enemy_cragjaw_armored",
+      "x": 272,
+      "y": 1004,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
+      "summit_enemy_set": 1,
+      "reference_text": "Husk Dandy",
+      "reference_position": [
+        232,
+        968
+      ],
       "reference_size": [
         32,
         32
-      ]
-    },
-    {
-      "room": "r071",
-      "t": "enemy_bat_armored",
-      "x": 144,
-      "y": 488,
-      "w": 10,
-      "h": 8,
-      "text": "Duskflit",
-      "summit_enemy_set": 1,
-      "reference_text": "Mistake",
-      "reference_position": [
-        136,
-        480
       ],
-      "patrol": 40,
-      "reference_size": [
-        24,
-        24
-      ]
+      "patrol": 40
     },
     {
       "room": "r072",
-      "t": "enemy_skeleton_swift",
+      "t": "enemy_thornmite_venom",
       "x": 456,
-      "y": 1084,
+      "y": 1088,
       "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "h": 8,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "Ooma",
       "reference_position": [
         472,
         1128
       ],
-      "patrol": 40,
       "reference_size": [
         16,
         40
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r073",
-      "t": "enemy_skeleton_armored",
+      "t": "enemy_cragjaw_shielded",
       "x": 312,
-      "y": 164,
-      "w": 8,
-      "h": 12,
-      "text": "Ossling",
+      "y": 156,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
       "reference_text": "Mantis Traitor",
       "reference_position": [
         312,
         112
       ],
-      "patrol": 40,
       "reference_size": [
         32,
         40
-      ]
+      ],
+      "patrol": 40
     },
     {
       "room": "r088",
@@ -1736,7 +1689,7 @@
     },
     {
       "room": "r092",
-      "t": "enemy_thornmite_armored",
+      "t": "enemy_thornmite_brood",
       "x": 456,
       "y": 208,
       "w": 8,
@@ -1756,12 +1709,12 @@
     },
     {
       "room": "r092",
-      "t": "enemy_hornback_armored",
+      "t": "enemy_thornmite_giant",
       "x": 584,
-      "y": 390,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
+      "y": 384,
+      "w": 16,
+      "h": 16,
+      "text": "Thornmite",
       "summit_enemy_set": 1,
       "reference_text": "green flyer",
       "reference_position": [
@@ -1796,6 +1749,26 @@
     },
     {
       "room": "r103",
+      "t": "enemy_skeleton_shielded",
+      "x": 288,
+      "y": 284,
+      "w": 8,
+      "h": 12,
+      "text": "Ossling",
+      "summit_enemy_set": 1,
+      "reference_text": "Folly",
+      "reference_position": [
+        256,
+        216
+      ],
+      "reference_size": [
+        16,
+        16
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r103",
       "t": "enemy_thornmite_swift",
       "x": 96,
       "y": 288,
@@ -1807,26 +1780,6 @@
       "reference_position": [
         96,
         272
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r103",
-      "t": "enemy_thornmite_armored",
-      "x": 200,
-      "y": 144,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "Mistake",
-      "reference_position": [
-        176,
-        128
       ],
       "reference_size": [
         16,
@@ -1876,12 +1829,12 @@
     },
     {
       "room": "r111",
-      "t": "enemy_hornback_armored",
+      "t": "enemy_skeleton_giant",
       "x": 216,
-      "y": 110,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
+      "y": 96,
+      "w": 16,
+      "h": 24,
+      "text": "Ossling",
       "summit_enemy_set": 1,
       "reference_text": "Marmu",
       "reference_position": [
@@ -1896,12 +1849,12 @@
     },
     {
       "room": "r115",
-      "t": "enemy_thornmite",
+      "t": "enemy_hornback_shielded",
       "x": 584,
-      "y": 504,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
+      "y": 502,
+      "w": 12,
+      "h": 10,
+      "text": "Hornback",
       "summit_enemy_set": 1,
       "reference_text": "Primal Aspid",
       "reference_position": [
@@ -1916,12 +1869,12 @@
     },
     {
       "room": "r115",
-      "t": "enemy_thornmite_swift",
-      "x": 552,
-      "y": 992,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
+      "t": "enemy_hornback_giant",
+      "x": 536,
+      "y": 980,
+      "w": 24,
+      "h": 20,
+      "text": "Hornback",
       "summit_enemy_set": 1,
       "reference_text": "Primal Aspid",
       "reference_position": [
@@ -1936,12 +1889,12 @@
     },
     {
       "room": "r116",
-      "t": "enemy_thornmite_armored",
+      "t": "enemy_cragjaw",
       "x": 456,
-      "y": 288,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
+      "y": 276,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
       "reference_text": "Spiny Husk",
       "reference_position": [
@@ -1956,12 +1909,12 @@
     },
     {
       "room": "r117",
-      "t": "enemy_hornback",
-      "x": 1240,
-      "y": 54,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
+      "t": "enemy_cragjaw_armored",
+      "x": 1232,
+      "y": 44,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
       "reference_text": "striped bug",
       "reference_position": [
@@ -1976,12 +1929,12 @@
     },
     {
       "room": "r118",
-      "t": "enemy_hornback_swift",
+      "t": "enemy_cragjaw_shielded",
       "x": 440,
-      "y": 590,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
+      "y": 580,
+      "w": 20,
+      "h": 20,
+      "text": "Cragjaw",
       "summit_enemy_set": 1,
       "reference_text": "husk",
       "reference_position": [
@@ -1991,266 +1944,6 @@
       "reference_size": [
         16,
         16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r120",
-      "t": "enemy_hornback_armored",
-      "x": 288,
-      "y": 126,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "husk",
-      "reference_position": [
-        288,
-        88
-      ],
-      "reference_size": [
-        16,
-        24
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r121",
-      "t": "enemy_thornmite",
-      "x": 488,
-      "y": 272,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "Ambloom",
-      "reference_position": [
-        536,
-        288
-      ],
-      "reference_size": [
-        32,
-        32
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r122",
-      "t": "enemy_thornmite_swift",
-      "x": 344,
-      "y": 72,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "Uoma",
-      "reference_position": [
-        320,
-        40
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r126",
-      "t": "enemy_thornmite_armored",
-      "x": 512,
-      "y": 152,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "husk",
-      "reference_position": [
-        528,
-        120
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r131",
-      "t": "enemy_hornback",
-      "x": 320,
-      "y": 70,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "Mantis Traitor",
-      "reference_position": [
-        352,
-        40
-      ],
-      "reference_size": [
-        32,
-        32
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r133",
-      "t": "enemy_hornback_swift",
-      "x": 256,
-      "y": 534,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "husk",
-      "reference_position": [
-        256,
-        504
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r135",
-      "t": "enemy_hornback_armored",
-      "x": 1480,
-      "y": 750,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "Husk Sentry",
-      "reference_position": [
-        1440,
-        712
-      ],
-      "reference_size": [
-        16,
-        24
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r139",
-      "t": "enemy_thornmite",
-      "x": 864,
-      "y": 480,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "Shrumeling",
-      "reference_position": [
-        840,
-        440
-      ],
-      "reference_size": [
-        40,
-        32
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r139",
-      "t": "enemy_thornmite_swift",
-      "x": 696,
-      "y": 360,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "Fungling",
-      "reference_position": [
-        704,
-        320
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r142",
-      "t": "enemy_thornmite_armored",
-      "x": 1160,
-      "y": 504,
-      "w": 8,
-      "h": 8,
-      "text": "Thornmite",
-      "summit_enemy_set": 1,
-      "reference_text": "pink husk",
-      "reference_position": [
-        1160,
-        480
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r142",
-      "t": "enemy_hornback",
-      "x": 1248,
-      "y": 502,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "pink husk",
-      "reference_position": [
-        1248,
-        480
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r143",
-      "t": "enemy_hornback_swift",
-      "x": 528,
-      "y": 750,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "husk",
-      "reference_position": [
-        504,
-        744
-      ],
-      "reference_size": [
-        16,
-        16
-      ],
-      "patrol": 40
-    },
-    {
-      "room": "r146",
-      "t": "enemy_hornback_armored",
-      "x": 2232,
-      "y": 294,
-      "w": 12,
-      "h": 10,
-      "text": "Hornback",
-      "summit_enemy_set": 1,
-      "reference_text": "Hornet",
-      "reference_position": [
-        2280,
-        264
-      ],
-      "reference_size": [
-        16,
-        24
       ],
       "patrol": 40
     }

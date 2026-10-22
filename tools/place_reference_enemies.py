@@ -8,10 +8,23 @@ import json
 import math
 from pathlib import Path
 
-BASE_SIZES = {'thornmite': (8, 8), 'skree': (8, 12), 'bat': (10, 8), 'skeleton': (8, 12), 'hornback': (12, 10), 'fuzzbob': (10, 10)}
-NAMES = {'thornmite': 'Thornmite', 'skree': 'Dropwing', 'bat': 'Duskflit', 'skeleton': 'Ossling', 'hornback': 'Hornback', 'fuzzbob': 'Fuzzbob'}
-FLOOR_WALKERS = ('thornmite', 'skeleton', 'hornback')
-SIZES = {base + suffix: size for base, size in BASE_SIZES.items() for suffix in ('', '_swift', '_armored')}
+# family: (body size, name, variants) -- matches Entities.TYPES; a giant's body is twice the size
+FAMILIES = {
+    'thornmite': ((8, 8), 'Thornmite', ['swift', 'venom', 'brood', 'giant']),
+    'skree': ((8, 12), 'Dropwing', ['swift', 'armored', 'venom']),
+    'bat': ((10, 8), 'Duskflit', ['swift', 'brood']),
+    'skeleton': ((8, 12), 'Ossling', ['armored', 'shielded', 'giant']),
+    'hornback': ((12, 10), 'Hornback', ['shielded', 'swift', 'giant']),
+    'fuzzbob': ((10, 10), 'Fuzzbob', ['brood', 'venom', 'giant']),
+    'cragjaw': ((20, 20), 'Cragjaw', ['armored', 'shielded']),
+    'murkspore': ((16, 14), 'Murkspore', ['swift', 'venom', 'brood']),
+}
+NAMES = {family: spec[1] for family, spec in FAMILIES.items()}
+FLOOR_WALKERS = ('thornmite', 'skeleton', 'hornback', 'cragjaw')
+SIZES = {}
+for family, (size, _, variants) in FAMILIES.items():
+    for variant in [''] + variants:
+        SIZES[family + ('_' + variant if variant else '')] = (size[0] * 2, size[1] * 2) if variant == 'giant' else size
 ROOMS = ['r005', 'r007', 'r012', 'r017', 'r018', 'r023', 'r025', 'r027', 'r029', 'r038', 'r039', 'r041', 'r045', 'r057', 'r062', 'r064', 'r067', 'r069', 'r070', 'r083', 'r090', 'r097']
 
 
@@ -29,7 +42,7 @@ def free(level, box):
 def valid(level, kind, x, y):
     width, height = SIZES[kind]
     base = kind.split('_')[0]
-    reach = 40 if base == 'fuzzbob' else 24
+    reach = 40 if base in ('fuzzbob', 'murkspore') else 24
     box = (x, y, width, height)
     if not free(level, box):
         return False
@@ -38,11 +51,12 @@ def valid(level, kind, x, y):
         tx = x // 8
         if (y + height) % 8 or not (3 <= tx < level['w'] - 4) or floor >= level['h']:
             return False
-        if not all(level['tiles'][floor][i] == '1' for i in range(tx - 3, tx + 4)):
+        end = (x + width - 1) // 8
+        if end + 4 > level['w'] or not all(level['tiles'][floor][i] == '1' for i in range(tx - 3, end + 4)):
             return False
-        if not free(level, (x - 24, y, 56, height)):
+        if not free(level, (x - 24, y, width + 48, height)):
             return False
-        area = (x - 24, y - 16, 56, height + 16)
+        area = (x - 24, y - 16, width + 48, height + 16)
     elif base in ('skree', 'bat'):
         tx, ty = x // 8, y // 8
         if y % 8 or ty < 1 or level['tiles'][ty - 1][tx] != '1':
@@ -51,7 +65,7 @@ def valid(level, kind, x, y):
             return False
         area = (x - 20, y, width + 40, 80)
     else:
-        padding = 12 if base == 'fuzzbob' else 0
+        padding = 12 if base in ('fuzzbob', 'murkspore') else 0
         area = (x - reach, y - padding, width + reach * 2, height + padding * 2)
         if not free(level, area):
             return False
@@ -68,22 +82,26 @@ def valid(level, kind, x, y):
     return True
 
 
-def install(root, per_type=6, apply=False):
+def install(root, per_type=3, apply=False):
     manifest = json.loads((root / 'world.json').read_text())
     ordered_rooms = ROOMS + [room for room in manifest['rooms'] if room not in ROOMS]
     levels = {room: json.loads((root / (room + '.json')).read_text()) for room in ordered_rooms}
     changed = set()
+    kept = Counter()
     for room, level in levels.items():
         for i, e in enumerate(level['entities']):
             if not e.get('summit_enemy_set'):
                 continue
             kind = e['t'].removeprefix('enemy_')
-            if kind not in SIZES:  # a removed kind: back to the reference map's placeholder
+            kept[kind] += 1
+            if kind not in SIZES or kept[kind] > per_type:  # removed kind or one too many: back to the placeholder
                 w, h = e.get('reference_size', (16, 16))
                 level['entities'][i] = {'t': 'enemy', 'x': e['reference_position'][0], 'y': e['reference_position'][1], 'w': w, 'h': h, 'text': e['reference_text']}
                 changed.add(room)
             elif e.get('text') != NAMES[kind.split('_')[0]]:
                 e['text'] = NAMES[kind.split('_')[0]]
+            if kind in SIZES and (e.get('w'), e.get('h')) != SIZES[kind]:
+                e['w'], e['h'] = SIZES[kind]
                 changed.add(room)
     counts = Counter(e['t'].removeprefix('enemy_') for level in levels.values() for e in level['entities'] if e.get('summit_enemy_set'))
     placements = []
@@ -135,7 +153,7 @@ def main():
     print(json.dumps({'counts': report['counts'], 'changed_rooms': report['changed_rooms']}, indent=2))
     if args.apply:
         Path('reports/hk-enemy-placements.json').write_text(json.dumps(report, indent=2) + '\n')
-    if any(report['counts'].get(kind, 0) < 6 for kind in SIZES):
+    if any(report['counts'].get(kind, 0) < 3 for kind in SIZES):
         raise SystemExit(1)
 
 

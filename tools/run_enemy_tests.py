@@ -27,7 +27,7 @@ def main():
     for name in ['Bot', 'EnemyDrawTexture', 'EnemyDrawProbe']:
         script += block(source, 'class', name)
     script += 'var fails := 0\nvar w\n\n'
-    checks = ['check_enemy_facing_alignment', 'check_combat_enemies', 'check_enemy_variants', 'check_hk_combat_placements']
+    checks = ['check_enemy_facing_alignment', 'check_combat_enemies', 'check_enemy_variants', 'check_big_enemies', 'check_hk_combat_placements']
     for name in ['check', 'make_world', 'step', 'p', *checks]:
         script += block(source, 'func', name)
     script += '''func _ready() -> void:
@@ -37,7 +37,8 @@ def main():
 	Game.settings.shake = false
 	await check_enemy_facing_alignment()
 	check_combat_enemies()
-	check_enemy_variants()
+	await check_enemy_variants()
+	check_big_enemies()
 	check_hk_combat_placements()
 	print("\\n%d focused enemy failure(s)" % fails)
 	get_tree().quit(fails)

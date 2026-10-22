@@ -228,10 +228,11 @@ No map or gameplay fixes are applied by these tools.
 
 ## Active enemies in the HK world
 
-108 reference placeholders have been replaced by eighteen combat variants (six each)
-of six original families: Thornmite, Dropwing, Duskflit, Ossling, Hornback and Fuzzbob.
-Each family has Original, Swift and Armored versions. They occupy 68 rooms, including one
-introductory Thornmite in King's Pass. The remaining reference enemy/boss markers retain their placeholder
+93 reference placeholders have been replaced by 31 enemy types (three each) from eight
+original families: Thornmite, Dropwing, Duskflit, Ossling, Hornback, Fuzzbob, and the big
+Cragjaw and Murkspore. Each family comes in the variants that suit it (Swift, Armored, Giant,
+Shielded, Brood, Venom). They occupy 56 rooms, including one introductory Thornmite in
+King's Pass. The remaining reference enemy/boss markers retain their placeholder
 behaviour. See [ENEMIES.md](ENEMIES.md) for controls, AI, tests, and how to reapply
 these placements after rebuilding the reference terrain.
 

@@ -40,24 +40,38 @@ const TYPES := {
 	"door": ["Door", true, Color("40e0ff"), Door],
 	# placeholders from reference maps: "text" names the thing (e.g. "Crawlid", "grub jar")
 	"enemy": ["Enemy (placeholder)", true, Color("e04848"), Placeholder],
+	# enemies: one row per family, then that family's variants (see CombatEnemy.VARIANTS)
 	"enemy_thornmite": ["Thornmite · wall crawler", false, Color("e6a76c"), ThornmiteEnemy],
 	"enemy_skree": ["Dropwing · ceiling dive", false, Color("e8bd78"), SkreeEnemy],
 	"enemy_bat": ["Duskflit · swoop", false, Color("9872af"), BatEnemy],
 	"enemy_skeleton": ["Ossling · bone throw", false, Color("d8d8bd"), SkeletonEnemy],
 	"enemy_hornback": ["Hornback · charge", false, Color("6483aa"), HornbackEnemy],
 	"enemy_fuzzbob": ["Fuzzbob · bouncing flight", false, Color("83b7a0"), FuzzbobEnemy],
+	"enemy_cragjaw": ["Cragjaw · leaping brute", false, Color("a58a6a"), CragjawEnemy],
+	"enemy_murkspore": ["Murkspore · spore spitter", false, Color("8a6aa8"), MurksporeEnemy],
 	"enemy_thornmite_swift": ["Thornmite · Swift", false, Color("f08d87"), ThornmiteEnemy],
-	"enemy_thornmite_armored": ["Thornmite · Armored", false, Color("899cae"), ThornmiteEnemy],
+	"enemy_thornmite_venom": ["Thornmite · Venom", false, Color("8fd14f"), ThornmiteEnemy],
+	"enemy_thornmite_brood": ["Thornmite · Brood", false, Color("c8d06a"), ThornmiteEnemy],
+	"enemy_thornmite_giant": ["Thornmite · Giant", false, Color("c0703a"), ThornmiteEnemy],
 	"enemy_skree_swift": ["Dropwing · Swift", false, Color("f08d87"), SkreeEnemy],
 	"enemy_skree_armored": ["Dropwing · Armored", false, Color("899cae"), SkreeEnemy],
+	"enemy_skree_venom": ["Dropwing · Venom", false, Color("8fd14f"), SkreeEnemy],
 	"enemy_bat_swift": ["Duskflit · Swift", false, Color("f08d87"), BatEnemy],
-	"enemy_bat_armored": ["Duskflit · Armored", false, Color("899cae"), BatEnemy],
-	"enemy_skeleton_swift": ["Ossling · Swift", false, Color("f08d87"), SkeletonEnemy],
+	"enemy_bat_brood": ["Duskflit · Brood", false, Color("c8d06a"), BatEnemy],
 	"enemy_skeleton_armored": ["Ossling · Armored", false, Color("899cae"), SkeletonEnemy],
+	"enemy_skeleton_shielded": ["Ossling · Shielded", false, Color("d3ad74"), SkeletonEnemy],
+	"enemy_skeleton_giant": ["Ossling · Giant", false, Color("c0703a"), SkeletonEnemy],
+	"enemy_hornback_shielded": ["Hornback · Shielded", false, Color("d3ad74"), HornbackEnemy],
 	"enemy_hornback_swift": ["Hornback · Swift", false, Color("f08d87"), HornbackEnemy],
-	"enemy_hornback_armored": ["Hornback · Armored", false, Color("899cae"), HornbackEnemy],
-	"enemy_fuzzbob_swift": ["Fuzzbob · Swift", false, Color("f08d87"), FuzzbobEnemy],
-	"enemy_fuzzbob_armored": ["Fuzzbob · Armored", false, Color("899cae"), FuzzbobEnemy],
+	"enemy_hornback_giant": ["Hornback · Giant", false, Color("c0703a"), HornbackEnemy],
+	"enemy_fuzzbob_brood": ["Fuzzbob · Brood", false, Color("c8d06a"), FuzzbobEnemy],
+	"enemy_fuzzbob_venom": ["Fuzzbob · Venom", false, Color("8fd14f"), FuzzbobEnemy],
+	"enemy_fuzzbob_giant": ["Fuzzbob · Giant", false, Color("c0703a"), FuzzbobEnemy],
+	"enemy_cragjaw_armored": ["Cragjaw · Armored", false, Color("899cae"), CragjawEnemy],
+	"enemy_cragjaw_shielded": ["Cragjaw · Shielded", false, Color("d3ad74"), CragjawEnemy],
+	"enemy_murkspore_swift": ["Murkspore · Swift", false, Color("f08d87"), MurksporeEnemy],
+	"enemy_murkspore_venom": ["Murkspore · Venom", false, Color("8fd14f"), MurksporeEnemy],
+	"enemy_murkspore_brood": ["Murkspore · Brood", false, Color("c8d06a"), MurksporeEnemy],
 	"breakable": ["Breakable (placeholder)", true, Color("e09a40"), Placeholder],
 	# breakable wall: solid until struck "hp" times (default 3) by the attack; stays broken for the run
 	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
@@ -341,11 +355,23 @@ class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, ha
 
 
 # Small, deterministic enemies: hit() integrates with the existing melee sector.
+# A type id is "enemy_<family>" or "enemy_<family>_<variant>"; each family registers only the variants that suit it.
 class CombatEnemy extends Ent:
-	var variant := "original"
+	# variant -> [speed, warning, recovery multipliers, body scale]
+	const VARIANTS := {
+		"": [1.0, 1.0, 1.0, 1.0],
+		"swift": [1.35, 0.75, 0.7, 1.0],  # faster, one hit point less
+		"armored": [0.75, 1.25, 1.25, 1.0],  # slower, two hit points more
+		"giant": [0.7, 1.2, 1.2, 2.0],  # twice the size, double hit points
+		"shielded": [0.9, 1.0, 1.0, 1.0],  # blocks hits from the front
+		"brood": [1.0, 1.0, 1.0, 1.0],  # splits into two small, fast copies when killed
+		"venom": [1.0, 1.0, 1.0, 1.0],  # leaves short-lived poison puddles
+	}
+	var variant := ""
 	var speed_multiplier := 1.0
 	var warning_multiplier := 1.0
 	var recovery_multiplier := 1.0
+	var scale := 1.0  # body and sprite size (giant 2, brood children 0.5)
 	var hp := 1
 	var facing := -1
 	var clock := 0.0
@@ -353,30 +379,53 @@ class CombatEnemy extends Ent:
 	var home := Vector2.ZERO
 	var phase := "idle"
 	var timer := 0.0
+	var puddles: Array = []  # venom: [Rect2i, seconds left]
+	var drip := 0.5
+
+	static func variant_of(t: String) -> String:
+		var v := t.get_slice("_", t.get_slice_count("_") - 1)
+		return v if v != "" and VARIANTS.has(v) and t.count("_") >= 2 else ""
+
+	func _init(world, data: Dictionary) -> void:
+		super(world, data)
+		if d.get("brood_child", false):
+			scale = 0.5
+			speed_multiplier = 1.35
+			hp = 1
+		if scale != 1.0:  # grow or shrink from the top-left the level placed it at
+			rect.size = Vector2i((Vector2(rect.size) * scale).round()).max(Vector2i(4, 4))
+			home = Vector2(rect.position)
 
 	func setup() -> void:
 		rect.size = Vector2i(8, 12)
-		if str(d.t).ends_with("_swift"):
-			variant = "swift"
-			speed_multiplier = 1.35
-			warning_multiplier = 0.75
-			recovery_multiplier = 0.7
-		elif str(d.t).ends_with("_armored"):
-			variant = "armored"
-			speed_multiplier = 0.75
-			warning_multiplier = 1.25
-			recovery_multiplier = 1.25
+		variant = variant_of(d.t)
+		var m: Array = VARIANTS[variant]
+		speed_multiplier = m[0]
+		warning_multiplier = m[1]
+		recovery_multiplier = m[2]
+		scale = m[3]
 		hp = variant_hp(1)
 		facing = -1 if int(d.get("facing", -1)) < 0 else 1
 		home = Vector2(rect.position)
 
 	func variant_hp(base: int) -> int:
-		return maxi(1, base - 1) if variant == "swift" else base + 2 if variant == "armored" else base
+		match variant:
+			"swift": return maxi(1, base - 1)
+			"armored": return base + 2
+			"giant": return base * 2
+			"shielded": return base + 1
+		return base
+
+	func family() -> String:
+		return d.t.trim_suffix("_" + variant) if variant != "" else d.t
 
 	func active(dt: float) -> bool:
 		clock += dt
 		flash = maxf(0, flash - dt)
-		return collidable and w != null and w.player != null and not w.player.dead and center().distance_to(w.player.center()) < 320
+		var on: bool = collidable and w != null and w.player != null and not w.player.dead and center().distance_to(w.player.center()) < 320
+		if on and variant == "venom":
+			update_venom(dt)
+		return on
 
 	func blocked(at: Rect2i) -> bool:
 		return w != null and (not w.bounds.encloses(at) or w.collide_solid(at) != null)
@@ -428,26 +477,119 @@ class CombatEnemy extends Ent:
 				return false
 		return true
 
-	func hit(_p) -> void:
+	# Shielded: the side it faces. A hit from there (and not from above) is blocked.
+	func front() -> Vector2:
+		return Vector2(facing, 0)
+
+	func blocks(p) -> bool:
+		var to: Vector2 = p.center() - center()
+		return variant == "shielded" and to.dot(front()) > 0 and to.y > -rect.size.y * 0.5
+
+	func hit(p) -> void:
 		if not collidable or flash > 0:
+			return
+		if blocks(p):
+			flash = 0.12
+			if w != null:
+				w.burst(center() + front() * rect.size.x * 0.5, Color("f8d89b"), 3)
 			return
 		hp -= 1
 		flash = 0.12
 		if hp <= 0:
 			collidable = false
+			puddles.clear()
 			if w != null:
 				w.burst(center(), EnemyArt.COLORS["y"], 6)
+				if variant == "brood":
+					brood()
+
+	func brood() -> void:
+		var kid_t: String = family() + "_swift" if TYPES.has(family() + "_swift") else family()
+		for side in [-1, 1]:
+			var kid := Rect2i(Vector2i(center()) + Vector2i(side * 4 - 2, -2), Vector2i(4, 4))
+			var at: Vector2i = kid.position if not blocked(kid.grow(2)) else Vector2i(center()) - Vector2i(2, 2)
+			w.spawn_entity({"t": kid_t, "x": at.x, "y": at.y, "facing": side, "brood_child": true})
+
+	# Venom: every so often a puddle on the surface below; the player dies on touching one.
+	func venom_spot() -> Rect2i:
+		var below := Rect2i(rect.position.x, rect.end.y, rect.size.x, 1)
+		for i in 96:
+			if blocked(below):
+				return Rect2i(int(center().x) - 5, below.position.y - 4, 10, 4)  # tall enough to reach a standing player's hurtbox
+			below.position.y += 1
+		return Rect2i()
+
+	func update_venom(dt: float) -> void:
+		drip -= dt
+		if drip <= 0:
+			drip = 0.8
+			var spot := venom_spot()
+			if spot.has_area():
+				puddles.append([spot, 3.0])
+		for i in range(puddles.size() - 1, -1, -1):
+			puddles[i][1] -= dt
+			if puddles[i][1] <= 0:
+				puddles.remove_at(i)
+			elif puddles[i][0].intersects(w.player.hurt_rect()):
+				w.player.die(Vector2.UP)
 
 	func touch(p) -> void:
 		if collidable:
 			p.die((p.center() - center()).normalized())
 
+	func vis_rect() -> Rect2i:
+		return body_rect()
+
+	func body_rect() -> Rect2i:  # the sprite overhangs the body; venom puddles lie around it
+		var area := rect.grow(8 + int(rect.size.x * 0.5))
+		for pd in puddles:
+			area = area.merge(pd[0])
+		return area
+
 	func draw(ci: CanvasItem) -> void:
+		for pd in puddles:
+			ci.draw_rect(Rect2(pd[0]), Color(0.55, 0.85, 0.3, minf(1.0, pd[1]) * 0.45))  # fades as it dries
 		if not collidable:
 			return
-		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0)
+		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0, scale)
+		if variant == "shielded":  # bright edge on the guarded side
+			var f := front()
+			var edge := center() + f * (rect.size.x * 0.5 + 1)
+			ci.draw_rect(Rect2(edge - Vector2(1, rect.size.y * 0.4), Vector2(2, rect.size.y * 0.8)) if f.x != 0 else Rect2(edge - Vector2(rect.size.x * 0.4, 1), Vector2(rect.size.x * 0.8, 2)), Color("f8d89b"))
 		if phase == "windup" and int(clock * 12) % 2 == 0:
 			ci.draw_rect(Rect2(center().x - 1, rect.position.y - 4, 2, 2), Color("f8d89b"))
+
+	# Projectiles owned by an enemy: [position, velocity, seconds left]. They stop at rock, can be swatted by the attack.
+	func update_shots(shots: Array, dt: float, gravity: float) -> void:
+		for i in range(shots.size() - 1, -1, -1):
+			var shot: Array = shots[i]
+			shot[2] -= dt
+			shot[1].y += gravity * dt
+			var delta: Vector2 = shot[1] * dt
+			var count := maxi(1, ceili(delta.length()))
+			var remove: bool = shot[2] <= 0
+			for j in count:
+				shot[0] += delta / count
+				var box := Rect2i(Vector2i(shot[0]) - Vector2i.ONE, Vector2i(3, 3))
+				if blocked(box):
+					remove = true
+					break
+				var p = w.player
+				var to_shot: Vector2 = shot[0] - p.center()
+				if p.attacking() and to_shot.length() <= p.ATTACK_RANGE and absf(p.attack_dir.angle_to(to_shot)) <= deg_to_rad(p.ATTACK_ARC) / 2:
+					remove = true
+					break
+				if box.intersects(p.hurt_rect()):
+					p.die(shot[1].normalized())
+					remove = true
+					break
+			if remove: shots.remove_at(i)
+
+	func shots_rect(shots: Array) -> Rect2i:
+		var area := body_rect()
+		for shot in shots:
+			area = area.merge(Rect2i(Vector2i(shot[0]) - Vector2i(3, 3), Vector2i(6, 6)))
+		return area
 
 
 class SkreeEnemy extends CombatEnemy:
@@ -516,7 +658,7 @@ class BatEnemy extends CombatEnemy:
 
 class SkeletonEnemy extends CombatEnemy:
 	var gravity_speed := 0.0
-	var bones: Array = []  # owned projectiles: [position, velocity, remaining seconds]
+	var bones: Array = []  # owned projectiles (see update_shots)
 	func setup() -> void:
 		super.setup()
 		hp = variant_hp(3)
@@ -537,7 +679,7 @@ class SkeletonEnemy extends CombatEnemy:
 				timer = 1.7 * recovery_multiplier
 			return
 		timer -= dt
-		if absf(offset.y) < 40 and sees_player(104):
+		if absf(offset.y) < 40 * scale and sees_player(104 * scale):
 			facing = -1 if offset.x < 0 else 1
 			if timer <= 0 and bones.size() < 3:
 				phase = "windup"
@@ -552,34 +694,9 @@ class SkeletonEnemy extends CombatEnemy:
 		super.hit(p)
 		if not collidable: bones.clear()
 	func update_bones(dt: float) -> void:
-		for i in range(bones.size() - 1, -1, -1):
-			var bone: Array = bones[i]
-			bone[2] -= dt
-			bone[1].y += 150 * dt
-			var delta: Vector2 = bone[1] * dt
-			var count := maxi(1, ceili(delta.length()))
-			var remove: bool = bone[2] <= 0
-			for j in count:
-				bone[0] += delta / count
-				var box := Rect2i(Vector2i(bone[0]) - Vector2i.ONE, Vector2i(3, 3))
-				if blocked(box):
-					remove = true
-					break
-				var p = w.player
-				var to_bone: Vector2 = bone[0] - p.center()
-				if p.attacking() and to_bone.length() <= p.ATTACK_RANGE and absf(p.attack_dir.angle_to(to_bone)) <= deg_to_rad(p.ATTACK_ARC) / 2:
-					remove = true
-					break
-				if box.intersects(p.hurt_rect()):
-					p.die(Vector2(facing, 0))
-					remove = true
-					break
-			if remove: bones.remove_at(i)
+		update_shots(bones, dt, 150)
 	func vis_rect() -> Rect2i:
-		var area := rect.grow(8)
-		for bone in bones:
-			area = area.merge(Rect2i(Vector2i(bone[0]) - Vector2i(3, 3), Vector2i(6, 6)))
-		return area
+		return shots_rect(bones)
 	func draw(ci: CanvasItem) -> void:
 		super.draw(ci)
 		for bone in bones:
@@ -602,6 +719,14 @@ class ThornmiteEnemy extends CombatEnemy:
 		dir = Vector2i(facing, 0)
 	func clings() -> bool:
 		return blocked(Rect2i(rect.position + down, rect.size))
+	func front() -> Vector2:
+		return Vector2(dir)
+	func venom_spot() -> Rect2i:  # a trail on whatever surface it clings to
+		match down:
+			Vector2i.UP: return Rect2i(rect.position.x, rect.position.y, rect.size.x, 4)
+			Vector2i.LEFT: return Rect2i(rect.position.x, rect.position.y, 4, rect.size.y)
+			Vector2i.RIGHT: return Rect2i(rect.end.x - 4, rect.position.y, 4, rect.size.y)
+		return Rect2i(rect.position.x, rect.end.y - 4, rect.size.x, 4)
 	func update(dt: float) -> void:
 		if not active(dt): return
 		if not clings():
@@ -636,8 +761,10 @@ class ThornmiteEnemy extends CombatEnemy:
 		if down == Vector2i.DOWN or not collidable:
 			super.draw(ci)
 			return
+		for pd in puddles:
+			ci.draw_rect(Rect2(pd[0]), Color(0.55, 0.85, 0.3, minf(1.0, pd[1]) * 0.45))  # fades as it dries
 		ci.draw_set_transform(center(), Vector2(Vector2i.DOWN).angle_to(Vector2(down)), Vector2.ONE)  # feet on its surface
-		EnemyArt.draw(ci, d.t, Vector2.ZERO, facing, clock, flash > 0)
+		EnemyArt.draw(ci, d.t, Vector2.ZERO, facing, clock, flash > 0, scale)
 		ci.draw_set_transform(Vector2.ZERO)
 
 
@@ -666,7 +793,7 @@ class HornbackEnemy extends CombatEnemy:
 				if timer <= 0: phase = "idle"
 			_:
 				var offset: Vector2 = w.player.center() - center()
-				if absf(offset.y) < 12 and sees_player(120):
+				if absf(offset.y) < 12 * scale and sees_player(120 * scale):
 					facing = -1 if offset.x < 0 else 1
 					phase = "windup"
 					timer = 0.5 * warning_multiplier
@@ -689,6 +816,91 @@ class FuzzbobEnemy extends CombatEnemy:
 		if move_enemy(Vector2(velocity.x * dt, 0)): velocity.x = -velocity.x
 		if move_enemy(Vector2(0, velocity.y * dt)): velocity.y = -velocity.y
 		facing = 1 if velocity.x > 0 else -1
+
+
+class CragjawEnemy extends CombatEnemy:
+	# Big brute: plods along its floor; a player in reach gets a warning, then a leap that slams down near them.
+	var velocity := Vector2.ZERO
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(20, 20)
+		hp = variant_hp(6)
+	func update(dt: float) -> void:
+		if not active(dt): return
+		velocity.y = minf(220, velocity.y + 400 * dt)
+		if move_enemy(Vector2(velocity.x * dt, 0)): velocity.x = 0
+		if move_enemy(Vector2(0, velocity.y * dt)):
+			if velocity.y > 0 and phase == "leap":
+				phase = "rest"
+				timer = 1.0 * recovery_multiplier
+				velocity.x = 0
+				w.shake_dir(Vector2.DOWN, 0.15)
+			velocity.y = 0
+		timer -= dt
+		match phase:
+			"windup":
+				if timer <= 0:
+					phase = "leap"
+					velocity = Vector2(clampf((w.player.center().x - center().x) / 0.8, -110, 110) * speed_multiplier, -170)
+			"leap":
+				pass
+			"rest":
+				if timer <= 0: phase = "idle"
+			_:
+				var offset: Vector2 = w.player.center() - center()
+				if absf(offset.x) < 140 * scale and absf(offset.y) < 64 * scale and sees_player(150 * scale):
+					facing = -1 if offset.x < 0 else 1
+					phase = "windup"
+					timer = 0.6 * warning_multiplier
+				elif not safe_step():
+					facing *= -1
+				elif move_enemy(Vector2(facing * 12 * speed_multiplier * dt, 0)):
+					facing *= -1
+
+
+class MurksporeEnemy extends CombatEnemy:
+	# Big hovering spore: keeps its distance, bobs, and spits a three-orb spread at a visible player.
+	var orbs: Array = []  # owned projectiles (see update_shots)
+	var bob := 0.0
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(16, 14)
+		hp = variant_hp(5)
+		timer = 1.0
+	func update(dt: float) -> void:
+		if not active(dt): return
+		update_orbs(dt)
+		bob += dt * 2.0
+		var to: Vector2 = w.player.center() - center()
+		var sees := sees_player(180)
+		var goal: Vector2 = (to - to.normalized() * 80) if sees else (home - Vector2(rect.position))
+		var v: Vector2 = goal.limit_length(24 * speed_multiplier)
+		move_enemy(Vector2(v.x * dt, 0))
+		move_enemy(Vector2(0, (v.y + sin(bob) * 10) * dt))
+		if sees:
+			facing = -1 if to.x < 0 else 1
+		timer -= dt
+		if phase == "windup":
+			if timer <= 0:
+				for a in [-0.3, 0.0, 0.3]:
+					orbs.append([center(), to.normalized().rotated(a) * 70, 3.0])
+				phase = "idle"
+				timer = 2.2 * recovery_multiplier
+		elif timer <= 0 and sees and orbs.is_empty():
+			phase = "windup"
+			timer = 0.5 * warning_multiplier
+	func update_orbs(dt: float) -> void:
+		update_shots(orbs, dt, 0)
+	func hit(p) -> void:
+		super.hit(p)
+		if not collidable: orbs.clear()
+	func vis_rect() -> Rect2i:
+		return shots_rect(orbs)
+	func draw(ci: CanvasItem) -> void:
+		super.draw(ci)
+		for orb in orbs:
+			ci.draw_circle(orb[0].round(), 2.5, Color("b07ad8"))
+			ci.draw_circle(orb[0].round(), 1.2, Color("f0d8ff"))
 
 
 class Liquid extends Ent:  # water: looks only; acid: kills on touch (like spikes)

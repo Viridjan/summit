@@ -66,10 +66,12 @@ block, zip mover, dream block, green/red bubble, bumper, feather, crystal heart
 (links rooms that don't touch), water (looks only), acid (kills), breakable wall
 (3 hits, stays broken for the run), enemy/breakable placeholders, spawn markers
 (one per entrance; Retry respawns there).
-Enemies (docs/ENEMIES.md), original names, each in Original/Swift/Armored:
-Thornmite (crawls floors, walls, ceilings), Dropwing (ceiling dive), Duskflit
-(swoop), Ossling (throws bones), Hornback (warns, then charges), Fuzzbob
-(bounces diagonally). 108 placed in the Hollow Knight world.
+Enemies (docs/ENEMIES.md), 8 original families: Thornmite (crawls floors, walls,
+ceilings), Dropwing (ceiling dive), Duskflit (swoop), Ossling (throws bones),
+Hornback (warns, then charges), Fuzzbob (bounces diagonally), and the big Cragjaw
+(leaps and slams) and Murkspore (spits three orbs). Each family has 2-4 of these
+variants: Swift, Armored, Giant (2x size), Shielded (blocks front hits), Brood
+(splits in two), Venom (poison puddles). 31 types; 93 placed in the HK world.
 Adding a new object: docs/ADDING_ENTITIES.md (one class + one registry line).
 
 
@@ -220,3 +222,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-22: Monsters page in the main menu and as a map-screen tab (L1/R1).
 - 2026-10-22: Ripper and Medusa removed; Thornmite, Hornback and Fuzzbob added
   (Hollow Knight-inspired); all enemies renamed to original names.
+- 2026-10-22: Cragjaw and Murkspore (big families); Giant, Shielded, Brood and Venom
+  variants, 2-4 per family; enemy atlas cells grew to 32px.

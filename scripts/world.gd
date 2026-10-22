@@ -68,6 +68,7 @@ var touch: Control  # phone controls, only on touchscreens
 var hud: Label
 var note_label: Label  # design note under the player (entities.gd Note)
 var note_t := 0.0
+var spawn_queue: Array = []  # entity dicts to add after this tick (spawn_entity); never saved
 var pending_door = null  # door touched this tick (Door entity); used after the touch loop
 var door_block := Rect2i()  # the door we arrived on: ignored until the player steps off it
 var overlay: Control
@@ -145,7 +146,7 @@ func _build(keep_player := false) -> void:
 		for x in gw:
 			grid[y * gw + x] = 1 if row.unicode_at(x) == 49 else 0
 	bounds = Rect2i(0, 0, gw * T, gh * T)
-	ents.clear(); solids.clear(); jumpthrus.clear(); dreams.clear(); spikes.clear(); touchables.clear()
+	ents.clear(); solids.clear(); jumpthrus.clear(); dreams.clear(); spikes.clear(); touchables.clear(); spawn_queue.clear()
 	total_berries = 0
 	spawn = Vector2(gw * T / 2.0, 16)
 	for d in data.entities:
@@ -200,11 +201,19 @@ func _check_room_exit() -> void:
 
 # Room changes after the player moved: walking off an edge, or a door touched this tick.
 func after_player_move() -> void:
+	for d in spawn_queue:  # entities born this tick (a Brood enemy splitting), added once nothing is iterating ents
+		var e = E.make(self, d)
+		ents.append(e)
+		touchables.append(e)
+	spawn_queue.clear()
 	_check_room_exit()
 	if pending_door != null and not player.dead:
 		_go_door(pending_door)
 	if door_block.has_area() and not door_block.intersects(player.hurt_rect()):
 		door_block = Rect2i()
+
+func spawn_entity(d: Dictionary) -> void:
+	spawn_queue.append(d)
 
 func door_hit(door) -> void:
 	if not door_block.intersects(door.rect):

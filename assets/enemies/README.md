@@ -4,8 +4,8 @@ Original pixel artwork authored in `scripts/enemy_art.gd`, exported to `enemies.
 No extracted artwork from any other game is included. Behaviour adaptations,
 controls, placement and references are documented in [ENEMIES.md](../../docs/ENEMIES.md).
 
-Open `preview.html` for an animated gallery. Each 16×16 cell belongs to a shared
-64×288 atlas: the first six rows are Thornmite, Dropwing, Duskflit, Ossling, Hornback
-and Fuzzbob. Rows 6–17 contain Swift/Armored pairs in the same family order.
+Open `preview.html` for an animated gallery. The atlas has one row per enemy type in
+`Entities.TYPES` order (the eight families, then each family's variants), four 32×32
+frames per row. Small sprites sit centred in their cell; Giants are drawn at 2×.
 
 Regenerate with `godot --headless --path . --script res://tools/export_enemies.gd`.

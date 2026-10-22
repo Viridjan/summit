@@ -565,11 +565,11 @@ func check_enemy_facing_alignment() -> void:
 	var previous: Texture2D = art._texture
 	var recording := EnemyDrawTexture.new()
 	art._texture = recording
-	# Literal centres from each enemy's real spawn collision dimensions at (100,90).
+	# Every enemy type draws centred on its own hitbox (giants and brood children are scaled).
 	var fixtures := []
-	for base in [["enemy_thornmite", Vector2(104, 94)], ["enemy_skree", Vector2(104, 96)], ["enemy_bat", Vector2(105, 94)], ["enemy_skeleton", Vector2(104, 96)], ["enemy_hornback", Vector2(106, 95)], ["enemy_fuzzbob", Vector2(105, 95)]]:
-		for suffix in ["", "_swift", "_armored"]:
-			fixtures.append([base[0] + suffix, base[1]])
+	for t in E.TYPES:
+		if t.begins_with("enemy_"):
+			fixtures.append([t, E.make(null, {"t": t, "x": 100, "y": 90}).center()])
 	for fixture in fixtures:
 		var probe := EnemyDrawProbe.new()
 		probe.enemy = E.make(null, {"t": fixture[0], "x": 100, "y": 90})
@@ -593,9 +593,11 @@ func check_enemy_facing_alignment() -> void:
 func check_combat_enemies() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
-	check(atlas.get_size() == Vector2i(64, 288), "eighteen enemy variants share a four-frame pixel atlas")
-	for row in 18:
-		check(atlas.get_region(Rect2i(0, row * 16, 16, 16)).get_used_rect().has_area(), "enemy sprite row %d contains visible artwork" % row)
+	var enemy_ids := E.TYPES.keys().filter(func(t): return t.begins_with("enemy_"))
+	check(art.KINDS == enemy_ids, "sprite atlas rows match the enemy registry, in order")
+	check(atlas.get_size() == Vector2i(4 * art.SIZE, art.SIZE * enemy_ids.size()), "every enemy type has a four-frame row in the atlas")
+	for row in enemy_ids.size():
+		check(atlas.get_region(Rect2i(0, row * art.SIZE, art.SIZE, art.SIZE)).get_used_rect().has_area(), "enemy sprite row %d contains visible artwork" % row)
 	Game.settings.invincible = true
 	# Thornmite crawls up, over and down a block on the floor without entering it
 	make_world([{"t": "enemy_thornmite", "x": 200, "y": 216, "facing": 1}], [[30, 26], [31, 26], [30, 27], [31, 27]])
@@ -726,44 +728,141 @@ func check_combat_enemies() -> void:
 func check_enemy_variants() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
-	for rows in [[0, 6, 7], [1, 8, 9], [2, 10, 11], [3, 12, 13], [4, 14, 15], [5, 16, 17]]:
-		var original_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[0] * 16, 16, 16)).get_data()
-		var swift_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[1] * 16, 16, 16)).get_data()
-		var armored_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[2] * 16, 16, 16)).get_data()
-		check(original_pixels != swift_pixels and swift_pixels != armored_pixels and original_pixels != armored_pixels, "enemy family at row %d has three visually distinct variants" % rows[0])
+	var row_of := func(t): return atlas.get_region(Rect2i(0, art.KINDS.find(t) * art.SIZE, art.SIZE, art.SIZE)).get_data()
 	Game.settings.invincible = true
 	make_world([])
-	for base in ["thornmite", "skree", "bat", "skeleton", "hornback", "fuzzbob"]:
-		var original_id: String = "enemy_" + base
-		var swift_id: String = original_id + "_swift"
-		var armored_id: String = original_id + "_armored"
-		var available: bool = E.TYPES.has(swift_id) and E.TYPES.has(armored_id)
-		check(available, "%s has original, Swift, and Armored editor types" % base)
-		if not available: continue
-		var original = E.make(w, {"t": original_id, "x": 160, "y": 112, "facing": 1})
-		var swift = E.make(w, {"t": swift_id, "x": 160, "y": 112, "facing": 1})
-		var armored = E.make(w, {"t": armored_id, "x": 160, "y": 112, "facing": 1})
-		check(swift.hp <= original.hp and armored.hp > original.hp, "%s variants offer lighter and tougher enemies" % base)
-		check(swift.rect == original.rect and armored.rect == original.rect, "%s variants preserve the aligned collision size" % base)
-		if base == "thornmite":
-			for e in [original, swift, armored]:
-				e.rect.position = Vector2i(160, 216)
-			p().pos = Vector2(80, 216)
-			for i in 30:
-				original.update(DT); swift.update(DT); armored.update(DT)
-			check(swift.rect.position.x > original.rect.position.x and armored.rect.position.x < original.rect.position.x, "Swift crawler moves faster; Armored crawls slower")
-		elif base == "skeleton":
-			armored.rect.position = Vector2i(180, 204)
-			p().pos = Vector2(80, 216)
-			armored.phase = "windup"
-			armored.timer = DT / 2
-			armored.update(DT)
-			check(armored.bones.size() == 2, "Armored Ossling throws a two-arc volley")
-			armored.timer = DT / 2
-			armored.phase = "windup"
-			armored.update(DT)
-			check(armored.bones.size() <= 3, "Armored Ossling respects the three-projectile cap")
+	for t in E.TYPES:
+		var v: String = E.CombatEnemy.variant_of(t)
+		if not t.begins_with("enemy_") or v == "":
+			continue
+		var base: String = t.trim_suffix("_" + v)
+		check(row_of.call(t) != row_of.call(base), "%s looks different from %s" % [t, base])
+		var o = E.make(w, {"t": base, "x": 160, "y": 112, "facing": 1})
+		var e = E.make(w, {"t": t, "x": 160, "y": 112, "facing": 1})
+		var ok: bool = {"swift": e.hp <= o.hp, "armored": e.hp > o.hp, "giant": e.hp > o.hp and e.rect.size == o.rect.size * 2,
+			"shielded": e.hp >= o.hp, "brood": e.hp >= o.hp, "venom": e.hp >= o.hp}[v]
+		check(ok and (v == "giant" or e.rect.size == o.rect.size), "%s: %s stats and size fit the variant (hp %d vs %d, %s)" % [t, v, e.hp, o.hp, e.rect.size])
+	check(E.TYPES.keys().filter(func(t): return t.begins_with("enemy_") and E.CombatEnemy.variant_of(t) == "").size() == 8, "eight enemy families")
+
+	# Swift crawls faster, Giant slower
+	var crawlers := []
+	for t in ["enemy_thornmite", "enemy_thornmite_swift", "enemy_thornmite_giant"]:
+		var c = E.make(w, {"t": t, "x": 160, "y": 216 - (8 if t.ends_with("giant") else 0), "facing": 1})
+		crawlers.append(c)
+	p().pos = Vector2(80, 216)
+	for i in 30:
+		for c in crawlers: c.update(DT)
+	check(crawlers[1].rect.position.x > crawlers[0].rect.position.x and crawlers[2].rect.position.x - 160 < crawlers[0].rect.position.x - 160, "Swift crawler moves faster; Giant crawls slower")
+
+	# Armored Ossling throws a two-arc volley, capped at three bones
+	var armored = E.make(w, {"t": "enemy_skeleton_armored", "x": 180, "y": 204, "facing": 1})
+	p().pos = Vector2(80, 216)
+	armored.phase = "windup"
+	armored.timer = DT / 2
+	armored.update(DT)
+	check(armored.bones.size() == 2, "Armored Ossling throws a two-arc volley")
+	armored.timer = DT / 2
+	armored.phase = "windup"
+	armored.update(DT)
+	check(armored.bones.size() <= 3, "Armored Ossling respects the three-projectile cap")
+
+	# Shielded blocks hits from the front, not from behind or above
+	var sh = E.make(w, {"t": "enemy_hornback_shielded", "x": 160, "y": 214, "facing": 1})
+	var hp0: int = sh.hp
+	p().pos = Vector2(190, 224)
+	sh.hit(p())
+	check(sh.hp == hp0, "Shielded Hornback blocks a hit from the front")
+	p().pos = Vector2(140, 224)
+	sh.flash = 0
+	sh.hit(p())
+	check(sh.hp == hp0 - 1, "Shielded Hornback takes a hit from behind")
+	p().pos = Vector2(166, 190)
+	sh.flash = 0
+	sh.hit(p())
+	check(sh.hp == hp0 - 2, "Shielded Hornback takes a hit from above")
+
+	# Brood splits into two small, fast copies when killed
+	make_world([{"t": "enemy_bat_brood", "x": 160, "y": 100}])
+	var brood = w.ents.filter(func(x): return x.d.t == "enemy_bat_brood")[0]
+	p().pos = Vector2(80, 216)
+	while brood.collidable:
+		brood.flash = 0
+		brood.hit(p())
+	w.after_player_move()
+	var kids: Array = w.ents.filter(func(x): return x.d.get("brood_child", false))
+	check(kids.size() == 2 and kids.all(func(k): return k.collidable and k.hp == 1 and k.rect.size.x < brood.rect.size.x), "Brood splits into two small copies (%d)" % kids.size())
+
+	# Venom leaves short-lived puddles that kill on touch
 	Game.settings.invincible = false
+	make_world([{"t": "enemy_thornmite_venom", "x": 200, "y": 216, "facing": 1}])
+	var venom = w.ents.filter(func(x): return x.d.t == "enemy_thornmite_venom")[0]
+	p().pos = Vector2(80, 216)
+	for i in 60: venom.update(DT)
+	check(not venom.puddles.is_empty(), "Venom Thornmite leaves a puddle on the surface it crawls on")
+	var puddle: Rect2i = venom.puddles[0][0]
+	p().pos = Vector2(puddle.get_center().x, puddle.end.y)
+	venom.update(DT)
+	check(p().dead, "touching a venom puddle kills")
+	make_world([{"t": "enemy_thornmite_venom", "x": 200, "y": 216, "facing": 1}])
+	venom = w.ents.filter(func(x): return x.d.t == "enemy_thornmite_venom")[0]
+	p().pos = Vector2(80, 216)
+	for i in 60: venom.update(DT)
+	for i in 300: venom.update(DT)
+	check(venom.puddles.all(func(pd): return pd[1] > 0) and venom.puddles.size() <= 6, "venom puddles dry up after a few seconds")
+	Game.settings.invincible = true
+
+	# Giants draw at twice the size
+	var probe := EnemyDrawProbe.new()
+	var recording := EnemyDrawTexture.new()
+	var previous: Texture2D = art._texture
+	art._texture = recording
+	probe.enemy = E.make(null, {"t": "enemy_hornback_giant", "x": 100, "y": 90})
+	add_child(probe)
+	probe.queue_redraw()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	check(not recording.destinations.is_empty() and absf(recording.destinations[-1].size.y) == art.SIZE * 2, "Giant enemies draw at twice the size")
+	probe.free()
+	art._texture = previous
+	Game.settings.invincible = false
+
+# Cragjaw (leaping brute) and Murkspore (hovering spitter), the two big families.
+func check_big_enemies() -> void:
+	Game.settings.invincible = true
+	make_world([{"t": "enemy_cragjaw", "x": 200, "y": 204, "facing": -1}])
+	var c = w.ents.filter(func(x): return x.d.t == "enemy_cragjaw")[0]
+	check(c.rect.size.x >= 16 and c.rect.size.y >= 16, "Cragjaw is a big enemy (%s)" % c.rect.size)
+	p().pos = Vector2(120, 224)
+	c.update(DT)
+	check(c.phase == "windup", "Cragjaw warns before leaping")
+	var rose := false
+	var landed := false
+	var inside := false
+	for i in 240:
+		c.update(DT)
+		rose = rose or c.velocity.y < 0
+		landed = landed or (rose and c.phase == "rest")
+		inside = inside or c.blocked(c.rect)
+	check(rose and landed and not inside, "Cragjaw leaps toward the player and slams down without entering rock")
+
+	make_world([{"t": "enemy_murkspore", "x": 200, "y": 120}])
+	var m = w.ents.filter(func(x): return x.d.t == "enemy_murkspore")[0]
+	p().pos = Vector2(120, 216)
+	var spat := 0
+	for i in 200:
+		m.update(DT)
+		spat = maxi(spat, m.orbs.size())
+	check(spat == 3, "Murkspore spits a three-orb spread (%d)" % spat)
+	m.orbs = [[p().center() + Vector2(10, 0), Vector2.ZERO, 1.0]]
+	p().attack_timer = 0.1
+	p().attack_dir = Vector2.RIGHT
+	m.update_orbs(DT)
+	check(m.orbs.is_empty(), "Melee swings can swat an incoming orb")
+	p().attack_timer = 0
+	Game.settings.invincible = false
+	m.orbs = [[p().center() + Vector2(4, 0), Vector2(-60, 0), 1.0]]
+	m.update_orbs(DT)
+	check(p().dead, "a Murkspore orb kills on touch")
 
 func check_hk_combat_placements() -> void:
 	var world_data: Dictionary = load("res://scripts/adventure.gd").load_world("res://worlds/hollow_knight/world.json")
@@ -793,7 +892,8 @@ func check_hk_combat_placements() -> void:
 				if enemy.blocked(enemy.rect):
 					failures.append(room_name + ": enemy entered terrain/bounds")
 					break
-	check(count.size() == 18 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the eighteen combat variants (%s)" % count)
+	var enemy_types: int = E.TYPES.keys().filter(func(t): return t.begins_with("enemy_")).size()
+	check(count.size() == enemy_types and count.values().all(func(n): return n == 3), "HK contains three of each of the %d enemy types (%s)" % [enemy_types, count])
 	check(failures.is_empty(), "HK enemy placements stay clear of entrances, terrain, and room bounds (%s)" % [failures])
 	Game.settings.invincible = false
 
@@ -945,7 +1045,8 @@ func check_bugfixes() -> void:
 func check_bestiary() -> void:
 	var b = load("res://scripts/bestiary.gd").new()
 	add_child(b)
-	check(b.rows.size() == 6 and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy kind once (%s)" % [b.rows])
+	check(b.rows.size() == 8 and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy family once (%s)" % [b.rows])
+	check(b.hp.get("enemy_cragjaw", 0) == 6 and b.hp.has("enemy_hornback_giant") and not b.hp.has("enemy_hornback_brood"), "monsters page shows each family's own variants")
 	check(b.hp.get("enemy_thornmite", 0) == 2, "monsters page shows enemy HP")
 	var borrowed := ["Ripper", "Medusa", "Skree", "Bat ", "Skeleton", "Puffling"]
 	for t in E.TYPES:
@@ -1457,7 +1558,8 @@ func _ready() -> void:
 	check_room_seams()
 	check_attack()
 	check_combat_enemies()
-	check_enemy_variants()
+	await check_enemy_variants()
+	check_big_enemies()
 	check_hk_combat_placements()
 	check_dirs()
 	check_adventure()

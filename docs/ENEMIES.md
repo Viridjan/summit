@@ -1,52 +1,54 @@
-# Combat enemies in the HK reference world
+# Combat enemies
 
-Six small enemies with original names and original pixel art (`scripts/enemy_art.gd`; no extracted game sprites). Three adapt encounter patterns from Hollow Knight. The other three adapt patterns from Metroid: Zero Mission and Castlevania. Each one renders as a single cached texture quad.
+Eight enemy families with original names and original pixel art (`scripts/enemy_art.gd`; no extracted game sprites). Each family comes in the variants that suit its behaviour. 31 types in all.
 
-| Type id / name | Inspired by | Behaviour | Hits to defeat |
-|---|---|---|---:|
-| `enemy_thornmite` / Thornmite | HK Tiktik | Crawls around terrain: floors, walls and ceilings, turning at inner and outer corners. Drops to the floor if placed in the air | 2 |
-| `enemy_skree` / Dropwing | Metroid ceiling divers | Ceiling perch; spots a player below. 0.35s warning, accelerating dive, rest, then returns (waits if blocked) | 1 |
-| `enemy_bat` / Duskflit | Castlevania bats | Perches until a visible player is near. 0.4s warning, then a committed swoop and a return | 1 |
-| `enemy_skeleton` / Ossling | Castlevania bone throwers | Platform patrol with ledge avoidance. Faces visible players; 0.45s warning, then a ballistic bone throw | 3 |
-| `enemy_hornback` / Hornback | HK charging husks | Floor patrol. A player at its height in sight gets a 0.5s warning, then a fast charge that stops at walls, ledges and hazards | 3 |
-| `enemy_fuzzbob` / Fuzzbob | HK Gruzzer | Drifts diagonally and bounces off anything solid. It never chases; its path is the threat | 2 |
+## Families
 
-The type ids `enemy_skree`, `enemy_bat` and `enemy_skeleton` are internal and were kept, so existing levels still load. Only the names shown in game and in the editor changed.
+| Family (type id) | Inspired by | Behaviour | HP | Variants |
+|---|---|---|---:|---|
+| Thornmite (`enemy_thornmite`) | HK Tiktik | Crawls around terrain: floors, walls and ceilings, turning at every corner. Drops to the floor if placed in the air | 2 | Swift, Venom, Brood, Giant |
+| Dropwing (`enemy_skree`) | Metroid ceiling divers | Ceiling perch; spots a player below. Warning, accelerating dive, rest, return | 1 | Swift, Armored, Venom |
+| Duskflit (`enemy_bat`) | Castlevania bats | Perches until a visible player is near. Warning, then a committed swoop and a return | 1 | Swift, Brood |
+| Ossling (`enemy_skeleton`) | Castlevania bone throwers | Platform patrol with ledge avoidance. Faces visible players; throws arcing bones | 3 | Armored, Shielded, Giant |
+| Hornback (`enemy_hornback`) | HK charging husks | Floor patrol. A player at its height in sight gets a warning, then a fast charge that stops at walls, ledges and hazards | 3 | Shielded, Swift, Giant |
+| Fuzzbob (`enemy_fuzzbob`) | HK Gruzzer | Drifts diagonally and bounces off anything solid. It never chases | 2 | Brood, Venom, Giant |
+| Cragjaw (`enemy_cragjaw`) | HK heavy brutes | Big (20×20) brute. Plods along its floor; a player in reach gets a warning, then a leap that slams down near them | 6 | Armored, Shielded |
+| Murkspore (`enemy_murkspore`) | HK Aspid | Big (16×14) hovering spore. Keeps about 80px away and spits a three-orb spread at a visible player | 5 | Swift, Venom, Brood |
 
-## Three variants per family
+The type ids `enemy_skree`, `enemy_bat` and `enemy_skeleton` come from the families' earlier names. They were kept so existing levels still load.
 
-Each base type has Original, Swift (`_swift`) and Armored (`_armored`) editor entries.
+## Variants
 
-- **Swift:** coral palette, 35% faster, 25% shorter warnings, 30% faster recovery, one fewer hit point (minimum one).
-- **Armored:** slate palette with bronze shoulder plates, 25% slower, warnings and recovery 25% longer, two extra hit points.
+A type id is `enemy_<family>_<variant>`. Variant stats are in `CombatEnemy.VARIANTS` (`scripts/entities.gd`), and each variant has its own palette in `EnemyArt.TINTS`.
 
-| Family | Original HP | Swift HP | Armored HP | Notes |
-|---|---:|---:|---:|---|
-| Thornmite | 2 | 1 | 4 | Crawl speed follows the variant |
-| Dropwing | 1 | 1 | 3 | Dive and return speeds, warning and rest follow the variant |
-| Duskflit | 1 | 1 | 3 | Swoop speed, warning and recovery differ |
-| Ossling | 3 | 2 | 5 | Armored throws a two-arc volley; at most three live bones |
-| Hornback | 3 | 2 | 5 | Charge speed, warning and rest follow the variant |
-| Fuzzbob | 2 | 1 | 4 | Drift speed follows the variant |
+| Variant | Look | Effect | HP |
+|---|---|---|---|
+| Swift | coral | 35% faster; warnings 25% shorter; recovers 30% faster | −1 (minimum 1) |
+| Armored | slate, bronze shoulder plates | 25% slower; warnings and recovery 25% longer. Armored Ossling throws a two-arc volley | +2 |
+| Giant | red-brown, 2× size | Body and sprite twice the size (grows from its top-left); 30% slower | ×2 |
+| Shielded | gold tint, bright edge on its front | Blocks hits from the side it faces; hit it from behind or from above | +1 |
+| Brood | pale, egg spots | Splits into two small, fast, one-hit copies when killed | same |
+| Venom | toxic green, dripping | Leaves 3-second poison puddles that kill on touch. Thornmite leaves them on the surface it crawls on; others drip onto the floor below | same |
 
-All three versions of a family share the same collision size and facing alignment. All 18 types are available in the editor and on the Monsters page (main menu, and the map screen's second tab).
+Ossling bones and Murkspore orbs collide with terrain and room bounds, expire after a few seconds, and can be swatted by the attack. Enemies more than 320px from the player sleep. Target acquisition is distance-limited and needs line of sight. Enemy hitboxes are not solid platforms.
 
 ## Playing and editing
 
-Choose **Adventure → World: Hollow Knight**. There are **108 enemies across 68 rooms**, six of each variant. A Thornmite introduces the set in King's Pass (`r005`). See `reports/hk-enemy-placements.json` for every position.
+Choose **Adventure → World: Hollow Knight**. There are **93 enemies across 56 rooms**: three of each type. A Thornmite introduces them in King's Pass (`r005`). See `reports/hk-enemy-placements.json` for every position. All 31 types are in the editor and on the Monsters page (main menu, or the map screen's second tab).
 
 Attack with **A**; hold a direction to aim the swing. Enemies use the existing one-hit player death system. An enemy takes at most one hit per swing, with a brief hurt flash. Defeated enemies become harmless and respawn when the room is rebuilt.
 
-Ossling bones collide with terrain and room bounds, expire after two seconds, and can be swatted by the attack. Enemies more than 320px from the player sleep. Target acquisition is distance-limited and needs line of sight. Enemy hitboxes are not solid platforms.
-
 ## Placement and regeneration
 
-`tools/place_reference_enemies.py` replaces selected HK placeholder enemies. Each replacement is tagged `summit_enemy_set: 1` and records the placeholder's `reference_text`, `reference_position` and `reference_size`. When a kind is removed from the tool, its placements turn back into the original placeholders on the next run, and new kinds take free slots.
+`tools/place_reference_enemies.py` replaces selected HK placeholder enemies. Its `FAMILIES` table must match `Entities.TYPES`. Each replacement is tagged `summit_enemy_set: 1` and records the placeholder's `reference_text`, `reference_position` and `reference_size`. On each run:
+- Placements of removed types, and any beyond three per type, turn back into their placeholders.
+- New types take free slots.
+- Each enemy's text and size are refreshed.
 
 The placer has different rules per enemy type:
-- **Floor walkers (Thornmite, Ossling, Hornback):** stand on a 7-tile floor with clear space either side.
+- **Floor walkers (Thornmite, Ossling, Hornback, Cragjaw):** stand on a floor that reaches 3 tiles past each side, with clear space around.
 - **Dropwing and Duskflit:** need an overhead perch with clear dive space below.
-- **Fuzzbob:** needs a wide open area.
+- **Fuzzbob and Murkspore:** need a wide open area.
 
 It also:
 - avoids hazards;
@@ -61,9 +63,9 @@ python3 tools/place_reference_enemies.py --apply  # install, then write the repo
 
 Rebuilding `tools/reference_worlds.py` overwrites room edits, so run the placer again afterwards. Its room list targets the current HK partition.
 
-## Art preview and tests
+## Art and tests
 
-Open `assets/enemies/preview.html` for the animated gallery. The atlas is 64×288px: 18 rows of four 16×16 frames. Rows 0–5 hold the families in the order above. Rows 6–17 hold the Swift/Armored pairs in the same order.
+The atlas (`assets/enemies/enemies.png`, preview in `assets/enemies/preview.html`) has one row per type in `Entities.TYPES` order. Each row is four 32×32 frames, and small sprites sit centred in their cell. `EnemyArt.draw(..., scale)` draws Giants at 2× and Brood children at 0.5×.
 
 ```sh
 godot --headless --path . --script res://tools/export_enemies.gd  # regenerate enemies.png
@@ -74,16 +76,19 @@ python3 -m unittest tests/test_reference_enemy_placement.py
 ```
 
 The checks cover:
-- **Thornmite:** crawling over a block, and dropping to the floor.
-- **Hornback:** its warning, charging, and stopping at walls and ledges.
-- **Fuzzbob:** bounces.
-- **Dropwing:** the dive and return.
-- **Duskflit:** line of sight and the committed swoop.
-- **Ossling:** throws, parries and bone collisions.
-- **All enemies:** damage, variants, original names, and the real HK placements.
+- **Atlas:** it matches the registry.
+- **Each family:** its behaviour.
+- **Each variant:** HP, size and look.
+- **Shielded:** front/back/above hits.
+- **Brood:** splitting.
+- **Venom:** puddles that kill, then dry up.
+- **Giant:** drawing at 2×.
+- **Cragjaw:** the leap and slam.
+- **Murkspore:** spit and swat.
+- **HK world:** the real placements.
 
 ## References
 
-- Hollow Knight (Team Cherry): Tiktik, charging husks and Gruzzer as encounter archetypes.
+- Hollow Knight (Team Cherry): Tiktik, charging husks, Gruzzer, Aspids and heavy brutes as encounter archetypes.
 - [Metroid: Zero Mission manual, enemy section](https://metroid.retropixel.net/games/metroidzm/manual/metroidzm_manual.pdf).
 - [Castlevania enemy guide](https://strategywiki.org/wiki/Castlevania/Enemies).

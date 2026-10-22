@@ -96,3 +96,20 @@ a single perimeter with connected end caps/corners and internal material grain.
 The image is generated at the exact world size and shared between matching pieces.
 Keep pieces separate when they have independent destruction or movement behaviour.
 See `assets/blocks/preview.html` for the styles, sizes and breakable-wall damage.
+
+## Adding an enemy or a variant
+
+Enemies extend `CombatEnemy` in `scripts/entities.gd`; see `docs/ENEMIES.md`.
+
+- **New family:** add one class plus one `"enemy_<family>"` row in `TYPES`, then add its sprite to `SPRITES` in `scripts/enemy_art.gd`.
+- **Variant of an existing family:** add a `"enemy_<family>_<variant>"` row in `TYPES` (same class), using a variant from `CombatEnemy.VARIANTS`.
+
+In both cases, also:
+1. Add the type id to `EnemyArt.KINDS` in the same order as `TYPES`; a test checks they match.
+2. Add the variant to the family's entry in `FAMILIES` in `tools/place_reference_enemies.py`.
+3. Run the placer with `--apply`.
+
+A brand-new variant needs:
+- a `VARIANTS` entry for its speed, warning, recovery and scale;
+- `variant_hp()`, if it changes HP;
+- a palette in `EnemyArt.TINTS`.
