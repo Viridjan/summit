@@ -27,6 +27,19 @@ class Bot extends "res://scripts/player.gd":
 		jump_check = hold.has("jump")
 		grab_check = hold.has("grab")
 
+# Capture the real draw request at the texture boundary, without needing a display.
+class EnemyDrawTexture extends Texture2D:
+	var destinations: Array[Rect2] = []
+	func _get_width() -> int: return 64
+	func _get_height() -> int: return 80
+	func _draw_rect_region(_canvas: RID, destination: Rect2, _source: Rect2, _modulate: Color, _transpose: bool, _clip: bool) -> void:
+		destinations.append(destination)
+
+class EnemyDrawProbe extends Node2D:
+	var enemy
+	func _draw() -> void:
+		enemy.draw(self)
+
 class TrackedEditor extends "res://scripts/editor.gd":
 	var background_draw_count := 0
 	func _draw_background(ci: CanvasItem) -> void:
@@ -500,6 +513,32 @@ func check_attack() -> void:
 	w._build()
 	check(w.ents.filter(func(e): return e.d.t == "breakwall")[0].collidable == false, "a broken wall stays broken after respawn")
 
+func check_enemy_facing_alignment() -> void:
+	var art = load("res://scripts/enemy_art.gd")
+	var previous: Texture2D = art._texture
+	var recording := EnemyDrawTexture.new()
+	art._texture = recording
+	# Literal centres from each enemy's real spawn collision dimensions at (100,90).
+	for fixture in [["enemy_ripper", Vector2(106, 94)], ["enemy_skree", Vector2(104, 96)], ["enemy_bat", Vector2(105, 94)], ["enemy_skeleton", Vector2(104, 96)], ["enemy_medusa", Vector2(105, 95)]]:
+		var probe := EnemyDrawProbe.new()
+		probe.enemy = E.make(null, {"t": fixture[0], "x": 100, "y": 90})
+		add_child(probe)
+		for facing in [-1, 1]:
+			probe.enemy.facing = facing
+			recording.destinations.clear()
+			probe.queue_redraw()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			var aligned := not recording.destinations.is_empty()
+			if aligned:
+				var destination: Rect2 = recording.destinations[-1]
+				# Godot flips a negative width in-place; it does not move the origin left.
+				var drawn_centre := destination.position + destination.size.abs() / 2
+				aligned = drawn_centre == fixture[1] and signf(destination.size.x) == facing
+			check(aligned, "%s facing %d stays centred on its spawn hitbox before moving" % [fixture[0], facing])
+		probe.free()
+	art._texture = previous
+
 func check_combat_enemies() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
@@ -734,6 +773,7 @@ func _ready() -> void:
 	Game.settings.shake = false
 
 	check_character_animation()
+	await check_enemy_facing_alignment()
 	await check_tile_layer()
 
 	# a script that fails to compile otherwise only shows up as engine errors
@@ -982,8 +1022,8 @@ func _ready() -> void:
 	for s in ["menu", "editor"]:
 		var n = load("res://scripts/%s.gd" % s).new()
 		add_child(n)
+		check(n.is_inside_tree() and n.get_child_count() > 0, "%s builds its UI" % s)
 		n.queue_free()
-	check(true, "menu + editor instantiate")
 
 	# editor: undo/new/resize/erase must not leave zip_pending pointing at a removed mover
 	Game.editor_level = {}

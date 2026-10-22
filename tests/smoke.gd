@@ -46,15 +46,17 @@ func _ready() -> void:
 	tap.position = Vector2(1150, 600)  # Jump
 	tap.pressed = true
 	tc._input(tap)
+	Input.flush_buffered_events()  # parse_input_event is buffered until the next process frame
 	await _frames(2)
 	await _shot("touch")
 	if not Input.is_action_pressed("jump"):
-		push_error("touch Jump did not press jump")
+		_fail("touch Jump did not press jump")
 	tap.pressed = false
 	tc._input(tap)
+	Input.flush_buffered_events()  # parse_input_event is buffered until the next process frame
 	await _frames(2)
 	if Input.is_action_pressed("jump"):
-		push_error("touch Jump stayed held")
+		_fail("touch Jump stayed held")
 	# character close-ups: standing, running, climbing the platform wall at x=264 (tiles 33-34)
 	var real_player = world.player
 	world.player = Bot.new(world, Vector2(200, 27 * 8))
@@ -91,10 +93,10 @@ func _ready() -> void:
 	world.debug_panel.step_frames = 1
 	await _frames(5)
 	if not frozen or world.time <= t0:
-		push_error("debug panel pause/step did not hold the simulation")
+		_fail("debug panel pause/step did not hold the simulation")
 	await _press("pause")  # Esc closes the panel instead of pausing
 	if world.debug_panel != null or world.paused:
-		push_error("Esc did not close the debug panel")
+		_fail("Esc did not close the debug panel")
 	await _press("map")
 	await _frames(5)
 	await _shot("map")
@@ -102,13 +104,13 @@ func _ready() -> void:
 	await _press("debug")
 	await _press("debug")
 	if world.map_view != null or world.debug_panel != null or world.paused or not world.hud.visible:
-		push_error("map/debug keys did not open and close cleanly")
+		_fail("map/debug keys did not open and close cleanly")
 	var hb0: bool = Game.settings.hitboxes
 	await _press("hitboxes")
 	var hb1: bool = Game.settings.hitboxes
 	await _press("hitboxes")
 	if hb1 == hb0 or Game.settings.hitboxes != hb0:
-		push_error("hitboxes key did not toggle the overlay")
+		_fail("hitboxes key did not toggle the overlay")
 	world._set_paused(true)
 	await _frames(5)
 	await _shot("pause")
@@ -128,10 +130,10 @@ func _ready() -> void:
 	trig.axis_value = 1.0
 	pad._input(trig)
 	if Game.settings.pad.jump != Game.PAD_AXIS + JOY_AXIS_TRIGGER_LEFT or pad.key_buttons.jump.text != "LT / L2":
-		push_error("controller page did not rebind jump to L2")
+		_fail("controller page did not rebind jump to L2")
 	pad._reset_keys()
 	if Game.settings.pad != Game.DEFAULT_PAD:
-		push_error("controller page reset failed")
+		_fail("controller page reset failed")
 	Game.settings.pad = saved_pad
 	Game.apply_settings()
 	Game.save_settings()
@@ -165,12 +167,12 @@ func _ready() -> void:
 	await _frames(10)
 	var adv = get_child(get_child_count() - 1)
 	if adv.room != "a1_first_steps":
-		push_error("new adventure did not start in the start room")
+		_fail("new adventure did not start in the start room")
 	adv.player.pos = Vector2(adv.bounds.end.x - 2, 160)  # half out of the doorway
 	adv.player.speed.x = 90
 	await _frames(10)
 	if adv.room != "a2_little_gap":
-		push_error("walking off the right edge did not enter room 2 (in %s)" % adv.room)
+		_fail("walking off the right edge did not enter room 2 (in %s)" % adv.room)
 	await _press("map")
 	await _frames(5)
 	await _shot("adventure_map")
@@ -178,15 +180,21 @@ func _ready() -> void:
 	adv._exit()
 	await _frames(5)
 	if not Game.has_adventure_save():
-		push_error("adventure run was not saved")
+		_fail("adventure run was not saved")
 	Game.world_path = Game.ADVENTURE_DIR + "world.json"  # the shipped world from here on
 	Game.goto("world_editor")
 	await _frames(10)
 	await _shot("world_editor")
 	DirAccess.remove_absolute(Game.save_path)
 	Game.save_path = Game.SAVE_PATH
-	print("SMOKE OK")
-	get_tree().quit()
+	print("SMOKE OK" if failures == 0 else "SMOKE FAILED: %d" % failures)
+	get_tree().quit(failures)
+
+var failures := 0
+
+func _fail(msg: String) -> void:
+	failures += 1
+	push_error(msg)
 
 func _press(action: String) -> void:
 	var ev := InputEventAction.new()
