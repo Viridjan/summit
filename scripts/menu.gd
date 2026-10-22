@@ -2,6 +2,7 @@ extends ColorRect
 # Title screen, level select, options, credits.
 
 const OptionsPanel := preload("res://scripts/options.gd")
+const Bestiary := preload("res://scripts/bestiary.gd")
 
 var body: VBoxContainer
 var hint: Label
@@ -38,6 +39,7 @@ func _main() -> void:
 	body.add_child(play)
 	body.add_child(Game.button("Custom Levels", _level_select))
 	body.add_child(Game.button("Level Editor", _editor_new))
+	body.add_child(Game.button("Monsters", _monsters))
 	body.add_child(Game.button("Options", _options))
 	body.add_child(Game.button("Credits", _credits))
 	body.add_child(Game.button("Quit", func(): get_tree().quit()))
@@ -135,6 +137,16 @@ func _options() -> void:
 	var o := OptionsPanel.new()
 	add_child(o)
 	o.closed.connect(_main)
+
+func _monsters() -> void:
+	_clear()
+	body.add_child(Game.label("Monsters", 44))
+	var b := Bestiary.new()
+	b.custom_minimum_size = Vector2(860, 500)
+	body.add_child(b)
+	var back := Game.button("Back", _main)
+	body.add_child(back)
+	back.grab_focus()
 
 func _credits() -> void:
 	_clear()

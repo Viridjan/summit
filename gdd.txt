@@ -112,6 +112,10 @@ playtest from a room, set start; door links shown as cyan lines.
 F1 debug panel: live state machine (with Attack layer row), transitions log,
 live variables, every movement variable editable; presets saved to
 user://tuning/, export to res://config/tuning.cfg; Pause sim / Step; Hitboxes.
+Monsters page (main menu, and the map screen's second tab): every enemy kind
+with its Swift/Armored variants, animated sprite and HP, read from the entity
+registry. Map screen tabs: Map (always opens first, Select / M) and Monsters;
+L1 / R1 (Q / E) switch.
 F2 / Options > Show Hitboxes: player (green), sword arc (red), objects
 (yellow), touch/hazard areas (orange).
 Reports: reports/hk-room-safety.md (transition/bounds checker, 0 findings),
@@ -211,3 +215,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-22: code-health audit (docs/CODE_HEALTH.md). Smoke test can fail now,
   CI runs the tests. Fixed: free-aim super jumps, red bubble aim, climbing walls
   on a room seam, restart/door/camera/save/editor bugs.
+- 2026-10-22: Monsters page in the main menu and as a map-screen tab (L1/R1).

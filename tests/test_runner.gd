@@ -883,6 +883,32 @@ func check_bugfixes() -> void:
 	ed.queue_free()
 	Game.editor_level = {}
 
+# Monsters page (main menu) and the map screen's Map / Monsters tabs (L1 / R1).
+func check_bestiary() -> void:
+	var b = load("res://scripts/bestiary.gd").new()
+	add_child(b)
+	check(b.rows.size() >= 5 and b.rows[0] == "enemy_ripper" and not b.rows.has("enemy"), "monsters page lists each enemy kind once (%s)" % [b.rows])
+	check(b.hp.get("enemy_ripper", 0) == 2, "monsters page shows enemy HP")
+	b.queue_free()
+	make_world([])
+	var mv = load("res://scripts/map_view.gd").new(w)
+	add_child(mv)
+	check(mv.tab == 0 and not mv.bestiary.visible, "the map screen opens on the Map tab")
+	var ev := InputEventJoypadButton.new()
+	ev.button_index = JOY_BUTTON_RIGHT_SHOULDER
+	ev.pressed = true
+	mv._input(ev)
+	check(mv.tab == 1 and mv.bestiary.visible, "R1 switches to the Monsters tab")
+	ev.button_index = JOY_BUTTON_LEFT_SHOULDER
+	mv._input(ev)
+	check(mv.tab == 0 and not mv.bestiary.visible, "L1 switches back to the Map tab")
+	var key := InputEventKey.new()
+	key.keycode = KEY_E
+	key.pressed = true
+	mv._input(key)
+	check(mv.tab == 1, "E switches tabs on the keyboard")
+	mv.queue_free()
+
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	Game.world_path = FIXTURE_WORLD + "world.json"
@@ -1373,6 +1399,7 @@ func _ready() -> void:
 	check_dirs()
 	check_adventure()
 	check_bugfixes()
+	check_bestiary()
 
 	print("\n%d failure(s)" % fails)
 	get_tree().quit(fails)

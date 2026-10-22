@@ -1,11 +1,13 @@
 extends Control
 # Full-screen map (M). The world pauses while it is open. Owned by world.gd.
 # One level: that level. Adventure: every visited room on the world grid (unvisited rooms stay hidden).
-# Wheel zooms, drag pans, M / Esc closes.
+# Wheel zooms, drag pans, M / Esc closes. Tabs: Map (always first) and Monsters; L1 / R1 or Q / E switch.
 
 const E := preload("res://scripts/entities.gd")
 const Adventure := preload("res://scripts/adventure.gd")
 const T := 8
+const Bestiary := preload("res://scripts/bestiary.gd")
+const TABS := ["Map", "Monsters"]
 
 var world
 var layers: Array = []  # [world-pixel Rect2, ImageTexture, is current room]
@@ -13,6 +15,9 @@ var area := Rect2()  # union of layers, world pixels
 var zoom := 1.0  # extra zoom on top of fit-to-screen
 var pan := Vector2.ZERO
 var dragging := false
+var tab := 0
+var tab_buttons: Array[Button] = []
+var bestiary: Control
 
 func _init(w) -> void:
 	world = w
@@ -62,6 +67,46 @@ func _ready() -> void:
 	area = layers[0][0]
 	for l in layers:
 		area = area.merge(l[0])
+	bestiary = Bestiary.new()
+	bestiary.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bestiary.offset_top = 70
+	bestiary.offset_bottom = -40
+	add_child(bestiary)
+	var bar := HBoxContainer.new()
+	bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	bar.position = Vector2(-300, 12)
+	bar.custom_minimum_size = Vector2(280, 0)
+	bar.alignment = BoxContainer.ALIGNMENT_END
+	add_child(bar)
+	var group := ButtonGroup.new()
+	for i in TABS.size():
+		var b := Button.new()  # tappable on touchscreens
+		b.text = TABS[i]
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.pressed.connect(_set_tab.bind(i))
+		bar.add_child(b)
+		tab_buttons.append(b)
+	_set_tab(0)
+
+func _set_tab(i: int) -> void:
+	tab = i
+	for j in tab_buttons.size():
+		tab_buttons[j].button_pressed = j == i
+		tab_buttons[j].modulate = Color(1, 1, 1, 1.0 if j == i else 0.45)
+	bestiary.visible = i == 1
+	queue_redraw()
+
+func _input(event: InputEvent) -> void:
+	var step := 0
+	if event is InputEventJoypadButton and event.pressed:
+		step = -1 if event.button_index == JOY_BUTTON_LEFT_SHOULDER else (1 if event.button_index == JOY_BUTTON_RIGHT_SHOULDER else 0)
+	elif event is InputEventKey and event.pressed and not event.echo:
+		step = -1 if event.keycode == KEY_Q else (1 if event.keycode == KEY_E else 0)
+	if step != 0:
+		_set_tab(posmod(tab + step, TABS.size()))
+		get_viewport().set_input_as_handled()
 
 # world pixels -> screen
 func _xform() -> Transform2D:
@@ -72,6 +117,12 @@ func _xform() -> Transform2D:
 
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.02, 0.06, 0.92))
+	var font := get_theme_default_font()
+	var hint := "L1 / R1 (Q / E) tabs · %s / Esc close" % Game.key_name("map")
+	if tab == 1:
+		draw_string(font, Vector2(24, 36), "Monsters", HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
+		draw_string(font, Vector2(24, size.y - 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.7, 0.7, 0.8))
+		return
 	var xf := _xform()
 	var s := xf.get_scale().x
 	for l in layers:
@@ -99,16 +150,17 @@ func _draw() -> void:
 		var pp: Vector2 = xf * (o + world.player.center())
 		draw_circle(pp, maxf(3.0, s * 4), world.player.hair_color())
 		draw_arc(pp, maxf(3.0, s * 4) + 2, 0, TAU, 16, Color.WHITE, 1.5)
-	var font := get_theme_default_font()
 	var title := "Map — %s" % world.data.get("name", "")
 	if world.adventure():
 		title += "   (%d / %d rooms explored)" % [Game.adv.visited.size(), Game.adv_world.rooms.size()]
 	else:
 		title += "  (%dx%d)" % [world.gw, world.gh]
 	draw_string(font, Vector2(24, 36), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
-	draw_string(font, Vector2(24, size.y - 18), "Wheel zoom · drag pan · %s / Esc close" % Game.key_name("map"), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.7, 0.7, 0.8))
+	draw_string(font, Vector2(24, size.y - 18), "Wheel zoom · drag pan · " + hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.7, 0.7, 0.8))
 
 func _gui_input(event: InputEvent) -> void:
+	if tab != 0:
+		return
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		var before: Vector2 = _xform().affine_inverse() * event.position
 		zoom = clampf(zoom * (1.25 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 0.8), 0.5, 20.0)
