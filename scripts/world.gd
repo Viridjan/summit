@@ -201,7 +201,7 @@ func _check_room_exit() -> void:
 # Room changes after the player moved: walking off an edge, or a door touched this tick.
 func after_player_move() -> void:
 	_check_room_exit()
-	if pending_door != null:
+	if pending_door != null and not player.dead:
 		_go_door(pending_door)
 	if door_block.has_area() and not door_block.intersects(player.hurt_rect()):
 		door_block = Rect2i()
@@ -687,6 +687,9 @@ func _restart() -> void:
 	deaths = 0
 	time = 0
 	collected.clear()
+	broken.clear()
+	pending_door = null
+	door_block = Rect2i()
 	_build()
 	cam_pos = _clamp_cam(player.camera_target())
 

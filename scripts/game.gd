@@ -238,6 +238,11 @@ static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 				return {}
 		if e.has("hp") and not _is_num(e.hp, 1, 99):  # optional (breakable walls)
 			return {}
+		for k in ["facing", "patrol"]:  # optional (enemies)
+			if e.has(k) and not _is_num(e[k], -MAX_COORD, MAX_COORD):
+				return {}
+		if e.has("top") and not e.top is bool:  # optional (liquids)
+			return {}
 	d.name = name
 	d.w = int(w)
 	d.h = int(h)

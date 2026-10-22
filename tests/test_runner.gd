@@ -635,6 +635,44 @@ func check_combat_enemies() -> void:
 	for i in 240: enemy.update(DT)
 	check(enemy.rect.position.y == 148 and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Skeleton patrol turns at ledges rather than walking into a pit")
 
+func check_enemy_variants() -> void:
+	Game.settings.invincible = true
+	make_world([])
+	for base in ["ripper", "skree", "bat", "skeleton", "medusa"]:
+		var original_id: String = "enemy_" + base
+		var swift_id: String = original_id + "_swift"
+		var armored_id: String = original_id + "_armored"
+		var available: bool = E.TYPES.has(swift_id) and E.TYPES.has(armored_id)
+		check(available, "%s has original, Swift, and Armored editor types" % base)
+		if not available: continue
+		var original = E.make(w, {"t": original_id, "x": 160, "y": 112, "facing": 1})
+		var swift = E.make(w, {"t": swift_id, "x": 160, "y": 112, "facing": 1})
+		var armored = E.make(w, {"t": armored_id, "x": 160, "y": 112, "facing": 1})
+		check(swift.hp <= original.hp and armored.hp > original.hp, "%s variants offer lighter and tougher enemies" % base)
+		check(swift.rect == original.rect and armored.rect == original.rect, "%s variants preserve the aligned collision size" % base)
+		if base == "ripper":
+			for i in 30:
+				original.update(DT); swift.update(DT); armored.update(DT)
+			check(swift.rect.position.x > original.rect.position.x and armored.rect.position.x < original.rect.position.x, "Swift patroller moves faster; Armored cruises slower")
+			p().pos = Vector2(220, 120)
+			armored.timer = 0
+			armored.update(DT)
+			check(armored.phase == "windup", "Armored Ripper warns before charging a nearby player")
+			for i in 32: armored.update(DT)
+			check(armored.phase == "charge", "Armored Ripper commits to its telegraphed charge")
+		elif base == "skeleton":
+			armored.rect.position = Vector2i(180, 204)
+			p().pos = Vector2(80, 216)
+			armored.phase = "windup"
+			armored.timer = DT / 2
+			armored.update(DT)
+			check(armored.bones.size() == 2, "Armored Skeleton throws a two-arc volley")
+			armored.timer = DT / 2
+			armored.phase = "windup"
+			armored.update(DT)
+			check(armored.bones.size() <= 3, "Armored Skeleton respects the three-projectile cap")
+	Game.settings.invincible = false
+
 func check_hk_combat_placements() -> void:
 	var world_data: Dictionary = load("res://scripts/adventure.gd").load_world("res://worlds/hollow_knight/world.json")
 	var count := {}
@@ -666,6 +704,67 @@ func check_hk_combat_placements() -> void:
 	check(count.size() == 5 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the five combat enemies (%s)" % count)
 	check(failures.is_empty(), "HK enemy placements stay clear of entrances, terrain, and room bounds (%s)" % [failures])
 	Game.settings.invincible = false
+
+# Regressions from the code-health audit: each check failed before its fix.
+func check_bugfixes() -> void:
+	# free-aim dash (DASH_DIRS 4) slightly above horizontal still counts as horizontal: super jump works
+	make_world([])
+	step(5)
+	p().DASH_DIRS = 4
+	p().aim_free = Vector2(0.95, -0.15).normalized()
+	p().hold = {"right": true}
+	p().tap = {"dash": true}
+	step(6)
+	p().tap = {"jump": true}
+	step(2)
+	check(p().state == p().ST_NORMAL and p().speed.x > p().DASH_SPEED and p().speed.y < 0, "free-aim near-horizontal dash allows a super jump (speed.x %d)" % p().speed.x)
+
+	# red bubble obeys DASH_DIRS: horizontal-only never shoots up
+	make_world([{"t": "booster_red", "x": 80, "y": 26 * 8}])
+	p().DASH_DIRS = 1
+	p().hold = {"up": true}
+	var red_dir := Vector2.ZERO
+	for i in 60:
+		step()
+		if p().state == p().ST_RED_DASH and p().dash_dir != Vector2.ZERO:
+			red_dir = p().dash_dir
+			break
+	check(red_dir != Vector2.ZERO and red_dir.y == 0, "red bubble follows DASH_DIRS (dash %s)" % red_dir)
+
+	# Restart Level clears broken walls and a pending door
+	make_world([{"t": "breakwall", "x": 96, "y": 26 * 8, "w": 8, "h": 16}])
+	w.break_wall(w.star_key("x"))
+	w.pending_door = w.ents[0]
+	w._restart()
+	check(w.broken.is_empty() and w.pending_door == null, "Restart Level un-breaks walls and drops a pending door")
+
+	# a player who died this tick doesn't travel through a door touched in the same tick
+	make_world([{"t": "door", "x": 200, "y": 200, "w": 8, "h": 24, "id": "a", "to": "b"},
+		{"t": "door", "x": 400, "y": 120, "w": 8, "h": 24, "id": "b", "to": "a"}])
+	p().pos = Vector2(204, 220)
+	p().die(Vector2.ZERO)
+	w.door_hit(w.ents.filter(func(e): return e.d.get("id", "") == "a")[0])
+	w.after_player_move()
+	check(p().dead and p().pos.distance_to(Vector2(204, 220)) < 1, "a dead player isn't moved by a door (at %s)" % p().pos)
+
+	# Skree returning home under a ceiling gives up instead of pushing forever
+	make_world([{"t": "enemy_skree", "x": 200, "y": 100}], [[25, 11], [26, 11]])
+	var sk = w.ents.filter(func(e): return e.d.t == "enemy_skree")[0]
+	sk.home.y = 40
+	sk.phase = "return"
+	step(30)
+	check(sk.phase != "return", "Skree blocked on its way home stops returning (phase %s)" % sk.phase)
+
+	# level validation rejects wrong types for enemy fields
+	for bad in [{"facing": [1]}, {"patrol": {}}, {"top": "false"}]:
+		var lv := Game.new_level("v", 10, 5)
+		var e := {"t": "enemy_ripper", "x": 8, "y": 8}
+		e.merge(bad)
+		lv.entities = [e]
+		check(Game.validate_level(lv).is_empty(), "level with %s is rejected" % [bad])
+	var ok := Game.new_level("v", 10, 5)
+	ok.entities = [{"t": "enemy_ripper", "x": 8, "y": 8, "facing": 1, "patrol": 40}, {"t": "acid", "x": 8, "y": 16, "top": false}]
+	check(not Game.validate_level(ok).is_empty(), "valid facing/patrol/top still load")
 
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
@@ -1151,9 +1250,11 @@ func _ready() -> void:
 	check_room_seams()
 	check_attack()
 	check_combat_enemies()
+	check_enemy_variants()
 	check_hk_combat_placements()
 	check_dirs()
 	check_adventure()
+	check_bugfixes()
 
 	print("\n%d failure(s)" % fails)
 	get_tree().quit(fails)

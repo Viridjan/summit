@@ -450,8 +450,8 @@ class SkreeEnemy extends CombatEnemy:
 					rect.position.y = int(home.y)
 					rem.y = 0
 					phase = "idle"
-				else:
-					move_enemy(Vector2(0, -36 * dt))
+				elif move_enemy(Vector2(0, -36 * dt)):
+					phase = "idle"  # something solid above: wait here instead of pushing forever
 
 
 class BatEnemy extends CombatEnemy:

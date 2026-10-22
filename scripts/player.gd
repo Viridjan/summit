@@ -610,7 +610,7 @@ func update(dt: float) -> void:
 		move_v(JUMPTHRU_ASSIST_SPEED * dt)
 
 	# dash floor snapping
-	if not on_ground and dash_attacking() and dash_dir.y == 0:
+	if not on_ground and dash_attacking() and dash_dir8().y == 0:
 		if solid_at(Vector2(0, DASH_V_FLOOR_SNAP_DIST)) or jumpthru_outside(Vector2(0, DASH_V_FLOOR_SNAP_DIST)) != null:
 			move_v_exact(DASH_V_FLOOR_SNAP_DIST)
 
@@ -760,8 +760,8 @@ func _co_resume() -> void:
 			if co_step == 0:
 				co_step = 1
 			else:
-				speed = last_aim * DASH_SPEED
-				dash_dir = last_aim
+				speed = last_dash_aim * DASH_SPEED
+				dash_dir = last_dash_aim
 				w.shake_dir(dash_dir, 0.2)
 				_call_dash_events()
 				co_active = false
@@ -1227,14 +1227,14 @@ func _normal_update(dt: float) -> int:
 			if wall_jump_check(1):
 				if facing == 1 and grab_check and stamina > 0:
 					climb_jump()
-				elif dash_attacking() and dash_dir.x == 0 and dash_dir.y == -1:
+				elif dash_attacking() and dash_dir8() == Vector2.UP:
 					super_wall_jump(-1)
 				else:
 					wall_jump(-1)
 			elif wall_jump_check(-1):
 				if facing == -1 and grab_check and stamina > 0:
 					climb_jump()
-				elif dash_attacking() and dash_dir.x == 0 and dash_dir.y == -1:
+				elif dash_attacking() and dash_dir8() == Vector2.UP:
 					super_wall_jump(1)
 				else:
 					wall_jump(1)
@@ -1390,6 +1390,11 @@ func _dash_co_start() -> void:
 	w.add_trail(self)
 	trail_timer = 0.08
 
+# dash_dir snapped to 8 ways, so a free-aim dash (DASH_DIRS 4) close to an axis still allows super jumps
+func dash_dir8() -> Vector2:
+	var a := snappedf(dash_dir.angle(), PI / 4)
+	return Vector2(roundf(cos(a)), roundf(sin(a)))
+
 func _jumpthru_dash_nudge() -> void:
 	var jt = w.collide_jumpthru(hitbox())
 	if jt != null and bottom() - jt.rect.position.y <= DASH_H_JUMPTHRU_NUDGE:
@@ -1397,12 +1402,13 @@ func _jumpthru_dash_nudge() -> void:
 
 func _dash_jumps(red: bool) -> int:
 	# shared by DASH and RED_DASH: super jump, super wall jump, wall jump out of a dash
-	if dash_dir.y == 0:
+	var d8 := dash_dir8()
+	if d8.y == 0:
 		_jumpthru_dash_nudge()
 		if can_unduck() and jump_pressed() and jump_grace_timer > 0:
 			super_jump()
 			return ST_NORMAL
-	if dash_dir.x == 0 and dash_dir.y == -1:
+	if d8 == Vector2.UP:
 		if jump_pressed() and can_unduck():
 			if wall_jump_check(1):
 				super_wall_jump(-1)
@@ -1410,7 +1416,7 @@ func _dash_jumps(red: bool) -> int:
 			elif wall_jump_check(-1):
 				super_wall_jump(1)
 				return ST_NORMAL
-	elif not red or dash_dir.y != 0:
+	elif not red or d8.y != 0:
 		if jump_pressed() and can_unduck():
 			if wall_jump_check(1):
 				wall_jump(-1)
