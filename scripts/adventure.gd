@@ -118,6 +118,22 @@ static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
 		"stars": [], "deaths": 0, "time": 0.0, "done": false}
 
+# A saved run with missing or wrong-typed fields filled from a fresh one (older or hand-edited saves).
+# Unusable saves (not a run, or its room is gone) start over.
+static func restore_run(world: Dictionary, run) -> Dictionary:
+	var fresh := new_run(world)
+	if not run is Dictionary or not world.rooms.has(run.get("room")):
+		return fresh
+	for k in fresh:
+		if run.has(k) and fresh[k] != null and typeof(run[k]) != typeof(fresh[k]):
+			run.erase(k)
+	run.merge(fresh)
+	if not (run.spawn is Array and run.spawn.size() == 2):
+		run.spawn = null
+	if not run.visited.has(run.room):
+		run.visited.append(run.room)  # the map always shows the current room
+	return run
+
 # Total stars in the world, for the HUD.
 static func star_count(world: Dictionary) -> int:
 	var n := 0

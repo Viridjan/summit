@@ -766,6 +766,62 @@ func check_bugfixes() -> void:
 	ok.entities = [{"t": "enemy_ripper", "x": 8, "y": 8, "facing": 1, "patrol": 40}, {"t": "acid", "x": 8, "y": 16, "top": false}]
 	check(not Game.validate_level(ok).is_empty(), "valid facing/patrol/top still load")
 
+	# a partial or hand-edited adventure save is filled from a fresh run instead of crashing
+	const Adventure := preload("res://scripts/adventure.gd")
+	var aw := Adventure.load_world(FIXTURE_WORLD + "world.json")
+	var run := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": [5], "deaths": "x", "visited": []})
+	check(run.room == "a2_little_gap" and run.spawn == null and run.deaths == 0 and run.stars == [] and run.abilities is Array
+		and run.visited == ["a2_little_gap"] and run.has("time"), "partial save gets defaults (%s)" % run)
+	check(Adventure.restore_run(aw, "junk").room == aw.start and Adventure.restore_run(aw, {"room": "gone"}).room == aw.start, "unusable save starts a fresh run")
+	Game.adv_world = aw
+	Game.adv = Adventure.restore_run(aw, {"room": "a1_first_steps"})
+	Game.adv_temp = true
+	Game.level = aw.rooms.a1_first_steps.level
+	if w:
+		w.queue_free()
+	w = load("res://scripts/world.gd").new()
+	add_child(w)
+	w.set_physics_process(false)
+	check(w.room == "a1_first_steps" and w.deaths == 0, "world starts from a restored partial save")
+
+	# a door into a far room snaps the camera there instead of sweeping across the world
+	var la := Game.new_level("a", 20, 10)
+	var lb := Game.new_level("b", 20, 10)
+	la.entities.append({"t": "door", "x": 80, "y": 40, "w": 8, "h": 24, "id": "d1", "to": "b:d2"})
+	lb.entities.append({"t": "door", "x": 40, "y": 40, "w": 8, "h": 24, "id": "d2", "to": "a:d1"})
+	Game.adv_world = {"start": "a", "abilities": [], "rooms": {"a": {"pos": Vector2i(0, 0), "level": la}, "b": {"pos": Vector2i(200, 0), "level": lb}}}
+	Game.adv = Adventure.new_run(Game.adv_world)
+	Game.level = la
+	w.queue_free()
+	w = load("res://scripts/world.gd").new()
+	add_child(w)
+	w.set_physics_process(false)
+	w.player = Bot.new(w, w.spawn)
+	p().pos = Vector2(84, 60)
+	step()
+	check(w.room == "b" and w.cam_pos.distance_to(w._clamp_cam(p().camera_target())) < 1, "door to a far room snaps the camera (room %s, cam %s)" % [w.room, w.cam_pos])
+	w.queue_free()
+	w = null
+	Game.adv = {}
+	Game.adv_temp = false
+
+	# editor: New/Load never keep a world room's file name; a drag released over the UI ends
+	Game.editor_level = Game.new_level("room", 20, 10)
+	Game.editor_dir = FIXTURE_WORLD
+	Game.editor_file = "a1_first_steps"
+	var ed = load("res://scripts/editor.gd").new()
+	add_child(ed)
+	check(ed.level == ed.saved_level, "an untouched level counts as saved (no leave prompt)")
+	ed._new()
+	check(Game.editor_file == "" and Game.editor_dir == Game.LEVEL_DIR, "editor New saves as a custom level, not over the world room")
+	ed.tool = "breakwall"
+	ed.rect_start = Vector2i(1, 1)
+	ed.dragging_paint = 1
+	ed._unhandled_input(InputEventMouseMotion.new())  # no button held
+	check(ed.rect_start == null and ed.dragging_paint == 0, "mouse moving with no button held ends a drag")
+	ed.queue_free()
+	Game.editor_level = {}
+
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	Game.world_path = FIXTURE_WORLD + "world.json"

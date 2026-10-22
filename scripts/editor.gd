@@ -23,6 +23,7 @@ var tool := "tile"
 var cam: Camera2D
 var preview: Array = []  # entity instances used only for drawing; index-aligned with level.entities
 var undo_stack: Array = []
+var saved_level: Dictionary  # last saved (or opened) state, to warn about unsaved changes
 var dragging_paint := 0  # 0 none, 1 paint, -1 erase
 var last_cell := Vector2i(-1, -1)
 var rect_start = null  # Vector2i cell where a sized drag began
@@ -56,6 +57,7 @@ func _create_tile_layer() -> void:
 
 func _ready() -> void:
 	level = Game.editor_level.duplicate(true) if not Game.editor_level.is_empty() else Game.new_level()
+	saved_level = level.duplicate(true)
 	cam = Camera2D.new()
 	cam.zoom = Vector2(3, 3)
 	add_child(cam)
@@ -107,7 +109,7 @@ func _build_ui() -> void:
 	bar.add_child(_btn("Undo", _undo))
 	bar.add_child(VSeparator.new())
 	bar.add_child(_btn("Playtest", _playtest))
-	bar.add_child(_btn("Menu" if Game.editor_return == "menu" else "World", func(): Game.goto(Game.editor_return)))
+	bar.add_child(_btn("Menu" if Game.editor_return == "menu" else "World", _leave))
 
 	var side := PanelContainer.new()
 	side.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
@@ -161,7 +163,8 @@ func _tool_button(parent: Control, id: String, text: String, col: Color) -> void
 	b.toggled.connect(func(on: bool):
 		if on:
 			tool = id
-			zip_pending = null)
+			zip_pending = null
+			rect_start = null)
 	parent.add_child(b)
 
 func _fill_load_menu() -> void:
@@ -177,6 +180,8 @@ func _load_index(i: int) -> void:
 		return
 	_push_undo()
 	_set_level(d)
+	Game.editor_dir = Game.LEVEL_DIR
+	Game.editor_file = load_menu.get_popup().get_item_text(i)
 	_status("Loaded " + d.name)
 
 func _sync_fields() -> void:
@@ -202,6 +207,8 @@ func _undo() -> void:
 func _new() -> void:
 	_push_undo()
 	_set_level(Game.new_level())
+	Game.editor_dir = Game.LEVEL_DIR
+	Game.editor_file = ""
 
 # Every whole-level replacement goes through here so pending edits never point at stale data.
 func _set_level(d: Dictionary) -> void:
@@ -216,6 +223,21 @@ func _save() -> void:
 	var f := Game.save_level(level, Game.editor_dir, Game.editor_file)
 	_status("Saved as %s.json" % f if f != "" else "Save failed")
 	Game.editor_level = level.duplicate(true)
+	saved_level = level.duplicate(true)
+
+func _leave() -> void:
+	if level == saved_level:
+		Game.goto(Game.editor_return)
+		return
+	var dlg := ConfirmationDialog.new()
+	dlg.dialog_text = "Leave without saving your changes?"
+	dlg.ok_button_text = "Leave"
+	dlg.confirmed.connect(func(): Game.goto(Game.editor_return))
+	dlg.visibility_changed.connect(func():
+		if not dlg.visible:
+			dlg.queue_free())
+	add_child(dlg)
+	dlg.popup_centered()
 
 func _resize() -> void:
 	_push_undo()
@@ -411,6 +433,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif mb.button_index == MOUSE_BUTTON_RIGHT:
 			_right(mb.pressed)
 	elif event is InputEventMouseMotion:
+		if event.button_mask & (MOUSE_BUTTON_MASK_LEFT | MOUSE_BUTTON_MASK_RIGHT) == 0:
+			dragging_paint = 0  # the button was released over the UI, where we never saw it
+			rect_start = null
 		if panning:
 			cam.position -= event.relative / cam.zoom
 		elif dragging_paint != 0:

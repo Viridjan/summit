@@ -207,6 +207,9 @@ func _add_index(i: int) -> void:
 	else:
 		base = Game.list_levels()[i - 1]
 		lvl = Game.load_level(base)
+		if lvl.is_empty():
+			status.text = "Could not load level %s" % base
+			return
 	add_room(base, lvl, _free_spot(lvl))
 	_fit()
 

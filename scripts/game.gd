@@ -285,9 +285,7 @@ func start_adventure(fresh: bool) -> void:
 	var cf := ConfigFile.new()
 	cf.load(save_path)
 	var run = cf.get_value("adventure", _run_key()) if cf.has_section_key("adventure", _run_key()) else null
-	if fresh or not run is Dictionary or not adv_world.rooms.has(run.get("room")):
-		run = Adventure.new_run(adv_world)
-	adv = run
+	adv = Adventure.new_run(adv_world) if fresh else Adventure.restore_run(adv_world, run)
 	adv_temp = false
 	_enter_adventure()
 

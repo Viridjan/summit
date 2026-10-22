@@ -236,6 +236,7 @@ func _go_door(door) -> void:
 		_unstick()
 	else:
 		enter_room(target_room, at)
+		cam_pos = _clamp_cam(player.camera_target())  # a door can lead anywhere: don't sweep the view across the world
 	door_block = Rect2i(dr)
 
 func enter_room(next: String, at = null) -> void:
