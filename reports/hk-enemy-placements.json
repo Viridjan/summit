@@ -1,28 +1,56 @@
 {
   "counts": {
     "ripper": 6,
+    "skeleton": 6,
     "skree": 6,
     "bat": 6,
-    "skeleton": 6,
-    "medusa": 6
+    "medusa": 6,
+    "ripper_swift": 6,
+    "ripper_armored": 6,
+    "skree_swift": 6,
+    "skree_armored": 6,
+    "bat_swift": 6,
+    "bat_armored": 6,
+    "skeleton_swift": 6,
+    "skeleton_armored": 6,
+    "medusa_swift": 6,
+    "medusa_armored": 6
   },
   "changed_rooms": [
-    "r005",
-    "r012",
-    "r017",
-    "r023",
-    "r027",
-    "r029",
-    "r038",
-    "r041",
-    "r045",
-    "r057",
-    "r062",
-    "r067",
-    "r069",
-    "r070",
-    "r083",
-    "r090",
+    "r001",
+    "r002",
+    "r003",
+    "r004",
+    "r006",
+    "r010",
+    "r011",
+    "r016",
+    "r021",
+    "r028",
+    "r032",
+    "r033",
+    "r034",
+    "r035",
+    "r036",
+    "r037",
+    "r040",
+    "r042",
+    "r043",
+    "r044",
+    "r046",
+    "r047",
+    "r048",
+    "r051",
+    "r052",
+    "r053",
+    "r054",
+    "r055",
+    "r060",
+    "r061",
+    "r065",
+    "r071",
+    "r072",
+    "r073",
     "r097"
   ],
   "placements": [
@@ -503,6 +531,966 @@
       "reference_position": [
         128,
         32
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r097",
+      "t": "enemy_ripper_swift",
+      "x": 192,
+      "y": 128,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Fungling",
+      "reference_position": [
+        224,
+        64
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r001",
+      "t": "enemy_ripper_armored",
+      "x": 1184,
+      "y": 344,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Crawlid",
+      "reference_position": [
+        1184,
+        344
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r001",
+      "t": "enemy_skree_swift",
+      "x": 664,
+      "y": 416,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "small pale creature",
+      "reference_position": [
+        696,
+        400
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r002",
+      "t": "enemy_skree_armored",
+      "x": 1576,
+      "y": 232,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Hunter",
+      "reference_position": [
+        1536,
+        264
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r002",
+      "t": "enemy_bat_swift",
+      "x": 184,
+      "y": 200,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Shardmite",
+      "reference_position": [
+        224,
+        144
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r003",
+      "t": "enemy_bat_armored",
+      "x": 920,
+      "y": 216,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Husk Miner",
+      "reference_position": [
+        872,
+        280
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r003",
+      "t": "enemy_medusa_swift",
+      "x": 984,
+      "y": 280,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Husk Miner",
+      "reference_position": [
+        976,
+        280
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r004",
+      "t": "enemy_skeleton_swift",
+      "x": 1440,
+      "y": 380,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Tiktik",
+      "reference_position": [
+        1448,
+        328
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r004",
+      "t": "enemy_skeleton_armored",
+      "x": 800,
+      "y": 156,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Leaping Husk",
+      "reference_position": [
+        776,
+        96
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r006",
+      "t": "enemy_medusa_armored",
+      "x": 1368,
+      "y": 624,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Hunter",
+      "reference_position": [
+        1368,
+        600
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r006",
+      "t": "enemy_ripper_swift",
+      "x": 1448,
+      "y": 576,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Hunter",
+      "reference_position": [
+        1448,
+        576
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r010",
+      "t": "enemy_ripper_armored",
+      "x": 328,
+      "y": 344,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Crawler",
+      "reference_position": [
+        328,
+        344
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r010",
+      "t": "enemy_skree_swift",
+      "x": 1880,
+      "y": 360,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Guardian",
+      "reference_position": [
+        1856,
+        344
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r011",
+      "t": "enemy_skree_armored",
+      "x": 168,
+      "y": 280,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Hunter",
+      "reference_position": [
+        192,
+        280
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r011",
+      "t": "enemy_bat_swift",
+      "x": 256,
+      "y": 248,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Crystal Hunter",
+      "reference_position": [
+        232,
+        272
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r016",
+      "t": "enemy_bat_armored",
+      "x": 2736,
+      "y": 1640,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Mosscreep",
+      "reference_position": [
+        2760,
+        1648
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r016",
+      "t": "enemy_skeleton_swift",
+      "x": 776,
+      "y": 452,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Moss Knight",
+      "reference_position": [
+        776,
+        408
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r021",
+      "t": "enemy_medusa_swift",
+      "x": 240,
+      "y": 288,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky flyer",
+      "reference_position": [
+        240,
+        288
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r021",
+      "t": "enemy_medusa_armored",
+      "x": 328,
+      "y": 264,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Aluba",
+      "reference_position": [
+        304,
+        264
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r028",
+      "t": "enemy_ripper_swift",
+      "x": 144,
+      "y": 384,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Gruzzer",
+      "reference_position": [
+        152,
+        416
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r028",
+      "t": "enemy_ripper_armored",
+      "x": 144,
+      "y": 88,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small crawler",
+      "reference_position": [
+        144,
+        88
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r032",
+      "t": "enemy_ripper_swift",
+      "x": 88,
+      "y": 48,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "small husk",
+      "reference_position": [
+        40,
+        72
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r032",
+      "t": "enemy_skree_swift",
+      "x": 224,
+      "y": 32,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Vengefly",
+      "reference_position": [
+        224,
+        64
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r033",
+      "t": "enemy_skree_armored",
+      "x": 120,
+      "y": 16,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Gruzzer",
+      "reference_position": [
+        120,
+        80
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r034",
+      "t": "enemy_medusa_swift",
+      "x": 352,
+      "y": 136,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky creature",
+      "reference_position": [
+        328,
+        112
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r034",
+      "t": "enemy_medusa_armored",
+      "x": 392,
+      "y": 56,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky creature",
+      "reference_position": [
+        408,
+        120
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r035",
+      "t": "enemy_bat_swift",
+      "x": 800,
+      "y": 312,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Gruzzer",
+      "reference_position": [
+        816,
+        360
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r035",
+      "t": "enemy_skeleton_armored",
+      "x": 320,
+      "y": 140,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small husk",
+      "reference_position": [
+        320,
+        88
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r036",
+      "t": "enemy_skeleton_swift",
+      "x": 232,
+      "y": 516,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Goam",
+      "reference_position": [
+        216,
+        496
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r036",
+      "t": "enemy_bat_armored",
+      "x": 464,
+      "y": 104,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Vengefly",
+      "reference_position": [
+        440,
+        40
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r037",
+      "t": "enemy_ripper_armored",
+      "x": 472,
+      "y": 112,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "infected beetle",
+      "reference_position": [
+        472,
+        112
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r040",
+      "t": "enemy_skree_swift",
+      "x": 720,
+      "y": 248,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue flyer",
+      "reference_position": [
+        720,
+        256
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r040",
+      "t": "enemy_skeleton_armored",
+      "x": 584,
+      "y": 396,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "blue furry flyer",
+      "reference_position": [
+        552,
+        336
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r042",
+      "t": "enemy_skree_armored",
+      "x": 256,
+      "y": 232,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Goam",
+      "reference_position": [
+        264,
+        256
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r042",
+      "t": "enemy_bat_swift",
+      "x": 160,
+      "y": 448,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "small husk",
+      "reference_position": [
+        144,
+        472
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r043",
+      "t": "enemy_bat_armored",
+      "x": 960,
+      "y": 408,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small grey flyer",
+      "reference_position": [
+        1000,
+        440
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r043",
+      "t": "enemy_medusa_swift",
+      "x": 1088,
+      "y": 504,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Entombed Husk",
+      "reference_position": [
+        1088,
+        480
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r044",
+      "t": "enemy_skeleton_swift",
+      "x": 288,
+      "y": 316,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Entombed Husk",
+      "reference_position": [
+        264,
+        272
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r046",
+      "t": "enemy_medusa_armored",
+      "x": 56,
+      "y": 144,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Goam",
+      "reference_position": [
+        48,
+        184
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r046",
+      "t": "enemy_skeleton_armored",
+      "x": 248,
+      "y": 100,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        200,
+        56
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r047",
+      "t": "enemy_ripper_swift",
+      "x": 240,
+      "y": 424,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "small pale crawler",
+      "reference_position": [
+        248,
+        424
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r048",
+      "t": "enemy_ripper_armored",
+      "x": 56,
+      "y": 144,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue flyer",
+      "reference_position": [
+        8,
+        144
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r048",
+      "t": "enemy_medusa_swift",
+      "x": 144,
+      "y": 152,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue flyer",
+      "reference_position": [
+        104,
+        152
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r051",
+      "t": "enemy_skree_swift",
+      "x": 56,
+      "y": 16,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Gruzzer",
+      "reference_position": [
+        56,
+        64
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r052",
+      "t": "enemy_skree_armored",
+      "x": 320,
+      "y": 352,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Wandering Husk",
+      "reference_position": [
+        360,
+        408
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r052",
+      "t": "enemy_bat_swift",
+      "x": 264,
+      "y": 168,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Gruz Mother",
+      "reference_position": [
+        280,
+        168
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r053",
+      "t": "enemy_bat_armored",
+      "x": 776,
+      "y": 96,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        784,
+        112
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r053",
+      "t": "enemy_medusa_armored",
+      "x": 840,
+      "y": 184,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small white flyer",
+      "reference_position": [
+        840,
+        184
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r054",
+      "t": "enemy_ripper_swift",
+      "x": 80,
+      "y": 48,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "husk",
+      "reference_position": [
+        96,
+        48
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r055",
+      "t": "enemy_ripper_armored",
+      "x": 104,
+      "y": 240,
+      "w": 12,
+      "h": 8,
+      "text": "Ripper_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Crawlid",
+      "reference_position": [
+        104,
+        240
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r055",
+      "t": "enemy_medusa_swift",
+      "x": 256,
+      "y": 160,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "small pale crawler",
+      "reference_position": [
+        208,
+        224
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r060",
+      "t": "enemy_medusa_armored",
+      "x": 144,
+      "y": 80,
+      "w": 10,
+      "h": 10,
+      "text": "Medusa_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "small green crawler",
+      "reference_position": [
+        144,
+        72
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r061",
+      "t": "enemy_skeleton_swift",
+      "x": 608,
+      "y": 508,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue creature",
+      "reference_position": [
+        608,
+        464
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r061",
+      "t": "enemy_skeleton_armored",
+      "x": 736,
+      "y": 508,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "spiky blue creature",
+      "reference_position": [
+        768,
+        464
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r065",
+      "t": "enemy_skree_swift",
+      "x": 208,
+      "y": 24,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Ooma",
+      "reference_position": [
+        208,
+        48
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r065",
+      "t": "enemy_skree_armored",
+      "x": 136,
+      "y": 128,
+      "w": 8,
+      "h": 12,
+      "text": "Skree_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Ooma",
+      "reference_position": [
+        136,
+        152
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r071",
+      "t": "enemy_bat_swift",
+      "x": 176,
+      "y": 1584,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Husk",
+      "reference_position": [
+        192,
+        1616
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r071",
+      "t": "enemy_bat_armored",
+      "x": 144,
+      "y": 488,
+      "w": 10,
+      "h": 8,
+      "text": "Bat_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Mistake",
+      "reference_position": [
+        136,
+        480
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r072",
+      "t": "enemy_skeleton_swift",
+      "x": 456,
+      "y": 1084,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Swift",
+      "summit_enemy_set": 1,
+      "reference_text": "Ooma",
+      "reference_position": [
+        472,
+        1128
+      ],
+      "patrol": 40
+    },
+    {
+      "room": "r073",
+      "t": "enemy_skeleton_armored",
+      "x": 312,
+      "y": 164,
+      "w": 8,
+      "h": 12,
+      "text": "Skeleton_Armored",
+      "summit_enemy_set": 1,
+      "reference_text": "Mantis Traitor",
+      "reference_position": [
+        312,
+        112
       ],
       "patrol": 40
     }

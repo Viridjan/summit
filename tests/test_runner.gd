@@ -31,7 +31,7 @@ class Bot extends "res://scripts/player.gd":
 class EnemyDrawTexture extends Texture2D:
 	var destinations: Array[Rect2] = []
 	func _get_width() -> int: return 64
-	func _get_height() -> int: return 80
+	func _get_height() -> int: return 240
 	func _draw_rect_region(_canvas: RID, destination: Rect2, _source: Rect2, _modulate: Color, _transpose: bool, _clip: bool) -> void:
 		destinations.append(destination)
 
@@ -513,13 +513,40 @@ func check_attack() -> void:
 	w._build()
 	check(w.ents.filter(func(e): return e.d.t == "breakwall")[0].collidable == false, "a broken wall stays broken after respawn")
 
+func check_connected_block_art() -> void:
+	var script_path := "res://scripts/block_art.gd"
+	check(ResourceLoader.exists(script_path), "special blocks have connected piece artwork")
+	if not ResourceLoader.exists(script_path): return
+	var art = load(script_path)
+	for style in ["breakwall", "crumble", "falling", "zip", "dream", "jumpthru"]:
+		for size in [Vector2i(8, 8), Vector2i(24, 16), Vector2i(29, 13), Vector2i(32, 5)]:
+			var piece: Image = art.build_piece(style, size)
+			check(piece.get_size() == size and piece.get_used_rect() == Rect2i(Vector2i.ZERO, size), "%s artwork fits whole pieces and partial tiles at %s" % [style, size])
+		var wide: Image = art.build_piece(style, Vector2i(40, 24))
+		check(wide.get_pixel(0, 7) != wide.get_pixel(8, 7) and wide.get_pixel(39, 7) != wide.get_pixel(31, 7), "%s outlines appear at external left/right edges rather than every tile" % style)
+		check(wide.get_pixel(7, 0) != wide.get_pixel(7, 8) and wide.get_pixel(7, 23) != wide.get_pixel(7, 15), "%s top/bottom caps remain outside the centre tiles" % style)
+		check(art.texture(style, Vector2i(24, 16)) == art.texture(style, Vector2i(24, 16)), "%s shares cached artwork between equal pieces" % style)
+	var intact: Image = art.build_piece("breakwall", Vector2i(24, 24), 0)
+	var cracked: Image = art.build_piece("breakwall", Vector2i(24, 24), 2)
+	check(intact.get_data() != cracked.get_data(), "struck breakable walls show additional connected cracks")
+	var samples := []
+	for style in ["breakwall", "crumble", "falling", "zip", "dream", "jumpthru"]:
+		samples.append(art.build_piece(style, Vector2i(24, 16)).get_pixel(5, 5))
+	var unique_colors := {}
+	for color in samples: unique_colors[color] = true
+	check(unique_colors.size() == 6, "special block materials have distinct colours")
+
 func check_enemy_facing_alignment() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var previous: Texture2D = art._texture
 	var recording := EnemyDrawTexture.new()
 	art._texture = recording
 	# Literal centres from each enemy's real spawn collision dimensions at (100,90).
-	for fixture in [["enemy_ripper", Vector2(106, 94)], ["enemy_skree", Vector2(104, 96)], ["enemy_bat", Vector2(105, 94)], ["enemy_skeleton", Vector2(104, 96)], ["enemy_medusa", Vector2(105, 95)]]:
+	var fixtures := []
+	for base in [["enemy_ripper", Vector2(106, 94)], ["enemy_skree", Vector2(104, 96)], ["enemy_bat", Vector2(105, 94)], ["enemy_skeleton", Vector2(104, 96)], ["enemy_medusa", Vector2(105, 95)]]:
+		for suffix in ["", "_swift", "_armored"]:
+			fixtures.append([base[0] + suffix, base[1]])
+	for fixture in fixtures:
 		var probe := EnemyDrawProbe.new()
 		probe.enemy = E.make(null, {"t": fixture[0], "x": 100, "y": 90})
 		add_child(probe)
@@ -542,8 +569,8 @@ func check_enemy_facing_alignment() -> void:
 func check_combat_enemies() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
-	check(atlas.get_size() == Vector2i(64, 80), "five original enemy sprites share a four-frame pixel atlas")
-	for row in 5:
+	check(atlas.get_size() == Vector2i(64, 240), "fifteen enemy variants share a four-frame pixel atlas")
+	for row in 15:
 		check(atlas.get_region(Rect2i(0, row * 16, 16, 16)).get_used_rect().has_area(), "enemy sprite row %d contains visible artwork" % row)
 	Game.settings.invincible = true
 	make_world([{"t": "enemy_ripper", "x": 160, "y": 112, "facing": 1}], [[26, 14], [26, 15]])
@@ -636,6 +663,13 @@ func check_combat_enemies() -> void:
 	check(enemy.rect.position.y == 148 and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Skeleton patrol turns at ledges rather than walking into a pit")
 
 func check_enemy_variants() -> void:
+	var art = load("res://scripts/enemy_art.gd")
+	var atlas: Image = art.atlas()
+	for rows in [[0, 5, 6], [1, 7, 8], [2, 9, 10], [3, 11, 12], [4, 13, 14]]:
+		var original_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[0] * 16, 16, 16)).get_data()
+		var swift_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[1] * 16, 16, 16)).get_data()
+		var armored_pixels: PackedByteArray = atlas.get_region(Rect2i(0, rows[2] * 16, 16, 16)).get_data()
+		check(original_pixels != swift_pixels and swift_pixels != armored_pixels and original_pixels != armored_pixels, "enemy family at row %d has three visually distinct variants" % rows[0])
 	Game.settings.invincible = true
 	make_world([])
 	for base in ["ripper", "skree", "bat", "skeleton", "medusa"]:
@@ -701,7 +735,7 @@ func check_hk_combat_placements() -> void:
 				if enemy.blocked(enemy.rect):
 					failures.append(room_name + ": enemy entered terrain/bounds")
 					break
-	check(count.size() == 5 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the five combat enemies (%s)" % count)
+	check(count.size() == 15 and count.values().all(func(n): return n == 6), "HK contains six examples of each of the fifteen combat variants (%s)" % count)
 	check(failures.is_empty(), "HK enemy placements stay clear of entrances, terrain, and room bounds (%s)" % [failures])
 	Game.settings.invincible = false
 
@@ -955,6 +989,7 @@ func _ready() -> void:
 	Game.settings.shake = false
 
 	check_character_animation()
+	check_connected_block_art()
 	await check_enemy_facing_alignment()
 	await check_tile_layer()
 

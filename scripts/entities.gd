@@ -5,6 +5,7 @@ extends RefCounted
 const T := 8
 const Art := preload("res://scripts/art.gd")
 const EnemyArt := preload("res://scripts/enemy_art.gd")
+const BlockArt := preload("res://scripts/block_art.gd")
 
 # The entity registry: the one place a type is declared.
 # type id (saved in level JSON) -> [editor label, sized (drag a rect in the editor), palette color, class]
@@ -44,6 +45,16 @@ const TYPES := {
 	"enemy_bat": ["Bat · swoop", false, Color("9872af"), BatEnemy],
 	"enemy_skeleton": ["Skeleton · bone throw", false, Color("d8d8bd"), SkeletonEnemy],
 	"enemy_medusa": ["Medusa · wave flight", false, Color("83b7a0"), MedusaEnemy],
+	"enemy_ripper_swift": ["Ripper · Swift", false, Color("f08d87"), RipperEnemy],
+	"enemy_ripper_armored": ["Ripper · Armored", false, Color("899cae"), RipperEnemy],
+	"enemy_skree_swift": ["Skree · Swift", false, Color("f08d87"), SkreeEnemy],
+	"enemy_skree_armored": ["Skree · Armored", false, Color("899cae"), SkreeEnemy],
+	"enemy_bat_swift": ["Bat · Swift", false, Color("f08d87"), BatEnemy],
+	"enemy_bat_armored": ["Bat · Armored", false, Color("899cae"), BatEnemy],
+	"enemy_skeleton_swift": ["Skeleton · Swift", false, Color("f08d87"), SkeletonEnemy],
+	"enemy_skeleton_armored": ["Skeleton · Armored", false, Color("899cae"), SkeletonEnemy],
+	"enemy_medusa_swift": ["Medusa · Swift", false, Color("f08d87"), MedusaEnemy],
+	"enemy_medusa_armored": ["Medusa · Armored", false, Color("899cae"), MedusaEnemy],
 	"breakable": ["Breakable (placeholder)", true, Color("e09a40"), Placeholder],
 	# breakable wall: solid until struck "hp" times (default 3) by the attack; stays broken for the run
 	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
@@ -328,6 +339,10 @@ class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, ha
 
 # Small, deterministic enemies: hit() integrates with the existing melee sector.
 class CombatEnemy extends Ent:
+	var variant := "original"
+	var speed_multiplier := 1.0
+	var warning_multiplier := 1.0
+	var recovery_multiplier := 1.0
 	var hp := 1
 	var facing := -1
 	var clock := 0.0
@@ -338,8 +353,22 @@ class CombatEnemy extends Ent:
 
 	func setup() -> void:
 		rect.size = Vector2i(8, 12)
+		if str(d.t).ends_with("_swift"):
+			variant = "swift"
+			speed_multiplier = 1.35
+			warning_multiplier = 0.75
+			recovery_multiplier = 0.7
+		elif str(d.t).ends_with("_armored"):
+			variant = "armored"
+			speed_multiplier = 0.75
+			warning_multiplier = 1.25
+			recovery_multiplier = 1.25
+		hp = variant_hp(1)
 		facing = -1 if int(d.get("facing", -1)) < 0 else 1
 		home = Vector2(rect.position)
+
+	func variant_hp(base: int) -> int:
+		return maxi(1, base - 1) if variant == "swift" else base + 2 if variant == "armored" else base
 
 	func active(dt: float) -> bool:
 		clock += dt
@@ -412,13 +441,32 @@ class RipperEnemy extends CombatEnemy:
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(12, 8)
-		hp = 2
+		hp = variant_hp(2)
 	func update(dt: float) -> void:
 		if not active(dt): return
+		if variant == "armored":
+			if phase == "windup":
+				timer -= dt
+				if timer <= 0:
+					phase = "charge"
+					timer = 0.6
+				return
+			if phase == "charge":
+				timer -= dt
+				if move_enemy(Vector2(facing * 80 * dt, 0)) or timer <= 0:
+					phase = "idle"
+					timer = 1.8
+				return
+			timer -= dt
+			if timer <= 0 and absf(w.player.center().y - center().y) < 16 and sees_player(96):
+				facing = -1 if w.player.center().x < center().x else 1
+				phase = "windup"
+				timer = 0.5
+				return
 		var reach := clampf(float(d.get("patrol", 64)), 16, 160)
 		if absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing:
 			facing *= -1
-		if move_enemy(Vector2(facing * 24 * dt, 0)):
+		if move_enemy(Vector2(facing * 24 * speed_multiplier * dt, 0)):
 			facing *= -1
 
 
@@ -431,17 +479,17 @@ class SkreeEnemy extends CombatEnemy:
 				var offset: Vector2 = w.player.center() - center()
 				if offset.y > 6 and absf(offset.x) < 28 and sees_player(112):
 					phase = "windup"
-					timer = 0.35
+					timer = 0.35 * warning_multiplier
 			"windup":
 				timer -= dt
 				if timer <= 0:
 					phase = "dive"
 					vertical_speed = 50
 			"dive":
-				vertical_speed = minf(180, vertical_speed + 360 * dt)
+				vertical_speed = minf(180 * speed_multiplier, vertical_speed + 360 * speed_multiplier * dt)
 				if move_enemy(Vector2(0, vertical_speed * dt)):
 					phase = "rest"
-					timer = 0.8
+					timer = 0.8 * recovery_multiplier
 			"rest":
 				timer -= dt
 				if timer <= 0: phase = "return"
@@ -450,7 +498,7 @@ class SkreeEnemy extends CombatEnemy:
 					rect.position.y = int(home.y)
 					rem.y = 0
 					phase = "idle"
-				elif move_enemy(Vector2(0, -36 * dt)):
+				elif move_enemy(Vector2(0, -36 * speed_multiplier * dt)):
 					phase = "idle"  # something solid above: wait here instead of pushing forever
 
 
@@ -464,13 +512,13 @@ class BatEnemy extends CombatEnemy:
 		if phase == "idle":
 			if sees_player(96):
 				phase = "windup"
-				timer = 0.4
+				timer = 0.4 * warning_multiplier
 		elif phase == "windup":
 			timer -= dt
 			if timer <= 0:
-				velocity = (w.player.center() - center()).normalized() * 65
+				velocity = (w.player.center() - center()).normalized() * 65 * speed_multiplier
 				phase = "swoop"
-				timer = 0.9
+				timer = 0.9 * recovery_multiplier
 		elif phase == "swoop":
 			facing = -1 if velocity.x < 0 else 1
 			timer -= dt
@@ -480,7 +528,7 @@ class BatEnemy extends CombatEnemy:
 			var delta := home - Vector2(rect.position)
 			if delta.length() < 2:
 				phase = "idle"
-			elif move_enemy(delta.normalized() * 30 * dt):
+			elif move_enemy(delta.normalized() * 30 * speed_multiplier * dt):
 				# A blocked direct return perches at the new location instead of phasing through rock.
 				home = Vector2(rect.position)
 				phase = "idle"
@@ -491,15 +539,16 @@ class MedusaEnemy extends CombatEnemy:
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(10, 10)
-		hp = 2
+		hp = variant_hp(2)
 	func update(dt: float) -> void:
 		if not active(dt): return
-		wave += dt * 3.0
-		var y := home.y + sin(wave) * 8
+		wave += dt * 3.0 * speed_multiplier
+		var amplitude := 6.0 if variant == "swift" else 12.0 if variant == "armored" else 8.0
+		var y := home.y + sin(wave) * amplitude
 		var reach := clampf(float(d.get("patrol", 56)), 16, 160)
 		if absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing:
 			facing *= -1
-		if move_enemy(Vector2(facing * 28 * dt, y - rect.position.y)):
+		if move_enemy(Vector2(facing * 28 * speed_multiplier * dt, y - rect.position.y)):
 			facing *= -1
 
 
@@ -508,8 +557,8 @@ class SkeletonEnemy extends CombatEnemy:
 	var bones: Array = []  # owned projectiles: [position, velocity, remaining seconds]
 	func setup() -> void:
 		super.setup()
-		hp = 3
-		timer = 1.0
+		hp = variant_hp(3)
+		timer = 1.0 * recovery_multiplier
 	func safe_step() -> bool:
 		var foot := Rect2i(rect.position.x + facing * 2, rect.end.y, rect.size.x, 2)
 		if w.collide_solid(foot) == null:
@@ -527,21 +576,23 @@ class SkeletonEnemy extends CombatEnemy:
 		if phase == "windup":
 			timer -= dt
 			if timer <= 0:
-				bones.append([center() + Vector2(facing * 5, -2), Vector2(facing * 60, -65), 2.0])
+				var volley := 2 if variant == "armored" else 1
+				for arc in mini(volley, 3 - bones.size()):
+					bones.append([center() + Vector2(facing * 5, -2), Vector2(facing * 60 * speed_multiplier, -65 - arc * 25), 2.0])
 				phase = "idle"
-				timer = 1.7
+				timer = 1.7 * recovery_multiplier
 			return
 		timer -= dt
 		if absf(offset.y) < 40 and sees_player(104):
 			facing = -1 if offset.x < 0 else 1
 			if timer <= 0 and bones.size() < 3:
 				phase = "windup"
-				timer = 0.45
+				timer = 0.45 * warning_multiplier
 			return
 		var reach := clampf(float(d.get("patrol", 40)), 8, 96)
 		if not safe_step() or (absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing):
 			facing *= -1
-		elif move_enemy(Vector2(facing * 14 * dt, 0)):
+		elif move_enemy(Vector2(facing * 14 * speed_multiplier * dt, 0)):
 			facing *= -1
 	func hit(p) -> void:
 		super.hit(p)
@@ -622,13 +673,9 @@ class BreakWall extends Ent:
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
-		for y in range(rect.position.y, rect.end.y, T):
-			for x in range(rect.position.x, rect.end.x, T):
-				Art.cell(ci, Art.STONE, Vector2(x, y) + shake)
-		var r := Rect2(rect)
-		for i in 3 - clampi(hp, 0, 3):  # a crack per hit taken
-			var x := r.position.x + r.size.x * (0.3 + 0.2 * i)
-			ci.draw_line(Vector2(x, r.position.y + 2), Vector2(x - 2, r.end.y - 2), Color(0, 0, 0, 0.6))
+		var damage := clampi(int(d.get("hp", 3)) - hp, 0, 2)
+		BlockArt.draw(ci, rect, "breakwall", shake, damage)
+		var r := Rect2(Vector2(rect.position) + shake, rect.size)
 		if flash > 0:
 			ci.draw_rect(r, Color(1, 1, 1, 0.5))
 
@@ -706,8 +753,7 @@ class JumpThru extends Ent:
 		jumpthru = true
 		rect.size.y = 5
 	func draw(ci: CanvasItem) -> void:
-		for x in range(rect.position.x, rect.end.x, T):
-			Art.cell(ci, Art.RAIL, Vector2(x, rect.position.y))
+		BlockArt.draw(ci, rect, "jumpthru")
 
 
 class Crumble extends Ent:
@@ -740,9 +786,7 @@ class Crumble extends Ent:
 		if not collidable:
 			ci.draw_rect(Rect2(rect), Color(1, 1, 1, 0.08), false, 1.0)
 			return
-		for y in range(rect.position.y, rect.end.y, T):
-			for x in range(rect.position.x, rect.end.x, T):
-				Art.cell(ci, Art.STONE, Vector2(x, y) + shake)
+		BlockArt.draw(ci, rect, "crumble", shake, 1 if st == 1 else 0)
 
 
 class FallingBlock extends Ent:
@@ -783,9 +827,7 @@ class FallingBlock extends Ent:
 	static func Player_approach(v: float, t: float, a: float) -> float:
 		return minf(v + a, t) if v <= t else maxf(v - a, t)
 	func draw(ci: CanvasItem) -> void:
-		for y in range(rect.position.y, rect.end.y, T):
-			for x in range(rect.position.x, rect.end.x, T):
-				Art.cell(ci, Art.STONE_2, Vector2(x, y) + shake, Color(1.0, 0.8, 1.0))
+		BlockArt.draw(ci, rect, "falling", shake)
 
 
 class ZipMover extends Ent:
@@ -850,8 +892,7 @@ class ZipMover extends Ent:
 		ci.draw_circle(a, 2, Color("4a4030"))
 		ci.draw_circle(b, 2, Color("4a4030"))
 		var r := Rect2(Vector2(rect.position) + shake, rect.size)
-		ci.draw_rect(r, Color("1e1e24"))
-		ci.draw_rect(r.grow(-1), Color("d0b040"), false, 1.0)
+		BlockArt.draw(ci, rect, "zip", shake)
 		var lit := Color("60e060") if st in [0, 5] else (Color("e04040") if st != 3 else Color("e0e040"))
 		ci.draw_rect(Rect2(r.get_center() - Vector2(1.5, 1.5), Vector2(3, 3)), lit)
 
@@ -870,12 +911,12 @@ class DreamBlock extends Ent:
 		t += dt
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
-		ci.draw_rect(r, Color("08080f"))
+		ci.draw_rect(r, Color("101018"))
 		for s in stars:
 			var p: Vector2 = r.position + s[0]
 			if int(t * 4 + p.x) % 3 != 0:
 				ci.draw_rect(Rect2(p.floor(), Vector2.ONE), s[1])
-		ci.draw_rect(r, Color.WHITE, false, 1.0)
+		ci.draw_rect(r, Color.WHITE, false)
 
 
 class Booster extends Ent:

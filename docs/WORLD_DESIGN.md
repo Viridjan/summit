@@ -228,9 +228,9 @@ No map or gameplay fixes are applied by these tools.
 
 ## Active enemies in the HK world
 
-Thirty reference placeholders have been replaced by five combat types (six each):
+Ninety reference placeholders have been replaced by fifteen combat variants (six each):
 Metroid-inspired Rippers and Skrees, and Castlevania-inspired bats, skeletons and
-wave-flying Medusa heads. They occupy 17 rooms, including one introductory Ripper
+wave-flying Medusa heads. Each family has Original, Swift and Armored versions. They occupy 51 rooms, including one introductory Ripper
 in King's Pass. The remaining reference enemy/boss markers retain their placeholder
 behaviour. See [ENEMIES.md](ENEMIES.md) for controls, AI, tests, and how to reapply
 these placements after rebuilding the reference terrain.

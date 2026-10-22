@@ -7,7 +7,8 @@ import json
 import math
 from pathlib import Path
 
-SIZES = {'ripper': (12, 8), 'skree': (8, 12), 'bat': (10, 8), 'skeleton': (8, 12), 'medusa': (10, 10)}
+BASE_SIZES = {'ripper': (12, 8), 'skree': (8, 12), 'bat': (10, 8), 'skeleton': (8, 12), 'medusa': (10, 10)}
+SIZES = {base + suffix: size for base, size in BASE_SIZES.items() for suffix in ('', '_swift', '_armored')}
 ROOMS = ['r005', 'r007', 'r012', 'r017', 'r018', 'r023', 'r025', 'r027', 'r029', 'r038', 'r039', 'r041', 'r045', 'r057', 'r062', 'r064', 'r067', 'r069', 'r070', 'r083', 'r090', 'r097']
 
 
@@ -24,11 +25,12 @@ def free(level, box):
 
 def valid(level, kind, x, y):
     width, height = SIZES[kind]
-    reach = 40 if kind in ('ripper', 'medusa') else 24
+    base = kind.split('_')[0]
+    reach = 40 if base in ('ripper', 'medusa') else 24
     box = (x, y, width, height)
     if not free(level, box):
         return False
-    if kind == 'skeleton':
+    if base == 'skeleton':
         floor = (y + height) // 8
         tx = x // 8
         if (y + height) % 8 or not (3 <= tx < level['w'] - 4) or floor >= level['h']:
@@ -38,7 +40,7 @@ def valid(level, kind, x, y):
         if not free(level, (x - 24, y, 56, height)):
             return False
         area = (x - 24, y - 16, 56, height + 16)
-    elif kind in ('skree', 'bat'):
+    elif base in ('skree', 'bat'):
         tx, ty = x // 8, y // 8
         if y % 8 or ty < 1 or level['tiles'][ty - 1][tx] != '1':
             return False
@@ -46,7 +48,7 @@ def valid(level, kind, x, y):
             return False
         area = (x - 20, y, width + 40, 80)
     else:
-        padding = 8 if kind == 'medusa' else 0
+        padding = (12 if kind.endswith('_armored') else 8) if base == 'medusa' else 0
         area = (x - reach, y - padding, width + reach * 2, height + padding * 2)
         if not free(level, area):
             return False
@@ -64,7 +66,9 @@ def valid(level, kind, x, y):
 
 
 def install(root, per_type=6, apply=False):
-    levels = {room: json.loads((root / (room + '.json')).read_text()) for room in ROOMS}
+    manifest = json.loads((root / 'world.json').read_text())
+    ordered_rooms = ROOMS + [room for room in manifest['rooms'] if room not in ROOMS]
+    levels = {room: json.loads((root / (room + '.json')).read_text()) for room in ordered_rooms}
     counts = Counter(e['t'].removeprefix('enemy_') for level in levels.values() for e in level['entities'] if e.get('summit_enemy_set'))
     changed = set()
     placements = []
@@ -74,7 +78,7 @@ def install(root, per_type=6, apply=False):
             if counts[kind] >= per_type:
                 continue
             placed = False
-            for room in ROOMS:
+            for room in ordered_rooms:
                 level = levels[room]
                 if sum(bool(e.get('summit_enemy_set')) for e in level['entities']) >= (2 if room != 'r005' else 1):
                     continue
@@ -84,7 +88,7 @@ def install(root, per_type=6, apply=False):
                     offsets = sorted(((dx, dy) for dx in range(-6, 7) for dy in range(-8, 9)), key=lambda p: (abs(p[0]) + abs(p[1]), p[1], p[0]))
                     for dx, dy in offsets:
                         x, y = (ex + dx) * 8, (ey + dy) * 8
-                        if kind == 'skeleton':
+                        if kind.split('_')[0] == 'skeleton':
                             y += 4  # 12px body with feet on an 8px floor grid
                         if valid(level, kind, x, y):
                             entity = dict(original)

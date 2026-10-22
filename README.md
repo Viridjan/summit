@@ -68,9 +68,9 @@ Levels save as JSON in `user://levels/` (Linux: `~/.local/share/godot/app_userda
 
 ## Combat enemies
 
-The HK reference world includes 30 active enemies: Rippers, Skrees, bats, skeletons
+The HK reference world includes 90 active enemies: Rippers, Skrees, bats, skeletons
 and wave-flying Medusa heads, adapted from Metroid: Zero Mission and Castlevania.
-Attack with A; skeleton bones can be swatted away. Five types are also available in
+Attack with A; skeleton bones can be swatted away. Each family has Original, Swift and Armored versions; all 15 types are available in
 the editor. See [behaviour and placement notes](docs/ENEMIES.md) and the
 [animated sprite gallery](assets/enemies/preview.html).
 

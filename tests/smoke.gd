@@ -30,7 +30,11 @@ func _ready() -> void:
 		x += 24
 	# Put every new combat behaviour on screen as well as in the generic registry row.
 	for enemy in [["enemy_ripper", 56, 160], ["enemy_skree", 168, 72], ["enemy_bat", 200, 96], ["enemy_skeleton", 264, 180], ["enemy_medusa", 320, 120]]:
-		d.entities.append({"t": enemy[0], "x": enemy[1], "y": enemy[2]})
+		for suffix in ["", "_swift", "_armored"]:
+			d.entities.append({"t": enemy[0] + suffix, "x": enemy[1], "y": enemy[2]})
+	# Connected surfaces: wide, tall and shallow pieces, including the 5px one-way rail.
+	for block in [["breakwall", 336, 32, 40, 24], ["crumble", 392, 32, 40, 8], ["falling", 336, 72, 16, 32], ["zip", 392, 72, 32, 16], ["dream", 336, 120, 40, 24], ["jumpthru", 392, 120, 40, 8]]:
+		d.entities.append({"t": block[0], "x": block[1], "y": block[2], "w": block[3], "h": block[4], "tx": block[1], "ty": block[2] + 24})
 	var previous_invincible: bool = Game.settings.invincible
 	Game.settings.invincible = true
 	Game.editor_level = d

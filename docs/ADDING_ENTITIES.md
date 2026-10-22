@@ -86,3 +86,13 @@ godot --headless --path . res://tests/smoke.tscn
 ```
 
 If the type draws a lot (big blocks, many particles), compare `godot --path . res://tests/bench.tscn` before and after adding it.
+
+## Connected special-block artwork
+
+Breakable walls, crumble/falling blocks, zip movers, dream blocks and jump-throughs
+use `BlockArt` (`scripts/block_art.gd`). Call `BlockArt.draw(ci, rect, style, shake,
+damage)` with the full entity rectangle; do not call it once per 8px tile. It draws
+a single perimeter with connected end caps/corners and internal material grain.
+The image is generated at the exact world size and shared between matching pieces.
+Keep pieces separate when they have independent destruction or movement behaviour.
+See `assets/blocks/preview.html` for the styles, sizes and breakable-wall damage.
