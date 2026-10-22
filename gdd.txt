@@ -104,7 +104,9 @@ pits (death) vs holes (lead to another room), explored rooms.
 
 6. EDITORS AND DEV TOOLS (all in-game)
 --------------------------------------
-Level editor: paint tiles, place/size objects, notes, undo, playtest (F5).
+Level editor: paint tiles, place/size objects, notes, undo, playtest (F5);
+asks before leaving with unsaved changes. New/Load always save as custom
+levels, never over the world room the editor was opened on.
 World editor: drag rooms on the grid, add empty/copied rooms, edit a room,
 playtest from a room, set start; door links shown as cyan lines.
 F1 debug panel: live state machine (with Attack layer row), transitions log,
@@ -130,6 +132,7 @@ air dashes, invincibility), keyboard and controller remapping.
 Start without dash and climb; orbs unlock them. Save: user://save.cfg
 [adventure]; settings: user://settings.cfg; levels: user://levels/.
 In the browser, saves live in browser storage; editors can't write game files.
+Old or hand-edited saves load: missing fields are filled from a fresh run.
 
 
 9. TECH NOTES
@@ -138,7 +141,9 @@ Fixed 60 Hz physics, pixel-based movement. Rendering culls offscreen objects
 but keeps them simulating. Tile chunks, incremental editor previews
 (OPTIMIZATION_RESULTS.md). Web: Godot web export without threads, deployed by
 GitHub Actions (.github/workflows/pages.yml) on every push to main.
-Tests: tests/test.tscn (exit code = failures), tests/smoke.tscn (every screen).
+Tests: tests/test.tscn and tests/smoke.tscn (exit code = failures), plus
+tests/test_world_accessibility.py; CI runs all three before every web deploy.
+Code-health audit, optimization and future-feature strategy: docs/CODE_HEALTH.md.
 
 
 10. PLANNED (see TODO.md)
@@ -203,3 +208,6 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-22: Sylphsong, Beastling Call, Elegy of the Deep dropped from the plan.
 - 2026-10-22: loadout systems expanded in TODO: all HK charms by effect,
   SS crests and tools by colour, SotN familiars.
+- 2026-10-22: code-health audit (docs/CODE_HEALTH.md). Smoke test can fail now,
+  CI runs the tests. Fixed: free-aim super jumps, red bubble aim, climbing walls
+  on a room seam, restart/door/camera/save/editor bugs.
