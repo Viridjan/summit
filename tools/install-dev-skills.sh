@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Run in a local terminal: this sandbox cannot reach GitHub or write global skills.
+# Installs for Codex (~/.codex/skills) and copies them to .claude/skills/ for Claude Code (git-ignored).
 # Uses the bundled Codex installer; downloads skill directories and their resources.
 set -euo pipefail
 
@@ -13,6 +14,9 @@ esac
 skills_codex_root="${CODEX_HOME:-$HOME/.codex}"
 skills_installer="$skills_codex_root/skills/.system/skill-installer/scripts/install-skill-from-github.py"
 skills_destination="$skills_codex_root/skills"
+# Claude Code reads project skills from here (git-ignored: third-party code, recreated by this script).
+skills_project_dir="$(cd "$(dirname "$0")/.." && pwd)/.claude/skills"
+skills_installed=()
 
 if [[ ! -f "$skills_installer" ]]; then
   printf 'Bundled Codex skill installer not found: %s\n' "$skills_installer" >&2
@@ -21,6 +25,7 @@ fi
 
 install_one_skill() {
   local skill_repo="$1" skill_path="$2" skill_name="${2##*/}"
+  skills_installed+=("$skill_name")
   if [[ -f "$skills_destination/$skill_name/SKILL.md" ]]; then
     printf 'Already installed; keeping existing version: %s\n' "$skill_name"
     return
@@ -50,6 +55,18 @@ install_one_skill obra/superpowers skills/verification-before-completion
 install_one_skill jwynia/agent-skills skills/tech/game-development/godot/godot-best-practices
 # Godot player/enemy state lifecycles with bundled GDScript reference implementations.
 install_one_skill gaoyuan-taka/godot-action-adventure-skills godot-state-machine
+
+for skill_name in "${skills_installed[@]}"; do
+  if [[ -f "$skills_project_dir/$skill_name/SKILL.md" ]]; then
+    continue
+  fi
+  if "$skills_dry_run"; then
+    printf 'cp -r %q %q\n' "$skills_destination/$skill_name" "$skills_project_dir/"
+  else
+    mkdir -p "$skills_project_dir"
+    cp -r "$skills_destination/$skill_name" "$skills_project_dir/"
+  fi
+done
 
 if "$skills_dry_run"; then
   printf 'Dry run only: no skills were downloaded or installed.\n'
