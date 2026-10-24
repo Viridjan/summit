@@ -116,7 +116,7 @@ Costs:
 - Some abilities cost a whole block and have to be recovered before reuse.
 
 Regeneration:
-- About 3 energy per second.
+- 6 energy per second (doubled from 3 on 2026-10-24).
 - The base (the first 50) always refills, even from 0.
 - Above it, only inside the current block: an extra block that is fully spent doesn't refill.
 

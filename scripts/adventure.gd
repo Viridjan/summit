@@ -13,7 +13,7 @@ const ABILITIES := ["dash", "climb", "attack"]
 # run.blocks counts the base as the first block (so 1 = just the base).
 const BASE_ENERGY := 50.0
 const ENERGY_PER_BLOCK := 100.0
-const ENERGY_REGEN := 3.0  # per second, only inside a partly spent block
+const ENERGY_REGEN := 6.0  # per second, only inside a partly spent block
 const WATER_DRAIN := 16.0  # per second while in water (1.6 every 0.1 s); no regeneration there
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}

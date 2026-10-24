@@ -270,3 +270,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: hitbox overlay (F2) draws damage boxes in red (Ent.damage_boxes: stones, scream, slam,
   bones, orbs, puddles) and the player's damage box in pink.
 - 2026-10-24: energy base 50, always regenerating; blocks add 100. A jump needs its 5 energy.
+- 2026-10-24: energy regenerates 6/s (was 3).
+- 2026-10-24: hitbox overlay lines are 1 screen pixel; a colour legend shows bottom right while it's on.

@@ -1271,12 +1271,12 @@ func check_energy() -> void:
 	check(run.blocks == 1 and run.energy == 50.0 and Adventure.energy_max(run) == 50.0, "a run starts with the base: 50 energy")
 	check(Adventure.spend_energy(run, 10) and run.energy == 40.0, "spending takes energy")
 	Adventure.regen_energy(run, 1.0)
-	check(is_equal_approx(run.energy, 43.0), "energy regenerates 3 per second (%s)" % run.energy)
+	check(is_equal_approx(run.energy, 46.0), "energy regenerates 6 per second (%s)" % run.energy)
 	Adventure.regen_energy(run, 10.0)
 	check(run.energy == 50.0, "regeneration stops at the top of the base")
 	run.energy = 0.0
 	Adventure.regen_energy(run, 2.0)
-	check(is_equal_approx(run.energy, 6.0), "the base always regenerates, even from 0 (%s)" % run.energy)
+	check(is_equal_approx(run.energy, 12.0), "the base always regenerates, even from 0 (%s)" % run.energy)
 	Adventure.regen_energy(run, 100.0)
 	check(not Adventure.spend_energy(run, 80) and run.energy == 50.0, "can't spend more than you have")
 	Adventure.add_energy_block(run)
@@ -1319,7 +1319,7 @@ func check_energy() -> void:
 	var y0: float = p().pos.y
 	p().tap = {"jump": true}
 	step(4)
-	check(absf(after_jump - 45.0) < 0.2 and p().on_ground and p().pos.y == y0, "a jump costs 5 energy; with less than 5 there's no jump (%s)" % after_jump)
+	check(absf(after_jump - 45.0) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 5 energy; with less than 5 there's no jump (%s)" % after_jump)
 	Game.adv.energy = 100.0
 
 	# HUD energy bars: one per block, filled by its share of the energy

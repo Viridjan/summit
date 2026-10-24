@@ -21,6 +21,16 @@ class Background extends Node2D:
 	func _draw() -> void:
 		screen._draw_background(self)
 
+# Hitbox overlay (F2) colours, also listed in its legend: [label, colour].
+const HITBOX_KEY := [
+	["Solid, platform", Color(1, 0.9, 0.2, 0.9)],
+	["Touch: pickups, hazards, triggers", Color(1, 0.5, 0.1, 0.9)],
+	["Damage: projectiles, scream, slam", Color(1, 0.15, 0.2, 0.9)],
+	["Player: collision", Color(0.2, 1, 0.3, 0.9)],
+	["Player: damage box", Color(1, 0.3, 0.8, 0.9)],
+	["Attack swing", Color(0.55, 0.8, 1, 0.9)],
+]
+
 # On-screen HUD: energy (top left), area name (top centre), timer and deaths (top right).
 class Hud extends Control:
 	const M := 16.0  # margin from the screen edges
@@ -77,6 +87,19 @@ class Hud extends Control:
 				var c: String = SKULL[row][col]
 				if c != " ":
 					draw_rect(Rect2(dx - 32 + col * 3, M + 36 + row * 3, 3, 3), Color.BLACK if c == "." else Color("e8e4dc"))
+		# bottom right: the hitbox overlay's legend, while it's on
+		if Game.settings.hitboxes:
+			var key: Array = w.HITBOX_KEY
+			var fs := 14
+			var widest := 0.0
+			for k in key:
+				widest = maxf(widest, font.get_string_size(k[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
+			var box := Rect2(sz.x - M - widest - 40, sz.y - M - key.size() * 20 - 12, widest + 40, key.size() * 20 + 12)
+			draw_rect(box, Color(0, 0, 0, 0.6))
+			for i in key.size():
+				var ky := box.position.y + 8 + i * 20
+				draw_rect(Rect2(box.position.x + 10, ky + 3, 14, 10), key[i][1], false, 1.0)
+				draw_string(font, Vector2(box.position.x + 32, ky + 13), key[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
 
 var tile_layer: TileLayer
 var background: Background
@@ -737,20 +760,21 @@ func _draw() -> void:
 		_draw_hitboxes(cull)
 
 # Debug overlay (Options / F1 "Hitboxes"): the rects collision and touches actually use.
+# Thin lines (-1: one screen pixel at any zoom), colours from HITBOX_KEY.
 func _draw_hitboxes(cull: Rect2i) -> void:
 	for e in ents:
 		if not e.vis_rect().intersects(cull):
 			continue
 		if e.solid or e.jumpthru:  # what the player collides with
 			if e.collidable:
-				draw_rect(Rect2(e.rect), Color(1, 0.9, 0.2, 0.8), false, 1.0)
+				draw_rect(Rect2(e.rect), HITBOX_KEY[0][1], false, -1.0)
 		elif e.touch_rect().has_area():  # what the player touches: pickups, hazards, triggers
-			draw_rect(Rect2(e.touch_rect()), Color(1, 0.5, 0.1, 0.8) if e.collidable else Color(1, 0.5, 0.1, 0.3), false, 1.0)
+			draw_rect(Rect2(e.touch_rect()), HITBOX_KEY[1][1] if e.collidable else Color(HITBOX_KEY[1][1], 0.3), false, -1.0)
 	for e in ents:  # what hurts besides the bodies: projectiles, puddles, the Ape's stones, scream and slam
 		for b in e.damage_boxes():
-			draw_rect(Rect2(b), Color(1, 0.15, 0.2, 0.9), false, 1.0)
-	draw_rect(Rect2(player.hitbox()), Color(0.2, 1, 0.3, 0.9), false, 1.0)
-	draw_rect(Rect2(player.damage_rect()), Color(1, 0.3, 0.8, 0.9), false, 1.0)  # what hazards test against
+			draw_rect(Rect2(b), HITBOX_KEY[2][1], false, -1.0)
+	draw_rect(Rect2(player.hitbox()), HITBOX_KEY[3][1], false, -1.0)
+	draw_rect(Rect2(player.damage_rect()), HITBOX_KEY[4][1], false, -1.0)  # what hazards test against
 	if player.attacking():
 		var c: Vector2 = player.center()
 		var half := deg_to_rad(player.ATTACK_ARC) / 2.0
@@ -758,7 +782,7 @@ func _draw_hitboxes(cull: Rect2i) -> void:
 		for i in 13:
 			pts.append(c + Vector2.from_angle(player.attack_dir.angle() - half + 2.0 * half * i / 12.0) * player.ATTACK_RANGE)
 		pts.append(c)
-		draw_polyline(pts, Color(1, 0.2, 0.2, 0.9), 1.0)
+		draw_polyline(pts, HITBOX_KEY[5][1], -1.0)
 
 # ---------------- menus ----------------
 func _clear_overlay() -> void:

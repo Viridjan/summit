@@ -8,7 +8,7 @@
 Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 
 ### Systems
-- [x] Energy as health: a base of 50 that always regenerates, blocks of 100 on top; a hit costs 100 (respawn), nothing left = death; regen 3/s (extra blocks only inside the current one) (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
+- [x] Energy as health: a base of 50 that always regenerates, blocks of 100 on top; a hit costs 100 (respawn), nothing left = death; regen 6/s (extra blocks only inside the current one) (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
 - [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
 - [x] Story world starts with jump only (`worlds/story`, `"abilities": []`)
 - [ ] Big wavedash jump is a later gate (needs dash): decide which later level gives dash
