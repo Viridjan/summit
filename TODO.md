@@ -8,7 +8,7 @@
 Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 
 ### Systems
-- [x] Energy as health: a base of 50 that always regenerates, blocks of 100 on top; a hit costs 100 (respawn), nothing left = death; regen 6/s (extra blocks only inside the current one) (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
+- [x] Energy as health: a base of 50 that always regenerates, blocks of 75 on top; a hit costs 100 (respawn), nothing left = death; regen 6/s (extra blocks only inside the current one) (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
 - [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
 - [x] Story world starts with jump only (`worlds/story`, `"abilities": []`)
 - [ ] Big wavedash jump is a later gate (needs dash): decide which later level gives dash
@@ -16,7 +16,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [x] Jump costs 5 energy and needs it (no jump with less; `Player.JUMP_ENERGY`, `Player.can_jump`)
 - [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
 - [ ] Energy orb refills everything for now; decide how much collectibles restore
-- [x] Water drains energy: 1.6 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
+- [x] Water drains energy: 2.08 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
 - [x] HUD: energy as a lightning bolt and one bar per block (top left, stars under it), area name (top centre), timer and deaths with a skull (top right)
 - [ ] Interact button (keyboard, controller, touch)
 - [ ] NPC entity + dialogue box; "..." reply for silent NPCs
@@ -43,7 +43,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Cove Town houses enterable through doors (placeholder note in the room)
 - [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end
-- [x] Ape boss arena (`a1_ape_arena`): open fighting floor, ledges at both exits and a gated hole to the left branch; tree, bridge pit and tree instructions removed
+- [x] Ape boss arena (`a1_ape_arena`): open fighting floor, ledges at both exits and a gated hole to the left branch; tree, bridge pit and tree instructions removed; 56 tiles wide (70%); entering walks you in (`auto_walk`) and the way back shuts (`boss_gate` with `closes_behind`)
 - [x] Right branch room: sand cave climbing at about 25° (`s1_sand_cave`), crumble blocks over pits stand in for breakable sand
 - [ ] Sand cave: Ape chase, rock fall that seals it, sword reward (notes for now)
 - [x] Shore (`s2_shore`): the mountain's foot with a star out of reach, the sea, the lighthouse tower; raft is a note

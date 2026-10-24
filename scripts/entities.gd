@@ -91,6 +91,8 @@ const TYPES := {
 	"boss_ape": ["Ape (boss)", false, Color("6a4430"), Ape],
 	"ape_trunk": ["Trunk (Ape arena)", true, Color("7a5638"), ApeTrunk],
 	"boss_gate": ["Boss Gate", true, Color("4a6a3a"), BossGate],
+	# walks the player in d.dir (1 right, -1 left) for d.time seconds on touch; "while_boss": only while an Ape lives
+	"auto_walk": ["Auto Walk", true, Color("a0d0ff"), AutoWalk],
 }
 
 static func make(w, d: Dictionary):
@@ -1459,16 +1461,17 @@ class ApeTrunk extends Ent:
 		ci.draw_set_transform(Vector2.ZERO)
 
 
-# Seals an exit while the room's Ape is alive (solid); open once it's beaten.
+# Seals an exit while the room's Ape is alive (solid); open once it's beaten. "closes_behind": stays open
+# until the player has passed it (left to right), then shuts behind them.
 class BossGate extends Ent:
+	var passed := false
 	func setup() -> void:
 		solid = true
+		collidable = w == null or not d.get("closes_behind", false)
 	func update(_dt: float) -> void:
-		var open := true
-		for e in w.ents:
-			if e is Ape and e.phase != "gone":
-				open = false
-		collidable = not open
+		if d.get("closes_behind", false) and not passed:
+			passed = w.player.hitbox().position.x > rect.end.x + 4
+		collidable = Ape.alive_in(w) and (passed or not d.get("closes_behind", false))
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -1478,6 +1481,23 @@ class BossGate extends Ent:
 			ci.draw_rect(Rect2(x, r.position.y, 2, r.size.y), Color("4a6a3a"))
 			for y in range(int(r.position.y) + (x % 8), int(r.end.y), 8):
 				ci.draw_rect(Rect2(x + 2, y, 2, 2), Color("c8d06a"))
+
+
+# Walks the player in for a moment (the arena's entrance), using Celeste's forced movement. Once per visit.
+class AutoWalk extends Ent:
+	var used := false
+	func touch(p) -> void:
+		if used or (d.get("while_boss", false) and not Ape.alive_in(w)):
+			return
+		used = true
+		p.force_move_x = int(d.get("dir", 1))
+		p.force_move_x_timer = float(d.get("time", 0.6))
+	func draw(ci: CanvasItem) -> void:
+		if w == null:  # editor only: a dashed arrow
+			var r := Rect2(rect)
+			ci.draw_rect(r, Color(0.6, 0.8, 1, 0.25))
+			var y := r.position.y + r.size.y / 2.0
+			ci.draw_line(Vector2(r.position.x + 2, y), Vector2(r.end.x - 2, y), Color(0.6, 0.8, 1), 1.0)
 
 
 # The Ape: wakes when the player comes near, then picks its attack by distance. Far: a stone thrown in an
@@ -1518,6 +1538,12 @@ class Ape extends Ent:
 	var id := ""
 	var x_min := 0.0
 	var x_max := 0.0
+	# True while the room has an Ape that isn't beaten (gates and the entrance walk follow it).
+	static func alive_in(world) -> bool:
+		for e in world.ents:
+			if e is Ape and e.phase != "gone":
+				return true
+		return false
 	func hurts() -> bool:
 		return phase != "gone" and phase != "dying"
 	func setup() -> void:

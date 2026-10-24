@@ -38,7 +38,7 @@ class Hud extends Control:
 	const SKULL := ["  ####  ", " ###### ", "##.##.##", "########", " ##..## ", "  # # # "]  # 8x6, "." = eye/nose holes
 	var world
 
-	# Fill of each bar, 0..1: the base (50) first, then one per extra block (100 each).
+	# Fill of each bar, 0..1: the base first, then one per extra block.
 	static func block_fills(energy: float, blocks: int) -> Array:
 		var out := [clampf(energy / Adventure.BASE_ENERGY, 0.0, 1.0)]
 		for i in blocks - 1:
@@ -64,7 +64,8 @@ class Hud extends Control:
 			var fills := block_fills(Game.adv.energy, int(Game.adv.blocks))
 			for i in fills.size():
 				var f: float = fills[i]
-				var r := Rect2(x, y + 7, 23 if i == 0 else 46, 14)  # the base holds half a block
+				var cap: float = Adventure.BASE_ENERGY if i == 0 else Adventure.ENERGY_PER_BLOCK
+				var r := Rect2(x, y + 7, roundf(cap * 0.46), 14)  # bar width follows what it holds
 				draw_rect(r.grow(2), Color.BLACK)
 				draw_rect(r, Color(0.12, 0.15, 0.2))
 				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), Color("ff9a4a") if low else Color("7cf0c0"))

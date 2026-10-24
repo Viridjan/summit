@@ -145,22 +145,24 @@ j3.ent("note", 75, 14, text="A deep roar ahead: the Ape's arena")
 
 # 6. The Ape's arena (section 1.6, the boss is not built yet) and the fork (1.7)
 def door(r, x, y, did, to): r.ents.append({"t": "door", "x": x * T, "y": y * T, "w": 2 * T, "h": 3 * T, "id": did, "to": to})
-a1 = Room("a1_ape_arena", "Ape Arena", 80, 23, "forest", fill="1")
-a1.open(1, 2, 78, G - 1); a1.open(0, 11, 0, 14); a1.open(79, 12, 79, 15)
-a1.solid(1, 15, 8, 18); a1.solid(71, 16, 78, 18)  # ledges at both exits (the right one is a 3-tile jump)
-a1.open(12, G, 15, 22)                       # left branch: down, back through the jungle (gated during the fight)
-# The tree puzzle and its bridge pit are removed: the fight uses one open arena.
-a1.spikes_up(60, 62, 18)
-a1.ents.append({"t": "boss_ape", "x": 26 * T, "y": 15 * T,
-    "range": [9 * T, 71 * T],
-    "spikes": [[[66 * T, 18 * T, 3]], [[56 * T, 18 * T, 2], [69 * T, 18 * T, 2]]],
-    "orb": [64 * T, 16 * T]})
-a1.ents.append({"t": "boss_gate", "x": 78 * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
+a1 = Room("a1_ape_arena", "Ape Arena", 56, 23, "forest", fill="1")
+a1.open(1, 2, 54, G - 1); a1.open(0, 11, 0, 14); a1.open(55, 12, 55, 15)
+a1.solid(1, 15, 5, 18); a1.solid(51, 16, 54, 18)  # ledges at both exits (the right one is a 3-tile jump)
+a1.open(12, G, 15, 22)                       # left branch (lines up with Jungle Depths), gated during the fight
+# One open arena (no tree puzzle). Entering, you're walked off the ledge into it and the way back shuts.
+a1.ents.append({"t": "auto_walk", "x": 0, "y": 11 * T, "w": 3 * T, "h": 4 * T, "dir": 1, "time": 0.7, "while_boss": True})
+a1.ents.append({"t": "boss_gate", "x": 0, "y": 11 * T, "w": T, "h": 4 * T, "closes_behind": True})
+a1.spikes_up(42, 44, 18)
+a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T,
+    "range": [6 * T, 51 * T],
+    "spikes": [[[46 * T, 18 * T, 3]], [[39 * T, 18 * T, 2], [48 * T, 18 * T, 2]]],
+    "orb": [45 * T, 16 * T]})
+a1.ents.append({"t": "boss_gate", "x": 55 * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
 a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
-a1.ent("note", 10, 18, text="Left branch, once the Ape is beaten: down here, back through the jungle")
-a1.ent("note", 20, 18, text="The Ape! Move towards it when it leaps: it lands past you")
-a1.ent("note", 57, 18, text="Lure its leaps onto spikes")
-a1.ent("note", 75, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
+a1.ent("note", 11, 18, text="Left branch, once the Ape is beaten: down here, back through the jungle")
+a1.ent("note", 17, 18, text="The Ape! Move towards it when it leaps: it lands past you")
+a1.ent("note", 40, 18, text="Lure its leaps onto spikes")
+a1.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 
 # Right branch: a sand cave climbing at about 25-30 degrees, then the shore and the lighthouse
 s1 = Room("s1_sand_cave", "Sand Cave", 80, 46, "sand", fill="1")
@@ -245,7 +247,7 @@ rooms = [(m, 0, 0), (j, 80, 0),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46),
-    (a1, 440, 46), (s1, 520, 23), (s2, 600, 23), (s3, 640, 0), (l1, 440, 69), (l2, 360, 69), (l3, 440, 23)]
+    (a1, 440, 46), (s1, 496, 23), (s2, 576, 23), (s3, 616, 0), (l1, 440, 69), (l2, 360, 69), (l3, 360, -2)]
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))

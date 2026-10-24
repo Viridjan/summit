@@ -281,3 +281,7 @@ Phase 5 - Input and tooling (2026-10-21/22)
   (docs/ADDING_ENTITIES.md "Contoured and circular damage areas").
 - 2026-10-24: Lake Cave's in-editor edits (stepping blocks above the lake) restored after a regeneration
   overwrote them; tools/story/gen_first_stretch.py now rewrites only the rooms named (or "all").
+- 2026-10-24: water drain +30%: 20.8/s (2.08 every 0.1 s).
+- 2026-10-24: an energy block adds 75 (was 100); hits still cost 100 (Adventure.HIT_ENERGY).
+- 2026-10-24: Ape arena 56 wide; auto_walk carries the player in, the entrance boss_gate closes behind
+  (closes_behind); s1/s2/s3 shifted 24 tiles left.

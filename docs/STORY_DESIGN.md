@@ -102,7 +102,7 @@ Flavour: the hero is exhausted. Boss fights drain all their energy. After the Ap
 Energy is also health:
 - It replaces hearts. The icon is still undecided; it shows as **blocks**.
 - **1 block = 100 energy** in code. Every value below is in code units.
-- The game starts with a **base of 50** that always regenerates. A hit costs 100, so on the base alone one hit kills during platforming (until a shield is unlocked later).
+- The game starts with a **base of 50** that always regenerates. Each energy block picked up adds 75. A hit costs 100, so on the base alone one hit kills during platforming (until a shield is unlocked later).
 - With 1 block the player can use one ability, then has to rest before using another.
 - The 2nd block comes from the first city.
 
@@ -132,7 +132,7 @@ Regeneration:
 Water:
 - Underwater is its own state, **Normal (Underwater)**, which replaces Normal in water: slow sinking, no walking on the floor (along it the player moves as mid-water), and no normal jump. **Jumping (Underwater)** is a weaker stroke (about half a jump's height) that works from the floor or mid-water, every time jump is pressed; with the surface close above, it leaps out of the water like a normal jump. Dash still works.
 - Waterfalls are a layer on top of the current state: inside one the player is pulled down, so jumps rise much less.
-- Staying in water costs 1.6 energy every 0.1 s (16 per second), and energy doesn't regenerate there.
+- Staying in water costs 2.08 energy every 0.1 s (20.8 per second), and energy doesn't regenerate there.
 - Running out of energy in water is a death (drowning).
 
 ## 4. Skill points
@@ -168,10 +168,13 @@ NPCs, quests, the roar, the house doors, the chase, the rock fall, the raft and 
 - 2026-10-24: water drain doubled to 1 every 0.1 s (10 per second); the waterfall pull is softer (jumps rise, less).
 - 2026-10-24: water drain doubled again, to 2 every 0.1 s (20 per second).
 - 2026-10-24: water drain set to 80% of that: 1.6 every 0.1 s (16 per second). No energy, no jump. Jump cost lowered to 5.
+- 2026-10-24: water drain raised 30%, to 2.08 every 0.1 s (20.8 per second).
+- 2026-10-24: an energy block adds 75 (was 100); a hit still costs 100.
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
 - 2026-10-24 (superseded by tree removal below): Ape arena reworked: you meet the Ape first, on your side of the pit. Get past it, stand past the tree, and its stone or leap fells the tree across the pit; it follows you over for the spike phase.
 - 2026-10-24 (tree setup superseded below): Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards energy drops to 5 and an energy orb appears. The power-up reward is still open.
 - 2026-10-24: the run starts with a base of 50 energy that always regenerates; energy blocks add 100 each. A jump needs its 5.
+- 2026-10-24: Ape arena 70% as wide (56 tiles); entering, the player is walked off the ledge into it and the entrance shuts until the Ape is beaten. Sand Cave, Shore and Lighthouse Top moved 24 tiles left to stay attached.
 - 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 

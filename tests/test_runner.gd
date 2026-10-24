@@ -189,6 +189,7 @@ func check_character_animation() -> void:
 	var run_poses := {}
 	var planted := true
 	var lifted := 0
+	var flight_poses := 0
 	for i in 8:
 		var pose := atlas.get_region(Rect2i(i*16,16,16,16))
 		run_poses[pose.get_data().hex_encode()] = true
@@ -199,10 +200,13 @@ func check_character_animation() -> void:
 			if shoe and not in_foot: groups += 1
 			in_foot = shoe
 			if pose.get_pixel(x,14).is_equal_approx(art.PALETTE.k): lifted += 1
-		planted = planted and groups == 1
-	check(planted, "run poses plant one foot instead of spreading both feet along the ground")
+		planted = planted and groups <= 1
+		flight_poses += int(groups == 0)
+	check(planted, "run poses never spread both planted feet along the ground")
 	check(lifted > 0, "run cycle lifts the recovering foot above the ground")
 	check(run_poses.size() == 8, "run cycle has eight distinct contact and passing poses")
+	check(flight_poses == 2, "run includes a short flight pose between each planted step")
+	check(art.frame("fall",100.0).x == 3 and art.frame("fall",100.13).x == 3 and art.frame("apex",100.0).x == 1 and art.frame("apex",100.2).x == 1, "airborne recovery settles instead of cycling the legs while falling")
 	var idle_pose := atlas.get_region(Rect2i(0,0,16,16))
 	var clear_face := true
 	var airborne := true
@@ -1161,7 +1165,7 @@ func check_ape_hitbox_shapes() -> void:
 	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
 	check(arena.entities.all(func(e): return e.t != "ape_trunk"), "Ape arena removes the tree obstacle")
 	var boss: Dictionary = arena.entities.filter(func(e): return e.t == "boss_ape")[0]
-	check(not boss.has("range2") and int(boss.range[0]) == 72 and int(boss.range[1]) == 568, "Ape arena uses one unrestricted fighting range")
+	check(not boss.has("range2") and int(boss.range[0]) == 48 and int(boss.range[1]) == 408 and int(arena.w) == 56, "Ape arena (70%% wide) uses one unrestricted fighting range")
 	check(arena.tiles[19].substr(44,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
 
 func check_ape() -> void:
@@ -1191,6 +1195,23 @@ func check_ape() -> void:
 		if trunk.down():
 			break
 	check(trunk.down() and trunk.collidable and trunk.rect == Rect2i(200, floor_y, 112, 8) and w.broken.has(trunk.id), "a stone fells the trunk into a bridge as long as it was tall, and it stays down (%s)" % trunk.rect)
+	# the arena's entrance: an auto walk carries the player in, and the gate behind them shuts while the Ape lives
+	make_world([{"t": "boss_ape", "x": 420, "y": floor_y - 32},
+		{"t": "auto_walk", "x": 72, "y": floor_y - 32, "w": 24, "h": 32, "dir": 1, "time": 0.5, "while_boss": true},
+		{"t": "boss_gate", "x": 56, "y": floor_y - 32, "w": 8, "h": 32, "closes_behind": true}])
+	ape = find.call(E.Ape)[0]
+	var gate_in = find.call(E.BossGate)[0]
+	var x_in: float = p().pos.x
+	var gate_open_first: bool = not gate_in.collidable
+	step(40)
+	check(p().pos.x - x_in > 20 and gate_in.collidable, "entering the arena walks the player in (%s px) and the gate behind shuts" % (p().pos.x - x_in))
+	ape.phase = "gone"
+	step(2)
+	check(gate_open_first and not gate_in.collidable, "the entrance gate opens again once the Ape is beaten")
+	make_world([{"t": "auto_walk", "x": 72, "y": floor_y - 32, "w": 24, "h": 32, "dir": 1, "time": 0.5, "while_boss": true}])
+	x_in = p().pos.x
+	step(40)
+	check(absf(p().pos.x - x_in) < 2, "no Ape, no auto walk")
 	# it sleeps until the player comes near
 	make_world([{"t": "boss_ape", "x": 400, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
@@ -1343,7 +1364,7 @@ func check_energy() -> void:
 	Adventure.regen_energy(run, 100.0)
 	check(not Adventure.spend_energy(run, 80) and run.energy == 50.0, "can't spend more than you have")
 	Adventure.add_energy_block(run)
-	check(run.blocks == 2 and run.energy == 150.0 and Adventure.energy_max(run) == 150.0, "a new block adds a full 100")
+	check(run.blocks == 2 and run.energy == 125.0 and Adventure.energy_max(run) == 125.0, "a new block adds a full 75")
 	Adventure.spend_energy(run, 100)
 	Adventure.regen_energy(run, 10.0)
 	check(run.energy == 50.0, "a fully spent block doesn't refill")
@@ -1353,7 +1374,7 @@ func check_energy() -> void:
 	Adventure.refill_energy(run)
 	Adventure.spend_energy(run, 30)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 150.0, "a partly spent block refills to its top")
+	check(run.energy == 125.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
@@ -1361,15 +1382,15 @@ func check_energy() -> void:
 	Game.adv_temp = true
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.energy == 150.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block")
+	check(Game.adv.blocks == 2 and Game.adv.energy == 125.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (75)")
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
 	check(Game.adv.blocks == 2, "an energy block is taken once per run")
 	p().die(Vector2.ZERO)
-	check(w.deaths == 1 and Game.adv.energy == 50.0, "a hit with a block to spare costs the block, and counts as a death (a respawn)")
+	check(w.deaths == 1 and Game.adv.energy == 25.0, "a hit (100) with energy to spare costs it, and counts as a death (a respawn)")
 	p().dead = false
 	p().die(Vector2.ZERO)
-	check(w.deaths == 2 and Game.adv.energy == 150.0, "a hit on the base alone is a death and refills energy")
+	check(w.deaths == 2 and Game.adv.energy == 125.0, "a hit with too little left is a death and refills energy")
 	# each jump costs 5 energy and needs it: with less there's no jump
 	make_world([])
 	step(5)
@@ -1386,16 +1407,16 @@ func check_energy() -> void:
 	Game.adv.energy = 100.0
 
 	# HUD energy bars: one per block, filled by its share of the energy
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(100.0, 3)
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(87.5, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
 
-	# water drains 1.6 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
+	# water drains 2.08 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
 	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])
 	step(5)
 	Game.adv.energy = 150.0
 	var before: float = Game.adv.energy
 	step(60)
-	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 16.0), "a second in water costs 16 energy, no regeneration (%s)" % (before - Game.adv.energy))
+	check(w.in_water() and absf(before - Game.adv.energy - 20.8) < 0.01, "a second in water costs 20.8 energy, no regeneration (%s)" % (before - Game.adv.energy))
 	Game.adv.energy = 0.004
 	var deaths_before: int = w.deaths
 	step(2)
