@@ -1,0 +1,7 @@
+[configuration]
+compatibility_minimum = "4.3"
+entry_symbol = "gdsion_library_init"
+
+[libraries]
+linux.debug.x86_64 = "res://addons/gdsion/libgdsion.linux.template_debug.x86_64.so"
+linux.release.x86_64 = "res://addons/gdsion/libgdsion.linux.template_release.x86_64.so"

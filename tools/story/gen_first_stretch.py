@@ -20,6 +20,8 @@ class Room:
     def solid(s, *a): s.rect(*a, "1")
     def open(s, *a): s.rect(*a, "0")
     def ent(s, t, x, y, **kw): s.ents.append({"t": t, "x": x * T, "y": y * T, **kw})
+    def building(s, x, y, w, h, style):  # scenery, walked through; first in the list so doors draw over it
+        s.ents.insert(0, {"t": "building", "x": x * T, "y": y * T, "w": w * T, "h": h * T, "style": style})
     def spikes_up(s, x0, x1, y):
         for x in range(x0, x1 + 1): s.ent("spikes_up", x, y)
     def water(s, x0, y0, x1, y1, **kw):
@@ -97,8 +99,7 @@ t = Room("t1_cove_town", "Cove Town", 40, 23, "sea")
 t.solid(0, G, 39, 22); t.solid(0, 0, 0, 15); t.solid(39, 0, 39, 14)  # right edge rows 15..18 lead into the jungle
 t.ents.append({"t": "jumpthru", "x": 8 * T, "y": 15 * T, "w": 6 * T, "h": 8})   # roof
 t.ents.append({"t": "jumpthru", "x": 18 * T, "y": 15 * T, "w": 6 * T, "h": 8})  # second roof
-t.solid(8, 16, 8, 18); t.solid(13, 16, 13, 18)   # house walls
-t.solid(18, 16, 18, 18); t.solid(23, 16, 23, 18)
+t.building(8, 14, 6, 5, "house"); t.building(18, 14, 6, 5, "house")  # backdrops, not walls
 t.open(30, G, 37, 20); t.water(30, G, 37, 20)    # the sea, ending a tile short of the jungle exit (flat entrance)
 t.ent("spawn", 2, 18)
 t.ent("energy_orb", 5, 17)
@@ -106,7 +107,7 @@ t.ent("energy_block", 20, 13)
 t.ents.append({"t": "house_door", "x": 10 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h1", "to": "h1_villager_house:out"})
 t.ents.append({"t": "house_door", "x": 20 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h2", "to": "h2_quest_house:out"})
 
-# Cove Town's houses, inside (reached through their house doors; press up at a door)
+# Cove Town's houses, inside (reached through their house doors; press interact at a door)
 def house(name, title, town_door, note):
     h = Room(name, title, 30, 14, "building", fill="1")
     h.open(1, 1, 28, 11)                     # floor rows 12..13
@@ -198,12 +199,13 @@ s2.ent("note", 4, 8, text="The mountain: clearly climbable, but not yet")
 s2.solid(15, G, 79, 22); s2.solid(79, 0, 79, 22)
 s2.open(56, G, 78, 21); s2.water(56, G, 78, 21)  # the sea
 s2.ent("note", 60, 18, text="Raft to the next island (not built): needs the lighthouse quest")
-s2.solid(44, 0, 52, 18); s2.open(44, 16, 45, 18)  # the lighthouse: solid stone, a doorway in its left face
+s2.building(44, 0, 9, 19, "tower")  # the lighthouse: a backdrop with its door at the foot
 s2.ents.append({"t": "house_door", "x": 44 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "lh", "to": "lh1_lighthouse_stairs:bottom"})
-s2.ent("note", 41, 18, text="The lighthouse: press up at its door to go in")
+s2.ent("note", 41, 18, text="The lighthouse: press interact (S / B) at its door to go in")
 
 s3 = Room("s3_lighthouse_top", "Lighthouse Top", 40, 23, "sky")
-s3.solid(4, 13, 12, 22)                      # the tower's top, continued from the shore
+s3.building(4, 13, 9, 10, "tower")           # the tower's top, continued from the shore
+s3.building(5, 5, 5, 6, "tower")             # the lantern room around the door
 s3.solid(0, 11, 39, 12)                      # the gallery: the silent village
 s3.ents.append({"t": "house_door", "x": 7 * T, "y": 8 * T, "w": 2 * T, "h": 3 * T, "id": "top", "to": "lh1_lighthouse_stairs:top"})
 s3.solid(24, 7, 26, 10)                      # the flame's pedestal

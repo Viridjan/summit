@@ -116,9 +116,20 @@ func _ready() -> void:
 	await _press("hitboxes")
 	if hb1 == hb0 or Game.settings.hitboxes != hb0:
 		_fail("hitboxes key did not toggle the overlay")
+	await _press("assist")
+	await _frames(5)
+	await _shot("assist")
+	if not world.paused or world.overlay == null or not world.overlay.assist_page:
+		_fail("assist key did not open the paused Assist Mode page")
+	await _press("assist")
+	await _frames(2)
+	if world.paused or world.overlay != null:
+		_fail("assist key did not close Assist Mode and resume")
 	world._set_paused(true)
 	await _frames(5)
 	await _shot("pause")
+	if is_instance_valid(Game.music_engine) and not Game.music_engine.muffled:
+		_fail("music not muffled in the pause menu")
 	world._open_options()
 	await _frames(5)
 	await _shot("options")
@@ -159,6 +170,16 @@ func _ready() -> void:
 	await _frames(10)
 	await _frames(1)
 	await _shot("menu")
+	Game.goto("music_studio")
+	await _frames(3)
+	var studio = get_child(get_child_count() - 1)
+	studio._toggle_play()
+	await _frames(5)
+	await _shot("music_studio")
+	studio._back()
+	await _frames(3)
+	if Game.get_music_engine().playing:
+		_fail("leaving music studio did not stop playback")
 	get_child(get_child_count() - 1)._level_select()
 	await _frames(10)
 	# adventure: menu -> new game -> walk into room 2 -> map -> exit; world editor
@@ -211,6 +232,8 @@ func _ready() -> void:
 				break
 		themed_world.enter_room(room_name, at)
 		await _frames(3)
+		if Game.get_music_engine().environment != environment or not Game.get_music_engine().playing:
+			_fail("room music did not follow background: " + environment)
 		if themed_world.tile_layer.chunks[0].environment != environment:
 			_fail("room terrain did not switch to " + environment)
 		for neighbour in themed_world.near_layers:

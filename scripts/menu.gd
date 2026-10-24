@@ -40,6 +40,7 @@ func _main() -> void:
 	body.add_child(Game.button("Custom Levels", _level_select))
 	body.add_child(Game.button("Level Editor", _editor_new))
 	body.add_child(Game.button("Monsters", _monsters))
+	body.add_child(Game.button("Music Studio", func(): Game.goto("music_studio")))
 	body.add_child(Game.button("Options", _options))
 	body.add_child(Game.button("Credits", _credits))
 	body.add_child(Game.button("Quit", func(): get_tree().quit()))

@@ -42,8 +42,10 @@ const TYPES := {
 	# door: drag its size; "id" names it, "to" = "room:id" (or just "id" in the same level) is where it leads.
 	# Links rooms that don't touch (elevators, trams) or that sit behind a wall.
 	"door": ["Door", true, Color("40e0ff"), Door],
-	# house door: a visible wooden door; stand at it and press up to go through ("id"/"to" like the Door)
+	# house door: a visible wooden door; stand at it and press interact (S / pad B) to go through ("id"/"to" like the Door)
 	"house_door": ["House Door", true, Color("8a5a34"), HouseDoor],
+	# building: scenery behind the player (walk through it), "style" = "house" (roof on top) or "tower" (stone)
+	"building": ["Building", true, Color("c8a878"), Building],
 	# placeholders from reference maps: "text" names the thing (e.g. "Crawlid", "grub jar")
 	"enemy": ["Enemy (placeholder)", true, Color("e04848"), Placeholder],
 	# enemies: one row per family, then that family's variants (see CombatEnemy.VARIANTS)
@@ -409,7 +411,7 @@ class Door extends Ent:  # touching it moves the player to the linked door (Worl
 			ci.draw_string(f, Vector2(rect.position) + Vector2(0, -2), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 6, c)
 
 
-# A visible wooden door. Standing at it shows a prompt; pressing up takes the player through
+# A visible wooden door. Standing at it shows a prompt; pressing interact takes the player through
 # (World.after_player_move), to the door its "to" names, like the Door object.
 class HouseDoor extends Door:
 	var near := 0.0  # > 0 while the player stands at it (drawn prompt)
@@ -435,6 +437,30 @@ class HouseDoor extends Door:
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-3, 2), c + Vector2(3, 2), c + Vector2(0, -2)]), Color.WHITE)
 		if w == null and d.has("to"):
 			super.draw(ci)  # editor: the link label
+
+
+class Building extends Ent:  # backdrop only: never collides; put it before its door so the door draws on top
+	func setup() -> void:
+		collidable = false
+	func draw(ci: CanvasItem) -> void:
+		var r := Rect2(rect)
+		if d.get("style", "house") == "tower":
+			ci.draw_rect(r, Color("8f8a80"))
+			for y in range(int(r.position.y) + 4, int(r.end.y), 4):  # stone courses, joints staggered
+				ci.draw_rect(Rect2(r.position.x, y, r.size.x, 1), Color("6f6a62"))
+				for x in range(int(r.position.x) + (4 if y % 8 == 0 else 0), int(r.end.x), 8):
+					ci.draw_rect(Rect2(x, y - 3, 1, 3), Color("6f6a62"))
+			ci.draw_rect(r, Color("4f4a44"), false, 1.0)
+			return
+		var roof := minf(16.0, r.size.y / 2.0)
+		var wall := Rect2(r.position.x, r.position.y + roof, r.size.x, r.size.y - roof)
+		ci.draw_rect(wall, Color("c8a878"))
+		ci.draw_rect(wall, Color("6e4628"), false, 1.0)
+		ci.draw_colored_polygon(PackedVector2Array([  # roof overhanging the walls by 2 px
+			Vector2(r.position.x - 2, wall.position.y), Vector2(r.position.x + 4, r.position.y),
+			Vector2(r.end.x - 4, r.position.y), Vector2(r.end.x + 2, wall.position.y)]), Color("9a3a2a"))
+		for y in range(int(r.position.y) + 4, int(wall.position.y), 4):  # tile rows
+			ci.draw_rect(Rect2(r.position.x, y, r.size.x, 1), Color("7a2a1e"))
 
 
 class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, harmless
@@ -586,10 +612,12 @@ class CombatEnemy extends Ent:
 		if not collidable or flash > 0:
 			return
 		if blocks(p):
+			Game.play_sfx("shield")
 			flash = 0.12
 			if w != null:
 				w.burst(center() + front() * rect.size.x * 0.5, Color("f8d89b"), 3)
 			return
+		Game.play_sfx("enemy_die" if hp <= 1 else "enemy_hit")
 		hp -= 1
 		flash = 0.12
 		if hp <= 0:
@@ -707,11 +735,13 @@ class SkreeEnemy extends CombatEnemy:
 			"idle":
 				var offset: Vector2 = w.player.center() - center()
 				if offset.y > 6 and absf(offset.x) < 28 and sees_player(112):
+					Game.play_sfx("enemy_alert")
 					phase = "windup"
 					timer = 0.35 * warning_multiplier
 			"windup":
 				timer -= dt
 				if timer <= 0:
+					Game.play_sfx("enemy_attack")
 					phase = "dive"
 					vertical_speed = 50
 			"dive":
@@ -740,12 +770,14 @@ class BatEnemy extends CombatEnemy:
 		if not active(dt): return
 		if phase == "idle":
 			if sees_player(96):
+				Game.play_sfx("enemy_alert")
 				phase = "windup"
 				timer = 0.4 * warning_multiplier
 		elif phase == "windup":
 			timer -= dt
 			if timer <= 0:
 				velocity = (w.player.center() - center()).normalized() * 65 * speed_multiplier
+				Game.play_sfx("enemy_attack")
 				phase = "swoop"
 				timer = 0.9 * recovery_multiplier
 		elif phase == "swoop":
@@ -781,6 +813,7 @@ class SkeletonEnemy extends CombatEnemy:
 			if timer <= 0:
 				var volley := 2 if variant == "armored" else 1
 				for arc in mini(volley, 3 - bones.size()):
+					Game.play_sfx("projectile")
 					bones.append([center() + Vector2(facing * 5, -2), Vector2(facing * 60 * speed_multiplier, -65 - arc * 25), 2.0])
 				phase = "idle"
 				timer = 1.7 * recovery_multiplier
@@ -789,6 +822,7 @@ class SkeletonEnemy extends CombatEnemy:
 		if absf(offset.y) < 40 * scale and sees_player(104 * scale):
 			facing = -1 if offset.x < 0 else 1
 			if timer <= 0 and bones.size() < 3:
+				Game.play_sfx("enemy_alert")
 				phase = "windup"
 				timer = 0.45 * warning_multiplier
 			return
@@ -890,6 +924,7 @@ class HornbackEnemy extends CombatEnemy:
 		match phase:
 			"windup":
 				if timer <= 0:
+					Game.play_sfx("enemy_attack")
 					phase = "charge"
 					timer = 1.2
 			"charge":
@@ -902,6 +937,7 @@ class HornbackEnemy extends CombatEnemy:
 				var offset: Vector2 = w.player.center() - center()
 				if absf(offset.y) < 12 * scale and sees_player(120 * scale):
 					facing = -1 if offset.x < 0 else 1
+					Game.play_sfx("enemy_alert")
 					phase = "windup"
 					timer = 0.5 * warning_multiplier
 				elif not safe_step():
@@ -962,6 +998,7 @@ class CragjawEnemy extends CombatEnemy:
 		match phase:
 			"windup":
 				if timer <= 0:
+					Game.play_sfx("enemy_attack")
 					phase = "leap"
 					velocity = Vector2(clampf((w.player.center().x - center().x) / 0.8, -110, 110) * speed_multiplier, -170)
 			"leap":
@@ -972,6 +1009,7 @@ class CragjawEnemy extends CombatEnemy:
 				var offset: Vector2 = w.player.center() - center()
 				if absf(offset.x) < 140 * scale and absf(offset.y) < 64 * scale and sees_player(150 * scale):
 					facing = -1 if offset.x < 0 else 1
+					Game.play_sfx("enemy_alert")
 					phase = "windup"
 					timer = 0.6 * warning_multiplier
 				elif not safe_step():
@@ -1005,10 +1043,12 @@ class MurksporeEnemy extends CombatEnemy:
 		if phase == "windup":
 			if timer <= 0:
 				for a in [-0.3, 0.0, 0.3]:
+					Game.play_sfx("projectile")
 					orbs.append([center(), to.normalized().rotated(a) * 70, 3.0])
 				phase = "idle"
 				timer = 2.2 * recovery_multiplier
 		elif timer <= 0 and sees and orbs.is_empty():
+			Game.play_sfx("enemy_alert")
 			phase = "windup"
 			timer = 0.5 * warning_multiplier
 	func update_orbs(dt: float) -> void:
@@ -1050,6 +1090,7 @@ class BreakWall extends Ent:
 			id = w.star_key(id)
 			collidable = not w.broken.has(id)
 	func hit(_p) -> void:
+		Game.play_sfx("impact")
 		hp -= 1
 		flash = 0.12
 		w.burst(center(), TYPES.breakwall[2], 4)
@@ -1125,6 +1166,7 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 				collect_timer = 0
 	func touch(p) -> void:
 		if collidable and not following:
+			Game.play_sfx("pickup", 0.8)
 			following = true
 			p.followers.append(self)
 	func touch_rect() -> Rect2i:  # exactly the sprite at rest
@@ -1181,12 +1223,14 @@ class Crumble extends Ent:
 		match st:
 			0:
 				if player_riding():
+					Game.play_sfx("mechanism")
 					st = 1
 					timer = 0.4 if w.player.state != w.player.ST_CLIMB else 0.6
 			1:
 				timer -= dt
 				shaken(dt, true)
 				if timer <= 0:
+					Game.play_sfx("crumble")
 					st = 2
 					collidable = false
 					timer = 2.0
@@ -1215,6 +1259,7 @@ class FallingBlock extends Ent:
 		match st:
 			0:
 				if player_riding():
+					Game.play_sfx("mechanism")
 					st = 1
 					timer = 0.2
 			1:
@@ -1266,6 +1311,7 @@ class ZipMover extends Ent:
 		match st:
 			0:
 				if player_riding():
+					Game.play_sfx("mechanism")
 					st = 1
 					timer = 0.1
 			1:
@@ -1686,9 +1732,14 @@ class Ape extends Ent:
 				if timer <= 0:
 					_beaten()
 	func _go(ph: String, t: float) -> void:
+		if ph == "scream":
+			Game.play_sfx("boss_roar")
+		elif ph == "hurt" or ph == "dying":
+			Game.play_sfx("enemy_hit", 0.6)
 		phase = ph
 		timer = t
 	func _throw(target: Vector2) -> void:
+		Game.play_sfx("projectile", 0.6)
 		var from := Vector2(center().x + facing * 10, rect.position.y)
 		var t := clampf(absf(target.x - from.x) / 220.0, 0.7, 1.3)
 		stones.append([from, Vector2((target.x - from.x) / t, (target.y - from.y) / t - 0.5 * STONE_G * t)])
@@ -1721,6 +1772,7 @@ class Ape extends Ent:
 	func slam_box() -> Rect2i:
 		return Rect2i(rect.position.x - SLAM_REACH, rect.end.y - SLAM_HEIGHT, SIZE + 2 * SLAM_REACH, SLAM_HEIGHT)
 	func _land() -> void:
+		Game.play_sfx("impact")
 		vel = Vector2.ZERO
 		slam_t = SLAM_TIME
 		w.shake_dir(Vector2.DOWN, 0.2)
@@ -1746,6 +1798,7 @@ class Ape extends Ent:
 					w.spawn_entity({"t": "spikes_up", "x": int(patch[0]) + i * T, "y": int(patch[1])})
 		_go("hurt", 0.8)
 	func _beaten() -> void:
+		Game.play_sfx("complete")
 		phase = "gone"
 		collidable = false
 		w.break_wall(id)

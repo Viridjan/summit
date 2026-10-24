@@ -23,6 +23,7 @@ class Bot extends "res://scripts/player.gd":
 		if tap.has("dash"): dash_buf = INPUT_BUFFER
 		attack_buf -= dt
 		if tap.has("attack"): attack_buf = INPUT_BUFFER
+		interact = tap.has("interact")
 		tap.clear()
 		jump_check = hold.has("jump")
 		grab_check = hold.has("grab")
@@ -445,7 +446,7 @@ func check_shipped_world() -> void:
 		step()
 	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
 	ww.queue_free()
-	# house doors: standing at one does nothing; pressing up goes inside, and up again (a new press) comes back out
+	# house doors: standing at one (or pressing up) does nothing; interact goes inside, and again comes back out
 	Game.adv = Adventure.new_run(story)
 	Game.adv.room = "t1_cove_town"
 	Game.adv.spawn = null
@@ -456,31 +457,29 @@ func check_shipped_world() -> void:
 	hw.set_physics_process(false)
 	hw.player = Bot.new(hw, Vector2(88, 19 * 8))
 	step(20)
-	var stayed: bool = hw.room == "t1_cove_town" and hw.door_near != null
 	p().hold = {"up": true}
+	step(5)
+	p().hold = {}
+	var stayed: bool = hw.room == "t1_cove_town" and hw.door_near != null
+	p().tap = {"interact": true}
 	step(3)
 	var inside: String = hw.room
-	step(20)  # still holding up: no bounce straight back
+	step(20)  # one press: no bounce straight back
 	var held_inside: String = hw.room
-	p().hold = {}
-	step(5)
-	p().hold = {"up": true}
+	p().tap = {"interact": true}
 	step(3)
-	p().hold = {}
-	check(stayed and inside == "h1_villager_house" and held_inside == inside and hw.room == "t1_cove_town", "house door: up at it goes inside, a new up press comes back out (%s, %s, %s)" % [inside, held_inside, hw.room])
+	check(stayed and inside == "h1_villager_house" and held_inside == inside and hw.room == "t1_cove_town", "house door: up does nothing, interact goes inside, a new press comes back out (%s, %s, %s)" % [inside, held_inside, hw.room])
 	# the lighthouse: the shore door leads into the stairs, the stairs' top door out onto the lamp's gallery
 	hw.player.pos = Vector2(0, 0)
 	hw.enter_room("s2_shore", Vector2(45 * 8, 19 * 8))
 	step(5)
-	p().hold = {"up": true}
+	p().tap = {"interact": true}
 	step(3)
-	p().hold = {}
 	var in_stairs: String = hw.room
 	p().pos = Vector2(16 * 8, 5 * 8)  # at the top door (as if climbed)
 	step(5)
-	p().hold = {"up": true}
+	p().tap = {"interact": true}
 	step(3)
-	p().hold = {}
 	check(in_stairs == "lh1_lighthouse_stairs" and hw.room == "s3_lighthouse_top", "lighthouse: shore door into the stairs, top door out to the lamp (%s, %s)" % [in_stairs, hw.room])
 	hw.queue_free()
 	sw.queue_free()
@@ -1370,29 +1369,29 @@ func check_energy() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
 	var run := Adventure.new_run(world)
-	check(run.blocks == 1 and run.energy == 50.0 and Adventure.energy_max(run) == 50.0, "a run starts with the base: 50 energy")
-	check(Adventure.spend_energy(run, 10) and run.energy == 40.0, "spending takes energy")
+	check(run.blocks == 1 and run.energy == 25.0 and Adventure.energy_max(run) == 25.0, "a run starts with the base: 25 energy")
+	check(Adventure.spend_energy(run, 10) and run.energy == 15.0, "spending takes energy")
 	Adventure.regen_energy(run, 1.0)
-	check(is_equal_approx(run.energy, 46.0), "energy regenerates 6 per second (%s)" % run.energy)
+	check(is_equal_approx(run.energy, 21.0), "energy regenerates 6 per second (%s)" % run.energy)
 	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 50.0, "regeneration stops at the top of the base")
+	check(run.energy == 25.0, "regeneration stops at the top of the base")
 	run.energy = 0.0
 	Adventure.regen_energy(run, 2.0)
 	check(is_equal_approx(run.energy, 12.0), "the base always regenerates, even from 0 (%s)" % run.energy)
 	Adventure.regen_energy(run, 100.0)
-	check(not Adventure.spend_energy(run, 80) and run.energy == 50.0, "can't spend more than you have")
+	check(not Adventure.spend_energy(run, 80) and run.energy == 25.0, "can't spend more than you have")
 	Adventure.add_energy_block(run)
-	check(run.blocks == 2 and run.energy == 125.0 and Adventure.energy_max(run) == 125.0, "a new block adds a full 75")
-	Adventure.spend_energy(run, 100)
+	check(run.blocks == 2 and run.energy == 45.0 and Adventure.energy_max(run) == 45.0, "a new block adds a full 20")
+	Adventure.spend_energy(run, 20)
 	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 50.0, "a fully spent block doesn't refill")
-	Adventure.spend_energy(run, 30)
+	check(run.energy == 25.0, "a fully spent block doesn't refill")
+	Adventure.spend_energy(run, 20)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 50.0, "the base refills, but not the spent block above it")
+	check(run.energy == 25.0, "the base refills, but not the spent block above it")
 	Adventure.refill_energy(run)
-	Adventure.spend_energy(run, 30)
+	Adventure.spend_energy(run, 10)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 125.0, "a partly spent block refills to its top")
+	check(run.energy == 45.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
@@ -1400,15 +1399,16 @@ func check_energy() -> void:
 	Game.adv_temp = true
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.energy == 125.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (75)")
+	check(Game.adv.blocks == 2 and Game.adv.energy == 45.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (20)")
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
 	check(Game.adv.blocks == 2, "an energy block is taken once per run")
+	Game.adv.energy = 125.0  # above the 45 max: hits (100) only leave energy to spare from here
 	p().die(Vector2.ZERO)
 	check(w.deaths == 1 and Game.adv.energy == 25.0, "a hit (100) with energy to spare costs it, and counts as a death (a respawn)")
 	p().dead = false
 	p().die(Vector2.ZERO)
-	check(w.deaths == 2 and Game.adv.energy == 125.0, "a hit with too little left is a death and refills energy")
+	check(w.deaths == 2 and Game.adv.energy == 45.0, "a hit with too little left is a death and refills energy")
 	# each jump costs 5 energy and needs it: with less there's no jump
 	make_world([])
 	step(5)
@@ -1425,7 +1425,7 @@ func check_energy() -> void:
 	Game.adv.energy = 100.0
 
 	# HUD energy bars: one per block, filled by its share of the energy
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(87.5, 3)
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(35.0, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
 
 	# water drains 2.08 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies

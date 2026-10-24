@@ -154,7 +154,7 @@ var spawn_queue: Array = []  # entity dicts to add after this tick (spawn_entity
 var leaving_ents: Array = []
 # Adventure: after crossing into a room sideways the player is walked to the middle of its second tile column.
 var walk_dir := 0
-var door_near = null  # house door the player stands at this tick (press up to go through)
+var door_near = null  # house door the player stands at this tick (interact to go through)
 var walk_target_x := 0.0
 var leaving_rect := Rect2()  # that room, in this room's coordinates
 var pending_door = null  # door touched this tick (Door entity); used after the touch loop
@@ -219,6 +219,7 @@ func _ready() -> void:
 	_build()
 	_create_tile_layer()
 	tile_layer.setup(tiles, gw, gh, data.get("environment", ""))
+	Game.get_music_engine().follow_environment(data.get("environment", ""))
 	_load_near()
 	_scan_floor_gaps()
 	cam_pos = _clamp_cam(player.camera_target())
@@ -298,7 +299,7 @@ func after_player_move() -> void:
 	_check_room_exit()
 	if pending_door != null and not player.dead:
 		_go_door(pending_door)
-	elif door_near != null and not player.dead and player.on_ground and player.in_y == -1 and player.prev_in_y != -1:
+	elif door_near != null and not player.dead and player.on_ground and player.interact:
 		var d = door_near
 		door_near = null
 		_go_door(d)
@@ -318,6 +319,7 @@ func door_hit(door) -> void:
 
 # "room:id" or "id" (same level). The player keeps speed and their offset inside the doorway.
 func _go_door(door) -> void:
+	Game.play_sfx("door")
 	pending_door = null
 	var to: String = door.d.get("to", "")
 	var target_room := room
@@ -356,6 +358,7 @@ func enter_room(next: String, at = null) -> void:
 	room = next
 	room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
 	data = Game.adv_world.rooms[room].level
+	Game.get_music_engine().follow_environment(data.get("environment", ""))
 	tiles = []
 	player.followers.clear()  # unbanked stars go back to their room
 	var left := ents.duplicate()
@@ -427,6 +430,8 @@ func _load_near() -> void:
 		near_layers[n].position = Vector2(rooms[n].pos * T) - room_origin
 
 func _process(_delta: float) -> void:
+	if is_instance_valid(Game.music_engine):
+		Game.music_engine.set_muffled(paused or map_view != null)
 	if touch != null:
 		touch.visible = not (paused or done or map_view != null or debug_panel != null)
 	if near_queue.is_empty():
@@ -443,6 +448,7 @@ func _process(_delta: float) -> void:
 	near_layers[n] = l
 
 func break_wall(id: String) -> void:
+	Game.play_sfx("crumble")
 	broken[id] = true
 	_save_run()
 
@@ -477,6 +483,8 @@ func _draw_floor_gaps() -> void:
 				draw_colored_polygon(PackedVector2Array([Vector2(x, y), Vector2(x + 4, y), Vector2(x + 2, y - 3)]), Color(col, 0.85))
 
 func show_note(text: String) -> void:
+	if note_t <= 0 or note_label.text != "Note: " + text:
+		Game.play_sfx("note")
 	note_label.text = "Note: " + text
 	note_t = 0.1
 
@@ -503,6 +511,7 @@ func energy_block_taken(key: String) -> bool:
 	return Game.adv.get("taken", []).has(key)
 
 func add_energy_block(key: String) -> void:
+	Game.play_sfx("unlock")
 	if adventure() and not energy_block_taken(key):
 		Game.adv.taken.append(key)
 		Adventure.add_energy_block(Game.adv)
@@ -513,10 +522,12 @@ func drain_energy(amount: float) -> void:
 		Adventure.drain_energy(Game.adv, amount)
 
 func refill_energy() -> void:
+	Game.play_sfx("refill")
 	if adventure():
 		Adventure.refill_energy(Game.adv)
 
 func grant_ability(a: String) -> void:
+	Game.play_sfx("unlock")
 	if adventure() and not Game.adv.abilities.has(a):
 		Game.adv.abilities.append(a)
 		_save_run()
@@ -635,6 +646,7 @@ func on_player_death(p, _dir: Vector2) -> void:
 	shake_t = 0.3 if Game.settings.shake else 0.0
 
 func collect_berry(b) -> void:
+	Game.play_sfx("pickup")
 	collected[b.id] = true
 	_save_run()
 	burst(b.pos, Color("e03c3c"), 10)
@@ -642,6 +654,7 @@ func collect_berry(b) -> void:
 func complete() -> void:
 	if done:
 		return
+	Game.play_sfx("complete")
 	done = true
 	if adventure():
 		Game.adv.done = true
@@ -669,6 +682,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if debug_panel != null:
 			debug_panel.hitbox_btn.set_pressed_no_signal(Game.settings.hitboxes)
 		return
+	elif event.is_action_pressed("assist") and map_view == null:
+		get_viewport().set_input_as_handled()
+		_open_assist()
+		return
 	# handled here (not in _physics_process) so the options screen can swallow Esc first
 	if event.is_action_pressed("pause") and not done and not (overlay is OptionsPanel):
 		get_viewport().set_input_as_handled()
@@ -689,6 +706,7 @@ func _physics_process(_delta: float) -> void:
 	if player.dead:
 		respawn_timer -= dt
 		if respawn_timer <= 0:
+			Game.play_sfx("respawn")
 			_build()
 	else:
 		player.update(dt)
@@ -835,6 +853,7 @@ func _panel(title: String) -> VBoxContainer:
 	return box
 
 func _set_paused(v: bool) -> void:
+	Game.play_sfx("ui")
 	paused = v
 	if not v:
 		_clear_overlay()
@@ -880,6 +899,17 @@ func _open_options() -> void:
 	ui.add_child(overlay)
 	overlay.closed.connect(func(): _set_paused(true))
 
+# Assist Mode (F12): pauses the game behind its own page; closing it resumes.
+func _open_assist() -> void:
+	paused = true
+	_clear_overlay()
+	overlay = OptionsPanel.new()
+	overlay.assist_page = true
+	ui.add_child(overlay)
+	overlay.closed.connect(func():
+		overlay = null
+		paused = false)
+
 func _restart() -> void:
 	paused = false
 	done = false
@@ -921,3 +951,8 @@ func _show_complete() -> void:
 	else:
 		box.add_child(first)
 	first.grab_focus()
+
+func _exit_tree() -> void:
+	if is_instance_valid(Game.music_engine) and (not is_instance_valid(Game.main) or Game.main.get_child_count() == 0 or Game.main.get_child(Game.main.get_child_count() - 1) == self):
+		Game.music_engine.set_muffled(false)
+		Game.music_engine.stop()

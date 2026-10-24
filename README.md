@@ -19,7 +19,7 @@ In the browser, saves, options and your own levels are kept by the browser; the 
     godot -e --path .         # open in editor
 
 ## Controls (remappable in Options)
-Arrows move · C/Space jump · X/Shift dash · Z/V grab · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning · F2 hitboxes. Gamepad: A jump · R1 dash · X attack · R2 grab · B back in menus (remap in Options → Controller Buttons).
+Arrows move · C/Space jump · X/Shift dash · Z/V grab · S interact (house doors) · A attack (swings toward the held direction; F1 → `DASH_DIRS` / `ATTACK_DIRS` limit dash and attack to 0 off, 1 horizontal, -1 vertical, 2 four-way, 3 eight-way, 4 free aim) · Esc pause · M map · F1 state machine & tuning · F2 hitboxes · F12 assist mode. Gamepad: A jump · R1 dash · X attack · R2 grab · B interact, back in menus (remap in Options → Controller Buttons).
 
 ## Moves
 Run, variable jump, coyote time, input buffering, wall jump, wall slide, climb + stamina,
@@ -79,3 +79,51 @@ Venom); all 32 types are in the editor and on the Monsters page (main menu, or t
     godot --headless --path . res://tests/test.tscn    # physics checks, exit code = failures
     godot --headless --path . res://tests/smoke.tscn   # opens every screen
     godot --path . res://tests/bench.tscn              # benchmarks (see OPTIMIZATION_RESULTS.md)
+
+### Music Studio (prototype)
+
+Open **Music Studio** from the main menu and press **Play** to hear an original
+four-channel chiptune loop. Click steps to cycle through rests and C-major notes;
+choose pulse, triangle, saw, synthesized percussion, or FM piano per channel.
+Tempo, volume, and channel mute controls are available. Pattern/instrument/tempo
+edits restart playback; volume changes apply immediately. Back or Esc stops music.
+Edits survive returning to the menu during the current session, but are not yet
+saved to disk. This first version is a synth/sequencer; automatic composition and
+gameplay-driven music are future work.
+
+The bundled GDSiON 0.7-beta8 runtime currently supports **Linux x86_64**. Other
+platforms need matching upstream binaries; see `addons/gdsion/README.md` for
+provenance, licenses, and integration notes. Run the audio and lifecycle checks:
+
+```sh
+godot --headless --path . --script tests/music.gd
+```
+
+### Environment soundtrack
+
+Gameplay now follows each room's background (`environment`). Nine original
+8-bar chiptune arrangements cover mountain/default, forest, sand, sea, cavern,
+deep cavern, sky, temple and village/building. Rooms with the same environment
+continue the current loop; entering a different environment starts its theme.
+Leaving gameplay stops music. The studio shares the gameplay volume control.
+
+In **Music Studio**, select a named environment to hear its arrangement against
+its background. Use **Steps … >** to browse all four pages of a 64-step score.
+Selecting a theme replaces the current working pattern; Reset demo restores the
+short demo. Theme changes currently restart immediately, without crossfading.
+The compositions use adventure-game moods, modal melodies and chip instruments;
+no Zelda melodies, recordings or samples are included.
+
+Scores live in `scripts/environment_music.gd`. Each defines a key/mode, tempo,
+instruments, chord progression and two original phrases, arranged as A/B/A'/B'.
+Run the soundtrack rendering and selection checks with:
+
+```sh
+godot --headless --path . --script tests/environment_music.gd
+```
+
+### Sound effects
+
+Original retro sound effects are synthesized and cached at startup in `scripts/sfx.gd`. Movement, combat, enemy warnings/projectiles, the Ape boss, pickups, doors, notes, blocks, and menu buttons trigger effects independently of the music synth. Options → Audio → Sound effects controls their volume (including Off). Playback uses a 16-voice pool and suppresses duplicate bursts. No external sound files or licenses are required.
+
+Run audio checks with `godot --headless --path . --script tests/sfx.gd`.

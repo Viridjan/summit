@@ -1,12 +1,14 @@
 extends ColorRect
-# Options screen: video, assist mode and key remapping. Used by the main menu and the pause menu.
+# Options screen: video and key remapping. Used by the main menu and the pause menu.
 # With pad_page set it is the controller button page instead (opened from "Controller Buttons").
+# With assist_page set it is the Assist Mode page instead (opened in game with the assist key, F12).
 
 signal closed
 
 var waiting_for := ""  # action being rebound
 var key_buttons := {}
 var pad_page := false
+var assist_page := false
 
 func _ready() -> void:
 	color = Color(0.05, 0.05, 0.12, 1.0 if pad_page else 0.95)
@@ -28,18 +30,17 @@ func _ready() -> void:
 	if pad_page:
 		_build_pad(box)
 		return
+	if assist_page:
+		_build_assist(box)
+		return
 	box.add_child(Game.label("Options", 44))
 	box.add_child(Game.label("Video", 22))
 	var first := _toggle(box, "Fullscreen", "fullscreen")
 	_toggle(box, "VSync", "vsync")
 	_toggle(box, "Screen Shake", "shake")
 
-	box.add_child(Game.label("Assist Mode", 22))
-	_choice(box, "Game Speed", "game_speed", ["50%", "60%", "70%", "80%", "90%", "100%"], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
-	_toggle(box, "Infinite Stamina", "infinite_stamina")
-	_choice(box, "Air Dashes", "air_dashes", ["Default", "Two", "Infinite"], [0, 1, 2])
-	_toggle(box, "Invincibility", "invincible")
-	_toggle(box, "Show Hitboxes", "hitboxes")
+	box.add_child(Game.label("Audio", 22))
+	_choice(box, "Sound effects", "sfx_volume", ["Off", "25%", "50%", "70%", "100%"], [0.0, 0.25, 0.5, 0.7, 1.0])
 
 	box.add_child(Game.label("Controls (keyboard)", 22))
 	for a in Game.ACTION_NAMES:
@@ -65,6 +66,16 @@ func _open_pad(from: Button) -> void:
 	o.pad_page = true
 	add_child(o)
 	o.closed.connect(from.grab_focus)
+
+func _build_assist(box: VBoxContainer) -> void:
+	box.add_child(Game.label("Assist Mode", 44))
+	var first := _choice(box, "Game Speed", "game_speed", ["50%", "60%", "70%", "80%", "90%", "100%"], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
+	_toggle(box, "Infinite Stamina", "infinite_stamina")
+	_choice(box, "Air Dashes", "air_dashes", ["Default", "Two", "Infinite"], [0, 1, 2])
+	_toggle(box, "Invincibility", "invincible")
+	_toggle(box, "Show Hitboxes", "hitboxes")
+	box.add_child(Game.button("Back", _close))
+	first.grab_focus()
 
 func _build_pad(box: VBoxContainer) -> void:
 	box.add_child(Game.label("Controller Buttons", 44))
@@ -102,7 +113,7 @@ func _toggle(box: VBoxContainer, text: String, key: String) -> CheckButton:
 	box.add_child(c)
 	return c
 
-func _choice(box: VBoxContainer, text: String, key: String, labels: Array, values: Array) -> void:
+func _choice(box: VBoxContainer, text: String, key: String, labels: Array, values: Array) -> OptionButton:
 	var row := HBoxContainer.new()
 	var l := Label.new()
 	l.text = text
@@ -115,6 +126,7 @@ func _choice(box: VBoxContainer, text: String, key: String, labels: Array, value
 	o.item_selected.connect(func(i: int): _apply(key, values[i]))
 	row.add_child(o)
 	box.add_child(row)
+	return o
 
 func _apply(key: String, v) -> void:
 	Game.settings[key] = v
@@ -165,7 +177,7 @@ func _reset_keys() -> void:
 	Game.save_settings()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if waiting_for == "" and event.is_action_pressed("ui_cancel"):
+	if waiting_for == "" and (event.is_action_pressed("ui_cancel") or (assist_page and event.is_action_pressed("assist"))):
 		get_viewport().set_input_as_handled()
 		_close()
 

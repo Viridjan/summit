@@ -295,3 +295,11 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: house doors (house_door): a visible wooden door, up at it to go through (same id/to links as
   Door; Entities.DOOR_TYPES). Cove Town's two houses lead to interiors h1_villager_house and h2_quest_house.
 - 2026-10-24: lighthouse: solid tower with a house door, inside room lh1_lighthouse_stairs (zigzag climb), door out to the top.
+- 2026-10-24: energy base 35 (was 50); a block adds 25 (was 75), so one upgrade = 60. Hits still cost 100: any hit at 60 or less is a death.
+- 2026-10-24: Assist Mode moved out of Options to its own page, opened in game with F12 (rebindable action "assist"); it pauses the game, Esc/F12/Back resumes.
+- 2026-10-24: energy base 25 (was 35); a block adds 35, so one upgrade is still 60.
+- 2026-10-24: music muffles (low-pass 600 Hz on its own "Music" bus) while paused, in Assist Mode or on the map.
+- 2026-10-24: an energy block adds 20 (base 25, so one upgrade = 45).
+- 2026-10-24: buildings with a door are backdrops (entity "building", style house/tower; never collides): Cove Town houses, the lighthouse on the shore and its top.
+- 2026-10-24: house doors use a new "interact" action (keyboard S, pad B), not up.
+- 2026-10-24: all music plays 25% slower and two whole tones lower (MusicEngine.TEMPO_SCALE / TRANSPOSE, applied at playback).

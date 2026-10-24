@@ -26,6 +26,7 @@ const DEFAULT_KEYS := {
 	"left": KEY_LEFT, "right": KEY_RIGHT, "up": KEY_UP, "down": KEY_DOWN,
 	"jump": KEY_C, "dash": KEY_X, "grab": KEY_Z, "pause": KEY_ESCAPE,
 	"map": KEY_M, "debug": KEY_F1, "attack": KEY_A, "hitboxes": KEY_F2,
+	"assist": KEY_F12, "interact": KEY_S,
 }
 const ALT_KEYS := {"jump": KEY_SPACE, "dash": KEY_SHIFT, "grab": KEY_V}
 # Gamepad: one button per action (JOY_BUTTON_*), PAD_AXIS + axis for a trigger, -1 = none.
@@ -35,7 +36,7 @@ const DEFAULT_PAD := {
 	"up": JOY_BUTTON_DPAD_UP, "down": JOY_BUTTON_DPAD_DOWN,
 	"jump": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "dash": JOY_BUTTON_RIGHT_SHOULDER,
 	"grab": PAD_AXIS + JOY_AXIS_TRIGGER_RIGHT, "pause": JOY_BUTTON_START,
-	"map": JOY_BUTTON_BACK, "debug": -1, "hitboxes": -1,
+	"map": JOY_BUTTON_BACK, "debug": -1, "hitboxes": -1, "assist": -1, "interact": JOY_BUTTON_B,
 }
 const PAD_NAMES := {
 	JOY_BUTTON_A: "A / Cross", JOY_BUTTON_B: "B / Circle", JOY_BUTTON_X: "X / Square", JOY_BUTTON_Y: "Y / Triangle",
@@ -46,11 +47,14 @@ const PAD_NAMES := {
 	JOY_BUTTON_DPAD_UP: "D-pad Up", JOY_BUTTON_DPAD_DOWN: "D-pad Down",
 	JOY_BUTTON_DPAD_LEFT: "D-pad Left", JOY_BUTTON_DPAD_RIGHT: "D-pad Right", -1: "-",
 }
-const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "pause", "map", "debug", "hitboxes"]
+const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "interact", "pause", "map", "debug", "hitboxes", "assist"]
 
 var main: Node
+var sfx: Node
+var music_engine: Node
 var theme: Theme
 var settings := {
+	"sfx_volume": 0.7,
 	"fullscreen": false, "vsync": true, "shake": true, "hitboxes": false,
 	"game_speed": 1.0, "infinite_stamina": false, "air_dashes": 0, "invincible": false,
 	"keys": DEFAULT_KEYS.duplicate(),
@@ -83,8 +87,27 @@ func _ready() -> void:
 	if settings.world != "" and FileAccess.file_exists(settings.world):
 		world_path = settings.world
 
+
+func get_sfx() -> Node:
+	if not is_instance_valid(sfx):
+		sfx = load("res://scripts/sfx.gd").new()
+		add_child(sfx)
+	return sfx
+
+func play_sfx(key: String, pitch: float = 1.0) -> void:
+	get_sfx().play(key, pitch)
+
+func get_music_engine() -> Node:
+	# SiON has global synthesis state. Keep one driver for the application lifetime.
+	if not is_instance_valid(music_engine):
+		music_engine = load("res://scripts/music_engine.gd").new()
+		add_child(music_engine)
+	return music_engine
+
 # ---------- screens ----------
 func goto(screen: String) -> void:
+	if is_instance_valid(music_engine):
+		music_engine.stop()
 	for c in main.get_children():
 		c.queue_free()
 	main.add_child(load("res://scripts/%s.gd" % screen).new())
@@ -115,6 +138,8 @@ func save_settings() -> void:
 	cf.save(SETTINGS_PATH)
 
 func apply_settings() -> void:
+	if is_instance_valid(sfx):
+		sfx.set_volume(float(settings.sfx_volume))
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)
@@ -354,6 +379,7 @@ static func fmt_time(t: float) -> String:
 func button(text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
+	b.pressed.connect(func(): play_sfx("ui"))
 	b.pressed.connect(cb)
 	return b
 
