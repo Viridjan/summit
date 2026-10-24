@@ -229,7 +229,7 @@ def markdown(report):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("world", nargs="?", default="worlds/hollow_knight", type=Path)
+    parser.add_argument("world", nargs="?", default="worlds/story", type=Path)
     parser.add_argument("--output", type=Path, default=Path("reports/world-accessibility"), help="Output filename prefix")
     parser.add_argument("--strict", choices=[m[0] for m in MODELS], help="Exit 1 if this model flags unreached rooms, partial regions, or invalid spawn")
     args = parser.parse_args()

@@ -54,7 +54,7 @@ jobs:
         run: |
           ~/godot/godot --headless --path . res://tests/test.tscn
           ~/godot/godot --headless --path . res://tests/smoke.tscn
-          python3 -m unittest tests/test_world_accessibility.py
+          python3 -m unittest tests/test_world_accessibility.py tests/test_story_entrances.py
 
       - name: Export
         run: |

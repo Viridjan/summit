@@ -41,8 +41,7 @@ M shows every room explored so far. Progress saves automatically (`user://save.c
 The shipped world (14 rooms styled after Hollow Knight, Silksong, Symphony of the Night and Metroid Zero Mission)
 is described in `docs/WORLD_DESIGN.md`; `tools/world_check.py` / `tools/world_softlock.py` check reachability and gates.
 **World:** in the Adventure menu switches to the story world (`res://worlds/story/`, chapter 1 in progress, see
-`docs/STORY_DESIGN.md`) or one of two reference worlds (Hallownest, Zebes: the original rooms traced at each game's
-character scale and linked by doors, not yet playable); the world editor edits the picked world (cyan lines = door links).
+`docs/STORY_DESIGN.md`); the world editor edits the picked world (cyan lines = door links).
 
 **World editor** (Adventure → World Editor, only when run from source because it writes `res://adventure/`):
 drag rooms on the grid; where two rooms touch and both have open tiles on the shared edge, that's a passage (green).
@@ -68,7 +67,7 @@ Levels save as JSON in `user://levels/` (Linux: `~/.local/share/godot/app_userda
 
 ## Combat enemies
 
-The HK reference world includes 93 active enemies from eight original families:
+Nine original enemy families:
 Thornmite (wall crawler), Dropwing (ceiling dive), Duskflit (swoop), Ossling (bone
 throw), Hornback (charge), Fuzzbob (bouncing flight), and the big Cragjaw (leaping
 brute) and Murkspore (spore spitter), plus the story jungle's calm Mosstrot (wanders, never chases). Attack with A; bones and orbs can be swatted

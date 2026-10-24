@@ -72,7 +72,7 @@ Hornback (warns, then charges), Fuzzbob (bounces diagonally), and the big Cragja
 (leaps and slams) and Murkspore (spits three orbs); Mosstrot (story jungle) just wanders
 and has no variants. The others have 2-4 of these
 variants: Swift, Armored, Giant (2x size), Shielded (blocks front hits), Brood
-(splits in two), Venom (poison puddles). 32 types; 96 placed in the HK world.
+(splits in two), Venom (poison puddles). 32 types.
 Adding a new object: docs/ADDING_ENTITIES.md (one class + one registry line).
 
 
@@ -87,10 +87,8 @@ Shipped adventure (res://adventure/): 14 rooms in 4 areas borrowing from the fou
 games (docs/WORLD_DESIGN.md): village and well, crossroads hub, dash-orb arena,
 vertical shaft, climb vault, castle corridor, clock tower, spire, crown (goal).
 
-Reference worlds (res://worlds/, picked in Adventure > World):
-  Hallownest (Hollow Knight) 225 rooms, Zebes (Metroid ZM) 134.
-  Original room layouts traced at each game's character scale, at 2x scale,
-  linked by doors, no overlaps, merged redundant maps, thin strips fixed.
+Story world (res://worlds/story/, picked in Adventure > World): chapter 1, docs/STORY_DESIGN.md.
+  (The Hollow Knight and Metroid reference worlds were removed on 2026-10-24.)
   King's Pass hand-fixed (breakable wall, entrance).
 
 World rules enforced by tools/world_fixups.py:
@@ -159,7 +157,7 @@ Code-health audit, optimization and future-feature strategy: docs/CODE_HEALTH.md
 - Power-ups from the four reference games (grouped by game). Dropped: Space Jump,
   Screw Attack, SotN bat/wolf/mist forms, Dreamgate, Morph Ball.
 - Health/hurt state, event flags, map stations, save slots (docs/METROID_NOTES.md).
-- Replace placeholder rooms with real ones; turn reference worlds into playable ones.
+- Replace placeholder rooms with real ones.
 
 
 11. OPEN QUESTIONS
@@ -286,3 +284,9 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: Ape arena 56 wide; auto_walk carries the player in, the entrance boss_gate closes behind
   (closes_behind); s1/s2/s3 shifted 24 tiles left.
 - 2026-10-24: Ape contact hitbox is one centred 24x24 rectangle (replaces the 22px body bands).
+- 2026-10-24: room changes: crossing sideways walks the player 1 unit in (middle of tile column 2),
+  where the entrance spawn is and where they respawn. Entrances must be flat for 2 tiles
+  (tools/check_entrances.py; story world 0). Cove Town's sea ends a tile earlier.
+- 2026-10-24: Hallownest (Hollow Knight) and Zebes (Metroid ZM) reference worlds removed, with their builder
+  (tools/reference_worlds.py), the HK enemy placer, the room-safety probes and the hk-* reports. Worlds now:
+  the main adventure and the story world.

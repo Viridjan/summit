@@ -1,7 +1,0 @@
-{
-  "world": "worlds/hollow_knight",
-  "room_count": 232,
-  "checked_open_edge_tiles": 2664,
-  "findings": [],
-  "limits": "Static terrain edge checks, not spawn reachability. Counts maximal adjacent vertical spans with the same issue/target, not separate tiles. Does not flag sealed solid edges. Valid adjacent empty tiles still need whole-player clearance and movement checks. A no-room opening can be intentionally clamped by player bounds; it is not automatically a playable exit or an out-of-bounds exploit."
-}

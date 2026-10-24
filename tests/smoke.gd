@@ -192,8 +192,8 @@ func _ready() -> void:
 	await _shot("world_editor")
 	DirAccess.remove_absolute(Game.save_path)
 	Game.save_path = Game.SAVE_PATH
-	# Real HK rooms: all themed renderers, neighbour caches and room swaps.
-	var hk := Game.Adventure.load_world("res://worlds/hollow_knight/world.json")
+	# Real story rooms: the themed renderers, neighbour caches and room swaps.
+	var hk := Game.Adventure.load_world("res://worlds/story/world.json")
 	var examples := {}
 	for room_name in hk.rooms:
 		var environment: String = hk.rooms[room_name].level.get("environment", "")
@@ -212,7 +212,7 @@ func _ready() -> void:
 		themed_world.enter_room(room_name, at)
 		await _frames(3)
 		if themed_world.tile_layer.chunks[0].environment != environment:
-			_fail("HK room terrain did not switch to " + environment)
+			_fail("room terrain did not switch to " + environment)
 		for neighbour in themed_world.near_layers:
 			var expected: String = hk.rooms[neighbour].level.get("environment", "")
 			if themed_world.near_layers[neighbour].chunks[0].environment != expected:

@@ -6,7 +6,7 @@ No third-party images were added or modified. Existing Paper Pixels attribution
 and licenses remain in `assets/paper-pixels/`.
 
 Open `preview.html` for all eight themes: sand, sea, cavern, cavern_deep, sky,
-temple, building and forest (the story world's jungle: grass tops, trunks, vines, ferns). The HK world assigns a theme to each room using its `environment` field.
+temple, building and forest (the story world's jungle: grass tops, trunks, vines, ferns). Rooms pick a theme with their `environment` field.
 The rural building theme uses timber, plaster and pitched-roof cottages.
 Gameplay, editor and neighbouring-room terrain use the same room-local art. None of these graphics imply collision,
 water behaviour, hazards or light sources.

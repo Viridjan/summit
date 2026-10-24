@@ -56,7 +56,6 @@ Checked and **not** bugs:
 - **Stale references after a room change.** The player keeps references into the old room (`climb_hop_solid`, `dream_block`, `current_booster`, `attack_hit`). This is harmless today because the objects are RefCounted.
 - **`tools/world_check.py`** raises `AttributeError` when the start room has no spawn.
 - **`tools/world_fixups.py` `drop_unreachable`** deletes room files and has no dry run. A rebuild restores them.
-- **`tools/place_reference_enemies.py`** hard-codes room ids, which break if the HK world is repartitioned.
 - **Test isolation.** Tests use the real `user://`, and one long `_ready` holds most checks.
 - **Magic numbers.** Some tests depend on them (e.g. `Tuning.names().size() == 99`).
 

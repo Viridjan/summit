@@ -35,34 +35,9 @@ Ossling bones and Murkspore orbs collide with terrain and room bounds, expire af
 
 ## Playing and editing
 
-Choose **Adventure → World: Hollow Knight**. There are **96 enemies across 59 rooms**: three of each type. A Thornmite introduces them in King's Pass (`r005`). See `reports/hk-enemy-placements.json` for every position. All 32 types are in the editor and on the Monsters page (main menu, or the map screen's second tab).
+All 32 types are in the editor and on the Monsters page (main menu, or the map screen's second tab). In the story world the jungle has calm Mosstrots, and the Ape boss (`boss_ape`, not an enemy family) waits in its arena.
 
 Attack with **A**; hold a direction to aim the swing. Enemies use the existing one-hit player death system. An enemy takes at most one hit per swing, with a brief hurt flash. Defeated enemies become harmless and respawn when the room is rebuilt.
-
-## Placement and regeneration
-
-`tools/place_reference_enemies.py` replaces selected HK placeholder enemies. Its `FAMILIES` table must match `Entities.TYPES`. Each replacement is tagged `summit_enemy_set: 1` and records the placeholder's `reference_text`, `reference_position` and `reference_size`. On each run:
-- Placements of removed types, and any beyond three per type, turn back into their placeholders.
-- New types take free slots.
-- Each enemy's text and size are refreshed.
-
-The placer has different rules per enemy type:
-- **Floor walkers (Thornmite, Ossling, Hornback, Cragjaw, Mosstrot):** stand on a floor that reaches 3 tiles past each side, with clear space around.
-- **Dropwing and Duskflit:** need an overhead perch with clear dive space below.
-- **Fuzzbob and Murkspore:** need a wide open area.
-
-It also:
-- avoids hazards;
-- keeps encounters apart;
-- stays at least 96px from spawns and doors;
-- uses at most two enemies per room (one in King's Pass).
-
-```sh
-python3 tools/place_reference_enemies.py          # dry run / idempotency check
-python3 tools/place_reference_enemies.py --apply  # install, then write the report
-```
-
-Rebuilding `tools/reference_worlds.py` overwrites room edits, so run the placer again afterwards. Its room list targets the current HK partition.
 
 ## Art and tests
 
@@ -86,7 +61,6 @@ The checks cover:
 - **Giant:** drawing at 2×.
 - **Cragjaw:** the leap and slam.
 - **Murkspore:** spit and swat.
-- **HK world:** the real placements.
 
 ## References
 

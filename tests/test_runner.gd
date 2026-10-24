@@ -149,16 +149,15 @@ func check_tile_layer() -> void:
 	layer.free()
 
 func check_environment_themes() -> void:
-	var world := Game.Adventure.load_world("res://worlds/hollow_knight/world.json")
+	var world := Game.Adventure.load_world("res://worlds/story/world.json")
 	var counts := {}
-	var allowed := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building"]
 	var valid := true
 	for room_data in world.rooms.values():
 		var environment: String = room_data.level.get("environment", "")
-		valid = valid and environment in allowed
+		valid = valid and environment in load("res://scripts/environment_art.gd").THEMES
 		counts[environment] = int(counts.get(environment, 0)) + 1
-	check(valid, "every HK room has a supported environment")
-	check(counts.size() == 7 and not counts.has(""), "HK rooms include all seven environment themes")
+	check(valid, "every story room has a supported environment")
+	check(counts.size() >= 4 and not counts.has(""), "story rooms use several environment themes (%s)" % [counts.keys()])
 	var sample := Game.new_level("theme validation", 8, 8)
 	sample.environment = "../../invalid"
 	check(Game.validate_level(sample).is_empty(), "level validation rejects unknown environment paths")
@@ -347,8 +346,8 @@ func check_shipped_world() -> void:
 							bad_liquid.append(rn)
 							break
 		check(bad_liquid.is_empty(), "%s: water/acid rows run wall to wall (bad: %s)" % [wp.get_base_dir().get_file(), bad_liquid])
-	# reference worlds in res://worlds/ (a cross-room door in Zebes moves the player into the linked room)
-	var zebes := Adventure.load_world(Game.WORLDS_DIR + "metroid_zero_mission/world.json")
+	# a cross-room door (the story's net trap) moves the player into the linked room
+	var zebes := Adventure.load_world(Game.WORLDS_DIR + "story/world.json")
 	var src := ""
 	var door: Dictionary = {}
 	for rn in zebes.rooms:
@@ -370,13 +369,13 @@ func check_shipped_world() -> void:
 	w.room = src
 	p().pos = Vector2(float(door.x) + float(door.w) / 2, float(door.y) + float(door.h))
 	step()
-	check(w.room == str(door.to).get_slice(":", 0), "Zebes door %s:%s leads into room %s (now in %s)" % [src, door.id, str(door.to).get_slice(":", 0), w.room])
+	check(w.room == str(door.to).get_slice(":", 0), "door %s:%s leads into room %s (now in %s)" % [src, door.id, str(door.to).get_slice(":", 0), w.room])
 	w.queue_free()
 	w = null
 	Game.adv = {}
-	# reference worlds: listed in the menu, load, start with every ability
+	# worlds in the menu: the main world and the story world
 	var listed: Array = Game.world_list()
-	check(listed.size() == 4 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world, the story world and the 2 reference worlds (%d)" % listed.size())
+	check(listed.size() == 2 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world and the story world (%d)" % listed.size())
 	# story world (docs/STORY_DESIGN.md): jump only at the start, the first stretch of rooms
 	var story := Adventure.load_world(Game.WORLDS_DIR + "story/world.json")
 	check(story.start == "m1_meadow" and story.rooms.size() >= 4 and Adventure.overlaps(story).is_empty() and Adventure.new_run(story).abilities.is_empty(), "story world loads, starts in the meadow with jump only (%d rooms)" % story.rooms.size())
@@ -426,6 +425,26 @@ func check_shipped_world() -> void:
 				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == Rect2(0, -23 * 8, 40 * 8, 23 * 8)
 	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
+	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
+	Game.adv = Adventure.new_run(story)
+	Game.adv.room = "c2_cave_teeth"
+	Game.adv.spawn = null
+	Game.level = story.rooms["c2_cave_teeth"].level
+	var ww = load("res://scripts/world.gd").new()
+	w = ww
+	add_child(ww)
+	ww.set_physics_process(false)
+	ww.player = Bot.new(ww, Vector2(40 * 8 - 6, 19 * 8))
+	p().hold = {"right": true}
+	for k in 30:
+		step()
+		if ww.room == "c3_cove_tunnel":
+			break
+	p().hold = {}  # let go: the walk carries on by itself
+	for k in 40:
+		step()
+	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
+	ww.queue_free()
 	sw.queue_free()
 	w = keep_w
 	Game.adv = {}
@@ -968,40 +987,6 @@ func check_big_enemies() -> void:
 	m.update_orbs(DT)
 	check(p().dead, "a Murkspore orb kills on touch")
 
-func check_hk_combat_placements() -> void:
-	var world_data: Dictionary = load("res://scripts/adventure.gd").load_world("res://worlds/hollow_knight/world.json")
-	var count := {}
-	var failures := []
-	Game.settings.invincible = true
-	for room_name in world_data.rooms:
-		var level: Dictionary = world_data.rooms[room_name].level
-		if not level.entities.any(func(e): return e.get("summit_enemy_set", 0) == 1):
-			continue
-		if w: w.queue_free()
-		Game.level = level
-		w = load("res://scripts/world.gd").new()
-		add_child(w)
-		w.set_physics_process(false)
-		w.player = Bot.new(w, w.spawn)
-		for enemy in w.ents:
-			if not enemy.d.get("summit_enemy_set", false): continue
-			count[enemy.d.t] = count.get(enemy.d.t, 0) + 1
-			if enemy.blocked(enemy.rect): failures.append(room_name + ": solid spawn")
-			for marker in level.entities:
-				if marker.t in ["spawn", "door"] and Vector2(marker.x, marker.y).distance_to(Vector2(enemy.rect.position)) < 96:
-					failures.append(room_name + ": enemy too close to entrance")
-			w.player.pos = enemy.center() + Vector2(0, 40)
-			for i in 240:
-				enemy.update(DT)
-				if enemy.blocked(enemy.rect):
-					failures.append(room_name + ": enemy entered terrain/bounds")
-					break
-	var enemy_types: int = E.TYPES.keys().filter(func(t): return t.begins_with("enemy_")).size()
-	check(count.size() == enemy_types and count.values().all(func(n): return n == 3), "HK contains three of each of the %d enemy types (%s)" % [enemy_types, count])
-	check(failures.is_empty(), "HK enemy placements stay clear of entrances, terrain, and room bounds (%s)" % [failures])
-	Game.settings.invincible = false
-
-# Regressions from the code-health audit: each check failed before its fix.
 func check_bugfixes() -> void:
 	# free-aim dash (DASH_DIRS 4) slightly above horizontal still counts as horizontal: super jump works
 	make_world([])
@@ -2014,7 +1999,6 @@ func _ready() -> void:
 	check_combat_enemies()
 	await check_enemy_variants()
 	check_big_enemies()
-	check_hk_combat_placements()
 	check_dirs()
 	check_adventure()
 	check_energy()

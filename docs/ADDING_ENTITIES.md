@@ -106,8 +106,6 @@ Enemies extend `CombatEnemy` in `scripts/entities.gd`; see `docs/ENEMIES.md`.
 
 In both cases, also:
 1. Add the type id to `EnemyArt.KINDS` in the same order as `TYPES`; a test checks they match.
-2. Add the variant to the family's entry in `FAMILIES` in `tools/place_reference_enemies.py`.
-3. Run the placer with `--apply`.
 
 A brand-new variant needs:
 - a `VARIANTS` entry for its speed, warning, recovery and scale;

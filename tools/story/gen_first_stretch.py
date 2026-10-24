@@ -99,7 +99,7 @@ t.ents.append({"t": "jumpthru", "x": 8 * T, "y": 15 * T, "w": 6 * T, "h": 8})   
 t.ents.append({"t": "jumpthru", "x": 18 * T, "y": 15 * T, "w": 6 * T, "h": 8})  # second roof
 t.solid(8, 16, 8, 18); t.solid(13, 16, 13, 18)   # house walls
 t.solid(18, 16, 18, 18); t.solid(23, 16, 23, 18)
-t.open(30, G, 38, 20); t.water(30, G, 38, 20)    # the sea
+t.open(30, G, 37, 20); t.water(30, G, 37, 20)    # the sea, ending a tile short of the jungle exit (flat entrance)
 t.ent("spawn", 2, 18)
 t.ent("energy_orb", 5, 17)
 t.ent("energy_block", 20, 13)

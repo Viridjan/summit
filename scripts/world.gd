@@ -152,6 +152,9 @@ var note_t := 0.0
 var spawn_queue: Array = []  # entity dicts to add after this tick (spawn_entity); never saved
 # Adventure: the room just left keeps drawing its objects (frozen) until the camera has left it.
 var leaving_ents: Array = []
+# Adventure: after crossing into a room sideways the player is walked to the middle of its second tile column.
+var walk_dir := 0
+var walk_target_x := 0.0
 var leaving_rect := Rect2()  # that room, in this room's coordinates
 var pending_door = null  # door touched this tick (Door entity); used after the touch loop
 var door_block := Rect2i()  # the door we arrived on: ignored until the player steps off it
@@ -296,6 +299,10 @@ func after_player_move() -> void:
 		_go_door(pending_door)
 	if door_block.has_area() and not door_block.intersects(player.hurt_rect()):
 		door_block = Rect2i()
+	if walk_dir != 0 and (player.dead or (player.pos.x - walk_target_x) * walk_dir >= 0 or player.force_move_x_timer <= 0):
+		if not player.dead:
+			player.force_move_x_timer = 0.0
+		walk_dir = 0
 
 func spawn_entity(d: Dictionary) -> void:
 	spawn_queue.append(d)
@@ -338,6 +345,9 @@ func enter_room(next: String, at = null) -> void:
 	var old_origin := room_origin
 	var old_room := room
 	var went_up: bool = player.center().y < 0
+	var in_dir := 0  # sideways crossings get the brief walk in
+	if at == null:
+		in_dir = 1 if player.center().x >= gw * T else (-1 if player.center().x < 0 else 0)
 	room = next
 	room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
 	data = Game.adv_world.rooms[room].level
@@ -351,6 +361,11 @@ func enter_room(next: String, at = null) -> void:
 	player.pos = global - room_origin if at == null else at
 	if went_up and at == null:  # Celeste-style lift so an upward exit doesn't fall straight back
 		player.speed.y = minf(player.speed.y, player.JUMP_SPEED)
+	walk_dir = in_dir
+	if in_dir != 0:  # walk 1 unit in: to the middle of the second tile column (where the entrance spawn sits)
+		walk_target_x = T * 1.5 if in_dir > 0 else (gw - 1.5) * T
+		player.force_move_x = in_dir
+		player.force_move_x_timer = 0.6
 	# respawn at the room's spawn marker closest to where we came in, else at the entry point
 	var best: Vector2 = player.pos
 	var best_d := INF
