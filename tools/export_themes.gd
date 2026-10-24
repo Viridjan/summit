@@ -8,6 +8,7 @@ const THEMES := {
 	"sky": ["aaa1a1", "766f86", "ede0c5", "89a8bf", "d1c8bf", "f2e6ca"],
 	"temple": ["a59b81", "6d706a", "dbcfaa", "424f60", "252e43", "b6b789"],
 	"building": ["b4a58b", "6b5a50", "e0cda5", "71858a", "354b50", "e9bb75"],
+	"forest": ["5e4a36", "3a2c22", "7fae4e", "2f5a3c", "17301f", "a8d86a"],
 }
 func box(img: Image, x: int, y: int, w: int, h: int, col: Color) -> void:
 	var r := Rect2i(x, y, w, h).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
@@ -35,7 +36,10 @@ func tile(theme: String, mask: int, variant := 0) -> Image:
 		box(img, 5, 6 - variant % 2, 1, 1, light.darkened(0.12))
 		if theme == "sand": box(img, 0, 6, 4, 1, body.darkened(0.08))
 		if theme == "sea": box(img, 1, 5, 1, 2, Color(p[5]))
-	if mask & 1:
+	if mask & 1 and theme == "forest":  # grass top with a ragged edge
+		box(img, 0, 0, 8, 2, light)
+		box(img, variant % 4 * 2, 2, 2, 1, light.darkened(0.2))
+	elif mask & 1:
 		box(img, 0, 0, 8, 1, light)
 		box(img, 0, 1, 8, 1, body.lightened(0.12))
 	if mask & 2: box(img, 7, 0, 1, 8, shade)
@@ -82,6 +86,20 @@ func background(theme: String, foreground: bool) -> Image:
 				box(img, x+6, y, 25, 4, col)
 				box(img, x, y+4, 42, 5, col)
 				box(img, x+8, y+9, 30, 3, col)
+		"forest":
+			# Big trunks under a canopy; the far layer is a paler, thinner copy.
+			var canopy := 30 if foreground else 46
+			for x in 320:
+				box(img, x, 0, 1, canopy + int(sin(float(x) / 11.0) * 6 + cos(float(x) / 29.0) * 8), col)
+				var floor_y := base - int(sin(float(x) / 37.0) * 6)
+				box(img, x, floor_y, 1, 180 - floor_y, col)
+			for i in 6:
+				var x := i * 61 + (17 if foreground else 40)
+				var trunk := 14 if foreground else 8
+				box(img, x, 20, trunk, 160, col)
+				box(img, x - 4, base - 8, trunk + 8, 8, col)  # roots
+				if not foreground:
+					for v in 4: box(img, x + trunk + 3 + v * 3, canopy, 1, 30 + v * 9 + i % 3 * 7, accent.darkened(0.55))  # hanging vines
 		"temple":
 			for i in 5:
 				var x := i*72+12; var y := 65+i%2*23
@@ -126,6 +144,11 @@ func decorations(theme: String) -> Image:
 				for y in 12: box(img,x+7-y/4,4+y,1+y/2,1,col if i%2==0 else dark)
 			"sky":
 				box(img,x+3,8,10,4,col); box(img,x+6,5,5,4,col)
+			"forest":
+				if i % 2 == 0:  # fern
+					for leaf in 5: box(img,x+2+leaf*2,6+absi(leaf-2)*2,2,10-absi(leaf-2)*2,col if leaf%2 else col.darkened(0.25))
+				else:  # bush with a berry
+					box(img,x+3,8,10,8,col.darkened(0.2)); box(img,x+5,6,6,3,col.darkened(0.2)); box(img,x+9,9,2,2,Color("d04848"))
 			"temple":
 				box(img,x+5,3,6,13,col); box(img,x+3,2,10,3,col); box(img,x+7,6,1,8,dark)
 			"building":

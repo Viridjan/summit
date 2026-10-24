@@ -537,7 +537,7 @@ func _draw_background(ci: CanvasItem) -> void:
 	ci.draw_rect(view, Color("0c0c1e"))
 	var b := Rect2(0, 0, level.w * T, level.h * T)
 	if level.get("environment", "") != "":
-		Art.draw_background(ci, view, 0.0, level.environment)
+		Art.draw_background(ci, view, 0.0, level.environment, b)
 	else:
 		ci.draw_rect(b, Art.SKY)
 	if cam.zoom.x >= 2:

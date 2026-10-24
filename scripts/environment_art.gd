@@ -1,6 +1,6 @@
 extends RefCounted
 ## Room-local environment graphics; collision still reads the original tile grid.
-const THEMES := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building"]
+const THEMES := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building", "forest"]
 static var _textures: Dictionary = {}
 static func texture(environment: String, asset: String) -> Texture2D:
 	var key := environment + "/" + asset
@@ -32,10 +32,18 @@ static func draw_range(ci: CanvasItem, tiles: Array, w: int, h: int, x0: int, y0
 			# Props require two clear cells overhead; they never affect collision.
 			if not up and y>=2 and code%11==0 and not solid(tiles,w,h,x,y-2) and not solid(tiles,w,h,x+1,y-1) and not solid(tiles,w,h,x+1,y-2):
 				ci.draw_texture_rect_region(props,Rect2(x*8,y*8-16,16,16),Rect2((code/11%8)*16,0,16,16))
-static func draw_background(ci: CanvasItem, view: Rect2, environment: String) -> void:
-	# Room-sized paintings: preserve aspect ratio and overscan for gentle parallax.
+# Where the camera is in the room (area) sets the perspective: a smooth shift, at most the 10% overscan
+# (slack) each way, so the picture never jumps. 0 when the room fits the view.
+static func parallax_shift(view: Rect2, area: Rect2) -> Vector2:
+	var slack := view.size * 0.1
+	var t := Vector2(0.5, 0.5)
+	if area.size.x > view.size.x: t.x = clampf((view.position.x - area.position.x) / (area.size.x - view.size.x), 0, 1)
+	if area.size.y > view.size.y: t.y = clampf((view.position.y - area.position.y) / (area.size.y - view.size.y), 0, 1)
+	return (Vector2(0.5, 0.5) - t) * 2 * slack
+static func draw_background(ci: CanvasItem, view: Rect2, environment: String, area := Rect2()) -> void:
+	# Room-sized paintings that stay with the camera; only the perspective shifts (parallax_shift).
 	var extent := view.size * 1.2
-	var far_at := view.position - (extent-view.size)/2 - Vector2(fposmod(view.position.x*0.025,8),fposmod(view.position.y*0.02,4))
-	ci.draw_texture_rect(texture(environment,"background"),Rect2(far_at.floor(),extent),false)
-	var near_at := view.position - (extent-view.size)/2 - Vector2(fposmod(view.position.x*0.07,16),fposmod(view.position.y*0.04,8))
-	ci.draw_texture_rect(texture(environment,"foreground"),Rect2(near_at.floor(),extent),false)
+	var slack := view.size * 0.1
+	var shift := parallax_shift(view, area)
+	ci.draw_texture_rect(texture(environment,"background"),Rect2(view.position + (shift * 0.4 - slack).floor(),extent),false)
+	ci.draw_texture_rect(texture(environment,"foreground"),Rect2(view.position + (shift - slack).floor(),extent),false)

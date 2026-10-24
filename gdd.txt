@@ -63,15 +63,16 @@ Spikes (4 dirs), springs (3 dirs), dash crystal, double-dash crystal, star
 (collectible; replaced the strawberry), jump-through, crumble block, falling
 block, zip mover, dream block, green/red bubble, bumper, feather, crystal heart
 (goal), dash/climb ability orbs (adventure), note (design reminder text), door
-(links rooms that don't touch), water (looks only), acid (kills), breakable wall
+(links rooms that don't touch), water (drains adventure energy; drown at 0), acid (kills), leaf platform (jump-through), waterfall (pushes down), breakable wall
 (3 hits, stays broken for the run), enemy/breakable placeholders, spawn markers
 (one per entrance; Retry respawns there).
 Enemies (docs/ENEMIES.md), 8 original families: Thornmite (crawls floors, walls,
 ceilings), Dropwing (ceiling dive), Duskflit (swoop), Ossling (throws bones),
 Hornback (warns, then charges), Fuzzbob (bounces diagonally), and the big Cragjaw
-(leaps and slams) and Murkspore (spits three orbs). Each family has 2-4 of these
+(leaps and slams) and Murkspore (spits three orbs); Mosstrot (story jungle) just wanders
+and has no variants. The others have 2-4 of these
 variants: Swift, Armored, Giant (2x size), Shielded (blocks front hits), Brood
-(splits in two), Venom (poison puddles). 31 types; 93 placed in the HK world.
+(splits in two), Venom (poison puddles). 32 types; 96 placed in the HK world.
 Adding a new object: docs/ADDING_ENTITIES.md (one class + one registry line).
 
 
@@ -228,3 +229,10 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: energy (adventure): 100 per block, start with 1, regen 3/s inside the current block,
   a hit costs a block (hazard respawn), last block = death. Attack is now an adventure ability.
 - 2026-10-24: Silksong (Pharloom) and Symphony of the Night (Dracula's Castle) reference worlds removed.
+- 2026-10-24: story Lake Cave gets 4 neighbour rooms: Roar Tunnel (left), Cave Teeth + Cove Tunnel (right),
+  Deep Lake (below, back up via jump-throughs); Cove Town moved right. House doors are a TODO.
+- 2026-10-24: story jungle: forest theme, leaf platforms, waterfall blocks, Mosstrot (calm wanderer, 9th
+  enemy family, 3 also in HK). Rooms Jungle Edge, Jungle Falls, Jungle Hills; bot runs meadow -> jungle end.
+- 2026-10-24: water drains adventure energy (0.5/s, no regen in water); 0 energy in water = death.
+- 2026-10-24: backgrounds no longer jump: the parallax shift follows the camera's place in the room,
+  bounded by the 10% overscan (EnvironmentArt.parallax_shift), instead of wrapping.

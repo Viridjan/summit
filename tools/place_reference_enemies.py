@@ -18,9 +18,10 @@ FAMILIES = {
     'fuzzbob': ((10, 10), 'Fuzzbob', ['brood', 'venom', 'giant']),
     'cragjaw': ((20, 20), 'Cragjaw', ['armored', 'shielded']),
     'murkspore': ((16, 14), 'Murkspore', ['swift', 'venom', 'brood']),
+    'mosstrot': ((12, 8), 'Mosstrot', []),
 }
 NAMES = {family: spec[1] for family, spec in FAMILIES.items()}
-FLOOR_WALKERS = ('thornmite', 'skeleton', 'hornback', 'cragjaw')
+FLOOR_WALKERS = ('thornmite', 'skeleton', 'hornback', 'cragjaw', 'mosstrot')
 SIZES = {}
 for family, (size, _, variants) in FAMILIES.items():
     for variant in [''] + variants:

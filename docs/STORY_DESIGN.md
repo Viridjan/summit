@@ -118,6 +118,10 @@ Regeneration:
 - About 3 energy per second.
 - Only inside the current block: a block that is fully spent doesn't refill.
 
+Water:
+- Staying in water costs 0.05 energy every 0.1 s (0.5 per second), and energy doesn't regenerate there.
+- Running out of energy in water is a death (drowning).
+
 ## 4. Skill points
 
 - Every village has at least one quest that rewards a skill point.
@@ -133,15 +137,20 @@ Regeneration:
 
 ## 6. Built so far
 
-`worlds/story/` (Adventure menu → World: Story), 4 rooms, jump only:
-Meadow → The Big Jump (fall into the gap) → Lake Cave → Cove Town (energy block on a roof).
-NPCs, the quest, the roar and the jungle exit are notes in the rooms for now.
-`tests/test_runner.gd` runs a jump-only bot from the meadow to Cove Town.
+`worlds/story/` (Adventure menu → World: Story), 8 rooms, jump only:
+Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
+Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
+Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
+NPCs, the quest, the roar, the house doors and the Ape arena are notes in the rooms for now.
+`tools/story/gen_first_stretch.py` generated these rooms once; edit them in-game from now on.
+`tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.
 
 ## 7. Decisions
 
 - 2026-10-24: the story world starts with **jump only**. Dash, climb and attack are adventure abilities unlocked by orbs (`Game.has_ability`).
 - 2026-10-24: the big jump gets nothing for now. It stays uncrossable until dash comes from a later level.
+- 2026-10-24: water drains energy (0.05 every 0.1 s, no regeneration in water); out of energy in water = death.
+- 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 
 ## 8. Open questions

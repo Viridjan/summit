@@ -12,6 +12,7 @@ const ABILITIES := ["dash", "climb", "attack"]
 # The HUD shows blocks; the code counts 100 energy per block. A run starts with 1 block.
 const ENERGY_PER_BLOCK := 100.0
 const ENERGY_REGEN := 3.0  # per second, only inside a partly spent block
+const WATER_DRAIN := 0.5  # per second while in water (0.05 every 0.1 s); no regeneration there
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}
 # Rooms whose file is missing or invalid are skipped.
@@ -131,6 +132,11 @@ static func energy_max(run: Dictionary) -> float:
 static func regen_energy(run: Dictionary, dt: float) -> void:
 	var top := ceilf(run.energy / ENERGY_PER_BLOCK) * ENERGY_PER_BLOCK
 	run.energy = minf(top, run.energy + ENERGY_REGEN * dt)
+
+# Being in water drains energy. Returns false when it's all gone: the player drowns.
+static func water_energy(run: Dictionary, dt: float) -> bool:
+	run.energy = maxf(0.0, run.energy - WATER_DRAIN * dt)
+	return run.energy > 0
 
 # Pays for an action; false (nothing spent) when there isn't enough.
 static func spend_energy(run: Dictionary, amount: float) -> bool:

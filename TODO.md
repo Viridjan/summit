@@ -15,6 +15,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
 - [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
 - [ ] Energy orb refills everything for now; decide how much collectibles restore
+- [x] Water drains energy: 0.05 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
 - [ ] Decide the energy icon, then replace the HUD's "Energy n/m" text with blocks
 - [ ] Interact button (keyboard, controller, touch)
 - [ ] NPC entity + dialogue box; "..." reply for silent NPCs
@@ -24,22 +25,23 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Research height cues for audio (above/below; HRTF or elevation tricks) before building
 
 ### Content
-- [ ] Forest environment theme
-- [ ] Leaf platforms
-- [ ] Waterfall blocks
+- [x] Forest environment theme (`forest`: grass tops, trunks, vines, ferns)
+- [x] Leaf platforms (`leaf`, a jump-through)
+- [x] Waterfall blocks (`waterfall`: inside, the player can't rise and is pushed down)
 - [ ] Breakable sand platforms
 - [ ] Moving bridges between platforms (flexible)
 - [ ] Net trap + capture animation
 - [ ] Raft (needs the quest flag)
 - [ ] Stone lighthouse with a mirror-aimed magic flame
-- [ ] Wandering jungle enemy (walks back and forth, not aggressive)
+- [x] Wandering jungle enemy: Mosstrot (`enemy_mosstrot`, walks back and forth, never chases; touching it hurts)
 
 ### Rooms
 - [x] Start meadow: flat, few jumps and spikes, no enemies (`m1_meadow`)
 - [x] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked (`m2_big_jump`, star on the far side)
-- [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); roar is a note until positional audio exists
+- [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); roar is a note until positional audio exists. Expanded with 4 rooms of their own: Roar Tunnel (left), Cave Teeth and Cove Tunnel (right), Deep Lake (below: a hole in the lake floor drops in, a jump-through shaft leads back up)
+- [ ] Cove Town houses enterable through doors (placeholder note in the room)
 - [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
-- [ ] Jungle: waterfall, lake, big trees and trunks, hills and tunnels, leaf platforms
+- [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end
 - [ ] Ape boss arena: falling-trunk crossing, spikes that grow with each hit
 - [ ] Right branch: 30° sand cave, Ape chase, rock fall seals it; sword reward
 - [ ] Shore: unclimbable mountain to the left (hints, collectibles), raft to the right

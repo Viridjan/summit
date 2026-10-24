@@ -371,6 +371,22 @@ func show_note(text: String) -> void:
 	note_label.text = "Note: " + text
 	note_t = 0.1
 
+# Adventure energy: regenerates out of water; in water it drains, and running out there drowns the player.
+func update_energy(dt: float) -> void:
+	if not adventure() or player.dead:
+		return
+	if not in_water():
+		Adventure.regen_energy(Game.adv, dt)
+	elif not Adventure.water_energy(Game.adv, dt):
+		player.die(Vector2.UP)
+
+func in_water() -> bool:
+	var r: Rect2i = player.hurt_rect()
+	for e in touchables:
+		if e.d.t == "water" and e.rect.intersects(r):
+			return true
+	return false
+
 func energy_block_taken(key: String) -> bool:
 	return Game.adv.get("taken", []).has(key)
 
@@ -560,8 +576,7 @@ func _physics_process(_delta: float) -> void:
 	else:
 		player.update(dt)
 		after_player_move()
-		if adventure():
-			Adventure.regen_energy(Game.adv, dt)
+		update_energy(dt)
 	for e in ents:
 		e.update(dt)
 	for i in range(parts.size() - 1, -1, -1):
@@ -600,7 +615,7 @@ func _clamp_cam(t: Vector2) -> Vector2:
 
 func _draw_background(ci: CanvasItem) -> void:
 	var view := Rect2(cam.position - VIEW / 2.0, VIEW)
-	Art.draw_background(ci, view, time, data.get("environment", ""))
+	Art.draw_background(ci, view, time, data.get("environment", ""), Rect2(0, 0, data.w * T, data.h * T))
 	for s in (snow if data.get("environment", "") == "" else []):
 		ci.draw_rect(Rect2((view.position + s).floor(), Vector2.ONE), Color(1, 1, 1, 0.35))
 

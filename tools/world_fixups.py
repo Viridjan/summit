@@ -22,7 +22,7 @@ from collections import deque
 
 T = 8
 HAZARD = ("acid", "water", "spikes_up", "spikes_down", "spikes_left", "spikes_right")
-SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru")
+SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru", "leaf")
 
 
 def seal_edges(world_dir):

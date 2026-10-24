@@ -53,6 +53,7 @@ const TYPES := {
 	"enemy_fuzzbob": ["Fuzzbob · bouncing flight", false, Color("83b7a0"), FuzzbobEnemy],
 	"enemy_cragjaw": ["Cragjaw · leaping brute", false, Color("a58a6a"), CragjawEnemy],
 	"enemy_murkspore": ["Murkspore · spore spitter", false, Color("8a6aa8"), MurksporeEnemy],
+	"enemy_mosstrot": ["Mosstrot · calm wanderer", false, Color("7fae4e"), MosstrotEnemy],
 	"enemy_thornmite_swift": ["Thornmite · Swift", false, Color("f08d87"), ThornmiteEnemy],
 	"enemy_thornmite_venom": ["Thornmite · Venom", false, Color("8fd14f"), ThornmiteEnemy],
 	"enemy_thornmite_brood": ["Thornmite · Brood", false, Color("c8d06a"), ThornmiteEnemy],
@@ -80,6 +81,9 @@ const TYPES := {
 	# breakable wall: solid until struck "hp" times (default 3) by the attack; stays broken for the run
 	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
 	"water": ["Water", true, Color("4a8ae0"), Liquid],
+	# story jungle (docs/STORY_DESIGN.md 1.5): a leafy jump-through, and falling water that pushes the player down
+	"leaf": ["Leaf Platform", true, Color("7fc04e"), Leaf],
+	"waterfall": ["Waterfall", true, Color("8ac8f0"), Waterfall],
 	"acid": ["Acid", true, Color("6ae070"), Liquid],
 	# design note: marks what a spot needs (a power-up not built yet, a boss, a secret...)
 	"note": ["Note", false, Color("ffe08a"), Note],
@@ -853,6 +857,21 @@ class HornbackEnemy extends CombatEnemy:
 					facing *= -1
 
 
+class MosstrotEnemy extends CombatEnemy:
+	# Jungle wanderer: walks back and forth on its floor, turning at walls and ledges. Never chases; touching it still hurts.
+	var gravity_speed := 0.0
+	func setup() -> void:
+		super.setup()
+		rect.size = Vector2i(12, 8)
+		hp = variant_hp(2)
+	func update(dt: float) -> void:
+		if not active(dt): return
+		gravity_speed = minf(140, gravity_speed + 400 * dt)
+		if move_enemy(Vector2(0, gravity_speed * dt)): gravity_speed = 0
+		if not safe_step() or move_enemy(Vector2(facing * 14 * speed_multiplier * dt, 0)):
+			facing *= -1
+
+
 class FuzzbobEnemy extends CombatEnemy:
 	# Drifts diagonally and bounces off anything solid; it never chases, its path is the threat.
 	var velocity := Vector2.ZERO
@@ -953,7 +972,7 @@ class MurksporeEnemy extends CombatEnemy:
 			ci.draw_circle(orb[0].round(), 1.2, Color("f0d8ff"))
 
 
-class Liquid extends Ent:  # water: looks only; acid: kills on touch (like spikes)
+class Liquid extends Ent:  # water: drains adventure energy (World.update_energy); acid: kills on touch (like spikes)
 	func setup() -> void:
 		collidable = d.t == "acid"
 	func touch(p) -> void:
@@ -1072,6 +1091,31 @@ class JumpThru extends Ent:
 		rect.size.y = 5
 	func draw(ci: CanvasItem) -> void:
 		BlockArt.draw(ci, rect, "jumpthru")
+
+
+class Leaf extends JumpThru:  # a jump-through drawn as big leaves on a stem
+	func draw(ci: CanvasItem) -> void:
+		var r := Rect2(rect)
+		ci.draw_rect(Rect2(r.position + Vector2(0, 2), Vector2(r.size.x, 1)), Color("41673a"))  # stem
+		for x in range(0, int(r.size.x), 6):
+			ci.draw_rect(Rect2(r.position + Vector2(x, 0), Vector2(5, 3)), Color("7fc04e") if x % 12 else Color("6aa840"))
+			ci.draw_rect(Rect2(r.position + Vector2(x + 1, 0), Vector2(3, 1)), Color("b6e080"))
+
+
+class Waterfall extends Ent:  # falling water: inside it the player can't rise, and is pushed down
+	var t := 0.0
+	func update(dt: float) -> void:
+		t += dt
+	func touch(p) -> void:
+		p.speed.y = maxf(p.speed.y, 90.0)
+	func draw(ci: CanvasItem) -> void:
+		var r := Rect2(rect)
+		ci.draw_rect(r, Color(0.54, 0.78, 0.94, 0.45))
+		for x in range(1, int(r.size.x) - 1, 3):  # streaks scrolling down
+			var y := fposmod(t * 120.0 + x * 7, 12.0)
+			while y < r.size.y:
+				ci.draw_rect(Rect2(r.position + Vector2(x, y), Vector2(1, minf(4, r.size.y - y))), Color(0.9, 0.97, 1.0, 0.6))
+				y += 12.0
 
 
 class Crumble extends Ent:

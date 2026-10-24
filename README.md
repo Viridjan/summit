@@ -71,9 +71,9 @@ Levels save as JSON in `user://levels/` (Linux: `~/.local/share/godot/app_userda
 The HK reference world includes 93 active enemies from eight original families:
 Thornmite (wall crawler), Dropwing (ceiling dive), Duskflit (swoop), Ossling (bone
 throw), Hornback (charge), Fuzzbob (bouncing flight), and the big Cragjaw (leaping
-brute) and Murkspore (spore spitter). Attack with A; bones and orbs can be swatted
-away. Each family comes in 2-4 variants (Swift, Armored, Giant, Shielded, Brood,
-Venom); all 31 types are in the editor and on the Monsters page (main menu, or the map's second tab). See [behaviour and placement notes](docs/ENEMIES.md) and the
+brute) and Murkspore (spore spitter), plus the story jungle's calm Mosstrot (wanders, never chases). Attack with A; bones and orbs can be swatted
+away. Most families come in 2-4 variants (Swift, Armored, Giant, Shielded, Brood,
+Venom); all 32 types are in the editor and on the Monsters page (main menu, or the map's second tab). See [behaviour and placement notes](docs/ENEMIES.md) and the
 [animated sprite gallery](assets/enemies/preview.html).
 
 ## Tests

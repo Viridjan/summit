@@ -119,12 +119,12 @@ static func draw_tile_range(ci: CanvasItem, tiles: Array, gw: int, gh: int, x0: 
 				ci.draw_rect(Rect2(at.x, at.y + T - 1, T, 1), BOTTOM_EDGE)
 
 # Parallax backdrop: moon, drifting clouds, tree line.
-static func draw_background(ci: CanvasItem, view: Rect2, t: float, environment := "") -> void:
+static func draw_background(ci: CanvasItem, view: Rect2, t: float, environment := "", area := Rect2()) -> void:
 	if environment in EnvironmentArt.THEMES:
-		EnvironmentArt.draw_background(ci, view, environment)
+		EnvironmentArt.draw_background(ci, view, environment, area)
 		return
 	ci.draw_rect(view.grow(16), SKY)
-	var moon_at := view.position + Vector2(view.size.x * 0.72, 18) - view.position * 0.03
+	var moon_at := view.position + Vector2(view.size.x * 0.72, 18) + EnvironmentArt.parallax_shift(view, area) * 0.3
 	region(ci, MOON, moon_at.floor(), Color(1, 1, 1, 0.8))
 	for i in 6:
 		var src: Rect2 = CLOUDS[i % CLOUDS.size()]

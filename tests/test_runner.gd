@@ -76,6 +76,7 @@ func step(n := 1) -> void:
 		if not w.player.dead:
 			w.player.update(DT)
 			w.after_player_move()
+			w.update_energy(DT)
 		for e in w.ents:
 			e.update(DT)
 
@@ -347,8 +348,8 @@ func check_shipped_world() -> void:
 	var story_ents := []
 	for rn in story.rooms:
 		story_ents += story.rooms[rn].level.entities.map(func(e): return e.t)
-	check(story_ents.has("energy_block") and not story_ents.any(func(t): return t.begins_with("enemy")), "story start has the town's energy block and no enemies")
-	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave -> cove town
+	check(story_ents.has("energy_block") and story_ents.filter(func(t): return t.begins_with("enemy")).all(func(t): return t == "enemy_mosstrot"), "story has the town's energy block, and its only enemies are calm Mosstrots")
+	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave -> deep lake (falls in) -> back up -> cove town -> jungle
 	Game.adv_world = story
 	Game.adv = Adventure.new_run(story)
 	Game.adv_temp = true
@@ -361,15 +362,25 @@ func check_shipped_world() -> void:
 	sw.player = Bot.new(sw, sw.spawn)
 	p().hold = {"right": true, "jump": true}
 	var story_seen := [sw.room]
-	for i in 6000:
-		if sw.room == "t1_cove_town" or p().dead:
+	var walk := 0
+	var jumped_at := -1.0
+	for i in 12000:
+		if sw.room == "j3_jungle_hills" and p().pos.x > 72 * 8 or p().dead:
 			break
-		if p().on_ground and p().speed.y >= 0:  # one ground jump per landing: a second buffered tap would wall-jump
-			p().tap["jump"] = true
+		var head: Rect2i = p().hurt_rect()
+		head.position.y -= 8
+		# one ground jump per landing (a second buffered tap would wall-jump); walk, don't jump, under a low ceiling (hollow trunks)
+		if walk > 0:
+			walk -= 1
+		elif p().on_ground and p().speed.y >= 0 and sw.collide_solid(head) == null:
+			if absf(p().pos.x - jumped_at) < 1:  # the last jump got nowhere (a trunk ahead): walk a bit instead
+				walk = 20
+			jumped_at = p().pos.x
+			p().tap["jump"] = walk == 0
 		step()
 		if sw.room != story_seen[-1]:
 			story_seen.append(sw.room)
-	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "t1_cove_town"] and sw.deaths == 0, "story bot reaches Cove Town with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "c4_deep_lake", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	sw.queue_free()
 	w = keep_w
 	Game.adv = {}
@@ -775,7 +786,7 @@ func check_enemy_variants() -> void:
 		var ok: bool = {"swift": e.hp <= o.hp, "armored": e.hp > o.hp, "giant": e.hp > o.hp and e.rect.size == o.rect.size * 2,
 			"shielded": e.hp >= o.hp, "brood": e.hp >= o.hp, "venom": e.hp >= o.hp}[v]
 		check(ok and (v == "giant" or e.rect.size == o.rect.size), "%s: %s stats and size fit the variant (hp %d vs %d, %s)" % [t, v, e.hp, o.hp, e.rect.size])
-	check(E.TYPES.keys().filter(func(t): return t.begins_with("enemy_") and E.CombatEnemy.variant_of(t) == "").size() == 8, "eight enemy families")
+	check(E.TYPES.keys().filter(func(t): return t.begins_with("enemy_") and E.CombatEnemy.variant_of(t) == "").size() == 9, "nine enemy families")
 
 	# Swift crawls faster, Giant slower
 	var crawlers := []
@@ -1075,10 +1086,22 @@ func check_bugfixes() -> void:
 	Game.editor_level = {}
 
 # Monsters page (main menu) and the map screen's Map / Monsters tabs (L1 / R1).
+# Themed backgrounds stay with the camera: the perspective shift is smooth and bounded (no wrap-around jumps).
+func check_background_parallax() -> void:
+	const EnvArt := preload("res://scripts/environment_art.gd")
+	var area := Rect2(0, 0, 320, 2000)
+	var last := EnvArt.parallax_shift(Rect2(0, 0, 320, 180), area)
+	var smooth := true
+	for y in range(0, 1821, 4):
+		var s := EnvArt.parallax_shift(Rect2(0, y, 320, 180), area)
+		smooth = smooth and absf(s.y - last.y) < 0.1 and absf(s.y) <= 18.0 and s.x == 0
+		last = s
+	check(smooth and is_equal_approx(last.y, -18.0), "background perspective shifts smoothly with vertical camera moves, within the overscan")
+
 func check_bestiary() -> void:
 	var b = load("res://scripts/bestiary.gd").new()
 	add_child(b)
-	check(b.rows.size() == 8 and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy family once (%s)" % [b.rows])
+	check(b.rows.size() == 9 and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy family once (%s)" % [b.rows])
 	check(b.hp.get("enemy_cragjaw", 0) == 6 and b.hp.has("enemy_hornback_giant") and not b.hp.has("enemy_hornback_brood"), "monsters page shows each family's own variants")
 	check(b.hp.get("enemy_thornmite", 0) == 2, "monsters page shows enemy HP")
 	var borrowed := ["Ripper", "Medusa", "Skree", "Bat ", "Skeleton", "Puffling"]
@@ -1142,6 +1165,17 @@ func check_energy() -> void:
 	p().dead = false
 	p().die(Vector2.ZERO)
 	check(w.deaths == 1 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
+	# water drains 0.05 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
+	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])
+	step(5)
+	Game.adv.energy = 150.0
+	var before: float = Game.adv.energy
+	step(60)
+	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 0.5), "a second in water costs 0.5 energy, no regeneration (%s)" % (before - Game.adv.energy))
+	Game.adv.energy = 0.004
+	var deaths_before: int = w.deaths
+	step(2)
+	check(p().dead and w.deaths == deaths_before + 1, "out of energy in water: the player dies")
 	make_world([])
 	step(5)
 	p().tap = {"attack": true}
@@ -1651,6 +1685,7 @@ func _ready() -> void:
 	check_energy()
 	check_bugfixes()
 	check_bestiary()
+	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)
 	get_tree().quit(fails)

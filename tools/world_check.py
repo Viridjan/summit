@@ -35,7 +35,7 @@ class World:
             for e in lvl["entities"]:
                 ex, ey = ox + int(e["x"]) // T, oy + int(e["y"]) // T
                 t = e["t"]
-                if t == "jumpthru":
+                if t in ("jumpthru", "leaf"):
                     for i in range(int(e["w"]) // T):
                         self.plat.add((ex + i, ey))
                 elif t.startswith("spikes_"):

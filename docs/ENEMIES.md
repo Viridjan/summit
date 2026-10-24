@@ -1,6 +1,6 @@
 # Combat enemies
 
-Eight enemy families with original names and original pixel art (`scripts/enemy_art.gd`; no extracted game sprites). Each family comes in the variants that suit its behaviour. 31 types in all.
+Nine enemy families with original names and original pixel art (`scripts/enemy_art.gd`; no extracted game sprites). Each family comes in the variants that suit its behaviour (Mosstrot has none). 32 types in all.
 
 ## Families
 
@@ -14,6 +14,7 @@ Eight enemy families with original names and original pixel art (`scripts/enemy_
 | Fuzzbob (`enemy_fuzzbob`) | HK Gruzzer | Drifts diagonally and bounces off anything solid. It never chases | 2 | Brood, Venom, Giant |
 | Cragjaw (`enemy_cragjaw`) | HK heavy brutes | Big (20×20) brute. Plods along its floor; a player in reach gets a warning, then a leap that slams down near them | 6 | Armored, Shielded |
 | Murkspore (`enemy_murkspore`) | HK Aspid | Big (16×14) hovering spore. Keeps about 80px away and spits a three-orb spread at a visible player | 5 | Swift, Venom, Brood |
+| Mosstrot (`enemy_mosstrot`) | HK Crawlid | Story jungle wanderer. Walks back and forth on its floor, turning at walls and ledges; never chases. Touching it still hurts | 2 | none |
 
 The type ids `enemy_skree`, `enemy_bat` and `enemy_skeleton` come from the families' earlier names. They were kept so existing levels still load.
 
@@ -34,7 +35,7 @@ Ossling bones and Murkspore orbs collide with terrain and room bounds, expire af
 
 ## Playing and editing
 
-Choose **Adventure → World: Hollow Knight**. There are **93 enemies across 56 rooms**: three of each type. A Thornmite introduces them in King's Pass (`r005`). See `reports/hk-enemy-placements.json` for every position. All 31 types are in the editor and on the Monsters page (main menu, or the map screen's second tab).
+Choose **Adventure → World: Hollow Knight**. There are **96 enemies across 59 rooms**: three of each type. A Thornmite introduces them in King's Pass (`r005`). See `reports/hk-enemy-placements.json` for every position. All 32 types are in the editor and on the Monsters page (main menu, or the map screen's second tab).
 
 Attack with **A**; hold a direction to aim the swing. Enemies use the existing one-hit player death system. An enemy takes at most one hit per swing, with a brief hurt flash. Defeated enemies become harmless and respawn when the room is rebuilt.
 
@@ -46,7 +47,7 @@ Attack with **A**; hold a direction to aim the swing. Enemies use the existing o
 - Each enemy's text and size are refreshed.
 
 The placer has different rules per enemy type:
-- **Floor walkers (Thornmite, Ossling, Hornback, Cragjaw):** stand on a floor that reaches 3 tiles past each side, with clear space around.
+- **Floor walkers (Thornmite, Ossling, Hornback, Cragjaw, Mosstrot):** stand on a floor that reaches 3 tiles past each side, with clear space around.
 - **Dropwing and Duskflit:** need an overhead perch with clear dive space below.
 - **Fuzzbob and Murkspore:** need a wide open area.
 

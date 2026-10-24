@@ -2,15 +2,16 @@ extends RefCounted
 # Original native pixel sprites; enemy behaviour references are documented in docs/ENEMIES.md.
 # One 32x32 cell per frame, four frames per row, one row per enemy type (same order as Entities.TYPES).
 const SIZE := 32
-const KINDS := ["enemy_thornmite", "enemy_skree", "enemy_bat", "enemy_skeleton", "enemy_hornback", "enemy_fuzzbob", "enemy_cragjaw", "enemy_murkspore", "enemy_thornmite_swift", "enemy_thornmite_venom", "enemy_thornmite_brood", "enemy_thornmite_giant", "enemy_skree_swift", "enemy_skree_armored", "enemy_skree_venom", "enemy_bat_swift", "enemy_bat_brood", "enemy_skeleton_armored", "enemy_skeleton_shielded", "enemy_skeleton_giant", "enemy_hornback_shielded", "enemy_hornback_swift", "enemy_hornback_giant", "enemy_fuzzbob_brood", "enemy_fuzzbob_venom", "enemy_fuzzbob_giant", "enemy_cragjaw_armored", "enemy_cragjaw_shielded", "enemy_murkspore_swift", "enemy_murkspore_venom", "enemy_murkspore_brood"]
+const KINDS := ["enemy_thornmite", "enemy_skree", "enemy_bat", "enemy_skeleton", "enemy_hornback", "enemy_fuzzbob", "enemy_cragjaw", "enemy_murkspore", "enemy_mosstrot", "enemy_thornmite_swift", "enemy_thornmite_venom", "enemy_thornmite_brood", "enemy_thornmite_giant", "enemy_skree_swift", "enemy_skree_armored", "enemy_skree_venom", "enemy_bat_swift", "enemy_bat_brood", "enemy_skeleton_armored", "enemy_skeleton_shielded", "enemy_skeleton_giant", "enemy_hornback_shielded", "enemy_hornback_swift", "enemy_hornback_giant", "enemy_fuzzbob_brood", "enemy_fuzzbob_venom", "enemy_fuzzbob_giant", "enemy_cragjaw_armored", "enemy_cragjaw_shielded", "enemy_murkspore_swift", "enemy_murkspore_venom", "enemy_murkspore_brood"]
 const COLORS := {
 	"o": Color("e6a76c"), "O": Color("a95c53"), "y": Color("f8d89b"),
 	"b": Color("6483aa"), "B": Color("33465f"), "p": Color("9872af"),
 	"P": Color("58446f"), "s": Color("d8d8bd"), "S": Color("8c9e9c"),
 	"g": Color("83b7a0"), "G": Color("436c75"), "e": Color("f4a16b"), "k": Color("253247"),
 	"r": Color("a58a6a"), "R": Color("5e4a3c"), "m": Color("8a6aa8"), "M": Color("4a3866"),
+	"l": Color("7fae4e"), "L": Color("41673a"), "h": Color("9a7452"), "H": Color("5a3f2e"),
 }
-const BODY := ["o", "O", "b", "B", "p", "P", "g", "G", "s", "S", "r", "R", "m", "M"]  # recoloured by variants
+const BODY := ["o", "O", "b", "B", "p", "P", "g", "G", "s", "S", "r", "R", "m", "M", "l", "L", "h", "H"]  # recoloured by variants
 # variant -> [tint, tint amount, eye colour or null]
 const TINTS := {
 	"swift": [Color("e66786"), 0.55, null],
@@ -28,6 +29,7 @@ const SPRITES := {
 	"enemy_hornback": ["        yy  ", "       yBy  ", "    BBBBBy  ", "   BbbbbBBB ", "  BbbbbbbBeB", "  BbBbbBbBBB", "  BBBBBBBBBB", "   k k  k k "],
 	"enemy_fuzzbob": ["  s      s  ", " sss    sss ", "  sGGGGGGs  ", "  GgggggggG ", " GgggggggggG", " GggeggggegG", " GgggggggggG", "  GgggggggG ", "   GGGGGG   "],
 	"enemy_cragjaw": ["      RRRRRRRR          ", "    RRrrrrrrrrRR        ", "   RrrrrrrrrrrrrR       ", "  RrrSrrrrrrrrrrrR      ", "  RrrrrrrrrrrrrrrrR     ", " RrrrrrrrrrrrrrrrrrR    ", " RrrrrrrrrrrrrrreerR    ", " RrrrrrrrrrrrrrrekrrR   ", " RrrrrrrrrrrrrrrrrrrR   ", " RrrrrrrrrrrrrRRRRRRRR  ", " RrrrrrrrrrrrRyrryrryR  ", " RrrrrrrrrrrrRRRRRRRRR  ", "  RrrrrrrrrrrrrrrrrrR   ", "  RRrrrrrrrrrrrrrrRR    ", "   RrrRRRRRRRRRrrR      ", "   Rrr        RrrR      ", "   RrR        RrR       ", "  kkkk       kkkk       "],
+	"enemy_mosstrot": ["   l  l  l  ", "  lLlLlLlLl ", " lLlllllllLl", " LllllllllL ", " HhhhhhhhheH", " HhhhhhhhhkH ", "  HHHHHHHHH ", "  k k  k k  "],
 	"enemy_murkspore": ["       MMMMMMMM       ", "     MMmmmmmmmmMM     ", "    MmmmymmmmmymmM    ", "   MmmmmmmmmmmmmmmM   ", "   MmmmmmmymmmmmmmM   ", "  MmmmmmmmmmmmmmmmmM  ", "  MMMMMMMMMMMMMMMMMM  ", "    MssssssssssssM    ", "    MsssseesseessM    ", "    MsssssskksssM     ", "     MssssssssM       ", "      MMMMMMMM        ", "       m  m  m        ", "      m   m   m       ", "       m  m  m        "],
 }
 static var _texture: Texture2D
@@ -78,7 +80,7 @@ static func atlas() -> Image:
 						var lift := 0
 						if base_kind == "enemy_thornmite" and y >= 7:  # scuttling legs
 							offset = (1 if x % 4 < 2 else -1) if frame % 2 else 0
-						if base_kind in ["enemy_skeleton", "enemy_hornback"] and y >= sprite.size() - 3:
+						if base_kind in ["enemy_skeleton", "enemy_hornback", "enemy_mosstrot"] and y >= sprite.size() - 3:
 							offset = (1 if x < width / 2 else -1) if frame % 2 else 0
 						if base_kind == "enemy_cragjaw" and y >= 15:  # heavy steps
 							offset = (1 if x < width / 2 else -1) if frame % 2 else 0
