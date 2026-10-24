@@ -137,9 +137,9 @@ const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the 
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)
 
-const HAIR_NORMAL := Color("ac3232")
-const HAIR_USED := Color("44b7ff")
-const HAIR_TWO := Color("ff6def")
+const HAIR_NORMAL := Color("493022")
+const HAIR_USED := Color("929292")
+const HAIR_TWO := Color("493022")
 const HAIR_FLY := Color("f2eb6d")
 
 var w  # world
@@ -1830,6 +1830,8 @@ func _draw_attack(ci: CanvasItem) -> void:
 func hair_color() -> Color:
 	if state == ST_STAR_FLY:
 		return HAIR_FLY if (star_fly_timer > STAR_FLY_END_FLASH or flash) else HAIR_NORMAL
+	if w != null and w.adventure() and Game.adv.energy < 0.2 * Game.Adventure.energy_max(Game.adv):
+		return HAIR_USED  # grey below 20% energy
 	if dashes == 2:
 		return HAIR_TWO
 	if dashes == 1:
@@ -1928,8 +1930,6 @@ func draw(ci: CanvasItem) -> void:
 	if dead:
 		return
 	var hc := hair_color()
-	if dashes == 0 and state != ST_STAR_FLY and dash_refill_cooldown_timer > 0:
-		hc = Color.WHITE
 	# Flowing hair retains the familiar dash-availability colour cue.
 	# pixel clumps, tip first so the larger ones near the head sit on top
 	var shades := CharacterArt.hair_shades(hc)

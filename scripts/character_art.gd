@@ -21,7 +21,7 @@ const PALETTE := {
 	"h": Color("a83c50"), "H": Color("e96962"), "L": Color("f2947d"),
 	"s": Color("f1c3a1"), "e": Color("28354b"),
 	"b": Color("3e79ad"), "B": Color("79b9d2"),
-	"p": Color("94615b"), "D": Color("2c354d"), "d": Color("38445f"), "k": Color("293449"),
+	"p": Color("94615b"), "D": Color("354557"), "d": Color("718698"), "k": Color("c29a68"),
 }
 const STAND := [
 	"    HLLH    ",
@@ -33,21 +33,21 @@ const STAND := [
 	"  ppbbBBbb  ",
 	"  ppbbBBbs  ",
 	"   pbbbbb   ",
-	"    dddd    ",
-	"    dd dd   ",
-	"   kkk kk   ",
+	"    DDdd    ",
+	"    DD dd   ",
+	"    kk kkk  ",
 ]
 # Side-on contact, compression, passing and recovery; then the opposite leg.
 # Four lower rows leave space for bent knees and a short flight phase. D identifies the far leg.
 const RUN_LOWER := [
-	["   pDddd    ", "    D dd    ", "   kk dd    ", "      kkk   "],
-	["   pDddd    ", "    DDdd    ", "    Dkdd    ", "     kkk    "],
-	["   pDddd    ", "     dDD    ", "     d Dkk  ", "    kkk     "],
-	["   pDddd    ", "    dd DDkk ", "    kk      ", "            "],
-	["   pdDDD    ", "    d DD    ", "   kk DD    ", "      kkk   "],
-	["   pdDDD    ", "    ddDD    ", "    dkDD    ", "     kkk    "],
-	["   pdDDD    ", "     Ddd    ", "     D dkk  ", "    kkk     "],
-	["   pdDDD    ", "    DD ddkk ", "    kk      ", "            "],
+	["   pDDdd    ", "    D dd    ", "   kk dd    ", "      kkk   "],
+	["   pDDdd    ", "    DDdd    ", "     Ddd    ", "     kkk    "],
+	["   pDDdd    ", "     ddD    ", "    dd Dkk  ", "    kkk     "],
+	["   pDDdd    ", "    dd DD   ", "    kk  Dkk ", "            "],
+	["   pddDD    ", "    d DD    ", "   kk DD    ", "      kkk   "],
+	["   pddDD    ", "    ddDD    ", "     dDD    ", "     kkk    "],
+	["   pddDD    ", "     DDd    ", "    DD dkk  ", "    kkk     "],
+	["   pddDD    ", "    DD dd   ", "    kk  dkk ", "            "],
 ]
 # Full poses keep hands below the face and connect sleeves, hips and bent legs.
 const AIR_POSES := {
@@ -120,9 +120,9 @@ const WALL_SLIDE := [
 	"  ppbbBBbb  ",
 	"  ppbbBBbs  ",
 	"   pbbbbb   ",
-	"    dddd    ",
-	"    dd dd   ",
-	"   kkk kk   ",
+	"    DDdd    ",
+	"    DD dd   ",
+	"    kk kkk  ",
 ]
 # Hair strand clumps, head to tip, in the sprite's own hair shades (h dark, H light).
 # Drawn pixel by pixel at world resolution so they match the sprite, not smooth circles.
@@ -137,9 +137,9 @@ static var _textures: Dictionary = {}
 # Same two shades build_atlas uses for the hair on the head.
 static func hair_shades(hair_color: Color) -> Dictionary:
 	return {
-		"h": hair_color.lerp(Color("57354c"), 0.2),
-		"H": hair_color.lerp(Color("ffad88"), 0.45),
-		"L": hair_color.lerp(Color("ffd2a1"), 0.65),
+		"h": hair_color.darkened(0.32),
+		"H": hair_color,
+		"L": hair_color.lightened(0.18),
 	}
 
 # How far the head sits below its usual spot on this frame (the hair anchor follows it).
@@ -155,7 +155,7 @@ static func frame(animation: String, clock: float) -> Vector2i:
 		column %= int(spec[1])
 	return Vector2i(column, spec[0])
 
-static func texture(hair_color: Color = Color("ac3232")) -> Texture2D:
+static func texture(hair_color: Color = Color("493022")) -> Texture2D:
 	var key := hair_color.to_rgba32()
 	if not _textures.has(key):
 		_textures[key] = ImageTexture.create_from_image(build_atlas(hair_color))
@@ -173,7 +173,7 @@ static func _box(img: Image, origin: Vector2i, rect: Rect2i, color: Color) -> vo
 	if clipped.has_area():
 		img.fill_rect(Rect2i(origin + clipped.position, clipped.size), color)
 
-static func build_atlas(hair_color: Color = Color("ac3232")) -> Image:
+static func build_atlas(hair_color: Color = Color("493022")) -> Image:
 	var img := Image.create(SIZE * COLUMNS, SIZE * ANIMATIONS.size(), false, Image.FORMAT_RGBA8)
 	img.fill(Color.TRANSPARENT)
 	var colors := PALETTE.duplicate()

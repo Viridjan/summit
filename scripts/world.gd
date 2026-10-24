@@ -38,6 +38,13 @@ class Hud extends Control:
 	const SKULL := ["  ####  ", " ###### ", "##.##.##", "########", " ##..## ", "  # # # "]  # 8x6, "." = eye/nose holes
 	var world
 
+	# Energy bar colour by how full the whole bar is: red when empty, yellow at half, mint when full.
+	static func bar_color(pct: float) -> Color:
+		pct = clampf(pct, 0.0, 1.0)
+		if pct < 0.5:
+			return Color("ff4a3a").lerp(Color("ffd84a"), pct * 2.0)
+		return Color("ffd84a").lerp(Color("7cf0c0"), pct * 2.0 - 1.0)
+
 	# Fill of each bar, 0..1: the base first, then one per extra block.
 	static func block_fills(energy: float, blocks: int) -> Array:
 		var out := [clampf(energy / Adventure.BASE_ENERGY, 0.0, 1.0)]
@@ -59,16 +66,16 @@ class Hud extends Control:
 			var bolt := PackedVector2Array(BOLT.map(func(p): return p + Vector2(M, y)))
 			draw_colored_polygon(bolt, Color("ffd84a"))
 			draw_polyline(bolt + PackedVector2Array([bolt[0]]), Color.BLACK, 2.0)
-			var low: bool = Game.adv.energy < 30.0
+			var col := bar_color(Game.adv.energy / Adventure.energy_max(Game.adv))
 			var x := M + 26.0
 			var fills := block_fills(Game.adv.energy, int(Game.adv.blocks))
 			for i in fills.size():
 				var f: float = fills[i]
 				var cap: float = Adventure.BASE_ENERGY if i == 0 else Adventure.ENERGY_PER_BLOCK
-				var r := Rect2(x, y + 7, roundf(cap * 0.46), 14)  # bar width follows what it holds
+				var r := Rect2(x, y + 7, roundf(cap * 0.92), 14)  # bar width follows what it holds (0.92 px per energy)
 				draw_rect(r.grow(2), Color.BLACK)
 				draw_rect(r, Color(0.12, 0.15, 0.2))
-				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), Color("ff9a4a") if low else Color("7cf0c0"))
+				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), col)
 				x += r.size.x + 8.0
 			y += 34.0
 		if w.total_berries > 0:

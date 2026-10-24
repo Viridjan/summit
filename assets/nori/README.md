@@ -1,7 +1,7 @@
 # Nori — Summit character
 
 Original mountain-courier pixel artwork, authored in `scripts/character_art.gd`.
-Swept red hair, blue parka, copper backpack, dark boots, and flowing dash-colour locks.
+Swept dark brown hair, blue parka, copper backpack, dark boots, and flowing dash-colour locks.
 No Celeste sprite artwork is included. Existing Paper Pixels assets and licenses
 remain available unchanged.
 
@@ -79,3 +79,7 @@ Jump knees tuck underneath the body rather than projecting sideways. Apex and
 fall now advance into a settled pose and hold, instead of looping the legs while
 falling. The HTML preview follows the same non-looping rules and frame timings.
 Hitboxes, velocities, jump height and movement controls are unchanged.
+
+### Leg and hair revision
+
+Slate trousers use a darker far leg and a lighter near leg, with warm tan boots. Revised run poses separate knee bends and planted feet. Hair is dark brown when a dash is available and neutral gray when empty; refilling restores brown. Head and trailing locks share the same neutral shading, without the former white cooldown flash.

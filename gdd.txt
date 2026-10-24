@@ -305,3 +305,9 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: all music plays 25% slower and two whole tones lower (MusicEngine.TEMPO_SCALE / TRANSPOSE, applied at playback).
 - 2026-10-24: Options → Audio: Music and Sound Effects volume sliders (0-100%, both default 100%). Effects play at 20% of their synthesized level, so 100% in Options is that.
 - 2026-10-24: music another 20% slower: TEMPO_SCALE 0.6 (60% of written tempo).
+- 2026-10-24: Sand Cave 120 wide (was 80): same 30-row climb as 15 two-tile steps (~14 deg), spike pits, crumble bridges,
+  a low-ceiling hop. The beaten Ape chases the player up it (entity ape_chase: follows the player's path at 75 px/s,
+  wakes past "trigger", gives up for the run at "end"). Shore and Lighthouse Top moved 40 tiles right.
+- 2026-10-24: HUD energy bars drawn twice as long (0.92 px per energy).
+- 2026-10-24: energy bar colour follows energy / max: red empty, yellow at half, mint full (was orange under 30).
+- 2026-10-24: hair turns grey below 20% energy (adventure), same grey as a spent dash.

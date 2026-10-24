@@ -93,6 +93,8 @@ const TYPES := {
 	"note": ["Note", false, Color("ffe08a"), Note],
 	# Boss 1, the Ape (docs/STORY_DESIGN.md section 2), with its arena pieces
 	"boss_ape": ["Ape (boss)", false, Color("6a4430"), Ape],
+	# the Ape chasing the player up the sand cave: wakes when the player passes x "trigger", gives up at x "end"
+	"ape_chase": ["Ape (chase)", false, Color("8a5440"), ApeChase],
 	"ape_trunk": ["Trunk (Ape arena)", true, Color("7a5638"), ApeTrunk],
 	"boss_gate": ["Boss Gate", true, Color("4a6a3a"), BossGate],
 	# walks the player in d.dir (1 right, -1 left) for d.time seconds on touch; "while_boss": only while an Ape lives
@@ -1627,7 +1629,7 @@ class Ape extends Ent:
 	# True while the room has an Ape that isn't beaten (gates and the entrance walk follow it).
 	static func alive_in(world) -> bool:
 		for e in world.ents:
-			if e is Ape and e.phase != "gone":
+			if e is Ape and not e is ApeChase and e.phase != "gone":
 				return true
 		return false
 	func hurts() -> bool:
@@ -1882,3 +1884,77 @@ class Ape extends Ent:
 				ci.draw_arc(c, minf(scream_radius(), scream_radius() * (k + 1) / 3.0 + fmod(clock * 30.0, 6.0)), 0, TAU, 24, Color(1, 0.9, 0.7, 0.5 - k * 0.12), 2.0)
 		elif phase == "scream":  # wind-up warning
 			ci.draw_arc(center(), SIZE / 2.0 + SCREAM_REACH, 0, TAU, 24, Color(1, 0.4, 0.3, 0.35), 1.0)
+
+
+# The Ape after its defeat, chasing the player up the sand cave. It runs along the exact path the player took
+# (jumps and all) a little slower than the player runs, so hesitating lets it catch up; touching it is a death.
+# Dying rebuilds the room, which puts it back to waiting. Once the player reaches x "end" it gives up for the run.
+class ApeChase extends Ape:
+	const SPEED := 75.0  # px/s along the player's path (the player runs at 90)
+	const ROAR_TIME := 1.0  # it roars this long before giving chase
+	var trail: Array[Vector2] = []  # the player's feet, oldest first: where the Ape's feet go next
+	var start := Vector2i.ZERO
+	func setup() -> void:
+		super.setup()
+		start = rect.position
+		if phase != "gone":
+			phase = "wait"
+	func hurts() -> bool:
+		return phase == "chase"
+	func touch(p) -> void:
+		if hurts() and body_hits(p.damage_rect()):
+			p.die((p.center() - center()).normalized())
+	func feet() -> Vector2:
+		return Vector2(rect.position.x + SIZE / 2.0, rect.end.y)
+	func update(dt: float) -> void:
+		clock += dt
+		if phase == "gone":
+			return
+		var p = w.player
+		timer -= dt
+		match phase:
+			"wait":
+				if p.center().x > float(d.get("trigger", rect.end.x + 64)):
+					Game.play_sfx("boss_roar")
+					w.shake_dir(Vector2.ZERO, 0.3)
+					facing = 1
+					phase = "roar"
+					timer = ROAR_TIME
+			"roar", "chase":
+				var f := Vector2(p.center().x, p.bottom())
+				if trail.is_empty() or trail[-1].distance_squared_to(f) > 1.0:
+					trail.append(f)
+				if phase == "roar":
+					if timer <= 0:
+						phase = "chase"
+				else:
+					_run(dt)
+				if p.center().x > float(d.get("end", 1e9)):
+					Game.play_sfx("boss_roar", 0.8)
+					w.break_wall(id)  # gone for the rest of the run
+					phase = "dying"
+					timer = 1.2
+			"dying":
+				if timer <= 0:
+					phase = "gone"
+					collidable = false
+	# Follows the trail at SPEED, eating the points it reaches.
+	func _run(dt: float) -> void:
+		var budget := SPEED * dt
+		var at := feet()
+		while budget > 0 and not trail.is_empty():
+			var to: Vector2 = trail[0]
+			var dist := at.distance_to(to)
+			if dist <= budget:
+				budget -= dist
+				at = to
+				trail.pop_front()
+			else:
+				at += (to - at) / dist * budget
+				budget = 0
+		if absf(at.x - feet().x) > 0.01:
+			facing = 1 if at.x > feet().x else -1
+		rect.position = Vector2i(roundi(at.x - SIZE / 2.0), roundi(at.y) - SIZE)
+	func draw(ci: CanvasItem) -> void:
+		if phase != "wait":
+			super.draw(ci)

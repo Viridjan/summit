@@ -481,6 +481,28 @@ func check_shipped_world() -> void:
 	p().tap = {"interact": true}
 	step(3)
 	check(in_stairs == "lh1_lighthouse_stairs" and hw.room == "s3_lighthouse_top", "lighthouse: shore door into the stairs, top door out to the lamp (%s, %s)" % [in_stairs, hw.room])
+	# the sand cave: the Ape waits, wakes once the player passes its trigger and runs along their path;
+	# standing still gets the player caught, reaching the end makes it give up for the run
+	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
+	step(5)
+	var ape = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	var waited: bool = ape.phase == "wait" and not ape.hurts()
+	p().pos = Vector2(15 * 8, 35 * 8)
+	step(2)
+	var woke: bool = ape.phase == "roar"
+	step(300)
+	check(waited and woke and p().dead, "sand cave Ape: waits, roars past the trigger, catches a player who stands still (%s)" % ape.phase)
+	p().dead = false
+	ape.phase = "wait"
+	ape.trail.clear()
+	ape.rect.position = ape.start
+	p().pos = Vector2(15 * 8, 35 * 8)
+	step(2)
+	p().pos = Vector2(115 * 8, 9 * 8)
+	step(2)
+	var gave_up: bool = ape.phase == "dying"
+	step(90)
+	check(gave_up and ape.phase == "gone" and hw.broken.has(ape.id), "sand cave Ape: gives up for the run once the player reaches the end")
 	hw.queue_free()
 	sw.queue_free()
 	w = keep_w
@@ -1427,6 +1449,13 @@ func check_energy() -> void:
 	# HUD energy bars: one per block, filled by its share of the energy
 	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(35.0, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
+	Game.adv.energy = 0.19 * Adventure.energy_max(Game.adv)
+	var grey: bool = p().hair_color() == p().HAIR_USED
+	Game.adv.energy = 0.21 * Adventure.energy_max(Game.adv)
+	check(grey and p().hair_color() != p().HAIR_USED, "hair turns grey below 20% energy")
+	Game.adv.energy = 100.0
+	var Hud = load("res://scripts/world.gd").Hud
+	check(Hud.bar_color(0.0).is_equal_approx(Color("ff4a3a")) and Hud.bar_color(0.5).is_equal_approx(Color("ffd84a")) and Hud.bar_color(1.0).is_equal_approx(Color("7cf0c0")), "HUD energy bar colour: red empty, yellow half, mint full (%s %s %s)" % [Hud.bar_color(0.0), Hud.bar_color(0.5), Hud.bar_color(1.0)])
 
 	# water drains 2.08 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
 	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])

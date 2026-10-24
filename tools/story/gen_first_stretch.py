@@ -176,20 +176,34 @@ a1.ent("note", 17, 18, text="The Ape! Move towards it when it leaps: it lands pa
 a1.ent("note", 40, 18, text="Lure its leaps onto spikes")
 a1.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 
-# Right branch: a sand cave climbing at about 25-30 degrees, then the shore and the lighthouse
-s1 = Room("s1_sand_cave", "Sand Cave", 80, 46, "sand", fill="1")
-top = [39 - (x * 30) // 78 for x in range(80)]
-for a, b in ((24, 27), (52, 55)):            # flat stretches over pits
-    for x in range(a, b + 1): top[x] = top[a]
-for x in range(80):
+# Right branch: a long sand cave climbing at about 14 degrees (30 rows over 120 columns), then the shore and the
+# lighthouse. Jump-only challenges (no abilities yet), with the beaten Ape chasing the player up it.
+# The climb is 15 steps 2 tiles high (each costs one jump: 5 energy), with flats between them for the challenges.
+SW = 120
+s1 = Room("s1_sand_cave", "Sand Cave", SW, 46, "sand", fill="1")
+STEPS = [(k * SW + 8) // 16 for k in range(1, 16)]  # first column of each step: 8, 15, 23 ... 113
+top = [39 - 2 * sum(1 for b in STEPS if b <= x) for x in range(SW)]  # first solid row under the corridor
+for x in range(SW):
     s1.open(x, top[x] - 7, x, top[x] - 1)
-for a, b in ((24, 27), (52, 55)):            # breakable sand: crumble blocks over 2-deep pits
+def spike_pit(a, b):                         # 3 deep, spikes on its floor
+    s1.open(a, top[a], b, top[a] + 2)
+    s1.spikes_up(a, b, top[a] + 2)
+def crumble_bridge(a, b, spikes=False):      # breakable sand over a 2-deep pit
     s1.open(a, top[a], b, top[a] + 1)
+    if spikes: s1.spikes_up(a, b, top[a] + 1)
     s1.ents.append({"t": "crumble", "x": a * T, "y": top[a] * T, "w": (b - a + 1) * T, "h": 8})
-s1.ent("note", 3, top[3] - 1, text="The Ape screams and chases you up the cave (not built yet)")
-s1.ent("note", 12, top[12] - 1, text="Rocks fall and seal the cave behind you (not built yet)")
-s1.ent("note", 22, top[22] - 1, text="Breakable sand platforms: crumble blocks stand in")
-s1.ent("note", 70, top[70] - 1, text="Reward: the sword (not built yet; needs 2 energy blocks to use)")
+spike_pit(17, 19)
+crumble_bridge(24, 28)
+spike_pit(40, 43)
+s1.solid(54, top[54] - 7, 59, top[54] - 5)   # low ceiling: only a short hop clears the pit under it
+spike_pit(55, 57)
+crumble_bridge(76, 81, spikes=True)
+spike_pit(92, 95)
+spike_pit(107, 109)
+s1.ents.append({"t": "ape_chase", "x": 0, "y": top[0] * T - 32, "trigger": 12 * T, "end": 113 * T})
+s1.ent("note", 6, top[6] - 1, text="The Ape screams and chases you up the cave: don't stop")
+s1.ent("note", 112, top[112] - 1, text="Rocks fall and seal the cave behind you (not built yet): the Ape gives up here")
+s1.ent("note", 116, top[116] - 1, text="Reward: the sword (not built yet; needs 2 energy blocks to use)")
 
 s2 = Room("s2_shore", "Shore", 80, 23, "sea")
 s2.solid(0, 9, 14, 22); s2.solid(0, 0, 0, 0)  # the cliff we come out on, the mountain's foot
@@ -266,7 +280,7 @@ rooms = [(m, 0, 0), (j, 80, 0),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46),
-    (a1, 440, 46), (h1, 240, 100), (h2, 280, 100), (lh, 320, 100), (s1, 496, 23), (s2, 576, 23), (s3, 616, 0), (l1, 440, 69), (l2, 360, 69), (l3, 360, -2)]
+    (a1, 440, 46), (h1, 240, 100), (h2, 280, 100), (lh, 320, 100), (s1, 496, 23), (s2, 616, 23), (s3, 656, 0), (l1, 440, 69), (l2, 360, 69), (l3, 360, -2)]
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))
