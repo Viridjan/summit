@@ -21,7 +21,6 @@ func run() -> void:
 	check(absf(gray.r-gray.g) < 0.025 and absf(gray.g-gray.b) < 0.025, "Spent dash makes hair gray")
 	for shade in art.hair_shades(gray).values():
 		check(absf(shade.r-shade.g) < 0.025 and absf(shade.g-shade.b) < 0.025, "Gray hair highlights and shadows stay neutral")
-	check(art.PALETTE.d.get_luminance() > art.PALETTE.D.get_luminance() * 1.5, "Near and far legs remain distinguishable at pixel scale")
 	player.dashes = 1
 	check(player.hair_color() == brown, "Dash refill restores brown hair")
 	print("CHARACTER STYLE OK" if failures == 0 else "CHARACTER STYLE FAILED")

@@ -21,7 +21,7 @@ const PALETTE := {
 	"h": Color("a83c50"), "H": Color("e96962"), "L": Color("f2947d"),
 	"s": Color("f1c3a1"), "e": Color("28354b"),
 	"b": Color("3e79ad"), "B": Color("79b9d2"),
-	"p": Color("94615b"), "D": Color("354557"), "d": Color("718698"), "k": Color("c29a68"),
+	"p": Color("94615b"), "D": Color("4b5b6c"), "d": Color("718698"), "k": Color("c29a68"),
 }
 const STAND := [
 	"    HLLH    ",
@@ -48,6 +48,11 @@ const RUN_LOWER := [
 	["   pddDD    ", "    ddDD    ", "     dDD    ", "     kkk    "],
 	["   pddDD    ", "     DDd    ", "    DD dkk  ", "    kkk     "],
 	["   pddDD    ", "    DD dd   ", "    kk  dkk ", "            "],
+]
+# Dash carries the trailing knee up, then extends it without returning to a standing pose.
+const DASH_LOWER := [
+	["   pDDdd    ", "   DD dd    ", "  kk  dd    ", "      kkk   "],
+	["   pDDdd    ", "    DDdd    ", "   kk dd    ", "      kkk   "],
 ]
 # Full poses keep hands below the face and connect sleeves, hips and bent legs.
 const AIR_POSES := {
@@ -200,6 +205,8 @@ static func _pose(img: Image, origin: Vector2i, animation: String, i: int, color
 		rows[7] = ["  ppbbBBbb  ", "  ppbbBBbs  ", "  ppbbBBbbs ", "  ppbbBBbb  "][arm_phase]
 		if head_drop(animation, i):
 			rows = [""] + rows.slice(0, 7) + rows.slice(8)
+	elif animation == "dash":
+		rows = STAND.slice(0, 8) + DASH_LOWER[i]
 	elif AIR_POSES.has(animation):
 		rows = AIR_POSES[animation][i]
 	elif animation == "climb":
@@ -225,7 +232,7 @@ static func _pose(img: Image, origin: Vector2i, animation: String, i: int, color
 	if height < STANDING_HEIGHT:
 		return
 
-	if animation in ["dash", "fly"]:
+	if animation == "fly":
 		_box(img, origin, Rect2i(5, 14, 8, 2), Color.TRANSPARENT)
 		_box(img, origin, Rect2i(6 + lean, 14, 2, 2), colors["d"])
 		_box(img, origin, Rect2i(5 + lean, 15, 3, 1), colors["k"])

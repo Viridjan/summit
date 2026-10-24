@@ -83,3 +83,5 @@ Hitboxes, velocities, jump height and movement controls are unchanged.
 ### Leg and hair revision
 
 Slate trousers use a darker far leg and a lighter near leg, with warm tan boots. Revised run poses separate knee bends and planted feet. Hair is dark brown when a dash is available and neutral gray when empty; refilling restores brown. Head and trailing locks share the same neutral shading, without the former white cooldown flash.
+
+Dash now has two authored lower-body poses: a raised trailing knee and a compact extension. Softer trouser shading keeps the legs cohesive with the body.
