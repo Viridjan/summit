@@ -134,6 +134,29 @@ its first two tiles on both sides: floor (or a jump-through) at the doorway's fl
 headroom, no spikes or acid. `python3 tools/check_entrances.py worlds/story` lists the ones that
 aren't; `tests/test_story_entrances.py` keeps the story world at zero.
 
+## Runtime transition and boundary probes
+
+```sh
+env XDG_DATA_HOME=/tmp/summit-rs godot --headless --path . res://tools/room_safety.tscn
+env XDG_DATA_HOME=/tmp/summit-rs godot --headless --path . res://tools/room_safety.tscn -- --phase replay --output res://reports/story-room-safety-replays.json
+python3 tools/check_side_openings.py
+python3 tools/summarize_room_safety.py
+```
+
+All four default to the story world. `room_safety.tscn` uses the real player collision, bounds,
+door-arrival and room-entry methods with rendering and save writes disabled. It sweeps every integer
+alignment along shared room edges (standing and crouched, 1/4/8 px steps), doorway contact offsets and
+open outer edges; `--phase edges|doors|bounds` runs one part, and `--phase replay` runs three seeded story
+spots (Cove Tunnel into Cove Town, the net-trap door, the Meadow's open sky) through the 60 Hz state
+machine. `--world res://adventure/world.json --output /tmp/adventure-safety.json` checks another world.
+Exit code 1 = a failure was reproduced, 2 = bad configuration, 0 = none found.
+
+`check_side_openings.py` groups open left/right edge tiles that face no room or a neighbour's wall
+(usually harmless: the boundary clamps, or the player meets rock); `summarize_room_safety.py` combines
+everything into `reports/story-room-safety.md`. Last run: no escapes or embeds in ~12,000 edge crossings,
+~2,000 door arrivals and ~8,000 boundary probes; 7 side openings (3 facing a neighbour's rock, 4 on the
+Lighthouse Top's open-sky edges).
+
 ## Room environment artwork
 
 A level's optional `environment` field selects `sand`, `sea`, `cavern`,

@@ -290,3 +290,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: Hallownest (Hollow Knight) and Zebes (Metroid ZM) reference worlds removed, with their builder
   (tools/reference_worlds.py), the HK enemy placer, the room-safety probes and the hk-* reports. Worlds now:
   the main adventure and the story world.
+- 2026-10-24: room-safety probes, side-opening check and summary ported to the story world (they defaulted to HK);
+  no escapes found; 7 harmless side openings (Lighthouse Top's sky edges, 3 facing rock). Reports: reports/story-*.

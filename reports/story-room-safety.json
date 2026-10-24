@@ -1,0 +1,22 @@
+{
+	"counts": {
+		"bounds_valid_starts": 8369,
+		"door_crossings": 2024,
+		"door_valid_starts": 2024,
+		"edge_candidates": 58848,
+		"edge_crossings": 11751,
+		"edge_valid_starts": 12183
+	},
+	"coverage": "Every integer seam alignment in both directions, standing/crouched; every valid integer door contact; every open outer-boundary alignment. Uses actual move_exact, bounds, room-exit, door, and enter_room methods. Rendering/saves disabled; room collision data cached.",
+	"finding_groups": [],
+	"limits": "Local probes are seeded at collision-free edges, not reached from spawn. Cardinal steps; no diagonal/subpixel state-machine playthrough, corner-correction callbacks, hazard survival, or moving entities. Top 24px allowance and bottom death margin are intentional. Findings are reproducible local transition failures, not proof every seed is reachable in a run. No guarantee against all untested inputs/states.",
+	"phase": "all",
+	"replays": [],
+	"room_count": 18,
+	"step_sizes_px": [
+		1,
+		4,
+		8
+	],
+	"world": "res://worlds/story/world.json"
+}

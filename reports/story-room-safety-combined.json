@@ -1,0 +1,4503 @@
+{
+  "transitions": {
+    "counts": {
+      "bounds_valid_starts": 8369,
+      "door_crossings": 2024,
+      "door_valid_starts": 2024,
+      "edge_candidates": 58848,
+      "edge_crossings": 11751,
+      "edge_valid_starts": 12183
+    },
+    "coverage": "Every integer seam alignment in both directions, standing/crouched; every valid integer door contact; every open outer-boundary alignment. Uses actual move_exact, bounds, room-exit, door, and enter_room methods. Rendering/saves disabled; room collision data cached.",
+    "finding_groups": [],
+    "limits": "Local probes are seeded at collision-free edges, not reached from spawn. Cardinal steps; no diagonal/subpixel state-machine playthrough, corner-correction callbacks, hazard survival, or moving entities. Top 24px allowance and bottom death margin are intentional. Findings are reproducible local transition failures, not proof every seed is reachable in a run. No guarantee against all untested inputs/states.",
+    "phase": "all",
+    "replays": [],
+    "room_count": 18,
+    "step_sizes_px": [
+      1,
+      4,
+      8
+    ],
+    "world": "res://worlds/story/world.json"
+  },
+  "replays": [
+    {
+      "case": {
+        "at": [
+          308,
+          152
+        ],
+        "dir": [
+          1,
+          0
+        ],
+        "duck": false,
+        "label": "Cove Tunnel into Cove Town",
+        "room": "c3_cove_tunnel"
+      },
+      "first_embedded_tick": -1,
+      "first_outside_tick": -1,
+      "trace": [
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            308.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 0
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            309.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            33.3333320617676,
+            0.0
+          ],
+          "state": 0,
+          "tick": 1
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            310.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            50.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 2
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            311.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            66.6666641235352,
+            0.0
+          ],
+          "state": 0,
+          "tick": 3
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            312.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            83.3333282470703,
+            0.0
+          ],
+          "state": 0,
+          "tick": 4
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            314.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 5
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            315.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 6
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            317.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 7
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            318.0,
+            152.0
+          ],
+          "room": "c3_cove_tunnel",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 8
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            0.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 9
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            1.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 10
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            3.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 11
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            4.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 12
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            6.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 13
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            7.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 14
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            9.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 15
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            10.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 16
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            12.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 17
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            13.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 18
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            15.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 19
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            16.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 20
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            18.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 21
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            19.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 22
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            21.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 23
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            22.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 24
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            24.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 25
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            25.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 26
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            27.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 27
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            28.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 28
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            30.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 29
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            31.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 30
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            33.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 31
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            34.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 32
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            36.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 33
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            37.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 34
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            39.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 35
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            40.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 36
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            42.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 37
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            43.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 38
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            45.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 39
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            46.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 40
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            48.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 41
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            49.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 42
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            51.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 43
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            52.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 44
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            54.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 45
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            55.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 46
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            57.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 47
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            58.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 48
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 49
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 50
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 51
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 52
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 53
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 54
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 55
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 56
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 57
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 58
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 59
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 60
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 61
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 62
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 63
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 64
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 65
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 66
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 67
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 68
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 69
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 70
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 71
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 72
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 73
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 74
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 75
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 76
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 77
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 78
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 79
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 80
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 81
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 82
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 83
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 84
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 85
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 86
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 87
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 88
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            152.0
+          ],
+          "room": "t1_cove_town",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 89
+        }
+      ]
+    },
+    {
+      "case": {
+        "at": [
+          168,
+          152
+        ],
+        "dir": [
+          1,
+          0
+        ],
+        "door": "net",
+        "duck": false,
+        "label": "Net trap door to the treetops",
+        "room": "l2_net_trap"
+      },
+      "first_embedded_tick": -1,
+      "first_outside_tick": -1,
+      "trace": [
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            56.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            16.6666660308838,
+            0.0
+          ],
+          "state": 0,
+          "tick": 0
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            57.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            33.3333320617676,
+            0.0
+          ],
+          "state": 0,
+          "tick": 1
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            58.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            50.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 2
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            59.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            66.6666641235352,
+            0.0
+          ],
+          "state": 0,
+          "tick": 3
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            60.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            83.3333282470703,
+            0.0
+          ],
+          "state": 0,
+          "tick": 4
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            62.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 5
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            63.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 6
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            65.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 7
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            66.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 8
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            68.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 9
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            69.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 10
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            71.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 11
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            72.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 12
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            74.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 13
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            75.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 14
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            77.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 15
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            78.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 16
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            80.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 17
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            81.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 18
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            83.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 19
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            84.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 20
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            86.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 21
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            87.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 22
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            89.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 23
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            90.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 24
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            92.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 25
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            93.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 26
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            95.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 27
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            96.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 28
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            98.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 29
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            99.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 30
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            101.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 31
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            102.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 32
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            104.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 33
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            105.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 34
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            107.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 35
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            108.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 36
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            110.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 37
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            111.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 38
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            113.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 39
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            114.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 40
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            116.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 41
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            117.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 42
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            119.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 43
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            120.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 44
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            122.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 45
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            123.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 46
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            125.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 47
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            126.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 48
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            128.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 49
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            129.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 50
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            131.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 51
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            132.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 52
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            134.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 53
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            135.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 54
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            137.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 55
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            138.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 56
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            140.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 57
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            141.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 58
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            143.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 59
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            144.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 60
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            146.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 61
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            147.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 62
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            149.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 63
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            150.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 64
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            152.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 65
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            153.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 66
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            155.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 67
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            156.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 68
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            158.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 69
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            159.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 70
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            161.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 71
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            162.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 72
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            164.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 73
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            165.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 74
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            167.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 75
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            168.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 76
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            170.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 77
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            171.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 78
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            173.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 79
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            174.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 80
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            176.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 81
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            177.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 82
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            179.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 83
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            180.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 84
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            182.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 85
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            183.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 86
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            185.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 87
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            186.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 88
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            188.0,
+            160.0
+          ],
+          "room": "l3_treetop_village",
+          "speed": [
+            90.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 89
+        }
+      ]
+    },
+    {
+      "case": {
+        "at": [
+          320,
+          152
+        ],
+        "dir": [
+          0,
+          -1
+        ],
+        "duck": false,
+        "label": "Meadow open sky",
+        "room": "m1_meadow"
+      },
+      "first_embedded_tick": -1,
+      "first_outside_tick": -1,
+      "trace": [
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 0
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 1
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 2
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 3
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 4
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 5
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 6
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 7
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 8
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 9
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 10
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 11
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 12
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 13
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 14
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 15
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 16
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 17
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 18
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 19
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 20
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 21
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 22
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 23
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 24
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 25
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 26
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 27
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 28
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 29
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 30
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 31
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 32
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 33
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 34
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 35
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 36
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 37
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 38
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 39
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 40
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 41
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 42
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 43
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 44
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 45
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 46
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 47
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 48
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 49
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 50
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 51
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 52
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 53
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 54
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 55
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 56
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 57
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 58
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 59
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 60
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 61
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 62
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 63
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 64
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 65
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 66
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 67
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 68
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 69
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 70
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 71
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 72
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 73
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 74
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 75
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 76
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 77
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 78
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 79
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 80
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 81
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 82
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 83
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 84
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 85
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 86
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 87
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 88
+        },
+        {
+          "dead": false,
+          "embedded": false,
+          "outside_allowance": false,
+          "position": [
+            320.0,
+            152.0
+          ],
+          "room": "m1_meadow",
+          "speed": [
+            0.0,
+            0.0
+          ],
+          "state": 0,
+          "tick": 89
+        }
+      ]
+    }
+  ],
+  "side_openings": {
+    "world": "worlds/story",
+    "room_count": 18,
+    "checked_open_edge_tiles": 188,
+    "findings": [
+      {
+        "source": "c2_cave_teeth",
+        "side": "right",
+        "reason": "neighbour_wall",
+        "target": "c3_cove_tunnel",
+        "boundary_x_local_px": 320,
+        "y_start_px": 72,
+        "world_boundary_tile": [
+          200,
+          32
+        ],
+        "y_end_px_exclusive": 104
+      },
+      {
+        "source": "s1_sand_cave",
+        "side": "left",
+        "reason": "neighbour_wall",
+        "target": "a1_ape_arena",
+        "boundary_x_local_px": 0,
+        "y_start_px": 256,
+        "world_boundary_tile": [
+          496,
+          55
+        ],
+        "y_end_px_exclusive": 280
+      },
+      {
+        "source": "s2_shore",
+        "side": "left",
+        "reason": "neighbour_wall",
+        "target": "s1_sand_cave",
+        "boundary_x_local_px": 0,
+        "y_start_px": 8,
+        "world_boundary_tile": [
+          576,
+          24
+        ],
+        "y_end_px_exclusive": 16
+      },
+      {
+        "source": "s3_lighthouse_top",
+        "side": "left",
+        "reason": "no_adjacent_room",
+        "target": null,
+        "boundary_x_local_px": 0,
+        "y_start_px": 0,
+        "world_boundary_tile": [
+          616,
+          0
+        ],
+        "y_end_px_exclusive": 88
+      },
+      {
+        "source": "s3_lighthouse_top",
+        "side": "left",
+        "reason": "no_adjacent_room",
+        "target": null,
+        "boundary_x_local_px": 0,
+        "y_start_px": 104,
+        "world_boundary_tile": [
+          616,
+          13
+        ],
+        "y_end_px_exclusive": 184
+      },
+      {
+        "source": "s3_lighthouse_top",
+        "side": "right",
+        "reason": "no_adjacent_room",
+        "target": null,
+        "boundary_x_local_px": 320,
+        "y_start_px": 0,
+        "world_boundary_tile": [
+          656,
+          0
+        ],
+        "y_end_px_exclusive": 88
+      },
+      {
+        "source": "s3_lighthouse_top",
+        "side": "right",
+        "reason": "no_adjacent_room",
+        "target": null,
+        "boundary_x_local_px": 320,
+        "y_start_px": 104,
+        "world_boundary_tile": [
+          656,
+          13
+        ],
+        "y_end_px_exclusive": 184
+      }
+    ],
+    "limits": "Static terrain edge checks, not spawn reachability. Counts maximal adjacent vertical spans with the same issue/target, not separate tiles. Does not flag sealed solid edges. Valid adjacent empty tiles still need whole-player clearance and movement checks. A no-room opening can be intentionally clamped by player bounds; it is not automatically a playable exit or an out-of-bounds exploit."
+  }
+}

@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from world_accessibility import Audit, main
+from check_side_openings import audit as audit_sides
 
 
 class AccessibilityTests(unittest.TestCase):
@@ -90,6 +91,25 @@ class AccessibilityTests(unittest.TestCase):
         path.write_text(json.dumps(level))
         with self.assertRaisesRegex(ValueError, "spawn is outside"):
             Audit(self.root)
+
+    def test_side_opening_into_void_is_grouped(self):
+        tiles = ["1111111", "0000001", "0000001", "1000001", "1111111"]
+        self.world({"a": (tiles, [])})
+        result = audit_sides(self.root)
+        self.assertEqual(len(result["findings"]), 1)
+        opening = result["findings"][0]
+        self.assertEqual((opening["reason"], opening["side"]), ("no_adjacent_room", "left"))
+        self.assertEqual((opening["y_start_px"], opening["y_end_px_exclusive"]), (8, 24))
+
+    def test_side_opening_distinguishes_wall_and_valid_exit(self):
+        a = ["1111111", "1000000", "1000000", "1000001", "1111111"]
+        b = ["1111111", "1000001", "0000001", "1000001", "1111111"]
+        self.world({"a": (a, []), "b": (b, [])}, {"a": [0, 0], "b": [7, 0]})
+        result = audit_sides(self.root)
+        self.assertEqual(len(result["findings"]), 1)
+        opening = result["findings"][0]
+        self.assertEqual((opening["source"], opening["target"], opening["reason"]), ("a", "b", "neighbour_wall"))
+        self.assertEqual((opening["y_start_px"], opening["y_end_px_exclusive"]), (8, 16))
 
     def test_overlap_rejected(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
