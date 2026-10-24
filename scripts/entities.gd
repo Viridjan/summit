@@ -126,6 +126,7 @@ class Ent extends RefCounted:
 		setup()
 
 	func setup() -> void: pass
+	func hurts() -> bool: return false  # true: touching it is damage, checked against the player's smaller damage_rect()
 	func update(_dt: float) -> void: pass
 	func draw(_ci: CanvasItem) -> void: pass
 	func touch(_p) -> void: pass  # player hurtbox overlaps touch_rect()
@@ -192,6 +193,7 @@ class SpawnMarker extends Ent:
 
 class Spikes extends Ent:
 	var dir := "up"
+	func hurts() -> bool: return true
 	func setup() -> void:
 		dir = (d.t as String).substr(7)
 		var p := rect.position
@@ -289,7 +291,7 @@ class Refill extends Ent:
 	var t := 0.0
 	func setup() -> void:
 		two = d.t == "refill_two"
-		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+		rect = Rect2i(rect.position.x, rect.position.y, 8, 8)  # exactly the sprite
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
@@ -314,7 +316,7 @@ class AbilityOrb extends Ent:  # adventure pickup that unlocks a move for the re
 	var t := 0.0
 	func setup() -> void:
 		ability = d.t.trim_prefix("ability_")
-		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 		collidable = w == null or not Game.has_ability(ability)  # already owned (or not in the adventure): gone
 	func update(dt: float) -> void:
 		t += dt
@@ -338,7 +340,7 @@ class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
 	var key := ""
 	var t := 0.0
 	func setup() -> void:
-		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 		if w != null:
 			key = "%s:%d:%d" % [w.room, int(d.x), int(d.y)]
 		collidable = w == null or (w.adventure() and not w.energy_block_taken(key))
@@ -363,7 +365,7 @@ class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
 class EnergyOrb extends Ent:  # adventure: refills energy, back after 2.5 s
 	var t := 0.0
 	func setup() -> void:
-		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+		rect = Rect2i(rect.position.x - 1, rect.position.y - 1, 10, 10)  # exactly the sprite
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
@@ -411,6 +413,7 @@ class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, ha
 # Small, deterministic enemies: hit() integrates with the existing melee sector.
 # A type id is "enemy_<family>" or "enemy_<family>_<variant>"; each family registers only the variants that suit it.
 class CombatEnemy extends Ent:
+	func hurts() -> bool: return true
 	# variant -> [speed, warning, recovery multipliers, body scale]
 	const VARIANTS := {
 		"": [1.0, 1.0, 1.0, 1.0],
@@ -514,7 +517,7 @@ class CombatEnemy extends Ent:
 		return true
 
 	func contact() -> void:
-		if w != null and w.player != null and not w.player.dead and rect.intersects(w.player.hurt_rect()):
+		if w != null and w.player != null and not w.player.dead and rect.intersects(w.player.damage_rect()):
 			touch(w.player)
 
 	func sees_player(distance: float) -> bool:
@@ -584,7 +587,7 @@ class CombatEnemy extends Ent:
 			puddles[i][1] -= dt
 			if puddles[i][1] <= 0:
 				puddles.remove_at(i)
-			elif puddles[i][0].intersects(w.player.hurt_rect()):
+			elif puddles[i][0].intersects(w.player.damage_rect()):
 				w.player.die(Vector2.UP)
 
 	func touch(p) -> void:
@@ -633,7 +636,7 @@ class CombatEnemy extends Ent:
 				if p.attacking() and to_shot.length() <= p.ATTACK_RANGE and absf(p.attack_dir.angle_to(to_shot)) <= deg_to_rad(p.ATTACK_ARC) / 2:
 					remove = true
 					break
-				if box.intersects(p.hurt_rect()):
+				if box.intersects(p.damage_rect()):
 					p.die(shot[1].normalized())
 					remove = true
 					break
@@ -973,6 +976,7 @@ class MurksporeEnemy extends CombatEnemy:
 
 
 class Liquid extends Ent:  # water: drains adventure energy (World.update_energy); acid: kills on touch (like spikes)
+	func hurts() -> bool: return d.t == "acid"
 	func setup() -> void:
 		collidable = d.t == "acid"
 	func touch(p) -> void:
@@ -1073,8 +1077,8 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 		if collidable and not following:
 			following = true
 			p.followers.append(self)
-	func touch_rect() -> Rect2i:
-		return rect if not following else Rect2i()
+	func touch_rect() -> Rect2i:  # exactly the sprite at rest
+		return Rect2i(rect.position + Vector2i(2, 2), Vector2i(6, 7)) if not following else Rect2i()
 	func vis_rect() -> Rect2i:  # drawn at pos, which trails the player
 		return Rect2i(Vector2i(pos) - Vector2i(8, 8), Vector2i(16, 16))
 	func draw(ci: CanvasItem) -> void:
@@ -1093,21 +1097,20 @@ class JumpThru extends Ent:
 		BlockArt.draw(ci, rect, "jumpthru")
 
 
-class Leaf extends JumpThru:  # a jump-through drawn as big leaves on a stem
+class Leaf extends JumpThru:  # a jump-through drawn as leaves on a stem, filling its box exactly
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
-		ci.draw_rect(Rect2(r.position + Vector2(0, 2), Vector2(r.size.x, 1)), Color("41673a"))  # stem
+		ci.draw_rect(Rect2(r.position + Vector2(0, r.size.y - 1), Vector2(r.size.x, 1)), Color("41673a"))  # stem
 		for x in range(0, int(r.size.x), 6):
-			ci.draw_rect(Rect2(r.position + Vector2(x, 0), Vector2(5, 3)), Color("7fc04e") if x % 12 else Color("6aa840"))
-			ci.draw_rect(Rect2(r.position + Vector2(x + 1, 0), Vector2(3, 1)), Color("b6e080"))
+			var lw := minf(5, r.size.x - x)
+			ci.draw_rect(Rect2(r.position + Vector2(x, 0), Vector2(lw, r.size.y - 1)), Color("7fc04e") if x % 12 else Color("6aa840"))
+			ci.draw_rect(Rect2(r.position + Vector2(x + 1, 0), Vector2(maxf(0, lw - 2), 1)), Color("b6e080"))
 
 
-class Waterfall extends Ent:  # falling water: inside it the player can't rise, and is pushed down
+class Waterfall extends Ent:  # falling water; the push is the player's waterfall layer (Player._layers)
 	var t := 0.0
 	func update(dt: float) -> void:
 		t += dt
-	func touch(p) -> void:
-		p.speed.y = maxf(p.speed.y, 90.0)
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		ci.draw_rect(r, Color(0.54, 0.78, 0.94, 0.45))
@@ -1287,7 +1290,7 @@ class Booster extends Ent:
 	var t := 0.0
 	func setup() -> void:
 		red = d.t == "booster_red"
-		rect = Rect2i(rect.position.x - 4, rect.position.y - 4, 16, 16)
+		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 	func update(dt: float) -> void:
 		t += dt
 		cannot_use = maxf(0, cannot_use - dt)
@@ -1316,7 +1319,7 @@ class Booster extends Ent:
 class Bumper extends Ent:
 	var t := 0.0
 	func setup() -> void:
-		rect = Rect2i(rect.position.x - 6, rect.position.y - 6, 20, 20)
+		rect = Rect2i(rect.position.x - 5, rect.position.y - 5, 18, 18)  # exactly the sprite
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
@@ -1335,6 +1338,8 @@ class Bumper extends Ent:
 
 
 class Feather extends Ent:
+	func touch_rect() -> Rect2i:  # exactly the sprite
+		return Rect2i(rect.position + Vector2i(1, 2), Vector2i(9, 9))
 	var t := 0.0
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
@@ -1356,6 +1361,8 @@ class Feather extends Ent:
 
 
 class Goal extends Ent:
+	func touch_rect() -> Rect2i:  # exactly the sprite
+		return Rect2i(rect.position + Vector2i(2, 4), Vector2i(11, 9))
 	var t := 0.0
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 4, rect.position.y - 4, 16, 16)

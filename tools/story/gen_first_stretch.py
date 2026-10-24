@@ -68,11 +68,15 @@ c.solid(146, 16, 148, 18); c.solid(168, 17, 171, 18)  # rocks to hop over
 c.solid(178, 13, 182, 13)                    # ledge
 c.open(70, G, 95, 20); c.water(70, G, 95, 20)  # the lake, in a dip
 c.open(199, 16, 199, 18)                     # right edge: rows 16..18 lead into Cove Town
-# lower cave (one screen, cols 80..119 rows 23..45): a hole in the lake floor drops into a deep lake
+# lower cave (one screen, cols 80..119 rows 23..45): a hole in the lake floor drops into a flooded deep lake
 c.open(88, 21, 91, 25)
 c.open(81, 26, 118, 40)
-c.water(81, 34, 118, 40)
 c.solid(98, 26, 108, 29)                     # ceiling tooth
+# One body of water, surface at the lake (row 19): the hole, all of Deep Lake and the shaft back up are under it.
+c.water(88, 21, 91, 22, top=False); c.water(114, G, 118, 22)  # hole and shaft, Lake Cave side
+c.water(88, 23, 91, 25, top=False); c.water(114, 23, 118, 25, top=False)  # the same, Deep Lake side
+c.water(81, 26, 97, 29, top=False); c.water(109, 26, 118, 29, top=False)  # either side of the tooth
+c.water(81, 30, 118, 40, top=False)
 c.open(114, G, 118, 25)                      # way back up: a shaft of jump-through platforms
 for y in (37, 34, 31, 28, 25, 22, 19):       # the top one (row 19) carries the cave floor over the shaft
     c.ents.append({"t": "jumpthru", "x": 114 * T, "y": y * T, "w": 5 * T, "h": 8})
@@ -130,8 +134,91 @@ j3.solid(32, 6, 46, 18); j3.open(32, 16, 46, 18)  # hill with a tunnel through i
 j3.solid(52, 2, 54, 16)                      # big trunk, hollow at the base
 leaf(j3, 56, 16, 3); leaf(j3, 59, 13, 4); leaf(j3, 56, 10, 3)  # up the trunk's right side
 j3.ent("strawberry", 57, 8)
-mosstrot(j3, 26, 18); mosstrot(j3, 70, 14)
-j3.ent("note", 75, 14, text="Boss 1, the Ape, waits past here (not built yet)")
+mosstrot(j3, 39, 5)  # on the tunnel hill's top, off the walking path
+j3.open(79, 11, 79, 14)                      # right edge rows 11..14 lead into the Ape's arena
+j3.ent("note", 75, 14, text="A deep roar ahead: the Ape's arena")
+
+# 6. The Ape's arena (section 1.6, the boss is not built yet) and the fork (1.7)
+def door(r, x, y, did, to): r.ents.append({"t": "door", "x": x * T, "y": y * T, "w": 2 * T, "h": 3 * T, "id": did, "to": to})
+a1 = Room("a1_ape_arena", "Ape Arena", 80, 23, "forest", fill="1")
+a1.open(1, 2, 78, G - 1); a1.open(0, 11, 0, 14); a1.open(79, 12, 79, 15)
+a1.solid(1, 15, 8, 18); a1.solid(71, 16, 78, 18)  # ledges at both exits (the right one is a 3-tile jump)
+a1.open(36, G, 43, 21); a1.spikes_up(36, 43, 21)  # the pit the trunk will bridge
+a1.ents.append({"t": "jumpthru", "x": 35 * T, "y": G * T, "w": 10 * T, "h": 8})  # stand-in for the fallen trunk
+a1.open(12, G, 15, 22)                       # left branch: down, back through the jungle
+a1.ent("note", 20, 18, text="Boss 1: the Ape (not built yet). Stone throw far, slam mid, scream near")
+a1.ent("note", 33, 18, text="Phase 1: a thrown stone knocks a trunk across this pit (the log stands in)")
+a1.ent("note", 50, 18, text="Phase 2: lure its slam onto spikes; more spikes grow after each hit")
+a1.ent("note", 10, 18, text="Left branch: down here, back through the jungle")
+a1.ent("note", 75, 15, text="Right branch: the sand cave")
+
+# Right branch: a sand cave climbing at about 25-30 degrees, then the shore and the lighthouse
+s1 = Room("s1_sand_cave", "Sand Cave", 80, 46, "sand", fill="1")
+top = [39 - (x * 30) // 78 for x in range(80)]
+for a, b in ((24, 27), (52, 55)):            # flat stretches over pits
+    for x in range(a, b + 1): top[x] = top[a]
+for x in range(80):
+    s1.open(x, top[x] - 7, x, top[x] - 1)
+for a, b in ((24, 27), (52, 55)):            # breakable sand: crumble blocks over 2-deep pits
+    s1.open(a, top[a], b, top[a] + 1)
+    s1.ents.append({"t": "crumble", "x": a * T, "y": top[a] * T, "w": (b - a + 1) * T, "h": 8})
+s1.ent("note", 3, top[3] - 1, text="The Ape screams and chases you up the cave (not built yet)")
+s1.ent("note", 12, top[12] - 1, text="Rocks fall and seal the cave behind you (not built yet)")
+s1.ent("note", 22, top[22] - 1, text="Breakable sand platforms: crumble blocks stand in")
+s1.ent("note", 70, top[70] - 1, text="Reward: the sword (not built yet; needs 2 energy blocks to use)")
+
+s2 = Room("s2_shore", "Shore", 80, 23, "sea")
+s2.solid(0, 9, 14, 22); s2.solid(0, 0, 0, 0)  # the cliff we come out on, the mountain's foot
+s2.solid(8, 2, 12, 2)                        # mountain ledge, out of reach for now
+s2.ent("strawberry", 10, 1)
+s2.ent("note", 4, 8, text="The mountain: clearly climbable, but not yet")
+s2.solid(15, G, 79, 22); s2.solid(79, 0, 79, 22)
+s2.open(56, G, 78, 21); s2.water(56, G, 78, 21)  # the sea
+s2.ent("note", 60, 18, text="Raft to the next island (not built): needs the lighthouse quest")
+s2.solid(44, 0, 44, 18); s2.solid(52, 0, 52, 18); s2.open(44, 16, 44, 18)  # lighthouse, door on the left
+for y in (16, 13, 10, 7, 4, 1):
+    s2.ents.append({"t": "jumpthru", "x": 45 * T, "y": y * T, "w": 7 * T, "h": 8})
+s2.ent("note", 41, 18, text="The lighthouse: climb to the top")
+
+s3 = Room("s3_lighthouse_top", "Lighthouse Top", 40, 23, "sky")
+s3.solid(4, 11, 4, 22); s3.solid(12, 11, 12, 22)  # the tower, continued from the shore
+for y in (20, 17, 14):
+    s3.ents.append({"t": "jumpthru", "x": 5 * T, "y": y * T, "w": 7 * T, "h": 8})
+s3.solid(0, 11, 3, 12); s3.solid(13, 11, 39, 12)  # the top: the silent village
+s3.ents.append({"t": "jumpthru", "x": 5 * T, "y": 11 * T, "w": 7 * T, "h": 8})
+s3.solid(24, 7, 26, 10)                      # the flame's pedestal
+s3.ent("note", 25, 6, text="Magic flame, aimed one way by mirrors (not built yet)")
+for i, x in enumerate((15, 19, 29, 33)):
+    s3.ent("note", x, 10, text='Silent villager (not built): "..."')
+s3.ent("note", 37, 10, text='Silent villager with a quest (not built): "..." Speak to them before the raft works')
+
+# Left branch: back through the jungle, a net trap, the treetop village
+l1 = Room("l1_jungle_depths", "Jungle Depths", 80, 23, "forest", fill="1")
+l1.open(1, 3, 78, G - 1); l1.open(12, 0, 15, 2); l1.open(0, 15, 0, 18)
+l1.solid(30, 14, 40, 18); l1.open(30, 17, 40, 18)  # hill with a low tunnel
+l1.open(60, G, 70, 20); l1.water(60, G, 70, 20)
+mosstrot(l1, 22, 18); mosstrot(l1, 52, 18)
+l1.ent("note", 8, 18, text="The Ape screams behind you; cross the jungle again (audio not built)")
+
+l2 = Room("l2_net_trap", "Net Trap", 80, 23, "forest", fill="1")
+l2.open(1, 3, 78, G - 1); l2.open(79, 15, 79, 18)
+leaf(l2, 50, 15, 4); leaf(l2, 44, 12, 4)
+mosstrot(l2, 60, 18)
+door(l2, 20, 16, "net", "l3_treetop_village:net")
+l2.ent("note", 25, 18, text="Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in")
+
+l3 = Room("l3_treetop_village", "Treetop Village", 80, 23, "forest", fill="1")
+l3.open(1, 2, 78, 19)                        # a floor of branches below: nobody falls here
+door(l3, 6, 17, "net", "l2_net_trap:net")
+for x, y, w in ((14, 17, 6), (23, 14, 6), (32, 11, 6), (43, 14, 8), (55, 11, 6), (64, 8, 8)):
+    l3.ents.append({"t": "jumpthru", "x": x * T, "y": y * T, "w": w * T, "h": 8})
+leaf(l3, 34, 8, 4)
+l3.ent("strawberry", 36, 6)
+l3.ent("note", 10, 19, text="Treetop village: platforming first, and you can't fall")
+l3.ent("note", 26, 13, text="Moving, oddly behaving bridges (not built): these jump-throughs stand in")
+l3.ent("note", 50, 19, text="Village NPCs (not built)")
+l3.ent("note", 68, 7, text="Reward: wall grab (not built yet)")
+l3.ent("note", 76, 19, text="Where the village leads: still open")
 
 # Lake Cave is built as one grid, then cut into rooms of its own (one per added screen).
 def cut(name, title, x0, y0, w, h):
@@ -147,7 +234,8 @@ rooms = [(m, 0, 0), (j, 80, 0),
     cut("c2_cave_teeth", "Cave Teeth", 120, 0, 40, 23),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
-    (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46)]
+    (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46),
+    (a1, 440, 46), (s1, 520, 23), (s2, 600, 23), (s3, 640, 0), (l1, 440, 69), (l2, 360, 69), (l3, 440, 23)]
 for r, _, _ in rooms:
     r.save()
 json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms}},

@@ -44,6 +44,23 @@ class World:
                     self.items.setdefault((ex, ey), []).append((t, name, e))
                 elif t == "spawn" and name == self.start and not hasattr(self, "spawn"):
                     self.spawn = (ex, ey)
+        # doors: every cell of a door leads to the feet cell at the bottom middle of the door it names
+        self.doors = {}
+        for name, (ox, oy, lvl) in self.rooms.items():
+            for e in lvl["entities"]:
+                to = e.get("to", "")
+                if e["t"] != "door" or not to:
+                    continue
+                rn, did = to.split(":", 1) if ":" in to else (name, to)
+                if rn not in self.rooms:
+                    continue
+                dox, doy, dl = self.rooms[rn]
+                for t in dl["entities"]:
+                    if t["t"] == "door" and t.get("id") == did:
+                        dest = (dox + (int(t["x"]) + int(t.get("w", T)) // 2) // T, doy + (int(t["y"]) + int(t.get("h", T))) // T - 1)
+                        for c in range(int(e.get("w", T)) // T):
+                            for r in range(int(e.get("h", T)) // T):
+                                self.doors[(ox + int(e["x"]) // T + c, oy + int(e["y"]) // T + r)] = dest
         # the player may rise up to 3 tiles (24px) above a room's top edge (Player._enforce_bounds)
         for name, (ox, oy, lvl) in self.rooms.items():
             for x in range(lvl["w"]):
@@ -90,6 +107,8 @@ def explore(W, m, abilities, starts, goal=None, good=None):
         s = q.popleft()
         x, y, mode, k, dash, lock, stam = s
         for c in ((x, y), (x, y - 1)):
+            if c in W.doors:
+                push((*W.doors[c], "F", 0, dash, 0, stam))
             for it in W.items.get(c, ()):
                 touched.setdefault(it[0] + ":" + it[1] + ":%d,%d" % c, (x, y))
                 if goal and it[0] == goal:

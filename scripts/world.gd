@@ -69,6 +69,9 @@ var hud: Label
 var note_label: Label  # design note under the player (entities.gd Note)
 var note_t := 0.0
 var spawn_queue: Array = []  # entity dicts to add after this tick (spawn_entity); never saved
+# Adventure: the room just left keeps drawing its objects (frozen) until the camera has left it.
+var leaving_ents: Array = []
+var leaving_rect := Rect2()  # that room, in this room's coordinates
 var pending_door = null  # door touched this tick (Door entity); used after the touch loop
 var door_block := Rect2i()  # the door we arrived on: ignored until the player steps off it
 var overlay: Control
@@ -146,6 +149,7 @@ func _build(keep_player := false) -> void:
 		for x in gw:
 			grid[y * gw + x] = 1 if row.unicode_at(x) == 49 else 0
 	bounds = Rect2i(0, 0, gw * T, gh * T)
+	leaving_ents = []
 	ents.clear(); solids.clear(); jumpthrus.clear(); dreams.clear(); spikes.clear(); touchables.clear(); spawn_queue.clear()
 	total_berries = 0
 	spawn = Vector2(gw * T / 2.0, 16)
@@ -258,7 +262,11 @@ func enter_room(next: String, at = null) -> void:
 	data = Game.adv_world.rooms[room].level
 	tiles = []
 	player.followers.clear()  # unbanked stars go back to their room
+	var left := ents.duplicate()
+	var left_size := Vector2(gw * T, gh * T)
 	_build(true)
+	leaving_ents = left
+	leaving_rect = Rect2(old_origin - room_origin, left_size)
 	player.pos = global - room_origin if at == null else at
 	if went_up and at == null:  # Celeste-style lift so an upward exit doesn't fall straight back
 		player.speed.y = minf(player.speed.y, player.JUMP_SPEED)
@@ -381,9 +389,12 @@ func update_energy(dt: float) -> void:
 		player.die(Vector2.UP)
 
 func in_water() -> bool:
-	var r: Rect2i = player.hurt_rect()
+	return liquid_at(player.hurt_rect(), "water")
+
+# True when r overlaps an entity of type t (water, waterfall...).
+func liquid_at(r: Rect2i, t: String) -> bool:
 	for e in touchables:
-		if e.d.t == "water" and e.rect.intersects(r):
+		if e.d.t == t and e.rect.intersects(r):
 			return true
 	return false
 
@@ -480,10 +491,11 @@ func touching_spikes(r: Rect2i) -> bool:
 
 func player_touch(p) -> void:
 	var hr: Rect2i = p.hurt_rect()
+	var dr: Rect2i = p.damage_rect()
 	for e in touchables:
 		if p.dead or done:
 			return
-		if e.collidable and e.touch_rect().intersects(hr):
+		if e.collidable and e.touch_rect().intersects(dr if e.hurts() else hr):
 			e.touch(p)
 
 # ---------------- events ----------------
@@ -613,9 +625,22 @@ func _clamp_cam(t: Vector2) -> Vector2:
 	var y := b.get_center().y if b.size.y <= VIEW.y else clampf(t.y, half.y, b.end.y - half.y)
 	return Vector2(x, y)
 
+# Where the view would settle with the camera in room area (as _clamp_cam does for this room).
+func _rest_view(view: Rect2, area: Rect2) -> Rect2:
+	var x := area.get_center().x - VIEW.x / 2 if area.size.x <= VIEW.x else clampf(view.position.x, area.position.x, area.end.x - VIEW.x)
+	var y := area.get_center().y - VIEW.y / 2 if area.size.y <= VIEW.y else clampf(view.position.y, area.position.y, area.end.y - VIEW.y)
+	return Rect2(x, y, VIEW.x, VIEW.y)
+
 func _draw_background(ci: CanvasItem) -> void:
 	var view := Rect2(cam.position - VIEW / 2.0, VIEW)
 	Art.draw_background(ci, view, time, data.get("environment", ""), Rect2(0, 0, data.w * T, data.h * T))
+	if adventure():  # each themed room's painting belongs to its room: it slides in and out with it in a transition
+		for n in [room] + near_layers.keys():
+			var r: Dictionary = Game.adv_world.rooms[n]
+			var area := Rect2(Vector2(r.pos * T) - room_origin, Vector2(r.level.w, r.level.h) * T)
+			var env: String = r.level.get("environment", "")
+			if area.intersects(view) and env in Art.EnvironmentArt.THEMES:
+				Art.EnvironmentArt.draw_background(ci, _rest_view(view, area), env, area, area.intersection(view))
 	for s in (snow if data.get("environment", "") == "" else []):
 		ci.draw_rect(Rect2((view.position + s).floor(), Vector2.ONE), Color(1, 1, 1, 0.35))
 
@@ -624,13 +649,28 @@ func _draw() -> void:
 	background.queue_redraw()
 	var view := Rect2(cam.position - VIEW / 2.0, VIEW)
 	var cull := Rect2i(view.position.floor(), view.size.ceil()).grow(1)
+	var over: Array = []  # water and waterfalls draw over the player
 	for e in ents:
 		if e.vis_rect().intersects(cull):  # offscreen entities still update, just don't draw
-			e.draw(self)
+			if e.d.t == "water" or e.d.t == "waterfall":
+				over.append(e)
+			else:
+				e.draw(self)
+	if not leaving_ents.is_empty():
+		if not leaving_rect.intersects(view):  # the transition is over
+			leaving_ents = []
+		draw_set_transform(leaving_rect.position)
+		var old_cull := Rect2i(cull.position - Vector2i(leaving_rect.position), cull.size)
+		for e in leaving_ents:
+			if e.vis_rect().intersects(old_cull):
+				e.draw(self)
+		draw_set_transform(Vector2.ZERO)
 	_draw_floor_gaps()
 	for t in trails:
 		draw_rect(t[0], Color(t[1], minf(t[2] * 1.5, 0.6)))
 	player.draw(self)
+	for e in over:
+		e.draw(self)
 	for pt in parts:
 		draw_rect(Rect2(pt[0].floor(), Vector2.ONE), Color(pt[3], clampf(pt[2] * 3, 0, 1)))
 	if Game.settings.hitboxes:
@@ -641,11 +681,11 @@ func _draw_hitboxes(cull: Rect2i) -> void:
 	for e in ents:
 		if not e.vis_rect().intersects(cull):
 			continue
-		if e.collidable:
-			draw_rect(Rect2(e.rect), Color(1, 0.9, 0.2, 0.8), false, 1.0)
-		var t: Rect2i = e.touch_rect()
-		if t != e.rect or not e.collidable:
-			draw_rect(Rect2(t), Color(1, 0.5, 0.1, 0.8), false, 1.0)
+		if e.solid or e.jumpthru:  # what the player collides with
+			if e.collidable:
+				draw_rect(Rect2(e.rect), Color(1, 0.9, 0.2, 0.8), false, 1.0)
+		elif e.touch_rect().has_area():  # what the player touches: pickups, hazards, triggers
+			draw_rect(Rect2(e.touch_rect()), Color(1, 0.5, 0.1, 0.8) if e.collidable else Color(1, 0.5, 0.1, 0.3), false, 1.0)
 	draw_rect(Rect2(player.hitbox()), Color(0.2, 1, 0.3, 0.9), false, 1.0)
 	if player.attacking():
 		var c: Vector2 = player.center()

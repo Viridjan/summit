@@ -40,10 +40,19 @@ static func parallax_shift(view: Rect2, area: Rect2) -> Vector2:
 	if area.size.x > view.size.x: t.x = clampf((view.position.x - area.position.x) / (area.size.x - view.size.x), 0, 1)
 	if area.size.y > view.size.y: t.y = clampf((view.position.y - area.position.y) / (area.size.y - view.size.y), 0, 1)
 	return (Vector2(0.5, 0.5) - t) * 2 * slack
-static func draw_background(ci: CanvasItem, view: Rect2, environment: String, area := Rect2()) -> void:
+# clip (optional): draw only inside it, e.g. one room's part of the screen during a room transition.
+static func draw_background(ci: CanvasItem, view: Rect2, environment: String, area := Rect2(), clip := Rect2()) -> void:
 	# Room-sized paintings that stay with the camera; only the perspective shifts (parallax_shift).
 	var extent := view.size * 1.2
 	var slack := view.size * 0.1
 	var shift := parallax_shift(view, area)
-	ci.draw_texture_rect(texture(environment,"background"),Rect2(view.position + (shift * 0.4 - slack).floor(),extent),false)
-	ci.draw_texture_rect(texture(environment,"foreground"),Rect2(view.position + (shift - slack).floor(),extent),false)
+	_painting(ci, texture(environment, "background"), Rect2(view.position + (shift * 0.4 - slack).floor(), extent), clip)
+	_painting(ci, texture(environment, "foreground"), Rect2(view.position + (shift - slack).floor(), extent), clip)
+static func _painting(ci: CanvasItem, tex: Texture2D, dest: Rect2, clip: Rect2) -> void:
+	if not clip.has_area():
+		ci.draw_texture_rect(tex, dest, false)
+		return
+	var part := dest.intersection(clip)
+	if part.has_area():
+		var k := tex.get_size() / dest.size
+		ci.draw_texture_rect_region(tex, part, Rect2((part.position - dest.position) * k, part.size * k))

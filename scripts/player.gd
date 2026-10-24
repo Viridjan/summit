@@ -120,6 +120,15 @@ const HB_NORMAL := Rect2i(-4, -11, 8, 11)
 const HB_DUCK := Rect2i(-4, -6, 8, 6)
 const HB_FLY := Rect2i(-4, -10, 8, 8)
 const HURT_NORMAL := Rect2i(-4, -11, 8, 9)
+# Environment layers: modifiers applied on top of whatever state runs (_layers), never states of their own.
+const WATER_MAX_FALL := 40.0  # underwater: buoyancy caps sinking...
+const WATER_BUOYANCY := 0.6  # ...and cancels this share of gravity
+const WATER_MAX_RISE := 110.0
+const WATER_MAX_X := 55.0  # drag pulls faster speeds down to this
+const WATER_DRAG := 500.0
+const WATER_STROKE := -80.0  # jump while swimming (off the ground)
+const WATERFALL_PUSH := 90.0  # inside a waterfall: can't rise, pushed down at least this fast
+const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)
 
@@ -138,6 +147,9 @@ var hurtbox := HURT_NORMAL
 var state := ST_NORMAL
 var prev_state := ST_NORMAL
 var dead := false
+var underwater := false  # layer: centre inside water (_layers)
+var in_waterfall := false  # layer: hurtbox inside a waterfall
+var bubble_t := 0.0
 
 var on_ground := false
 var was_on_ground := false
@@ -262,6 +274,13 @@ func hitbox() -> Rect2i:
 func hurt_rect() -> Rect2i:
 	return Rect2i(Vector2i(pos) + hurtbox.position, hurtbox.size)
 
+# What hazards and enemies test against: the hurtbox 20% smaller each way (pickups keep hurt_rect).
+# Centred sideways; the bottom edge stays put so floor spikes still reach the feet.
+func damage_rect() -> Rect2i:
+	var r := hurt_rect()
+	var s := Vector2i((Vector2(r.size) * DAMAGE_SCALE).round())
+	return Rect2i(r.position.x + (r.size.x - s.x) / 2, r.end.y - s.y, s.x, s.y)
+
 func center() -> Vector2:
 	return pos + Vector2(collider.position) + Vector2(collider.size) / 2.0
 
@@ -322,6 +341,26 @@ func dash_attacking() -> bool:
 
 func can_dash() -> bool:
 	return dash_buf > 0 and dash_cooldown_timer <= 0 and dashes > 0 and DASH_DIRS != 0
+
+# Environment layers on top of the current state: water (buoyancy, drag, swim strokes) and waterfalls (pushed down).
+func _layers(dt: float) -> void:
+	underwater = w.liquid_at(Rect2i(Vector2i(center()), Vector2i.ONE), "water")
+	in_waterfall = w.liquid_at(hurt_rect(), "waterfall")
+	if underwater:
+		if not on_ground:
+			speed.y -= GRAVITY * WATER_BUOYANCY * dt
+			if state == ST_NORMAL and jump_pressed():
+				jump_buf = 0
+				speed.y = WATER_STROKE
+		speed.y = clampf(speed.y, -WATER_MAX_RISE, maxf(WATER_MAX_FALL, approach(speed.y, WATER_MAX_FALL, WATER_DRAG * 2 * dt)))
+		if absf(speed.x) > WATER_MAX_X:
+			speed.x = approach(speed.x, WATER_MAX_X * signf(speed.x), WATER_DRAG * dt)
+		bubble_t -= dt
+		if bubble_t <= 0:
+			bubble_t = 0.45
+			w.parts.append([center() + Vector2(facing * 3, -5), Vector2(0, -18), 0.9, Color(0.85, 0.95, 1.0)])
+	if in_waterfall:
+		speed.y = maxf(speed.y, WATERFALL_PUSH)
 
 func jump_pressed() -> bool:
 	return jump_buf > 0
@@ -602,6 +641,7 @@ func update(dt: float) -> void:
 	_state_update(dt)
 	if dead:
 		return
+	_layers(dt)
 
 	# Actor.Update: lift speed resets each frame, with a short grace
 	lift_current = Vector2.ZERO
@@ -1224,9 +1264,15 @@ func _normal_update(dt: float) -> int:
 		else:
 			var_jump_timer = 0
 
-	# jumping
+	# jumping (down + jump on a jump-through drops through it: once inside it, it no longer holds the player)
 	if jump_pressed():
-		if jump_grace_timer > 0:
+		if in_y == 1 and on_ground and solid_first(Vector2.DOWN) == null and jumpthru_outside(Vector2.DOWN) != null:
+			jump_buf = 0
+			jump_grace_timer = 0
+			on_ground = false
+			pos.y += 1
+			speed.y = maxf(speed.y, 40.0)  # falling already, or the jump-thru assist would lift us back on top
+		elif jump_grace_timer > 0:
 			jump()
 		elif can_unduck():
 			if wall_jump_check(1):

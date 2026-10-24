@@ -45,6 +45,34 @@
 		"j3_jungle_hills": [
 			360,
 			46
+		],
+		"a1_ape_arena": [
+			440,
+			46
+		],
+		"s1_sand_cave": [
+			520,
+			23
+		],
+		"s2_shore": [
+			600,
+			23
+		],
+		"s3_lighthouse_top": [
+			640,
+			0
+		],
+		"l1_jungle_depths": [
+			440,
+			69
+		],
+		"l2_net_trap": [
+			360,
+			69
+		],
+		"l3_treetop_village": [
+			440,
+			23
 		]
 	}
 }

@@ -236,3 +236,14 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: water drains adventure energy (0.5/s, no regen in water); 0 energy in water = death.
 - 2026-10-24: backgrounds no longer jump: the parallax shift follows the camera's place in the room,
   bounded by the 10% overscan (EnvironmentArt.parallax_shift), instead of wrapping.
+- 2026-10-24: room transitions: the old room's objects stay drawn until the camera has left it; each themed
+  room's background is pinned to its room and slides in/out with it. Hazards and enemies hit a box 20%
+  smaller than the hurtbox (Player.damage_rect; pickups keep the full one). Exit-time texture leak warnings
+  fixed (art caches cleared on quit; no const preloads of cached scripts in the Game autoload).
+- 2026-10-24: story rooms past the jungle: Ape Arena, the right branch (Sand Cave, Shore, Lighthouse Top)
+  and the left branch (Jungle Depths, Net Trap, Treetop Village); 18 rooms, all reachable with jump only.
+  tools/world_check.py now follows doors.
+- 2026-10-24: player environment layers (Player._layers, on top of any state): underwater (buoyancy,
+  drag, swim stroke, bubbles; water draws over the player) and waterfall (pushed down, can't rise).
+  Lake Cave's water now fills the hole, Deep Lake and the shaft. Down + jump drops through jump-throughs.
+  Pickups and platforms touch exactly what they draw (tools/check_hitboxes.tscn checks it).

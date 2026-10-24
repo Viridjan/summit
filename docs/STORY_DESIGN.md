@@ -119,6 +119,7 @@ Regeneration:
 - Only inside the current block: a block that is fully spent doesn't refill.
 
 Water:
+- Underwater is a layer on top of the player's state: slow sinking, drag, and jump becomes a swim stroke. Waterfalls are a layer too: inside one the player is pushed down and can't rise.
 - Staying in water costs 0.05 energy every 0.1 s (0.5 per second), and energy doesn't regenerate there.
 - Running out of energy in water is a death (drowning).
 
@@ -137,11 +138,12 @@ Water:
 
 ## 6. Built so far
 
-`worlds/story/` (Adventure menu → World: Story), 8 rooms, jump only:
+`worlds/story/` (Adventure menu → World: Story), 18 rooms, jump only:
 Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
-NPCs, the quest, the roar, the house doors and the Ape arena are notes in the rooms for now.
+Past the jungle: the Ape Arena (the fight is notes; a log stands in for the fallen trunk over a spiked pit), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
+NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
 `tools/story/gen_first_stretch.py` generated these rooms once; edit them in-game from now on.
 `tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.
 

@@ -42,11 +42,13 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Cove Town houses enterable through doors (placeholder note in the room)
 - [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end
-- [ ] Ape boss arena: falling-trunk crossing, spikes that grow with each hit
-- [ ] Right branch: 30° sand cave, Ape chase, rock fall seals it; sword reward
-- [ ] Shore: unclimbable mountain to the left (hints, collectibles), raft to the right
-- [ ] Lighthouse silent village (4-5 "..." NPCs, one quest NPC)
-- [ ] Left branch: jungle again, net capture, treetop village (no falling), moving bridges; wall grab reward
+- [x] Ape boss arena room (`a1_ape_arena`): spiked pit with a log standing in for the fallen trunk, ledges at both exits, a hole down to the left branch; the fight itself is notes until the boss exists
+- [x] Right branch room: sand cave climbing at about 25° (`s1_sand_cave`), crumble blocks over pits stand in for breakable sand
+- [ ] Sand cave: Ape chase, rock fall that seals it, sword reward (notes for now)
+- [x] Shore (`s2_shore`): the mountain's foot with a star out of reach, the sea, the lighthouse tower; raft is a note
+- [x] Lighthouse top (`s3_lighthouse_top`): silent village and the mirrored flame as notes until NPCs exist
+- [x] Left branch rooms: Jungle Depths (`l1_jungle_depths`), Net Trap (`l2_net_trap`, a door stands in for the net lift), Treetop Village (`l3_treetop_village`, a branch floor so nobody falls; jump-throughs stand in for the moving bridges)
+- [ ] Left branch: net capture animation, moving bridges, wall grab reward (notes for now)
 - [ ] Treetop Village: decide where the player goes after it (exits, next area, whether the two branches meet again)
 
 ### Boss: the Ape

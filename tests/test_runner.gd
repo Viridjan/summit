@@ -349,7 +349,7 @@ func check_shipped_world() -> void:
 	for rn in story.rooms:
 		story_ents += story.rooms[rn].level.entities.map(func(e): return e.t)
 	check(story_ents.has("energy_block") and story_ents.filter(func(t): return t.begins_with("enemy")).all(func(t): return t == "enemy_mosstrot"), "story has the town's energy block, and its only enemies are calm Mosstrots")
-	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave -> deep lake (falls in) -> back up -> cove town -> jungle
+	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave (swims over the hole) -> cove town -> jungle
 	Game.adv_world = story
 	Game.adv = Adventure.new_run(story)
 	Game.adv_temp = true
@@ -363,6 +363,7 @@ func check_shipped_world() -> void:
 	p().hold = {"right": true, "jump": true}
 	var story_seen := [sw.room]
 	var walk := 0
+	var kept_old := false
 	var jumped_at := -1.0
 	for i in 12000:
 		if sw.room == "j3_jungle_hills" and p().pos.x > 72 * 8 or p().dead:
@@ -380,7 +381,10 @@ func check_shipped_world() -> void:
 		step()
 		if sw.room != story_seen[-1]:
 			story_seen.append(sw.room)
-	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "c4_deep_lake", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+			if sw.room == "j2_jungle_falls":  # dropped in from Jungle Edge, one screen above
+				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == Rect2(0, -23 * 8, 40 * 8, 23 * 8)
+	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
 	sw.queue_free()
 	w = keep_w
 	Game.adv = {}
@@ -603,6 +607,21 @@ func check_connected_block_art() -> void:
 	var unique_colors := {}
 	for color in samples: unique_colors[color] = true
 	check(unique_colors.size() == 6, "special block materials have distinct colours")
+
+func check_new_enemy_sprite_animation() -> void:
+	var art = load("res://scripts/enemy_art.gd")
+	var atlas: Image = art.atlas()
+	for family in ["enemy_mosstrot", "enemy_cragjaw", "enemy_murkspore"]:
+		var frames := {}
+		var row: int = art.KINDS.find(family)
+		var bounded := true
+		for frame in 4:
+			var image := atlas.get_region(Rect2i(frame*art.SIZE,row*art.SIZE,art.SIZE,art.SIZE))
+			frames[image.get_data().hex_encode()] = true
+			var used := image.get_used_rect()
+			bounded = bounded and used.position.x >= 1 and used.position.y >= 1 and used.end.x < art.SIZE and used.end.y < art.SIZE
+		check(frames.size() == 4, "%s has four distinct animation poses" % family)
+		check(bounded, "%s animation stays inside its cell with a transparent margin" % family)
 
 func check_enemy_facing_alignment() -> void:
 	var art = load("res://scripts/enemy_art.gd")
@@ -1299,6 +1318,7 @@ func _ready() -> void:
 	check_environment_themes()
 	check_character_animation()
 	check_connected_block_art()
+	check_new_enemy_sprite_animation()
 	await check_enemy_facing_alignment()
 	await check_tile_layer()
 
@@ -1476,12 +1496,51 @@ func _ready() -> void:
 	check(held == 60 * 20, "infinite stamina keeps the player on the wall (held %d frames, min stamina %.1f)" % [held, min_st])
 	Game.settings.infinite_stamina = false
 
+	# environment layers (Player._layers) sit on top of the state machine: water and waterfalls
+	make_world([{"t": "water", "x": 0, "y": 8 * 8, "w": 60 * 8, "h": 22 * 8}])
+	p().pos = Vector2(88, 14 * 8)
+	step(40)
+	var sink: float = p().speed.y
+	var uw: bool = p().underwater and p().state == p().ST_NORMAL
+	p().tap = {"jump": true}
+	step()
+	check(uw and sink <= p().WATER_MAX_FALL + 0.01 and p().speed.y < 0, "underwater is a layer on the normal state: slow sinking (%s), a jump mid-water is a stroke (%s)" % [sink, p().speed.y])
+	make_world([{"t": "waterfall", "x": 64, "y": 0, "w": 48, "h": 30 * 8}])
+	p().pos = Vector2(88, 27 * 8)
+	step(5)
+	var fall_floor: float = p().pos.y
+	p().tap = {"jump": true}
+	var top_y := fall_floor
+	for k in 10:
+		step()
+		top_y = minf(top_y, p().pos.y)
+	check(p().in_waterfall and top_y >= fall_floor - 1, "a waterfall layer pushes down: no jumping up inside it (rose %s px)" % (fall_floor - top_y))
+
+	# down + jump on a jump-through drops through it; jump alone still jumps
+	make_world([{"t": "jumpthru", "x": 64, "y": 20 * 8, "w": 48, "h": 8}])
+	p().pos = Vector2(88, 20 * 8)
+	step(10)
+	var on_top: bool = p().on_ground and p().pos.y == 20 * 8
+	p().hold = {"down": true}
+	p().tap = {"jump": true}
+	step(20)
+	check(on_top and p().pos.y > 20 * 8 + 8, "down + jump drops through a jump-through (y %s)" % p().pos.y)
+	p().pos = Vector2(88, 20 * 8)
+	p().hold = {}
+	step(10)
+	p().tap = {"jump": true}
+	step(3)
+	check(p().pos.y < 20 * 8, "jump alone on a jump-through still jumps")
+
 	# spikes kill
 	make_world([{"t": "spikes_up", "x": 120, "y": 27 * 8}])
 	step(5)
 	p().hold = {"right": true}
 	step(40)
 	check(p().dead, "walking into spikes kills")
+	var hr: Rect2i = p().hurt_rect()
+	var dr: Rect2i = p().damage_rect()
+	check(dr.size == Vector2i((Vector2(hr.size) * 0.8).round()) and dr.end.y == hr.end.y and hr.encloses(dr), "hazards hit a box 20%% smaller than the hurtbox (%s in %s)" % [dr, hr])
 
 	# spring super bounce
 	make_world([{"t": "spring_up", "x": 104, "y": 27 * 8}])

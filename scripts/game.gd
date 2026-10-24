@@ -1,7 +1,6 @@
 extends Node
 # Autoload "Game": settings, controls, level files, save progress, screen switching.
 
-const ArtEnvironment := preload("res://scripts/environment_art.gd")
 const Entities := preload("res://scripts/entities.gd")
 const Tuning := preload("res://scripts/tuning.gd")
 const Adventure := preload("res://scripts/adventure.gd")
@@ -11,6 +10,16 @@ const WORLDS_DIR := "res://worlds/"  # extra worlds: one folder each with world.
 const SETTINGS_PATH := "user://settings.cfg"
 const SAVE_PATH := "user://save.cfg"
 var save_path := SAVE_PATH  # tests point this at a scratch file
+
+# Art caches live in static vars, which outlive the scene tree: drop them on quit so Godot
+# doesn't report the cached textures as leaked at exit.
+# They're loaded at runtime here: a const preload in this autoload would itself keep a script alive at exit.
+func _exit_tree() -> void:
+	load("res://scripts/environment_art.gd")._textures.clear()
+	load("res://scripts/block_art.gd")._textures.clear()
+	load("res://scripts/character_art.gd")._textures.clear()
+	load("res://scripts/art.gd")._hair_cache.clear()
+	load("res://scripts/enemy_art.gd")._texture = null
 
 # Default controls (Celeste keyboard layout + gamepad).
 const DEFAULT_KEYS := {
@@ -208,7 +217,7 @@ static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 	if not d is Dictionary:
 		return {}
 	var environment = d.get("environment", "")
-	if not environment is String or (environment != "" and environment not in ArtEnvironment.THEMES):
+	if not environment is String or (environment != "" and environment not in load("res://scripts/environment_art.gd").THEMES):
 		return {}
 	var w = d.get("w")
 	var h = d.get("h")
