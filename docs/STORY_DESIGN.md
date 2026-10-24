@@ -1,0 +1,146 @@
+# Story world: chapter 1
+
+Design notes from 2026-10-24. Not built yet; tasks are in `TODO.md` (Story world).
+More details will be added later.
+
+The player faces right from the start, and the route mostly moves right.
+
+## 1. Route
+
+### 1.1 Start: flat meadow
+- Mostly flat, a few jumps and a few spikes, nothing excessive.
+- No enemies.
+
+### 1.2 The big jump
+- A gap meant for a **wavedash**, not a normal jump.
+- Shape: a cone or triangle with the narrow point facing up.
+
+### 1.3 First lake and cave (below the jump)
+- A lake at the bottom, darker than the meadow.
+- A few tunnels that lead nowhere in particular.
+- **Roaring sounds come from the left** (stereo, panned left; see Audio). They hint at the ape.
+
+### 1.4 Cove or small city
+- Further right: a cove or small town with a couple of NPCs.
+- NPCs don't exist in the game yet (see Systems).
+- **The second energy block is collected here.**
+- Has at least one quest that rewards a skill point (true for every village).
+
+### 1.5 Jungle (right of the city)
+- A waterfall, lots of vegetation, a lake; the player drops down again here.
+- Big trees and tree trunks.
+- Enemies that aren't aggressive: they just walk back and forth.
+- Exploration: hills and tunnels, still heading right.
+- In a couple of places, platforms made of leaves can be reached.
+- New content: **leaf platforms**, a **forest** environment theme, **waterfall blocks**.
+
+### 1.6 Boss 1: the Ape (end of the jungle)
+See Bosses. Reward: a power-up, after which the hero is exhausted (see Energy).
+
+### 1.7 The fork after the Ape
+Past the Ape the path splits. Each side changes the story.
+
+**Right: sand cave → shore**
+- A cave full of sand and breakable platforms, climbing diagonally at about 30°, with some platforming.
+- Entering triggers the Ape's scream; **the Ape chases the player**.
+- At a small gap the player hears the Ape hit the wall; rocks fall and seal the cave behind them. This starts the second part.
+- Reward on this path: **the sword** (see Energy for its costs).
+- The sealed cave can't be re-entered, so the only way is right, to the shore.
+- The shore offers two options:
+  1. **Left: a mountain.** Clearly climbable, but beyond the player's current abilities. Hints that it can be climbed later; nothing else for now (maybe some collectibles).
+  2. **Right: a raft** ("zattera") to reach the next island to the right.
+- **Lighthouse:** next to the raft stands a big, primitive stone lighthouse. On top burns a magic flame, aimed in a single direction by mirrors.
+- **Silent village** at the top of the lighthouse: 4-5 NPCs who answer every interaction with "...". One NPC gives a quest; the raft can't be used until the player has spoken to them.
+
+**Left: jungle again → Treetop Village**
+- The Ape screams and the jungle has to be crossed again.
+- The player is caught by people with spears: a net on the floor snares them (needs a capture animation), and they are taken up into the trees.
+- **Treetop level:** platforming matters most here.
+- It starts with a **treetop village** where the player can't fall down.
+- Bridges between platforms: moving, oddly behaving bridges (needs a flexible bridge entity).
+- Reward on this path: **wall grab** (holding onto a vertical wall).
+- Still open: where the player goes after the village (TODO).
+
+## 2. Bosses
+
+Every boss is a gimmick boss, mostly based on platforming.
+
+### The Ape
+- Size: about 4 units. Comes back to life (reanimates).
+- The player dodges parabolic throws (like the Skeleton's), slime on the ground, and the scream.
+
+Attacks, chosen by distance to the player:
+
+| Attack | Range | Detail |
+|---|---|---|
+| Stone throw | far | Big stone: 2.5-unit sprite, 2x2-unit hitbox. Parabolic arc. |
+| Slam | mid | Jumps and slams the ground. Overshoots on purpose (below). |
+| Scream | near | Reaches 3 units around the Ape. |
+
+Gimmick:
+1. **Phase 1: the trunk.** The player stands on a specific spot to bait a throw and dodges it. The stone hits a target and knocks down a trunk, which becomes the way to the other side of the arena.
+2. **Phase 2: the spikes.** On the other side, trick the Ape into landing on spikes.
+   - The slam aims a bit **past** the player, not at them.
+   - Standing still still gets the player hit, because of the arc.
+   - Moving **toward** the Ape is completely safe, an easy dodge once learned.
+3. Repeat 3-4 times. After each hit the Ape screams and slams, and **more spikes appear**: the Ape gets easier to kill while the arena gets more dangerous.
+
+## 3. Energy
+
+Flavour: the hero is exhausted. Boss fights drain all their energy. After the Ape the player gets a power-up but is badly tired, and must collect pickups to recover.
+
+Energy is also health:
+- It replaces hearts. The icon is still undecided; it shows as **blocks**.
+- **1 block = 100 energy** in code. Every value below is in code units.
+- The game starts with **1 block**, so one hit kills during platforming (until a shield is unlocked later).
+- With 1 block the player can use one ability, then has to rest before using another.
+- The 2nd block comes from the first city.
+
+More energy unlocks more abilities:
+
+| Energy | Unlocks |
+|---|---|
+| some | jump about 10% higher |
+| more | attack |
+| more again | the cool abilities (some need even more) |
+
+The thresholds aren't set yet.
+
+Costs:
+- Sword: needs 2 blocks (200) to be used at all.
+- Sword swing: 10 per swing.
+- Sword hit: 15 more per enemy hit (25 for a swing that lands). Swing only when you mean it.
+- Wall grab: 20-30 per second while holding on.
+- Some abilities cost a whole block and have to be recovered before reuse.
+
+Regeneration:
+- About 3 energy per second.
+- Only inside the current block: a block that is fully spent doesn't refill.
+
+## 4. Skill points
+
+- Every village has at least one quest that rewards a skill point.
+- Skill points go into regeneration, damage, speed and other stats.
+- Later, active abilities can be bought with them too.
+
+## 5. Systems the story needs
+
+- **NPCs:** scripts don't exist yet. Needed: dialogue, a talk button, the "..." reply, quest flags (the raft needs the quest NPC).
+- **Interact button:** none exists yet.
+- **Positional audio:** a stereo engine where sounds attach to sprites and pan by position (enemy on the right → heard on the right). Above and below are harder; research how other games fake height (HRTF or elevation cues) before building.
+- **New content:** leaf platforms, forest environment theme, waterfall blocks, moving bridges, breakable sand platforms, net capture animation, raft, lighthouse.
+
+## 6. Decisions
+
+- 2026-10-24: the story world starts with **jump only**. Dash, climb and attack are adventure abilities unlocked by orbs (`Game.has_ability`).
+- 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
+
+## 7. Open questions
+
+1. **Big jump vs jump only:** the wavedash in section 1.2 needs dash, which the player doesn't have yet. Give dash before the jump, or make it a long normal jump?
+2. Energy thresholds for each unlock (+10% jump, attack, abilities).
+3. Energy icon to use instead of hearts.
+4. Where the Treetop Village leads.
+5. How the two branches meet again, if they do.
+6. Wall grab costs 20 or 30 per second?
+7. How much energy collectibles restore (the energy orb refills everything for now).
