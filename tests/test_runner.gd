@@ -340,8 +340,41 @@ func check_shipped_world() -> void:
 	Game.adv = {}
 	# reference worlds: listed in the menu, load, start with every ability
 	var listed: Array = Game.world_list()
-	check(listed.size() == 3 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world and the 2 reference worlds (%d)" % listed.size())
-	for w in listed.slice(1):
+	check(listed.size() == 4 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world, the story world and the 2 reference worlds (%d)" % listed.size())
+	# story world (docs/STORY_DESIGN.md): jump only at the start, the first stretch of rooms
+	var story := Adventure.load_world(Game.WORLDS_DIR + "story/world.json")
+	check(story.start == "m1_meadow" and story.rooms.size() >= 4 and Adventure.overlaps(story).is_empty() and Adventure.new_run(story).abilities.is_empty(), "story world loads, starts in the meadow with jump only (%d rooms)" % story.rooms.size())
+	var story_ents := []
+	for rn in story.rooms:
+		story_ents += story.rooms[rn].level.entities.map(func(e): return e.t)
+	check(story_ents.has("energy_block") and not story_ents.any(func(t): return t.begins_with("enemy")), "story start has the town's energy block and no enemies")
+	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave -> cove town
+	Game.adv_world = story
+	Game.adv = Adventure.new_run(story)
+	Game.adv_temp = true
+	Game.level = story.rooms[story.start].level
+	var sw = load("res://scripts/world.gd").new()
+	var keep_w = w
+	w = sw
+	add_child(sw)
+	sw.set_physics_process(false)
+	sw.player = Bot.new(sw, sw.spawn)
+	p().hold = {"right": true, "jump": true}
+	var story_seen := [sw.room]
+	for i in 6000:
+		if sw.room == "t1_cove_town" or p().dead:
+			break
+		if p().on_ground and p().speed.y >= 0:  # one ground jump per landing: a second buffered tap would wall-jump
+			p().tap["jump"] = true
+		step()
+		if sw.room != story_seen[-1]:
+			story_seen.append(sw.room)
+	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "t1_cove_town"] and sw.deaths == 0, "story bot reaches Cove Town with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	sw.queue_free()
+	w = keep_w
+	Game.adv = {}
+	Game.adv_temp = false
+	for w in listed.slice(1).filter(func(x): return not x[1].contains("/story/")):
 		var rw := Adventure.load_world(w[1])
 		var has_spawn: bool = rw.rooms.has(rw.start) and rw.rooms[rw.start].level.entities.any(func(e): return e.t == "spawn")
 		check(rw.rooms.size() > 10 and has_spawn and Adventure.overlaps(rw).is_empty() and Adventure.new_run(rw).abilities == ["dash", "climb", "attack"], "%s loads: %d rooms, spawn, no overlaps, starts with dash+climb+attack" % [w[0], rw.rooms.size()])

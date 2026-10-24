@@ -10,7 +10,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 ### Systems
 - [x] Energy as health: blocks of 100, start with 1 block, a hit costs a block (hazard respawn), last block = death; regen 3/s inside the current block (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
 - [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
-- [ ] Story world starts with jump only: its world.json gets `"abilities": []`
+- [x] Story world starts with jump only (`worlds/story`, `"abilities": []`)
 - [ ] Big wavedash jump is a later gate (needs dash): decide which later level gives dash
 - [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
 - [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
@@ -35,10 +35,10 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Wandering jungle enemy (walks back and forth, not aggressive)
 
 ### Rooms
-- [ ] Start meadow: flat, few jumps and spikes, no enemies
-- [ ] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked
-- [ ] First lake and dark cave with dead-end tunnels; roar panned left
-- [ ] Cove or small city: 2 NPCs, 2nd energy block, a quest
+- [x] Start meadow: flat, few jumps and spikes, no enemies (`m1_meadow`)
+- [x] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked (`m2_big_jump`, star on the far side)
+- [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); roar is a note until positional audio exists
+- [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [ ] Jungle: waterfall, lake, big trees and trunks, hills and tunnels, leaf platforms
 - [ ] Ape boss arena: falling-trunk crossing, spikes that grow with each hit
 - [ ] Right branch: 30° sand cave, Ape chase, rock fall seals it; sword reward

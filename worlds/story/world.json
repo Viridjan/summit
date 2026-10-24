@@ -1,0 +1,22 @@
+{
+	"start": "m1_meadow",
+	"abilities": [],
+	"rooms": {
+		"m1_meadow": [
+			0,
+			0
+		],
+		"m2_big_jump": [
+			80,
+			0
+		],
+		"c1_lake_cave": [
+			80,
+			23
+		],
+		"t1_cove_town": [
+			160,
+			23
+		]
+	}
+}

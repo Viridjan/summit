@@ -131,13 +131,20 @@ Regeneration:
 - **Positional audio:** a stereo engine where sounds attach to sprites and pan by position (enemy on the right → heard on the right). Above and below are harder; research how other games fake height (HRTF or elevation cues) before building.
 - **New content:** leaf platforms, forest environment theme, waterfall blocks, moving bridges, breakable sand platforms, net capture animation, raft, lighthouse.
 
-## 6. Decisions
+## 6. Built so far
+
+`worlds/story/` (Adventure menu → World: Story), 4 rooms, jump only:
+Meadow → The Big Jump (fall into the gap) → Lake Cave → Cove Town (energy block on a roof).
+NPCs, the quest, the roar and the jungle exit are notes in the rooms for now.
+`tests/test_runner.gd` runs a jump-only bot from the meadow to Cove Town.
+
+## 7. Decisions
 
 - 2026-10-24: the story world starts with **jump only**. Dash, climb and attack are adventure abilities unlocked by orbs (`Game.has_ability`).
 - 2026-10-24: the big jump gets nothing for now. It stays uncrossable until dash comes from a later level.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 
-## 7. Open questions
+## 8. Open questions
 
 1. Which later level gives dash, so the big jump (section 1.2) can be crossed.
 2. Energy thresholds for each unlock (+10% jump, attack, abilities).
