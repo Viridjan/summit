@@ -11,7 +11,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [x] Energy as health: blocks of 100, start with 1 block, a hit costs a block (hazard respawn), last block = death; regen 3/s inside the current block (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
 - [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
 - [ ] Story world starts with jump only: its world.json gets `"abilities": []`
-- [ ] Decide: big jump needs a wavedash, which needs dash; dash is locked at the start (give dash before the jump, or make it a plain long jump)
+- [ ] Big wavedash jump is a later gate (needs dash): decide which later level gives dash
 - [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
 - [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
 - [ ] Energy orb refills everything for now; decide how much collectibles restore
@@ -36,7 +36,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 
 ### Rooms
 - [ ] Start meadow: flat, few jumps and spikes, no enemies
-- [ ] Big wavedash jump (cone shape, tip up)
+- [ ] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked
 - [ ] First lake and dark cave with dead-end tunnels; roar panned left
 - [ ] Cove or small city: 2 NPCs, 2nd energy block, a quest
 - [ ] Jungle: waterfall, lake, big trees and trunks, hills and tunnels, leaf platforms

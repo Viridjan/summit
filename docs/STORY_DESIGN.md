@@ -14,6 +14,7 @@ The player faces right from the start, and the route mostly moves right.
 ### 1.2 The big jump
 - A gap meant for a **wavedash**, not a normal jump.
 - Shape: a cone or triangle with the narrow point facing up.
+- **Not crossable at the start:** the player has jump only, and a wavedash needs dash. It's a gate for later: the player returns once dash comes from a later level (which level is still open).
 
 ### 1.3 First lake and cave (below the jump)
 - A lake at the bottom, darker than the meadow.
@@ -133,11 +134,12 @@ Regeneration:
 ## 6. Decisions
 
 - 2026-10-24: the story world starts with **jump only**. Dash, climb and attack are adventure abilities unlocked by orbs (`Game.has_ability`).
+- 2026-10-24: the big jump gets nothing for now. It stays uncrossable until dash comes from a later level.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 
 ## 7. Open questions
 
-1. **Big jump vs jump only:** the wavedash in section 1.2 needs dash, which the player doesn't have yet. Give dash before the jump, or make it a long normal jump?
+1. Which later level gives dash, so the big jump (section 1.2) can be crossed.
 2. Energy thresholds for each unlock (+10% jump, attack, abilities).
 3. Energy icon to use instead of hearts.
 4. Where the Treetop Village leads.
