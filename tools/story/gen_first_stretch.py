@@ -1,6 +1,11 @@
-# One-off generator for worlds/story (chapter 1, first stretch). Rooms are edited in-game afterwards.
+# Generator for worlds/story (chapter 1). Rooms are edited in-game too, so it only rewrites the rooms
+# you name (their in-game edits are lost); "all" rewrites every room and world.json.
+#   python3 -I tools/story/gen_first_stretch.py worlds/story a1_ape_arena [more rooms...]
 import json, os, sys
 OUT = sys.argv[1]
+ONLY = set(sys.argv[2:])
+if not ONLY:
+    sys.exit("name the rooms to rewrite (or 'all'); in-game edits to them are lost")
 T = 8
 
 class Room:
@@ -241,8 +246,13 @@ rooms = [(m, 0, 0), (j, 80, 0),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46),
     (a1, 440, 46), (s1, 520, 23), (s2, 600, 23), (s3, 640, 0), (l1, 440, 69), (l2, 360, 69), (l3, 440, 23)]
-for r, _, _ in rooms:
+unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
+if unknown:
+    sys.exit("no such room: %s" % ", ".join(sorted(unknown)))
+written = [r for r, _, _ in rooms if "all" in ONLY or r.name in ONLY]
+for r in written:
     r.save()
-json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms}},
-          open(os.path.join(OUT, "world.json"), "w"), indent="\t")
-print("wrote", len(rooms), "rooms")
+if "all" in ONLY:
+    json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms}},
+              open(os.path.join(OUT, "world.json"), "w"), indent="\t")
+print("wrote", ", ".join(r.name for r in written))

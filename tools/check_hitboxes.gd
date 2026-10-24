@@ -32,6 +32,8 @@ func _ready() -> void:
 			await RenderingServer.frame_post_draw
 		var drawn := vp.get_texture().get_image().get_used_rect()
 		var touch: Rect2i = e.touch_rect() if not (e.solid or e.jumpthru) else e.rect
+		if e.has_method("body_boxes"):  # a shaped body (the Ape): its bands must sit inside the sprite
+			touch = drawn if e.body_boxes().all(func(b): return drawn.encloses(b)) else e.body_boxes()[0]
 		if drawn != touch:
 			bad += 1
 			print("MISMATCH %s: drawn %s, hitbox %s" % [t, drawn, touch])
