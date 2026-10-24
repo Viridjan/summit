@@ -311,3 +311,16 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: HUD energy bars drawn twice as long (0.92 px per energy).
 - 2026-10-24: energy bar colour follows energy / max: red empty, yellow at half, mint full (was orange under 30).
 - 2026-10-24: hair turns grey below 20% energy (adventure), same grey as a spent dash.
+- 2026-10-24: floor-walking enemies walk until their box's edge lines up with the end of the floor before turning (CombatEnemy.walk, pixel by pixel; was turning while still overhanging up to almost the whole box).
+- 2026-10-24: main menu: "Level Editor" replaced by "World Editor" (moved out of the Adventure menu; source runs only). Rooms are still edited in the level editor via World Editor → Edit room.
+- 2026-10-24: main menu: "Custom Levels" removed (level list, play/edit/delete).
+- 2026-10-24: Ape sounds: "ape_scream" (harsh shriek, the boss fight now opens with it) and "ape_scream_cave" (same with dark left/right cave echoes, the Sand Cave chase).
+- 2026-10-24: the Sand Cave Ape moves by the player's rules: a copy of the player's movement code (ChaseRunner) with
+  AI input (run at the player, jump 12 px before walls and at gaps), through a stand-in world (ChaseWorld) that only
+  forwards collision: no energy cost, no player sounds, can't die. Replaces the path-following version.
+- 2026-10-24: Ape scream five whole tones lower.
+- 2026-10-24: Sand Cave Ape only replays one planned run: when the chase starts, ApeChase.plan() simulates the player's
+  movement running right and tries take-off distances (px before a wall / past a gap's edge) until a run reaches the
+  end without touching spikes; the Ape follows that run frame by frame (cached per room). Sand Cave pits moved so each
+  starts 3 tiles after a step (the jump up a step carried straight into the pit).
+- 2026-10-24: stretch aspect "expand": on phones the touch controls sit at the real screen edges (TouchControls.at keeps each one's distance to the nearest edges); the world keeps its 1280x720 view centred with black bars (World.Letterbox).

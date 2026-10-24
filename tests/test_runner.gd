@@ -481,8 +481,8 @@ func check_shipped_world() -> void:
 	p().tap = {"interact": true}
 	step(3)
 	check(in_stairs == "lh1_lighthouse_stairs" and hw.room == "s3_lighthouse_top", "lighthouse: shore door into the stairs, top door out to the lamp (%s, %s)" % [in_stairs, hw.room])
-	# the sand cave: the Ape waits, wakes once the player passes its trigger and runs along their path;
-	# standing still gets the player caught, reaching the end makes it give up for the run
+	# the sand cave: the Ape waits, wakes once the player passes its trigger, and chases by the player's own
+	# movement rules; standing still gets the player caught, reaching the end makes it give up for the run
 	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
 	step(5)
 	var ape = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
@@ -490,14 +490,26 @@ func check_shipped_world() -> void:
 	p().pos = Vector2(15 * 8, 35 * 8)
 	step(2)
 	var woke: bool = ape.phase == "roar"
-	step(300)
-	check(waited and woke and p().dead, "sand cave Ape: waits, roars past the trigger, catches a player who stands still (%s)" % ape.phase)
+	step(400)
+	check(waited and woke and p().dead, "sand cave Ape: waits, screams past the trigger, catches a player who stands still (%s)" % ape.phase)
+	# it can climb the whole cave on its own: run at a player waiting at the top (it would give up there, so not yet)
 	p().dead = false
-	ape.phase = "wait"
-	ape.trail.clear()
-	ape.rect.position = ape.start
-	p().pos = Vector2(15 * 8, 35 * 8)
+	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
 	step(2)
+	ape = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	ape.d["end"] = 1e9
+	Game.settings.invincible = true
+	p().pos = Vector2(117 * 8, 9 * 8)
+	for i in 60 * 30:
+		step()
+	Game.settings.invincible = false
+	var touched := false
+	for f in ape.path:
+		var feet := Rect2i(int(f.x) - 3, int(f.y) - 8, 6, 8)
+		touched = touched or hw.touching_spikes(feet)
+	check(ape.path.size() > 60 and ape.path[-1].x >= 112 * 8 and not touched and ape.rect.end.y == int(ape.path[-1].y) and absf(ape.center().x - ape.path[-1].x) <= 1,
+		"sand cave Ape: replays a planned run up the whole cave, by the player's rules, never on spikes (%d frames to x %d)" % [ape.path.size(), ape.path[-1].x if not ape.path.is_empty() else -1])
+	ape.d["end"] = 113 * 8
 	p().pos = Vector2(115 * 8, 9 * 8)
 	step(2)
 	var gave_up: bool = ape.phase == "dying"
@@ -906,6 +918,14 @@ func check_combat_enemies() -> void:
 	p().pos = Vector2(400, 216)
 	for i in 240: enemy.update(DT)
 	check(enemy.rect.position.y == 148 and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Ossling patrol turns at ledges rather than walking into a pit")
+	# walkers go right up to the edge: the box's side lines up with the end of the floor before turning
+	make_world([{"t": "enemy_mosstrot", "x": 164, "y": 152}], [[20, 20], [21, 20]])
+	enemy = w.ents.filter(func(e): return e.d.t == "enemy_mosstrot")[0]
+	var reached := {}
+	for i in 600:
+		enemy.update(DT)
+		reached[enemy.rect.position.x] = true
+	check(reached.has(160) and reached.has(176 - enemy.rect.size.x) and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Mosstrot walks until its box is flush with each end of its floor (%s)" % [reached.keys()])
 
 func check_enemy_variants() -> void:
 	var art = load("res://scripts/enemy_art.gd")
@@ -1258,7 +1278,11 @@ func check_ape() -> void:
 	var slept: bool = ape.phase == "sleep"
 	p().pos = Vector2(300, floor_y)
 	step(5)
-	check(slept and ape.phase != "sleep", "the Ape wakes when the player comes near")
+	check(slept and ape.phase == "scream", "the Ape wakes when the player comes near, and the fight opens with its scream")
+	var sfx = Game.get_sfx()
+	var scream: AudioStreamWAV = sfx.streams.get("ape_scream")
+	var echoed: AudioStreamWAV = sfx.streams.get("ape_scream_cave")
+	check(scream != null and echoed != null and echoed.get_length() > scream.get_length() + 1.0, "the Ape has a scream, and an echoing cave version that rings on longer")
 	# a leap that meets the standing trunk fells it; then, outside its new range, it leaps across
 	make_world([{"t": "ape_trunk", "x": 200, "y": floor_y - 112, "w": 16, "h": 112},
 		{"t": "boss_ape", "x": 120, "y": floor_y - 32, "range": [40, 216], "range2": [330, 460]}])
@@ -1454,6 +1478,13 @@ func check_energy() -> void:
 	Game.adv.energy = 0.21 * Adventure.energy_max(Game.adv)
 	check(grey and p().hair_color() != p().HAIR_USED, "hair turns grey below 20% energy")
 	Game.adv.energy = 100.0
+	# touch controls keep their distance to the nearest screen edges on any screen shape (phones are wider than 16:9)
+	var tc = load("res://scripts/touch_controls.gd").new()
+	tc.size = Vector2(1560, 720)
+	check(tc.at(Vector2(1150, 600)) == Vector2(1430, 600) and tc.at(Vector2(190, 540)) == Vector2(190, 540) and tc.at(Vector2(1220, 50)) == Vector2(1500, 50), "touch controls hug the screen edges on a wide phone")
+	tc.size = Vector2(1280, 960)
+	check(tc.at(Vector2(1150, 600)) == Vector2(1150, 840) and tc.at(Vector2(190, 540)) == Vector2(190, 780), "touch controls hug the bottom on a tall screen")
+	tc.free()
 	var Hud = load("res://scripts/world.gd").Hud
 	check(Hud.bar_color(0.0).is_equal_approx(Color("ff4a3a")) and Hud.bar_color(0.5).is_equal_approx(Color("ffd84a")) and Hud.bar_color(1.0).is_equal_approx(Color("7cf0c0")), "HUD energy bar colour: red empty, yellow half, mint full (%s %s %s)" % [Hud.bar_color(0.0), Hud.bar_color(0.5), Hud.bar_color(1.0)])
 

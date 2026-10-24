@@ -574,15 +574,31 @@ class CombatEnemy extends Ent:
 				contact()
 		return hit
 
-	# Floor walkers: the next step has floor under it and no acid or spikes.
+	# Floor walkers: the next pixel ahead has floor under it and no acid or spikes, so a walker stops with
+	# its box's leading edge exactly over the edge of the ground.
 	func safe_step() -> bool:
-		var foot := Rect2i(rect.position.x + facing * 2, rect.end.y, rect.size.x, 2)
+		var foot := Rect2i(rect.end.x if facing > 0 else rect.position.x - 1, rect.end.y, 1, 2)
 		if w.collide_solid(foot) == null:
 			return false
 		for entity in w.touchables:
 			if entity.collidable and (entity.d.t == "acid" or entity.d.t.begins_with("spikes_")) and entity.rect.intersects(Rect2i(rect.position + Vector2i(facing * 2, 0), rect.size).grow(2)):
 				return false
 		return true
+
+	# Walks px forward one pixel at a time; true when a wall or the edge of the floor stops it.
+	var walk_rem := 0.0
+	func walk(px: float) -> bool:
+		walk_rem += px
+		var n := int(walk_rem)
+		walk_rem -= n
+		for i in n:
+			var next := Rect2i(rect.position + Vector2i(facing, 0), rect.size)
+			if not safe_step() or blocked(next):
+				walk_rem = 0.0
+				return true
+			rect = next
+			contact()
+		return false
 
 	func contact() -> void:
 		if w != null and w.player != null and not w.player.dead and rect.intersects(w.player.damage_rect()):
@@ -831,7 +847,7 @@ class SkeletonEnemy extends CombatEnemy:
 		var reach := clampf(float(d.get("patrol", 40)), 8, 96)
 		if not safe_step() or (absf(rect.position.x - home.x) >= reach and signf(rect.position.x - home.x) == facing):
 			facing *= -1
-		elif move_enemy(Vector2(facing * 14 * speed_multiplier * dt, 0)):
+		elif walk(14 * speed_multiplier * dt):
 			facing *= -1
 	func hit(p) -> void:
 		super.hit(p)
@@ -930,7 +946,7 @@ class HornbackEnemy extends CombatEnemy:
 					phase = "charge"
 					timer = 1.2
 			"charge":
-				if not safe_step() or move_enemy(Vector2(facing * 110 * speed_multiplier * dt, 0)) or timer <= 0:
+				if walk(110 * speed_multiplier * dt) or timer <= 0:
 					phase = "rest"
 					timer = 0.9 * recovery_multiplier
 			"rest":
@@ -944,7 +960,7 @@ class HornbackEnemy extends CombatEnemy:
 					timer = 0.5 * warning_multiplier
 				elif not safe_step():
 					facing *= -1
-				elif move_enemy(Vector2(facing * 16 * speed_multiplier * dt, 0)):
+				elif walk(16 * speed_multiplier * dt):
 					facing *= -1
 
 
@@ -959,7 +975,7 @@ class MosstrotEnemy extends CombatEnemy:
 		if not active(dt): return
 		gravity_speed = minf(140, gravity_speed + 400 * dt)
 		if move_enemy(Vector2(0, gravity_speed * dt)): gravity_speed = 0
-		if not safe_step() or move_enemy(Vector2(facing * 14 * speed_multiplier * dt, 0)):
+		if walk(14 * speed_multiplier * dt):
 			facing *= -1
 
 
@@ -1016,7 +1032,7 @@ class CragjawEnemy extends CombatEnemy:
 					timer = 0.6 * warning_multiplier
 				elif not safe_step():
 					facing *= -1
-				elif move_enemy(Vector2(facing * 12 * speed_multiplier * dt, 0)):
+				elif walk(12 * speed_multiplier * dt):
 					facing *= -1
 
 
@@ -1693,7 +1709,7 @@ class Ape extends Ent:
 		match phase:
 			"sleep":
 				if absf(dx) < WAKE:
-					_go("idle", 0.6)
+					_go("scream", 0.5)  # the fight opens with a scream
 			"idle":
 				if timer <= 0:
 					var r := leap_range()
@@ -1743,7 +1759,7 @@ class Ape extends Ent:
 					_beaten()
 	func _go(ph: String, t: float) -> void:
 		if ph == "scream":
-			Game.play_sfx("boss_roar")
+			Game.play_sfx("ape_scream")
 		elif ph == "hurt" or ph == "dying":
 			Game.play_sfx("enemy_hit", 0.6)
 		phase = ph
@@ -1847,32 +1863,21 @@ class Ape extends Ent:
 		if phase == "gone":
 			return
 		var a := 1.0 if phase != "dying" else clampf(timer / 1.2, 0.0, 1.0)
-		var fur := Color(0.35, 0.23, 0.16, a)
-		var dark := Color(0.23, 0.14, 0.09, a)
-		var face := Color(0.77, 0.6, 0.45, a)
-		if flash > 0 and int(flash * 20) % 2 == 0:
-			fur = Color(1, 1, 1, a)
+		var pose := phase
+		if phase in ["chase", "running"]:
+			pose = "run"
+		elif phase == "roar":
+			pose = "scream"
+		var art = load("res://scripts/ape_art.gd")
 		var o := Vector2(rect.position)
-		var crouch := 3.0 if phase == "crouch" else 0.0
-		# mirrored so it faces the player; 32x32 exactly at rest
-		ci.draw_set_transform(o + Vector2(SIZE / 2.0, 0), 0.0, Vector2(-facing, 1))
-		var b := Vector2(-SIZE / 2.0, crouch)
-		ci.draw_rect(Rect2(b + Vector2(4, 10), Vector2(24, 18 - crouch)), fur)  # body
-		ci.draw_rect(Rect2(b + Vector2(8, 0), Vector2(16, 12)), fur)  # head
-		ci.draw_rect(Rect2(b + Vector2(10, 3), Vector2(12, 8)), face)
-		ci.draw_rect(Rect2(b + Vector2(11, 4), Vector2(3, 2)), dark)  # eyes
-		ci.draw_rect(Rect2(b + Vector2(18, 4), Vector2(3, 2)), dark)
-		if phase == "scream":
-			ci.draw_rect(Rect2(b + Vector2(13, 7), Vector2(6, 4)), Color(0.1, 0.02, 0.02, a))
-		var arm_up := phase == "throw"
-		ci.draw_rect(Rect2(b + Vector2(0, 12), Vector2(6, 16)), dark)  # far arm
-		if arm_up:
-			ci.draw_rect(Rect2(b + Vector2(26, 0), Vector2(6, 14)), dark)
-			ci.draw_rect(Rect2(b + Vector2(25, -6), Vector2(8, 7)), Color("8a8478"))  # stone in hand
-		else:
-			ci.draw_rect(Rect2(b + Vector2(26, 12), Vector2(6, 16)), dark)
-		ci.draw_rect(Rect2(Vector2(-SIZE / 2.0 + 6, 28), Vector2(8, 4)), dark)  # legs
-		ci.draw_rect(Rect2(Vector2(-SIZE / 2.0 + 18, 28), Vector2(8, 4)), dark)
+		var tint := Color(1, 1, 1, a)
+		if flash > 0 and int(flash * 20) % 2 == 0:
+			tint = Color(1.8, 1.5, 1.3, a)
+		ci.draw_set_transform(o + Vector2(SIZE / 2.0, 0), 0.0, Vector2(facing, 1))
+		ci.draw_texture_rect(art.texture(pose, int(clock * 10.0)), Rect2(-SIZE / 2.0, 0, SIZE, SIZE), false, tint)
+		if phase == "throw":
+			ci.draw_rect(Rect2(3, -5, 8, 6), Color("8a8478"))
+			ci.draw_rect(Rect2(4, -4, 4, 2), Color("b0aa9c"))
 		ci.draw_set_transform(Vector2.ZERO)
 		if slam_t > 0:  # the shockwave, exactly its hitbox
 			var sb := Rect2(slam_box())
@@ -1886,17 +1891,18 @@ class Ape extends Ent:
 			ci.draw_arc(center(), SIZE / 2.0 + SCREAM_REACH, 0, TAU, 24, Color(1, 0.4, 0.3, 0.35), 1.0)
 
 
-# The Ape after its defeat, chasing the player up the sand cave. It runs along the exact path the player took
-# (jumps and all) a little slower than the player runs, so hesitating lets it catch up; touching it is a death.
-# Dying rebuilds the room, which puts it back to waiting. Once the player reaches x "end" it gives up for the run.
+# The Ape after its defeat, chasing the player up the sand cave. It moves by the player's rules along one fixed,
+# known-good path: when the room loads, plan() simulates the player's movement code (ChaseRunner) running right
+# and searches, jump by jump, for a take-off distance that clears every step and pit without touching spikes.
+# The Ape only ever replays that run, one recorded frame per tick, so it can't miss a jump. Touching it is a death;
+# dying rebuilds the room, which puts it back to waiting. Once the player passes x "end" it gives up for the run.
 class ApeChase extends Ape:
-	const SPEED := 75.0  # px/s along the player's path (the player runs at 90)
-	const ROAR_TIME := 1.0  # it roars this long before giving chase
-	var trail: Array[Vector2] = []  # the player's feet, oldest first: where the Ape's feet go next
-	var start := Vector2i.ZERO
+	const ROAR_TIME := 1.0  # it screams this long before giving chase
+	static var _plans := {}  # room key -> PackedVector2Array of feet positions, one per tick
+	var path := PackedVector2Array()
+	var at := 0.0  # index into path
 	func setup() -> void:
 		super.setup()
-		start = rect.position
 		if phase != "gone":
 			phase = "wait"
 	func hurts() -> bool:
@@ -1904,8 +1910,6 @@ class ApeChase extends Ape:
 	func touch(p) -> void:
 		if hurts() and body_hits(p.damage_rect()):
 			p.die((p.center() - center()).normalized())
-	func feet() -> Vector2:
-		return Vector2(rect.position.x + SIZE / 2.0, rect.end.y)
 	func update(dt: float) -> void:
 		clock += dt
 		if phase == "gone":
@@ -1915,22 +1919,27 @@ class ApeChase extends Ape:
 		match phase:
 			"wait":
 				if p.center().x > float(d.get("trigger", rect.end.x + 64)):
-					Game.play_sfx("boss_roar")
+					Game.play_sfx("ape_scream_cave")
 					w.shake_dir(Vector2.ZERO, 0.3)
 					facing = 1
+					var key := "%s:%d:%d" % [w.star_key(""), rect.position.x, rect.position.y]
+					if not _plans.has(key):  # planned once per room, when first needed
+						_plans[key] = plan(w, rect, float(d.get("end", w.bounds.end.x)) + 16.0)
+					path = _plans[key]
 					phase = "roar"
 					timer = ROAR_TIME
 			"roar", "chase":
-				var f := Vector2(p.center().x, p.bottom())
-				if trail.is_empty() or trail[-1].distance_squared_to(f) > 1.0:
-					trail.append(f)
 				if phase == "roar":
 					if timer <= 0:
 						phase = "chase"
-				else:
-					_run(dt)
+				elif not path.is_empty():
+					at = minf(at + dt * 60.0, path.size() - 1)
+					var f: Vector2 = path[int(at)]
+					rect.position = Vector2i(roundi(f.x - SIZE / 2.0), roundi(f.y) - SIZE)
+					if not p.dead and body_hits(p.damage_rect()):
+						touch(p)
 				if p.center().x > float(d.get("end", 1e9)):
-					Game.play_sfx("boss_roar", 0.8)
+					Game.play_sfx("ape_scream_cave", 0.8)
 					w.break_wall(id)  # gone for the rest of the run
 					phase = "dying"
 					timer = 1.2
@@ -1938,23 +1947,109 @@ class ApeChase extends Ape:
 				if timer <= 0:
 					phase = "gone"
 					collidable = false
-	# Follows the trail at SPEED, eating the points it reaches.
-	func _run(dt: float) -> void:
-		var budget := SPEED * dt
-		var at := feet()
-		while budget > 0 and not trail.is_empty():
-			var to: Vector2 = trail[0]
-			var dist := at.distance_to(to)
-			if dist <= budget:
-				budget -= dist
-				at = to
-				trail.pop_front()
-			else:
-				at += (to - at) / dist * budget
-				budget = 0
-		if absf(at.x - feet().x) > 0.01:
-			facing = 1 if at.x > feet().x else -1
-		rect.position = Vector2i(roundi(at.x - SIZE / 2.0), roundi(at.y) - SIZE)
 	func draw(ci: CanvasItem) -> void:
 		if phase != "wait":
 			super.draw(ci)
+
+	# Tries take-off distances (px before a wall, px past the edge of a gap) until a simulated run from the Ape's
+	# spot reaches end_x without touching spikes. Returns that run's feet positions, or an empty path if none works.
+	static func plan(world, from: Rect2i, end_x: float) -> PackedVector2Array:
+		for wall in [12, 8, 16, 10, 14, 6, 18]:
+			for gap in [1, 2, 4, 6, 8]:
+				var run := _simulate(world, from, end_x, wall, gap)
+				if not run.is_empty():
+					return run
+		push_warning("ApeChase: no path found to x %d" % end_x)
+		return PackedVector2Array()
+
+	# One run to the right; empty when it touches spikes, falls out or gets stuck.
+	static func _simulate(world, from: Rect2i, end_x: float, wall: float, gap: float) -> PackedVector2Array:
+		var r := ChaseRunner.new(ChaseWorld.new(world), Vector2.ZERO)
+		r.pos = Vector2(from.position.x + SIZE / 2.0, from.end.y)
+		r.pos.x -= r.hitbox().get_center().x - r.pos.x
+		r.pos.y -= r.bottom() - from.end.y
+		r.wall_d = wall
+		r.gap_d = gap
+		var path := PackedVector2Array()
+		var best := -1e9
+		var still := 0
+		for tick in 60 * 60:
+			r.update(1.0 / 60.0)
+			var hb: Rect2i = r.hitbox()
+			path.append(Vector2(hb.get_center().x, hb.end.y))
+			if world.touching_spikes(r.damage_rect()) or hb.position.y > world.bounds.end.y:
+				return PackedVector2Array()
+			if hb.end.x >= end_x:
+				return path
+			if hb.end.x > best:
+				best = hb.end.x
+				still = 0
+			else:
+				still += 1
+				if still > 90:  # stuck under a step it never cleared
+					return PackedVector2Array()
+		return PackedVector2Array()
+
+
+# The chasing Ape's body while planning: the player's movement code, always running right, jumping wall_d px
+# before a wall and when the floor ends within gap_d px.
+class ChaseRunner extends "res://scripts/player.gd":
+	var wall_d := 12.0
+	var gap_d := 1.0
+	var hold_jump := 0.0
+	func _init(world, spawn: Vector2) -> void:
+		super(world, spawn)
+		quiet = true
+	func _read_input(dt: float) -> void:
+		in_x = 1
+		in_y = 0
+		aim_raw = Vector2(in_x, 0)
+		aim_free = aim_raw
+		jump_buf -= dt
+		dash_buf -= dt
+		attack_buf -= dt
+		hold_jump -= dt
+		if not on_ground:
+			jump_buf = 0.0  # a press left over in the air would wall-jump it back off a step
+		elif w.collide_solid(rect_at(pos + Vector2(wall_d, 0))) != null or _gap_within(gap_d):
+			jump_buf = INPUT_BUFFER
+			hold_jump = VAR_JUMP_TIME
+		jump_check = hold_jump > 0
+		grab_check = false
+	# No floor under the pixel d px past the leading edge.
+	func _gap_within(d: float) -> bool:
+		var hb := hitbox()
+		return w.collide_solid(Rect2i(hb.end.x + int(d) - 1, hb.end.y, 1, 2)) == null
+
+
+# What the chasing Ape's runner sees of the world: the same collision, none of the player's side effects
+# (energy, sounds, dust, touches, deaths, room exits).
+class ChaseWorld:
+	var real
+	var bounds: Rect2i
+	var time := 0.0
+	var ents: Array = []
+	var parts: Array = []
+	func _init(world) -> void:
+		real = world
+		bounds = world.bounds
+	func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
+		return real.collide_solid(r, ignore, skip_dream)
+	func collide_dream(r: Rect2i):
+		return real.collide_dream(r)
+	func collide_jumpthru(r: Rect2i):
+		return real.collide_jumpthru(r)
+	func collide_jumpthru_outside(r_at: Rect2i, r_now: Rect2i):
+		return real.collide_jumpthru_outside(r_at, r_now)
+	func liquid_at(r: Rect2i, t: String) -> bool:
+		return real.liquid_at(r, t)
+	func touching_spikes(_r: Rect2i) -> bool: return false
+	func can_exit(_p: Vector2) -> bool: return false
+	func adventure() -> bool: return false
+	func dust(_at: Vector2, _dir: Vector2, _n: int, _col := Color.WHITE) -> void: pass
+	func shake_dir(_dir: Vector2, _t: float) -> void: pass
+	func add_trail(_p) -> void: pass
+	func freeze_for(_t: float) -> void: pass
+	func player_touch(_p) -> void: pass
+	func on_player_death(_p, _dir: Vector2) -> void: pass
+	func drain_energy(_amount: float) -> void: pass

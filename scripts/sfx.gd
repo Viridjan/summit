@@ -49,6 +49,8 @@ func _ready() -> void:
 	for key in SOUNDS:
 		streams[key] = _synthesize(SOUNDS[key])
 	streams["cave_roar"] = _cave_roar()
+	streams["ape_scream"] = _ape_scream(false)
+	streams["ape_scream_cave"] = _ape_scream(true)
 	for i in VOICES:
 		var voice := AudioStreamPlayer.new()
 		voice.bus = "SFX"
@@ -100,6 +102,56 @@ func _synthesize(spec: Array) -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = rate
+	stream.data = bytes
+	return stream
+
+# The Ape's scream: a harsh shriek that jumps up, wavers and drops, with breath noise.
+# echo: the same scream in a cave, followed by darker, alternating left/right reflections.
+func _ape_scream(echo: bool) -> AudioStreamWAV:
+	var rate := 22050
+	var duration := 1.2
+	var count := int(rate * duration)
+	var dry := PackedFloat32Array()
+	dry.resize(count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 6113
+	var phase := 0.0
+	var breath := 0.0
+	for i in count:
+		var t := float(i) / rate
+		var pitch := lerpf(240.0, 520.0, smoothstep(0.0, 0.14, t)) - smoothstep(0.7, 1.2, t) * 230.0
+		pitch += sin(t * TAU * 9.0) * 28.0  # the waver
+		pitch *= pow(2.0, -10.0 / 12.0)  # five whole tones lower
+		phase += pitch * TAU / rate
+		breath = lerpf(breath, rng.randf_range(-1.0, 1.0), 0.45)
+		var voice := sin(phase) * 0.45 + sin(phase * 2.0) * 0.25 + sin(phase * 3.0) * 0.18 + sin(phase * 5.0) * 0.1
+		voice = clampf(voice * 1.6, -0.9, 0.9)  # clipped: harsh, not pure
+		var envelope := smoothstep(0.0, 0.05, t) * (1.0 - smoothstep(0.85, 1.2, t))
+		dry[i] = (voice + breath * 0.3) * envelope
+	var tail := 1.8 if echo else 0.0
+	var total := count + int(rate * tail)
+	var taps := [[0.13, 0.5, 0.3], [0.29, 0.38, 0.75], [0.48, 0.28, 0.25], [0.72, 0.2, 0.8], [1.0, 0.13, 0.4]] if echo else []
+	var bytes := PackedByteArray()
+	bytes.resize(total * 4)
+	var dark_l := 0.0
+	var dark_r := 0.0
+	for i in total:
+		var d := dry[i] if i < count else 0.0
+		var el := 0.0
+		var er := 0.0
+		for tap in taps:  # [delay s, gain, share heard on the right]
+			var j: int = i - int(rate * float(tap[0]))
+			if j >= 0 and j < count:
+				el += dry[j] * float(tap[1]) * (1.0 - float(tap[2]))
+				er += dry[j] * float(tap[1]) * float(tap[2])
+		dark_l = lerpf(dark_l, el, 0.25)  # reflections lose their highs
+		dark_r = lerpf(dark_r, er, 0.25)
+		bytes.encode_s16(i * 4, int(clampf(d * 0.8 + dark_l, -0.95, 0.95) * 26000))
+		bytes.encode_s16(i * 4 + 2, int(clampf(d * 0.8 + dark_r, -0.95, 0.95) * 26000))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = rate
+	stream.stereo = true
 	stream.data = bytes
 	return stream
 

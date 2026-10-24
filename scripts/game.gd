@@ -15,6 +15,7 @@ var save_path := SAVE_PATH  # tests point this at a scratch file
 # doesn't report the cached textures as leaked at exit.
 # They're loaded at runtime here: a const preload in this autoload would itself keep a script alive at exit.
 func _exit_tree() -> void:
+	load("res://scripts/ape_art.gd")._textures.clear()
 	load("res://scripts/environment_art.gd")._textures.clear()
 	load("res://scripts/block_art.gd")._textures.clear()
 	load("res://scripts/character_art.gd")._textures.clear()

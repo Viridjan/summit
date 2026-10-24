@@ -260,6 +260,12 @@ func _init(world, spawn: Vector2) -> void:
 		hair.append(pos + Vector2(0, -9))
 	dashes = max_dashes()
 
+var quiet := false  # true for a stand-in runner (the chasing Ape): its moves make no player sounds
+
+func sfx(key: String, pitch := 1.0) -> void:
+	if not quiet:
+		Game.play_sfx(key, pitch)
+
 # Overrides tunable vars by name, then recomputes the derived ones.
 func apply_tuning(values: Dictionary) -> void:
 	for k in values:
@@ -377,7 +383,7 @@ func _swim_update(dt: float) -> int:
 			jump()  # the surface is close: a full jump out of the water
 		else:  # Jumping (Underwater)
 			jump_buf = 0
-			Game.play_sfx("splash", 1.3)
+			sfx("splash", 1.3)
 			speed.y = WATER_STROKE
 	bubble_t -= dt
 	if bubble_t <= 0:
@@ -556,10 +562,10 @@ func update(dt: float) -> void:
 	step_sfx_timer = maxf(0.0, step_sfx_timer - dt)
 	if not dead and step_sfx_timer <= 0.0:
 		if on_ground and absf(speed.x) > 20 and state == ST_NORMAL:
-			Game.play_sfx("step")
+			sfx("step")
 			step_sfx_timer = 0.19
 		elif state == ST_CLIMB and absf(speed.y) > 5:
-			Game.play_sfx("climb")
+			sfx("climb")
 			step_sfx_timer = 0.25
 	_read_input(dt)
 	# adventure: moves not picked up yet do nothing (Game.has_ability is always true elsewhere)
@@ -673,7 +679,7 @@ func update(dt: float) -> void:
 	var was_underwater := underwater
 	underwater = w.liquid_at(Rect2i(Vector2i(center()), Vector2i.ONE), "water")
 	if underwater != was_underwater:
-		Game.play_sfx("splash")
+		sfx("splash")
 	_state_update(dt)
 	if dead:
 		return
@@ -873,7 +879,7 @@ func can_jump() -> bool:
 	return not w.adventure() or Game.adv.energy >= JUMP_ENERGY
 
 func jump(particles := true) -> void:
-	Game.play_sfx("jump")
+	sfx("jump")
 	w.drain_energy(JUMP_ENERGY)
 	jump_buf = 0
 	jump_grace_timer = 0
@@ -891,7 +897,7 @@ func jump(particles := true) -> void:
 		w.dust(pos, Vector2.UP, 4)
 
 func super_jump() -> void:
-	Game.play_sfx("jump")
+	sfx("jump")
 	jump_buf = 0
 	jump_grace_timer = 0
 	var_jump_timer = VAR_JUMP_TIME
@@ -912,7 +918,7 @@ func super_jump() -> void:
 	w.dust(pos, Vector2.UP, 4)
 
 func wall_jump(dir: int) -> void:
-	Game.play_sfx("wall_jump")
+	sfx("wall_jump")
 	set_ducking(false)
 	jump_buf = 0
 	jump_grace_timer = 0
@@ -936,7 +942,7 @@ func wall_jump(dir: int) -> void:
 	w.dust(center() + Vector2(-dir * 4, 0), Vector2(dir, -1).normalized(), 4)
 
 func super_wall_jump(dir: int) -> void:
-	Game.play_sfx("wall_jump")
+	sfx("wall_jump")
 	set_ducking(false)
 	jump_buf = 0
 	jump_grace_timer = 0
@@ -954,7 +960,7 @@ func super_wall_jump(dir: int) -> void:
 	w.dust(center() + Vector2(-dir * 4, 0), Vector2(dir, -1).normalized(), 4)
 
 func climb_jump() -> void:
-	Game.play_sfx("wall_jump")
+	sfx("wall_jump")
 	if not on_ground:
 		stamina -= CLIMB_JUMP_COST
 	dream_jump = false
@@ -992,7 +998,7 @@ func bounce(from_y: float) -> void:
 	collider = was
 
 func super_bounce(from_y: float) -> void:
-	Game.play_sfx("spring")
+	sfx("spring")
 	var was := collider
 	collider = HB_NORMAL
 	move_v(from_y - bottom())
@@ -1010,7 +1016,7 @@ func super_bounce(from_y: float) -> void:
 func side_bounce(dir: int, from_x: float, from_y: float) -> bool:
 	if absf(speed.x) > SIDE_BOUNCE_SPEED and signf(speed.x) == dir:
 		return false
-	Game.play_sfx("spring")
+	sfx("spring")
 	var was := collider
 	collider = HB_NORMAL
 	move_v(clampf(from_y - bottom(), -4, 4))
@@ -1048,7 +1054,7 @@ func rebound(direction := 0) -> void:
 	_set_state(ST_NORMAL)
 
 func explode_launch(from: Vector2, snap_up := true) -> void:
-	Game.play_sfx("spring", 0.7)
+	sfx("spring", 0.7)
 	w.freeze_for(0.1)
 	var normal := center() - from
 	normal = normal.normalized() if normal != Vector2.ZERO else Vector2.UP
@@ -1079,7 +1085,7 @@ func refill_dash() -> bool:
 func use_refill(two: bool) -> bool:
 	var target := 2 if two else max_dashes()
 	if dashes < target or stamina < CLIMB_TIRED_THRESHOLD:
-		Game.play_sfx("refill")
+		sfx("refill")
 		dashes = target
 		refill_stamina()
 		return true
@@ -1091,14 +1097,14 @@ func refill_stamina() -> void:
 func die(dir: Vector2) -> void:
 	if dead or Game.settings.invincible:
 		return
-	Game.play_sfx("death")
+	sfx("death")
 	dead = true
 	speed = Vector2.ZERO
 	w.on_player_death(self, dir)
 
 # ---------------- boosters / feathers ----------------
 func boost(b, red: bool) -> void:
-	Game.play_sfx("boost")
+	sfx("boost")
 	_set_state(ST_BOOST)
 	speed = Vector2.ZERO
 	boost_target = b.center()
@@ -1153,7 +1159,7 @@ func _on_collide_h(hit) -> void:
 
 func _on_collide_v(hit) -> void:
 	if speed.y > 40:
-		Game.play_sfx("land")
+		sfx("land")
 	if state == ST_STAR_FLY:
 		speed.y = 0 if star_fly_timer < STAR_FLY_END_NO_BOUNCE else speed.y * STAR_FLY_WALL_BOUNCE
 		return
@@ -1354,7 +1360,7 @@ func _normal_update(dt: float) -> int:
 
 # ---------------- CLIMB ----------------
 func _climb_begin() -> void:
-	Game.play_sfx("climb")
+	sfx("climb")
 	auto_jump = false
 	speed.x = 0
 	speed.y *= CLIMB_GRAB_Y_MULT
@@ -1469,7 +1475,7 @@ func _start_dash() -> int:
 	return ST_DASH
 
 func _dash_begin() -> void:
-	Game.play_sfx("dash")
+	sfx("dash")
 	called_dash_events = false
 	dash_started_on_ground = on_ground
 	launched = false
@@ -1620,7 +1626,7 @@ func _launch_update(dt: float) -> int:
 
 # ---------------- DREAM DASH ----------------
 func _dream_dash_begin() -> void:
-	Game.play_sfx("dream")
+	sfx("dream")
 	speed = dash_dir * DASH_SPEED
 	dream_dash_can_end_timer = DREAM_DASH_MIN_TIME
 	stamina = CLIMB_MAX_STAMINA
@@ -1684,7 +1690,7 @@ func _dream_dash_update(dt: float) -> int:
 
 # ---------------- STAR FLY (feather) ----------------
 func _star_fly_begin() -> void:
-	Game.play_sfx("feather")
+	sfx("feather")
 	star_fly_transforming = true
 	star_fly_timer = STAR_FLY_TIME
 	star_fly_speed_lerp = 0
@@ -1788,7 +1794,7 @@ func _attack_update(dt: float) -> void:
 			attack_timer = 0
 	elif attack_buf > 0 and attack_cooldown_timer <= 0 and ATTACK_DIRS != 0 and state not in NO_ATTACK_STATES:
 		attack_buf = 0
-		Game.play_sfx("attack")
+		sfx("attack")
 		attack_timer = ATTACK_TIME
 		attack_cooldown_timer = ATTACK_COOLDOWN
 		attack_dir = dir_for(ATTACK_DIRS)

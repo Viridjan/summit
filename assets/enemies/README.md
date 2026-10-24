@@ -16,3 +16,9 @@ with gills. Their four poses use leaf sway, alternating heavy steps, and a
 breathing cap/tendril cycle. Variants share the refined shapes and tint the new
 highlight colours. Gameplay hitboxes, draw origins and enemy behaviour are unchanged.
 `new-families.png` shows these three rows at native resolution.
+
+## Ape profile artwork
+
+The arena boss and Sand Cave chase share original 32×32 side-view artwork from `scripts/ape_art.gd`. It faces its movement/attack direction and uses distinct idle, crouch, airborne, throw, scream and running silhouettes. Collision and attack areas retain their existing dimensions.
+
+Rebuild `ape.png` with `godot --headless --path . --script tools/export_ape.gd`. Rows follow the pose order above, four frames per row.

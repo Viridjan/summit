@@ -37,8 +37,8 @@ func _main() -> void:
 	body.add_child(HSeparator.new())
 	var play := Game.button("Adventure", _adventure)
 	body.add_child(play)
-	body.add_child(Game.button("Custom Levels", _level_select))
-	body.add_child(Game.button("Level Editor", _editor_new))
+	if OS.has_feature("editor"):  # the world files live in res://, writable only from source
+		body.add_child(Game.button("World Editor", func(): Game.goto("world_editor")))
 	body.add_child(Game.button("Monsters", _monsters))
 	body.add_child(Game.button("Music Studio", func(): Game.goto("music_studio")))
 	body.add_child(Game.button("Options", _options))
@@ -65,74 +65,9 @@ func _adventure() -> void:
 		body.add_child(first)
 	var fresh := Game.button("New Game", func(): Game.start_adventure(true))
 	body.add_child(fresh)
-	if OS.has_feature("editor"):  # the world file lives in res://, writable only from source
-		body.add_child(Game.button("World Editor", func(): Game.goto("world_editor")))
 	var back := Game.button("Back", _main)
 	body.add_child(back)
 	(first if first else fresh).grab_focus()
-
-func _level_select() -> void:
-	_clear()
-	body.add_child(Game.label("Levels", 44))
-	var levels := Game.list_levels()
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(760, 380)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.follow_focus = true
-	body.add_child(scroll)
-	var list := VBoxContainer.new()
-	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(list)
-	var first: Control = null
-	if levels.is_empty():
-		list.add_child(Game.label("No levels yet. Make one in the Level Editor!", 22))
-	for f in levels:
-		var row := HBoxContainer.new()
-		var rec := Game.get_record(f)
-		var info := f
-		if rec.has("best_time"):
-			info += "   %s   %d/%d stars" % [Game.fmt_time(rec.best_time), rec.berries, rec.total]
-		var b := Game.button(info, _play.bind(f))
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		row.add_child(b)
-		row.add_child(Game.button("Edit", _edit.bind(f)))
-		row.add_child(Game.button("Delete", _confirm_delete.bind(f)))
-		list.add_child(row)
-		if first == null:
-			first = b
-	body.add_child(Game.button("Open Levels Folder", func(): OS.shell_open(ProjectSettings.globalize_path(Game.LEVEL_DIR))))
-	var back := Game.button("Back", _main)
-	body.add_child(back)
-	(first if first else back).grab_focus()
-
-func _play(f: String) -> void:
-	var d := Game.load_level(f)
-	if not d.is_empty():
-		Game.play(d, false)
-
-func _edit(f: String) -> void:
-	Game.editor_level = Game.load_level(f)
-	Game.editor_dir = Game.LEVEL_DIR
-	Game.editor_file = ""
-	Game.editor_return = "menu"
-	Game.goto("editor")
-
-func _editor_new() -> void:
-	Game.editor_level = {}
-	Game.editor_dir = Game.LEVEL_DIR
-	Game.editor_file = ""
-	Game.editor_return = "menu"
-	Game.goto("editor")
-
-func _confirm_delete(f: String) -> void:
-	var dlg := ConfirmationDialog.new()
-	dlg.dialog_text = "Delete level \"%s\"? This cannot be undone." % f
-	dlg.confirmed.connect(func():
-		Game.delete_level(f)
-		_level_select())
-	add_child(dlg)
-	dlg.popup_centered()
 
 func _options() -> void:
 	var o := OptionsPanel.new()

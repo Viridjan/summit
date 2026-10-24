@@ -48,7 +48,8 @@ func _ready() -> void:
 	world.touch = tc
 	world.ui.add_child(tc)
 	var tap := InputEventScreenTouch.new()
-	tap.position = Vector2(1150, 600)  # Jump
+	await _frames(1)  # laid out to the screen size
+	tap.position = tc.at(Vector2(1150, 600))  # Jump
 	tap.pressed = true
 	tc._input(tap)
 	Input.flush_buffered_events()  # parse_input_event is buffered until the next process frame
@@ -180,8 +181,6 @@ func _ready() -> void:
 	await _frames(3)
 	if Game.get_music_engine().playing:
 		_fail("leaving music studio did not stop playback")
-	get_child(get_child_count() - 1)._level_select()
-	await _frames(10)
 	# adventure: menu -> new game -> walk into room 2 -> map -> exit; world editor
 	Game.save_path = "user://smoke_save.cfg"
 	DirAccess.remove_absolute(Game.save_path)

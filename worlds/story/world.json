@@ -25,6 +25,14 @@
 			120,
 			46
 		],
+		"h1_villager_house": [
+			240,
+			100
+		],
+		"h2_quest_house": [
+			280,
+			100
+		],
 		"j1_jungle_edge": [
 			280,
 			23
@@ -49,6 +57,10 @@
 			360,
 			-2
 		],
+		"lh1_lighthouse_stairs": [
+			608,
+			-37
+		],
 		"m1_meadow": [
 			0,
 			0
@@ -72,18 +84,6 @@
 		"t1_cove_town": [
 			240,
 			23
-		],
-		"h1_villager_house": [
-			240,
-			100
-		],
-		"h2_quest_house": [
-			280,
-			100
-		],
-		"lh1_lighthouse_stairs": [
-			320,
-			100
 		]
 	},
 	"start": "m1_meadow"

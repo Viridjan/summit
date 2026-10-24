@@ -32,6 +32,20 @@ const HITBOX_KEY := [
 ]
 
 # On-screen HUD: energy (top left), area name (top centre), timer and deaths (top right).
+class Letterbox extends Control:
+	func _ready() -> void:
+		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		resized.connect(queue_redraw)
+	func _draw() -> void:
+		var inner := Rect2((size - Vector2(1280, 720)) / 2.0, Vector2(1280, 720))
+		var black := Color.BLACK
+		draw_rect(Rect2(0, 0, size.x, inner.position.y), black)
+		draw_rect(Rect2(0, inner.end.y, size.x, size.y - inner.end.y), black)
+		draw_rect(Rect2(0, inner.position.y, inner.position.x, 720), black)
+		draw_rect(Rect2(inner.end.x, inner.position.y, size.x - inner.end.x, 720), black)
+
+
 class Hud extends Control:
 	const M := 16.0  # margin from the screen edges
 	const BOLT := [Vector2(10, 0), Vector2(1, 16), Vector2(8, 16), Vector2(4, 28), Vector2(18, 10), Vector2(11, 10), Vector2(16, 0)]
@@ -200,7 +214,15 @@ func _ready() -> void:
 	cam.zoom = Vector2(ZOOM, ZOOM)
 	add_child(cam)
 	cam.make_current()
+	# The screen may be wider or taller than 1280x720 (stretch aspect "expand", so phone controls reach the
+	# screen edges); the world view stays 1280x720 in the middle, with black bars around it.
+	var bars := CanvasLayer.new()
+	bars.layer = 1
+	add_child(bars)
+	var letterbox := Letterbox.new()
+	bars.add_child(letterbox)
 	ui = CanvasLayer.new()
+	ui.layer = 2
 	add_child(ui)
 	hud = Hud.new()
 	hud.world = self

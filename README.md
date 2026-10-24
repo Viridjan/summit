@@ -1,6 +1,6 @@
 # Summit
 
-A Celeste-style platformer in Godot 4 (tested on 4.4.1 and 4.7.2) with a built-in level editor.
+A Celeste-style platformer in Godot 4 (tested on 4.4.1 and 4.7.2) with a built-in world editor.
 
 Player physics are a GDScript port of Celeste's `Player.cs`
 (MIT, Maddy Makes Games — https://github.com/NoelFB/Celeste).
@@ -43,7 +43,7 @@ is described in `docs/WORLD_DESIGN.md`; `tools/world_check.py` / `tools/world_so
 **World:** in the Adventure menu switches to the story world (`res://worlds/story/`, chapter 1 in progress, see
 `docs/STORY_DESIGN.md`); the world editor edits the picked world (cyan lines = door links).
 
-**World editor** (Adventure → World Editor, only when run from source because it writes `res://adventure/`):
+**World editor** (main menu → World Editor, only when run from source because it writes `res://adventure/`):
 drag rooms on the grid; where two rooms touch and both have open tiles on the shared edge, that's a passage (green).
 "+ Add empty room" (placed right of the selected room) or "+ Add copy of my level", Edit room (opens the level editor; "World" goes back),
 Playtest from here, Set as start. Files: `res://adventure/world.json` (room positions) + one level file per room.

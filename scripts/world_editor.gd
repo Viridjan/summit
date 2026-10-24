@@ -1,5 +1,5 @@
 extends Control
-# World editor (Adventure > World Editor, only when run from source): places adventure rooms on the world grid.
+# World editor (main menu > World Editor, only when run from source): places adventure rooms on the world grid.
 # Rooms are ordinary level files in res://adventure/; world.json stores where each one sits.
 # Drag a room to move it (snaps to tiles); where two rooms touch, matching open tiles become passages (green).
 # Overlapping rooms are outlined red. Every change is saved straight away.
