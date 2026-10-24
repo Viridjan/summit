@@ -87,6 +87,10 @@ const TYPES := {
 	"acid": ["Acid", true, Color("6ae070"), Liquid],
 	# design note: marks what a spot needs (a power-up not built yet, a boss, a secret...)
 	"note": ["Note", false, Color("ffe08a"), Note],
+	# Boss 1, the Ape (docs/STORY_DESIGN.md section 2), with its arena pieces
+	"boss_ape": ["Ape (boss)", false, Color("6a4430"), Ape],
+	"ape_trunk": ["Trunk (Ape arena)", true, Color("7a5638"), ApeTrunk],
+	"boss_gate": ["Boss Gate", true, Color("4a6a3a"), BossGate],
 }
 
 static func make(w, d: Dictionary):
@@ -1377,3 +1381,314 @@ class Goal extends Ent:
 		ci.draw_circle(c + Vector2(2.5, -1.5), 3, col)
 		ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-5.5, -1), c + Vector2(5.5, -1), c + Vector2(0, 6)]), col)
 		ci.draw_rect(Rect2(c.x - 3, c.y - 3, 1, 1), Color.WHITE)
+
+
+# ---------------- Boss 1: the Ape (docs/STORY_DESIGN.md section 2) ----------------
+# A tall trunk in the arena. Standing it's scenery (no collision); a thrown stone fells it to the right,
+# where it lies at its base's height as a bridge as long as it was tall. Stays down for the run.
+class ApeTrunk extends Ent:
+	const FALL_TIME := 0.6
+	var id := ""
+	var standing := Rect2i()
+	var fall := 0.0  # 0 standing .. 1 down
+	var falling := false
+	func setup() -> void:
+		solid = true
+		collidable = false
+		standing = rect
+		id = "%d_%d" % [rect.position.x, rect.position.y]
+		if w != null:
+			id = w.star_key(id)
+			if w.broken.has(id):
+				_lay()
+	func down() -> bool:
+		return fall >= 1.0
+	func fell() -> void:
+		if falling or down():
+			return
+		falling = true
+		if w != null:
+			w.burst(Vector2(standing.position.x + standing.size.x / 2.0, standing.position.y + 8), Color("c8a070"), 10)
+	func _lay() -> void:
+		fall = 1.0
+		falling = false
+		collidable = true
+		rect = Rect2i(standing.position.x, standing.end.y, standing.size.y, 8)
+	func update(dt: float) -> void:
+		if falling:
+			fall = minf(1.0, fall + dt / FALL_TIME)
+			if fall >= 1.0:
+				_lay()
+				w.break_wall(id)
+				w.shake_dir(Vector2.DOWN, 0.25)
+				w.dust(Vector2(rect.position.x + rect.size.x / 2.0, rect.position.y), Vector2.UP, 12)
+	func vis_rect() -> Rect2i:
+		var h := standing.size.y
+		return Rect2i(standing.position.x - 8, standing.position.y - 8, h + 24, h + 24)
+	func draw(ci: CanvasItem) -> void:
+		var bark := Color("7a5638")
+		var dark := Color("4e3422")
+		if down():
+			ci.draw_rect(Rect2(rect), bark)
+			ci.draw_rect(Rect2(rect.position.x, rect.end.y - 2, rect.size.x, 2), dark)
+			for x in range(rect.position.x + 6, rect.end.x - 2, 11):
+				ci.draw_rect(Rect2(x, rect.position.y + 2, 3, 1), dark)
+			return
+		# standing (or falling): drawn upright, rotated about the base's right corner
+		var pivot := Vector2(standing.end.x, standing.end.y)
+		ci.draw_set_transform(pivot, fall * PI / 2.0)
+		var r := Rect2(-standing.size.x, -standing.size.y, standing.size.x, standing.size.y)
+		ci.draw_rect(r, bark)
+		ci.draw_rect(Rect2(r.position.x, r.position.y, 2, r.size.y), dark)
+		for y in range(int(r.position.y) + 5, -2, 9):
+			ci.draw_rect(Rect2(r.position.x + 4, y, r.size.x - 8, 1), dark)
+		var knot := minf(6.0, r.size.y)
+		ci.draw_rect(Rect2(r.position.x + r.size.x / 2.0 - 3, r.position.y + minf(10.0, r.size.y - knot), 6, knot), Color("e0c060"))  # the target knot
+		ci.draw_set_transform(Vector2.ZERO)
+
+
+# Seals an exit while the room's Ape is alive (solid); open once it's beaten.
+class BossGate extends Ent:
+	func setup() -> void:
+		solid = true
+	func update(_dt: float) -> void:
+		var open := true
+		for e in w.ents:
+			if e is Ape and e.phase != "gone":
+				open = false
+		collidable = not open
+	func draw(ci: CanvasItem) -> void:
+		if not collidable:
+			return
+		var r := Rect2(rect)
+		ci.draw_rect(r, Color("2e4a26"))
+		for x in range(int(r.position.x), int(r.end.x), 4):  # thorny vines
+			ci.draw_rect(Rect2(x, r.position.y, 2, r.size.y), Color("4a6a3a"))
+			for y in range(int(r.position.y) + (x % 8), int(r.end.y), 8):
+				ci.draw_rect(Rect2(x + 2, y, 2, 2), Color("c8d06a"))
+
+
+# The Ape: picks its attack by distance. Far: a stone thrown in an arc. Mid: a leap that lands a bit
+# past the player (standing still gets you hit by the arc; moving towards it is safe). Near: a scream
+# around its body. While the arena's trunk stands it only throws. Landing on spikes is a hit: it screams,
+# leaps again, and the next spike patch appears (d.spikes, one list per hit: [x, y, count] in px).
+# Three hits beat it: the exits open, the player is exhausted (energy 5) and an energy orb appears (d.orb).
+class Ape extends Ent:
+	const HP := 3
+	const SIZE := 32
+	const LEAP_G := 600.0
+	const LEAP_TIME := 0.75
+	const OVERSHOOT := 24.0  # the slam lands this far past the player
+	const STONE_G := 400.0
+	const STONE := 16  # stone size = its hitbox
+	const SCREAM_REACH := 24  # 3 units around the body
+	const FAR := 140.0
+	const NEAR := 44.0
+	var hp := HP
+	var phase := "sleep"  # sleep, idle, throw, crouch, air, scream, hurt, dying, gone
+	var timer := 0.0
+	var vel := Vector2.ZERO
+	var facing := -1
+	var stage := 0
+	var then_slam := false
+	var stones: Array = []  # [centre, velocity]
+	var flash := 0.0
+	var clock := 0.0
+	var id := ""
+	var x_min := 0.0
+	var x_max := 0.0
+	func hurts() -> bool:
+		return phase != "gone" and phase != "dying"
+	func setup() -> void:
+		rect.size = Vector2i(SIZE, SIZE)
+		var r: Array = d.get("range", [rect.position.x - 200, rect.end.x + 200])
+		x_min = float(r[0])
+		x_max = float(r[1])
+		id = "ape_%d_%d" % [rect.position.x, rect.position.y]
+		if w != null:
+			id = w.star_key(id)
+			if w.broken.has(id):
+				phase = "gone"
+				collidable = false
+	func trunk():
+		for e in w.ents:
+			if e is ApeTrunk:
+				return e
+		return null
+	func touch(p) -> void:
+		if hurts():
+			p.die((p.center() - center()).normalized())
+	func update(dt: float) -> void:
+		clock += dt
+		flash = maxf(0.0, flash - dt)
+		_update_stones(dt)
+		if phase == "gone":
+			return
+		var p = w.player
+		var dx: float = p.center().x - center().x
+		if phase in ["idle", "throw", "crouch", "scream"]:
+			facing = 1 if dx > 0 else -1
+		timer -= dt
+		match phase:
+			"sleep":
+				var t = trunk()
+				if (t != null and not t.down() and p.center().x > t.standing.get_center().x) or ((t == null or t.down()) and absf(dx) < 300):
+					_go("idle", 0.6)
+			"idle":
+				if timer <= 0:
+					var t = trunk()
+					if (t != null and not t.down()) or absf(dx) > FAR:
+						_go("throw", 0.7)
+					elif absf(dx) > NEAR:
+						_go("crouch", 0.45)
+					else:
+						_go("scream", 0.5)
+			"throw":
+				if timer <= 0:
+					_throw(p.center())
+					_go("idle", 1.0)
+			"crouch":
+				if timer <= 0:
+					var side := 1.0 if dx > 0 else -1.0
+					var tx := clampf(p.center().x + side * OVERSHOOT, x_min + SIZE / 2.0, x_max - SIZE / 2.0)
+					vel = Vector2((tx - center().x) / LEAP_TIME, -0.5 * LEAP_G * LEAP_TIME)
+					phase = "air"
+			"air":
+				vel.y += LEAP_G * dt
+				_move(dt)
+			"scream":
+				if timer <= 0.0 and timer > -0.35:  # the scream itself, after the 0.5 s wind-up
+					if not p.dead and rect.grow(SCREAM_REACH).intersects(p.damage_rect()):
+						p.die((p.center() - center()).normalized())
+				elif timer <= -0.35:
+					if then_slam:
+						then_slam = false
+						_go("crouch", 0.3)
+					else:
+						_go("idle", 0.8)
+			"hurt":
+				if timer <= 0:
+					then_slam = true
+					_go("scream", 0.3)
+			"dying":
+				if timer <= 0:
+					_beaten()
+	func _go(ph: String, t: float) -> void:
+		phase = ph
+		timer = t
+	func _throw(target: Vector2) -> void:
+		var from := Vector2(center().x + facing * 10, rect.position.y)
+		var t := clampf(absf(target.x - from.x) / 220.0, 0.7, 1.3)
+		stones.append([from, Vector2((target.x - from.x) / t, (target.y - from.y) / t - 0.5 * STONE_G * t)])
+	func _move(dt: float) -> void:
+		var step := vel * dt
+		var r := Rect2i(rect)
+		r.position.x = int(round(rect.position.x + step.x))
+		if w.collide_solid(r) == null:
+			rect.position.x = r.position.x
+		r = Rect2i(rect)
+		r.position.y = int(round(rect.position.y + step.y))
+		if w.collide_solid(r) == null:
+			rect.position.y = r.position.y
+		elif vel.y > 0:
+			while w.collide_solid(Rect2i(rect.position + Vector2i(0, 1), rect.size)) == null:
+				rect.position.y += 1
+			_land()
+		else:
+			vel.y = 0
+	func _land() -> void:
+		vel = Vector2.ZERO
+		w.shake_dir(Vector2.DOWN, 0.2)
+		w.dust(Vector2(center().x, rect.end.y), Vector2.UP, 10)
+		var feet := Rect2i(rect.position.x, rect.end.y - 4, rect.size.x, 4)
+		for e in w.touchables:
+			if e is Spikes and e.collidable and e.rect.intersects(feet):
+				_hit()
+				return
+		_go("idle", 0.6)
+	func _hit() -> void:
+		hp -= 1
+		flash = 0.8
+		w.burst(center(), Color("ff6040"), 14)
+		if hp <= 0:
+			_go("dying", 1.2)
+			return
+		stage += 1
+		var patches: Array = d.get("spikes", [])
+		if stage - 1 < patches.size():
+			for patch in patches[stage - 1]:
+				for i in int(patch[2]):
+					w.spawn_entity({"t": "spikes_up", "x": int(patch[0]) + i * T, "y": int(patch[1])})
+		_go("hurt", 0.8)
+	func _beaten() -> void:
+		phase = "gone"
+		collidable = false
+		w.break_wall(id)
+		w.shake_dir(Vector2.ZERO, 0.4)
+		if w.adventure():
+			Game.adv.energy = minf(Game.adv.energy, 5.0)  # the fight leaves the hero exhausted
+		if d.has("orb"):
+			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
+	func _update_stones(dt: float) -> void:
+		var t = trunk() if w != null else null
+		for i in range(stones.size() - 1, -1, -1):
+			var s: Array = stones[i]
+			s[1].y += STONE_G * dt
+			s[0] += s[1] * dt
+			var box := Rect2i(Vector2i(s[0]) - Vector2i(STONE / 2, STONE / 2), Vector2i(STONE, STONE))
+			var gone := false
+			if not w.player.dead and box.intersects(w.player.damage_rect()):
+				w.player.die(s[1].normalized())
+				gone = true
+			elif t != null and not t.down() and not t.falling and box.intersects(t.standing):
+				t.fell()
+				gone = true
+			elif w.collide_solid(box) != null or s[0].y > w.gh * T + 64:
+				gone = true
+			if gone:
+				w.burst(s[0], Color("9a9080"), 8)
+				stones.remove_at(i)
+	func vis_rect() -> Rect2i:
+		return rect.grow(400)
+	func draw(ci: CanvasItem) -> void:
+		for s in stones:  # stones: 16x16, exactly their hitbox
+			var at: Vector2 = s[0] - Vector2(STONE / 2.0, STONE / 2.0)
+			ci.draw_rect(Rect2(at + Vector2(2, 0), Vector2(12, 16)), Color("8a8478"))
+			ci.draw_rect(Rect2(at + Vector2(0, 2), Vector2(16, 12)), Color("8a8478"))
+			ci.draw_rect(Rect2(at + Vector2(3, 3), Vector2(5, 3)), Color("b0aa9c"))
+		if phase == "gone":
+			return
+		var a := 1.0 if phase != "dying" else clampf(timer / 1.2, 0.0, 1.0)
+		var fur := Color(0.35, 0.23, 0.16, a)
+		var dark := Color(0.23, 0.14, 0.09, a)
+		var face := Color(0.77, 0.6, 0.45, a)
+		if flash > 0 and int(flash * 20) % 2 == 0:
+			fur = Color(1, 1, 1, a)
+		var o := Vector2(rect.position)
+		var crouch := 3.0 if phase == "crouch" else 0.0
+		# mirrored so it faces the player; 32x32 exactly at rest
+		ci.draw_set_transform(o + Vector2(SIZE / 2.0, 0), 0.0, Vector2(-facing, 1))
+		var b := Vector2(-SIZE / 2.0, crouch)
+		ci.draw_rect(Rect2(b + Vector2(4, 10), Vector2(24, 18 - crouch)), fur)  # body
+		ci.draw_rect(Rect2(b + Vector2(8, 0), Vector2(16, 12)), fur)  # head
+		ci.draw_rect(Rect2(b + Vector2(10, 3), Vector2(12, 8)), face)
+		ci.draw_rect(Rect2(b + Vector2(11, 4), Vector2(3, 2)), dark)  # eyes
+		ci.draw_rect(Rect2(b + Vector2(18, 4), Vector2(3, 2)), dark)
+		if phase == "scream":
+			ci.draw_rect(Rect2(b + Vector2(13, 7), Vector2(6, 4)), Color(0.1, 0.02, 0.02, a))
+		var arm_up := phase == "throw"
+		ci.draw_rect(Rect2(b + Vector2(0, 12), Vector2(6, 16)), dark)  # far arm
+		if arm_up:
+			ci.draw_rect(Rect2(b + Vector2(26, 0), Vector2(6, 14)), dark)
+			ci.draw_rect(Rect2(b + Vector2(25, -6), Vector2(8, 7)), Color("8a8478"))  # stone in hand
+		else:
+			ci.draw_rect(Rect2(b + Vector2(26, 12), Vector2(6, 16)), dark)
+		ci.draw_rect(Rect2(Vector2(-SIZE / 2.0 + 6, 28), Vector2(8, 4)), dark)  # legs
+		ci.draw_rect(Rect2(Vector2(-SIZE / 2.0 + 18, 28), Vector2(8, 4)), dark)
+		ci.draw_set_transform(Vector2.ZERO)
+		if phase == "scream" and timer <= 0.0:  # the scream's reach
+			var c := center()
+			for k in 3:
+				ci.draw_arc(c, SIZE / 2.0 + SCREAM_REACH * (k + 1) / 3.0 + fmod(clock * 30.0, 6.0), 0, TAU, 24, Color(1, 0.9, 0.7, 0.5 - k * 0.12), 2.0)
+		elif phase == "scream":  # wind-up warning
+			ci.draw_arc(center(), SIZE / 2.0 + SCREAM_REACH, 0, TAU, 24, Color(1, 0.4, 0.3, 0.35), 1.0)

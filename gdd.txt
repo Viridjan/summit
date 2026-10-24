@@ -262,3 +262,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
   timer and skull + deaths (top right). Drawn by World.Hud.
 - 2026-10-24: each jump costs 10 adventure energy (never blocks it; wall jumps and swim strokes are free).
 - 2026-10-24: the death counter counts every respawn (spare-block hits too).
+- 2026-10-24: Boss 1, the Ape (entities.gd Ape/ApeTrunk/BossGate): throw far, leap past the player mid,
+  scream near; a stone fells the trunk into a bridge; 3 spike landings beat it; gates open, exhaustion.

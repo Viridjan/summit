@@ -21,7 +21,7 @@ const PALETTE := {
 	"h": Color("a83c50"), "H": Color("e96962"), "L": Color("f2947d"),
 	"s": Color("f1c3a1"), "e": Color("28354b"),
 	"b": Color("3e79ad"), "B": Color("79b9d2"),
-	"p": Color("94615b"), "d": Color("38445f"), "k": Color("293449"),
+	"p": Color("94615b"), "D": Color("2c354d"), "d": Color("38445f"), "k": Color("293449"),
 }
 const STAND := [
 	"    HLLH    ",
@@ -36,6 +36,18 @@ const STAND := [
 	"    dddd    ",
 	"    dd dd   ",
 	"   kkk kk   ",
+]
+# Side-view contact / down / passing / recovery, then the opposite leg.
+# Exactly one planted boot; the other bends above the baseline. D is the far leg.
+const RUN_LEGS := [
+	[" Dddd   ", " kk dd  ", "    kkk "],
+	[" Dddd   ", " Dkdd   ", "   kkk  "],
+	[" Dddd   ", "  d Dk  ", "  kkk   "],
+	[" Dddd   ", " dd Dkk ", " kkk    "],
+	[" dDDD   ", " kk DD  ", "    kkk "],
+	[" dDDD   ", " dkDD   ", "   kkk  "],
+	[" dDDD   ", "  D dk  ", "  kkk   "],
+	[" dDDD   ", " DD dkk ", " kkk    "],
 ]
 const CROUCH := [
 	"    HLLH    ",
@@ -186,12 +198,14 @@ static func _pose(img: Image, origin: Vector2i, animation: String, i: int, color
 		return
 	# A connected hip anchors both legs; only the lower silhouette changes.
 	if animation == "run":
-		_box(img, origin, Rect2i(4, 14, 9, 2), Color.TRANSPARENT)
-		var stride: int = [-1, -1, 0, 1, 1, 1, 0, -1][i]
-		_box(img, origin, Rect2i(6 + lean + stride, 14, 2, 2), colors["d"])
-		_box(img, origin, Rect2i(8 + lean - stride, 14, 2, 2), colors["d"])
-		_box(img, origin, Rect2i(5 + lean + stride, 15, 3, 1), colors["k"])
-		_box(img, origin, Rect2i(8 + lean - stride, 15, 3, 1), colors["k"])
+		_box(img, origin, Rect2i(4, 13, 10, 3), Color.TRANSPARENT)
+		var legs: Array = RUN_LEGS[i]
+		for y in legs.size():
+			var row: String = legs[y]
+			for x in row.length():
+				if colors.has(row[x]):
+					img.set_pixelv(origin + Vector2i(5 + lean + x, 13 + y), colors[row[x]])
+
 	elif animation in ["jump", "dash", "fly"]:
 		_box(img, origin, Rect2i(5, 14, 8, 2), Color.TRANSPARENT)
 		_box(img, origin, Rect2i(6 + lean, 14, 2, 2), colors["d"])

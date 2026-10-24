@@ -186,6 +186,23 @@ func check_character_animation() -> void:
 	check(valid, "every authored animation frame is populated and sampling remains in range")
 	check(art.frame("land", 100).x == 2 and art.frame("jump", 100).x == 1, "landing and jump poses hold their last frame")
 	check(art.texture() == art.texture(), "Nori shares one cached texture")
+	var run_poses := {}
+	var planted := true
+	var lifted := 0
+	for i in 8:
+		var pose := atlas.get_region(Rect2i(i*16,16,16,16))
+		run_poses[pose.get_data().hex_encode()] = true
+		var groups := 0
+		var in_foot := false
+		for x in 16:
+			var shoe := pose.get_pixel(x,15).is_equal_approx(art.PALETTE.k)
+			if shoe and not in_foot: groups += 1
+			in_foot = shoe
+			if pose.get_pixel(x,14).is_equal_approx(art.PALETTE.k): lifted += 1
+		planted = planted and groups == 1
+	check(planted, "run poses plant one foot instead of spreading both feet along the ground")
+	check(lifted > 0, "run cycle lifts the recovering foot above the ground")
+	check(run_poses.size() == 8, "run cycle has eight distinct contact and passing poses")
 	var actor = PlayerScript.new(null, Vector2(40, 40))
 	actor.on_ground = true
 	actor._update_visuals(DT)
@@ -1110,6 +1127,81 @@ func check_bugfixes() -> void:
 	ed.queue_free()
 	Game.editor_level = {}
 
+# Boss 1, the Ape: distance picks the attack; a stone fells the trunk; spikes hurt it; three hits beat it.
+func check_ape() -> void:
+	var floor_y := 28 * 8
+	var keep_inv: bool = Game.settings.invincible
+	var find := func(cls): return w.ents.filter(func(e): return is_instance_of(e, cls))
+	# far: a stone thrown in an arc towards the player
+	Game.settings.invincible = true
+	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32}])
+	var ape = find.call(E.Ape)[0]
+	var thrown := false
+	for k in 120:
+		step()
+		if not ape.stones.is_empty():
+			thrown = ape.stones[0][1].x < 0 and ape.stones[0][1].y < 0
+			break
+	check(thrown, "the Ape throws a stone in an arc at a far player")
+	# phase 1: a stone that meets the standing trunk fells it into a bridge at its base (and it stays down)
+	make_world([{"t": "ape_trunk", "x": 200, "y": floor_y - 112, "w": 16, "h": 112}, {"t": "boss_ape", "x": 380, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	var trunk = find.call(E.ApeTrunk)[0]
+	ape.phase = "idle"  # as if the player had walked past the trunk
+	for k in 300:
+		step()
+		if trunk.down():
+			break
+	check(trunk.down() and trunk.collidable and trunk.rect == Rect2i(200, floor_y, 112, 8) and w.broken.has(trunk.id), "a stone fells the trunk into a bridge as long as it was tall, and it stays down (%s)" % trunk.rect)
+	# mid range: the leap lands past the player, on the far side from the Ape
+	make_world([{"t": "boss_ape", "x": 380, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(320, floor_y)
+	ape.phase = "idle"
+	var landed_x := -1.0
+	for k in 200:
+		step()
+		if ape.phase == "air":
+			landed_x = 0.0
+		elif landed_x == 0.0:
+			landed_x = ape.center().x
+			break
+	check(landed_x > 0 and landed_x < p().center().x - 8, "the Ape's leap lands past the player (at %s, player %s)" % [landed_x, p().center().x])
+	# spikes: a landing on them is a hit, and the next patch appears; three hits beat it
+	make_world([{"t": "spikes_up", "x": 288, "y": floor_y - 8}, {"t": "spikes_up", "x": 296, "y": floor_y - 8}, {"t": "spikes_up", "x": 304, "y": floor_y - 8},
+		{"t": "boss_ape", "x": 400, "y": floor_y - 32, "spikes": [[[100, floor_y - 8, 2]]], "orb": [200, floor_y - 16]},
+		{"t": "boss_gate", "x": 440, "y": floor_y - 32, "w": 8, "h": 32}])
+	ape = find.call(E.Ape)[0]
+	var gate = find.call(E.BossGate)[0]
+	p().pos = Vector2(320, floor_y)
+	ape.phase = "idle"
+	var spikes_before: int = find.call(E.Spikes).size()
+	for k in 200:
+		step()
+		if ape.hp < 3:
+			break
+	step(2)
+	check(ape.hp == 2 and find.call(E.Spikes).size() == spikes_before + 2, "landing on spikes hurts the Ape, and the next spike patch appears (hp %d)" % ape.hp)
+	step(2)
+	check(gate.collidable, "boss gates stay shut while the Ape lives")
+	ape.hp = 1
+	ape.rect.position = Vector2i(296, floor_y - 32)
+	ape._land()
+	step(90)
+	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "three hits beat the Ape: gates open, it stays beaten, an energy orb appears")
+	# near: the scream reaches around its body
+	Game.settings.invincible = keep_inv
+	make_world([{"t": "boss_ape", "x": 140, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(124, floor_y)
+	ape.phase = "idle"
+	for k in 90:
+		step()
+		if p().dead:
+			break
+	check(p().dead and ape.phase == "scream", "close to the Ape, its scream hits (phase %s)" % ape.phase)
+	Game.settings.invincible = keep_inv
+
 # Monsters page (main menu) and the map screen's Map / Monsters tabs (L1 / R1).
 # Themed backgrounds stay with the camera: the perspective shift is smooth and bounded (no wrap-around jumps).
 func check_background_parallax() -> void:
@@ -1824,6 +1916,7 @@ func _ready() -> void:
 	check_energy()
 	check_bugfixes()
 	check_bestiary()
+	check_ape()
 	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)

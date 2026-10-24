@@ -38,6 +38,10 @@ class World:
                 if t in ("jumpthru", "leaf"):
                     for i in range(int(e["w"]) // T):
                         self.plat.add((ex + i, ey))
+                elif t == "ape_trunk":  # assume the fight is won: the felled trunk lies at its base, as long as it was tall
+                    base = oy + (int(e["y"]) + int(e["h"])) // T
+                    for i in range(int(e["h"]) // T):
+                        self.plat.add((ex + i, base))
                 elif t.startswith("spikes_"):
                     self.spike.add((ex, ey))
                 elif t in ("ability_dash", "ability_climb", "goal", "strawberry", "refill"):

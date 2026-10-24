@@ -4,7 +4,8 @@ extends Node
 #   godot --path . res://tools/check_hitboxes.tscn   (exit code = mismatches)
 const E := preload("res://scripts/entities.gd")
 const TYPES := ["refill", "refill_two", "ability_dash", "ability_climb", "ability_attack", "energy_block", "energy_orb",
-	"strawberry", "booster", "booster_red", "bumper", "feather", "goal", "jumpthru", "leaf", "crumble", "breakwall"]
+	"strawberry", "booster", "booster_red", "bumper", "feather", "goal", "jumpthru", "leaf", "crumble", "breakwall",
+	"boss_ape", "ape_trunk", "boss_gate"]
 
 class Canvas extends Node2D:
 	var e

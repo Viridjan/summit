@@ -53,13 +53,16 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Treetop Village: decide where the player goes after it (exits, next area, whether the two branches meet again)
 
 ### Boss: the Ape
-- [ ] Ape enemy, 4 units, reanimates
-- [ ] Stone throw (far): parabolic, 2.5-unit sprite, 2x2 hitbox
-- [ ] Slam (mid): jump that overshoots the player; safe when moving toward the Ape
-- [ ] Scream (near): 3-unit reach
+- [x] Ape boss (`boss_ape`), 4 units (32x32), 3 hits; arena `a1_ape_arena`; tests in `check_ape()`
+- [x] Stone throw (far): parabolic, 2x2-unit stone (sprite = hitbox, per the exact-hitbox rule)
+- [x] Slam (mid): a leap that lands 3 units past the player; safe when moving toward the Ape
+- [x] Scream (near): 3-unit reach, with a wind-up ring
+- [x] Gimmick: walk past the trunk to wake it, stand behind the trunk so a stone fells it into a bridge (`ape_trunk`); lure its leaps onto spikes, a new patch after each hit
+- [x] Exits sealed during the fight (`boss_gate`); beaten for the run
+- [x] Post-boss exhaustion: energy drops to 5, an energy orb appears
+- [ ] Ape reanimates (later: the chase in the sand cave?)
 - [ ] Ground slime hazard
-- [ ] Gimmick: thrown stone knocks a trunk down to cross the arena; 3-4 spike hits, more spikes after each
-- [ ] Post-boss exhaustion: power-up, energy drained
+- [ ] The Ape's power-up reward (decide which)
 
 ## Power-ups from the reference games
 One ability = one coded unit (player state/flag + orb/pickup entity + tuning vars + test), added methodically per

@@ -41,3 +41,14 @@ and unchanged physical hitboxes. The exported atlas was visually inspected.
 The preview JavaScript passes `node --check`. Browser screenshot automation and
 rendered gameplay inspection were unavailable in this session due to display
 and socket restrictions.
+
+## Side-view run cycle
+
+The run row uses eight authored leg poses: contact, down, passing and recovery,
+then the opposite leg. One boot stays on the baseline while the other bends and
+passes above it. A darker far-leg shade separates the two legs at this scale.
+The supporting foot travels backward through each step rather than both boots
+spreading apart on the floor. Hip placement, body height and draw origin stay
+fixed; speed scaling and movement physics are unchanged. `run-poses.png` shows
+the full row. The browser preview uses the current idle timing and avoids adding
+a run-only hair bob that the runtime does not apply.
