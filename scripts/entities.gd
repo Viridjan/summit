@@ -1892,7 +1892,7 @@ class Ape extends Ent:
 
 
 # The Ape after its defeat, chasing the player up the sand cave. It moves by the player's rules along one fixed,
-# known-good path: when the room loads, plan() simulates the player's movement code (ChaseRunner) running right
+# known-good path that never touches breakable blocks (they are empty to the planner, so it jumps clear over them): when the room loads, plan() simulates the player's movement code (ChaseRunner) running right
 # and searches, jump by jump, for a take-off distance that clears every step and pit without touching spikes.
 # The Ape only ever replays that run, one recorded frame per tick, so it can't miss a jump. Touching it is a death;
 # dying rebuilds the room, which puts it back to waiting. Once the player passes x "end" it gives up for the run.
@@ -1954,22 +1954,32 @@ class ApeChase extends Ape:
 	# Tries take-off distances (px before a wall, px past the edge of a gap) until a simulated run from the Ape's
 	# spot reaches end_x without touching spikes. Returns that run's feet positions, or an empty path if none works.
 	static func plan(world, from: Rect2i, end_x: float) -> PackedVector2Array:
-		for wall in [12, 8, 16, 10, 14, 6, 18]:
-			for gap in [1, 2, 4, 6, 8]:
-				var run := _simulate(world, from, end_x, wall, gap)
-				if not run.is_empty():
-					return run
+		for brk in [2, 4, 6, 8, 3, 5]:  # extra take-off margin before a breakable block
+			for wall in [12, 8, 16, 10, 14, 6, 18]:
+				for gap in [1, 2, 4, 6, 8]:
+					var run := _simulate(world, from, end_x, wall, gap, brk)
+					if not run.is_empty():
+						return run
 		push_warning("ApeChase: no path found to x %d" % end_x)
 		return PackedVector2Array()
 
-	# One run to the right; empty when it touches spikes, falls out or gets stuck.
-	static func _simulate(world, from: Rect2i, end_x: float, wall: float, gap: float) -> PackedVector2Array:
+	# The box, or the pixel row under it, overlaps a breakable block.
+	static func _on_breakable(world, hb: Rect2i) -> bool:
+		var feet := Rect2i(hb.position, hb.size + Vector2i(0, 1))
+		for e in world.solids:
+			if (e is Crumble or e is BreakWall) and e.rect.intersects(feet):
+				return true
+		return false
+
+	# One run to the right; empty when it touches spikes or a breakable, falls out or gets stuck.
+	static func _simulate(world, from: Rect2i, end_x: float, wall: float, gap: float, brk: float) -> PackedVector2Array:
 		var r := ChaseRunner.new(ChaseWorld.new(world), Vector2.ZERO)
 		r.pos = Vector2(from.position.x + SIZE / 2.0, from.end.y)
 		r.pos.x -= r.hitbox().get_center().x - r.pos.x
 		r.pos.y -= r.bottom() - from.end.y
 		r.wall_d = wall
 		r.gap_d = gap
+		r.brk_d = gap + brk
 		var path := PackedVector2Array()
 		var best := -1e9
 		var still := 0
@@ -1977,7 +1987,7 @@ class ApeChase extends Ape:
 			r.update(1.0 / 60.0)
 			var hb: Rect2i = r.hitbox()
 			path.append(Vector2(hb.get_center().x, hb.end.y))
-			if world.touching_spikes(r.damage_rect()) or hb.position.y > world.bounds.end.y:
+			if world.touching_spikes(r.damage_rect()) or hb.position.y > world.bounds.end.y or _on_breakable(world, hb):
 				return PackedVector2Array()
 			if hb.end.x >= end_x:
 				return path
@@ -1996,6 +2006,7 @@ class ApeChase extends Ape:
 class ChaseRunner extends "res://scripts/player.gd":
 	var wall_d := 12.0
 	var gap_d := 1.0
+	var brk_d := 3.0  # take-off distance when the floor ahead is a breakable block
 	var hold_jump := 0.0
 	func _init(world, spawn: Vector2) -> void:
 		super(world, spawn)
@@ -2011,11 +2022,17 @@ class ChaseRunner extends "res://scripts/player.gd":
 		hold_jump -= dt
 		if not on_ground:
 			jump_buf = 0.0  # a press left over in the air would wall-jump it back off a step
-		elif w.collide_solid(rect_at(pos + Vector2(wall_d, 0))) != null or _gap_within(gap_d):
+		elif w.collide_solid(rect_at(pos + Vector2(wall_d, 0))) != null or _gap_within(gap_d) or _breakable_within(brk_d):
 			jump_buf = INPUT_BUFFER
 			hold_jump = VAR_JUMP_TIME
 		jump_check = hold_jump > 0
 		grab_check = false
+	# A breakable block under the pixel d px past the leading edge (the planner's world sees it as a gap).
+	func _breakable_within(d: float) -> bool:
+		var hb := hitbox()
+		var hit = w.real.collide_solid(Rect2i(hb.end.x + int(d) - 1, hb.end.y, 1, 2))
+		return hit is Crumble or hit is BreakWall
+
 	# No floor under the pixel d px past the leading edge.
 	func _gap_within(d: float) -> bool:
 		var hb := hitbox()
@@ -2033,8 +2050,15 @@ class ChaseWorld:
 	func _init(world) -> void:
 		real = world
 		bounds = world.bounds
+	# Breakable blocks (crumble, breakable walls) count as empty: the Ape's path never stands on or leans on them.
 	func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
-		return real.collide_solid(r, ignore, skip_dream)
+		var hit = real.collide_solid(r, ignore, skip_dream)
+		if hit == null or hit is String or not (hit is Crumble or hit is BreakWall):
+			return hit  # tiles are checked first: an entity here means no tile overlaps
+		for e in real.solids:
+			if e.collidable and e != ignore and not (skip_dream and e.dream) and not (e is Crumble or e is BreakWall) and e.rect.intersects(r):
+				return e
+		return null
 	func collide_dream(r: Rect2i):
 		return real.collide_dream(r)
 	func collide_jumpthru(r: Rect2i):

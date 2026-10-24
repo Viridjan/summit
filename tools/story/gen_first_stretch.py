@@ -192,13 +192,13 @@ def crumble_bridge(a, b, spikes=False):      # breakable sand over a 2-deep pit
     s1.open(a, top[a], b, top[a] + 1)
     if spikes: s1.spikes_up(a, b, top[a] + 1)
     s1.ents.append({"t": "crumble", "x": a * T, "y": top[a] * T, "w": (b - a + 1) * T, "h": 8})
-# every pit starts 3 tiles after a step, so the jump up a step never carries into it
+# every pit and bridge starts 3 tiles after a step, so the jump up a step never carries into it
 spike_pit(18, 20)
-crumble_bridge(24, 28)
+crumble_bridge(26, 28)       # 3 wide after 3 tiles of run-up: the Ape leaps clear of it
 spike_pit(41, 43)
 s1.solid(55, top[55] - 7, 59, top[55] - 5)   # low ceiling: only a short hop clears the pit under it
 spike_pit(56, 58)
-crumble_bridge(76, 81, spikes=True)
+crumble_bridge(79, 81, spikes=True)
 spike_pit(93, 95)
 spike_pit(108, 110)
 s1.ents.append({"t": "ape_chase", "x": 0, "y": top[0] * T - 32, "trigger": 12 * T, "end": 113 * T})

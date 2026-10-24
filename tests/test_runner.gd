@@ -504,9 +504,14 @@ func check_shipped_world() -> void:
 		step()
 	Game.settings.invincible = false
 	var touched := false
+	var on_breakable := false
 	for f in ape.path:
 		var feet := Rect2i(int(f.x) - 3, int(f.y) - 8, 6, 8)
 		touched = touched or hw.touching_spikes(feet)
+		for e in hw.solids:
+			if (e is E.Crumble or e is E.BreakWall) and e.rect.intersects(Rect2i(int(f.x) - 4, int(f.y) - 11, 8, 12)):
+				on_breakable = true
+	check(not on_breakable, "sand cave Ape: its path never stands on or touches a breakable block")
 	check(ape.path.size() > 60 and ape.path[-1].x >= 112 * 8 and not touched and ape.rect.end.y == int(ape.path[-1].y) and absf(ape.center().x - ape.path[-1].x) <= 1,
 		"sand cave Ape: replays a planned run up the whole cave, by the player's rules, never on spikes (%d frames to x %d)" % [ape.path.size(), ape.path[-1].x if not ape.path.is_empty() else -1])
 	ape.d["end"] = 113 * 8

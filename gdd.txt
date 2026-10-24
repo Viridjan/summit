@@ -324,3 +324,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
   end without touching spikes; the Ape follows that run frame by frame (cached per room). Sand Cave pits moved so each
   starts 3 tiles after a step (the jump up a step carried straight into the pit).
 - 2026-10-24: stretch aspect "expand": on phones the touch controls sit at the real screen edges (TouchControls.at keeps each one's distance to the nearest edges); the world keeps its 1280x720 view centred with black bars (World.Letterbox).
+- 2026-10-24: the Sand Cave Ape's planned path never touches breakable blocks (crumble/breakable walls are empty to the planner, which also rejects any run whose box touches one; breakables get their own take-off margin). Crumble bridges now 3 wide with 3 tiles of run-up (26-28, 79-81).
