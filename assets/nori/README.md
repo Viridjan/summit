@@ -45,8 +45,8 @@ and socket restrictions.
 ## Side-view run cycle
 
 The run row uses eight authored leg poses: contact, down, passing and recovery,
-then the opposite leg. One boot stays on the baseline while the other bends and
-passes above it. A darker far-leg shade separates the two legs at this scale.
+then the opposite leg. Contact frames plant one boot while the other bends and passes above it.
+Each half-cycle then has a brief flight frame with both boots off the baseline. A darker far-leg shade separates the two legs at this scale.
 The supporting foot travels backward through each step rather than both boots
 spreading apart on the floor. Hip placement, body height and draw origin stay
 fixed; speed scaling and movement physics are unchanged. `run-poses.png` shows
@@ -61,3 +61,21 @@ the same head drop. Jump, apex and fall have full authored poses with sleeves
 below the face, connected hips, tucked knees and distinct recovery frames.
 The preview includes a complete jump arc and left/right run examples so pose
 transitions can be assessed in motion. Character height and gameplay are unchanged.
+
+### Celeste motion reference pass
+
+Reviewed the moving `UndergrowthGif3.gif` in the map creator's
+[gameplay gallery](https://nicgib.github.io/project-celeste.html), frame by frame.
+The official [Celeste trailer](https://www.youtube.com/watch?v=FqBj2IGg6Uw)
+could not be fetched in this environment. Celeste's published
+[player animation selection](https://github.com/NoelFB/Celeste/blob/master/Source/Player/Player.cs)
+was also checked for its speed and rise/fall state handling. Reference media stays
+outside the project; no Celeste pixels were copied into Nori's assets.
+
+The revised run uses an 18fps base cadence, alternating contacts and two short
+flight poses across the eight-frame cycle. The visible sleeve changes phase
+when the near/far legs swap. Existing speed scaling still controls playback.
+Jump knees tuck underneath the body rather than projecting sideways. Apex and
+fall now advance into a settled pose and hold, instead of looping the legs while
+falling. The HTML preview follows the same non-looping rules and frame timings.
+Hitboxes, velocities, jump height and movement controls are unchanged.

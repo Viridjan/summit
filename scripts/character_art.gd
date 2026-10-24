@@ -10,7 +10,7 @@ const CROUCHED_HEIGHT := 8
 const BODY_WIDTH := 12
 # row, frame count, fps. Keep row order stable for the animation preview.
 const ANIMATIONS := {
-	"idle": [0, 8, 4.0], "run": [1, 8, 14.0], "jump": [2, 2, 8.0],
+	"idle": [0, 8, 4.0], "run": [1, 8, 18.0], "jump": [2, 2, 8.0],
 	"apex": [3, 2, 6.0], "fall": [4, 4, 8.0], "climb": [5, 4, 10.0],
 	"wall_slide": [6, 2, 5.0], "dash": [7, 2, 16.0], "duck": [8, 2, 4.0],
 	"skid": [9, 2, 10.0], "fly": [10, 4, 10.0], "boost": [11, 2, 6.0],
@@ -38,32 +38,32 @@ const STAND := [
 	"   kkk kk   ",
 ]
 # Side-on contact, compression, passing and recovery; then the opposite leg.
-# Four lower rows leave space for bent knees. D identifies the far leg.
+# Four lower rows leave space for bent knees and a short flight phase. D identifies the far leg.
 const RUN_LOWER := [
 	["   pDddd    ", "    D dd    ", "   kk dd    ", "      kkk   "],
 	["   pDddd    ", "    DDdd    ", "    Dkdd    ", "     kkk    "],
 	["   pDddd    ", "     dDD    ", "     d Dkk  ", "    kkk     "],
-	["   pDddd    ", "    dd DD   ", "    dd  kk  ", "   kkk      "],
+	["   pDddd    ", "    dd DDkk ", "    kk      ", "            "],
 	["   pdDDD    ", "    d DD    ", "   kk DD    ", "      kkk   "],
 	["   pdDDD    ", "    ddDD    ", "    dkDD    ", "     kkk    "],
 	["   pdDDD    ", "     Ddd    ", "     D dkk  ", "    kkk     "],
-	["   pdDDD    ", "    DD dd   ", "    DD  kk  ", "   kkk      "],
+	["   pdDDD    ", "    DD ddkk ", "    kk      ", "            "],
 ]
 # Full poses keep hands below the face and connect sleeves, hips and bent legs.
 const AIR_POSES := {
 	"jump": [
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbbs ", "  ppbbBBb   ", "   pDddd    ", "    D ddkk  ", "    Ddk     ", "   kkk      "],
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDdddd   ", "    DD ddkk ", "    kkkdd   ", "       kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbs  ", "   pDddd    ", "    DDddk   ", "    Ddkk    ", "    kk      "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbs  ", "  ppbbBBbb  ", "   pDddd    ", "    DDdd    ", "    kkddk   ", "      kk    "],
 	],
 	"apex": [
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDddd    ", "    D dd    ", "    kkddk   ", "      kk    "],
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbs  ", "  ppbbBBbb  ", "   pDddd    ", "    DDdd    ", "     kkdd   ", "       kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbs  ", "   pDddd    ", "    DDdd    ", "    Ddkk    ", "     kk     "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbs  ", "  ppbbBBbb  ", "   pDddd    ", "    Dddd    ", "    Dd kk   ", "    kk      "],
 	],
 	"fall": [
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbb  ", "   pDdddbs  ", "    DDdd    ", "    D  dd   ", "    kk kk   "],
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDdddb   ", "    Dddd    ", "    D  ddk  ", "    kk      "],
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbs  ", "   pDdddb   ", "    DDdd    ", "    D  dd   ", "    kk kk   "],
-		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDdddb   ", "    Dddd    ", "    Dk dd   ", "       kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbs  ", "   pDddd    ", "    DDdd    ", "    Dd kk   ", "    kk      "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbs  ", "  ppbbBBbb  ", "   pDddd    ", "    DDdd    ", "    D dd    ", "    kk kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbb  ", "   pDdddbs  ", "    Dddd    ", "    D dd    ", "    kk kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbs  ", "   pDdddb   ", "    DDdd    ", "    D dd    ", "    kk kk   "],
 	],
 }
 const CROUCH := [
@@ -149,7 +149,7 @@ static func head_drop(animation: String, column: int) -> int:
 static func frame(animation: String, clock: float) -> Vector2i:
 	var spec: Array = ANIMATIONS[animation]
 	var column := maxi(0, int(clock * spec[2]))
-	if animation in ["jump", "land"]:
+	if animation in ["jump", "apex", "fall", "land"]:
 		column = mini(column, spec[1] - 1)
 	else:
 		column %= int(spec[1])
@@ -195,8 +195,9 @@ static func _pose(img: Image, origin: Vector2i, animation: String, i: int, color
 		rows = STAND.slice(0, 8) + RUN_LOWER[i]
 		rows = rows.duplicate()
 		# The visible sleeve swings opposite the forward knee.
-		rows[6] = ["  ppbbBBbs  ", "  ppbbBBbb  ", "  ppbbBBbb  ", "  ppbbBBbbs "][i % 4]
-		rows[7] = ["  ppbbBBbb  ", "  ppbbBBbs  ", "  ppbbBBbbs ", "  ppbbBBbb  "][i % 4]
+		var arm_phase := (i + 2 * (i / 4)) % 4
+		rows[6] = ["  ppbbBBbs  ", "  ppbbBBbb  ", "  ppbbBBbb  ", "  ppbbBBbbs "][arm_phase]
+		rows[7] = ["  ppbbBBbb  ", "  ppbbBBbs  ", "  ppbbBBbbs ", "  ppbbBBbb  "][arm_phase]
 		if head_drop(animation, i):
 			rows = [""] + rows.slice(0, 7) + rows.slice(8)
 	elif AIR_POSES.has(animation):
