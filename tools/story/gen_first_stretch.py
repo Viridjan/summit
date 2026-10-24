@@ -144,20 +144,17 @@ a1 = Room("a1_ape_arena", "Ape Arena", 80, 23, "forest", fill="1")
 a1.open(1, 2, 78, G - 1); a1.open(0, 11, 0, 14); a1.open(79, 12, 79, 15)
 a1.solid(1, 15, 8, 18); a1.solid(71, 16, 78, 18)  # ledges at both exits (the right one is a 3-tile jump)
 a1.open(12, G, 15, 22)                       # left branch: down, back through the jungle (gated during the fight)
-a1.open(26, G, 35, 21); a1.spikes_up(26, 35, 21)  # the pit only the felled trunk bridges
-# Phase 1: walk past the trunk to wake the Ape, then step back behind it: the stone fells it across the pit.
-a1.ents.append({"t": "ape_trunk", "x": 22 * T, "y": 5 * T, "w": 2 * T, "h": 14 * T})
-# Phase 2: lure its leap onto spikes; each hit adds the next patch.
-a1.spikes_up(44, 46, 18)
-a1.ents.append({"t": "boss_ape", "x": 60 * T, "y": 15 * T,
-    "range": [37 * T, 71 * T],
-    "spikes": [[[54 * T, 18 * T, 3]], [[64 * T, 18 * T, 3], [40 * T, 18 * T, 2]]],
-    "orb": [56 * T, 16 * T]})
+# The tree puzzle and its bridge pit are removed: the fight uses one open arena.
+a1.spikes_up(60, 62, 18)
+a1.ents.append({"t": "boss_ape", "x": 26 * T, "y": 15 * T,
+    "range": [9 * T, 71 * T],
+    "spikes": [[[66 * T, 18 * T, 3]], [[56 * T, 18 * T, 2], [69 * T, 18 * T, 2]]],
+    "orb": [64 * T, 16 * T]})
 a1.ents.append({"t": "boss_gate", "x": 78 * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
 a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
 a1.ent("note", 10, 18, text="Left branch, once the Ape is beaten: down here, back through the jungle")
-a1.ent("note", 19, 18, text="Walk past the trunk to wake the Ape; stand behind the trunk so its stone fells it")
-a1.ent("note", 40, 18, text="Mid range it leaps past you: move towards it to dodge, and lure it onto spikes")
+a1.ent("note", 20, 18, text="The Ape! Move towards it when it leaps: it lands past you")
+a1.ent("note", 57, 18, text="Lure its leaps onto spikes")
 a1.ent("note", 75, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 
 # Right branch: a sand cave climbing at about 25-30 degrees, then the shore and the lighthouse

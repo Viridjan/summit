@@ -52,3 +52,12 @@ spreading apart on the floor. Hip placement, body height and draw origin stay
 fixed; speed scaling and movement physics are unchanged. `run-poses.png` shows
 the full row. The browser preview uses the current idle timing and avoids adding
 a run-only hair bob that the runtime does not apply.
+
+### Coordinated motion pass
+
+Running now uses four rows for hips and bent legs, a sleeve swing opposite the
+forward knee, and a one-pixel compression on each down-step. Hair anchors follow
+the same head drop. Jump, apex and fall have full authored poses with sleeves
+below the face, connected hips, tucked knees and distinct recovery frames.
+The preview includes a complete jump arc and left/right run examples so pose
+transitions can be assessed in motion. Character height and gameplay are unchanged.

@@ -272,3 +272,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: energy base 50, always regenerating; blocks add 100. A jump needs its 5 energy.
 - 2026-10-24: energy regenerates 6/s (was 3).
 - 2026-10-24: hitbox overlay lines are 1 screen pixel; a colour legend shows bottom right while it's on.
+- 2026-10-24: Ape arena: meet the Ape first; past the tree its stone or leap fells it into the bridge; it follows
+  you across for the spike phase. Ape leaps keep sub-pixel motion.

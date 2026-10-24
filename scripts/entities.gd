@@ -131,6 +131,7 @@ class Ent extends RefCounted:
 
 	func setup() -> void: pass
 	func hurts() -> bool: return false  # true: touching it is damage, checked against the player's smaller damage_rect()
+	func damage_circles() -> Array: return []  # [centre, radius] for exact round hazards
 	func damage_boxes() -> Array: return []  # extra boxes that hurt (projectiles, waves), for the hitbox overlay
 	func update(_dt: float) -> void: pass
 	func draw(_ci: CanvasItem) -> void: pass
@@ -1479,14 +1480,18 @@ class BossGate extends Ent:
 				ci.draw_rect(Rect2(x + 2, y, 2, 2), Color("c8d06a"))
 
 
-# The Ape: picks its attack by distance. Far: a stone thrown in an arc. Mid: a leap that lands a bit
-# past the player (standing still gets you hit by the arc; moving towards it is safe). Near: a scream
-# around its body. While the arena's trunk stands it only throws. Landing on spikes is a hit: it screams,
-# leaps again, and the next spike patch appears (d.spikes, one list per hit: [x, y, count] in px).
-# Three hits beat it: the exits open, the player is exhausted (energy 5) and an energy orb appears (d.orb).
+# The Ape: wakes when the player comes near, then picks its attack by distance. Far: a stone thrown in an
+# arc. Mid: a leap that lands a bit past the player (standing still gets you hit by the arc; moving towards
+# it is safe). Near: a scream around its body. A player beyond its leaps' reach always gets a leap (which
+# stops at the range's edge). Its leaps stay inside d.range ([x0, x1] px); once the arena's
+# trunk is down, inside d.range2, and it leaps there first if it's outside. A stone or a leap that meets
+# the standing trunk fells it. Landing on spikes is a hit: it screams, leaps again, and the next spike patch
+# appears (d.spikes, one list per hit: [x, y, count] in px). Three hits beat it: the exits open, the
+# player is exhausted (energy 5) and an energy orb appears (d.orb).
 class Ape extends Ent:
 	const HP := 3
 	const SIZE := 32
+	const BODY_SCALE := 0.7
 	const LEAP_G := 600.0
 	const LEAP_TIME := 0.75
 	const OVERSHOOT := 24.0  # the slam lands this far past the player
@@ -1498,6 +1503,7 @@ class Ape extends Ent:
 	const SLAM_TIME := 0.2
 	const FAR := 140.0
 	const NEAR := 44.0
+	const WAKE := 220.0
 	var hp := HP
 	var phase := "sleep"  # sleep, idle, throw, crouch, air, scream, hurt, dying, gone
 	var timer := 0.0
@@ -1525,13 +1531,42 @@ class Ape extends Ent:
 			if w.broken.has(id):
 				phase = "gone"
 				collidable = false
+	# [x0, x1] the leaps stay in: d.range, or d.range2 once the arena's trunk is down.
+	func leap_range() -> Vector2:
+		var t = trunk()
+		var r: Array = d.get("range2", []) if t != null and t.down() and d.has("range2") else [x_min, x_max]
+		return Vector2(float(r[0]), float(r[1]))
 	func trunk():
 		for e in w.ents:
 			if e is ApeTrunk:
 				return e
 		return null
+	# The movement footprint remains 32px. Contact damage uses smaller silhouette bands.
+	func touch_rect() -> Rect2i:
+		var size := roundi(SIZE * BODY_SCALE)
+		return Rect2i(rect.position + Vector2i((SIZE-size)/2,(SIZE-size)/2),Vector2i(size,size))
+	func body_boxes() -> Array:
+		var bounds := touch_rect()
+		var drop := 3 if phase == "crouch" else 0
+		return [
+			Rect2i(bounds.position+Vector2i(5,drop),Vector2i(12,7)),
+			Rect2i(bounds.position+Vector2i(2,7+drop),Vector2i(18,5)),
+			Rect2i(bounds.position+Vector2i(0,12+drop),Vector2i(22,10-drop)),
+		]
+	func body_hits(area: Rect2i) -> bool:
+		for box in body_boxes():
+			if box.intersects(area): return true
+		return false
+	func scream_radius() -> float:
+		return SIZE / 2.0 + SCREAM_REACH
+	func scream_hits(area: Rect2i) -> bool:
+		var c := center()
+		var nearest := c.clamp(Vector2(area.position),Vector2(area.end))
+		return area.has_area() and c.distance_squared_to(nearest) < scream_radius() * scream_radius()
+	func damage_circles() -> Array:
+		return [[center(),scream_radius()]] if phase == "scream" and timer <= 0.0 and timer > -0.35 else []
 	func touch(p) -> void:
-		if hurts():
+		if hurts() and body_hits(p.damage_rect()):
 			p.die((p.center() - center()).normalized())
 	func update(dt: float) -> void:
 		clock += dt
@@ -1550,13 +1585,16 @@ class Ape extends Ent:
 		timer -= dt
 		match phase:
 			"sleep":
-				var t = trunk()
-				if (t != null and not t.down() and p.center().x > t.standing.get_center().x) or ((t == null or t.down()) and absf(dx) < 300):
+				if absf(dx) < WAKE:
 					_go("idle", 0.6)
 			"idle":
 				if timer <= 0:
-					var t = trunk()
-					if (t != null and not t.down()) or absf(dx) > FAR:
+					var r := leap_range()
+					if center().x < r.x or center().x > r.y:  # outside its range (the trunk just fell): leap there
+						_go("crouch", 0.45)
+					elif p.center().x < r.x or p.center().x > r.y:  # player out of its reach (past the trunk): leap at them
+						_go("crouch", 0.45)
+					elif absf(dx) > FAR:
 						_go("throw", 0.7)
 					elif absf(dx) > NEAR:
 						_go("crouch", 0.45)
@@ -1569,15 +1607,19 @@ class Ape extends Ent:
 			"crouch":
 				if timer <= 0:
 					var side := 1.0 if dx > 0 else -1.0
-					var tx := clampf(p.center().x + side * OVERSHOOT, x_min + SIZE / 2.0, x_max - SIZE / 2.0)
+					var r := leap_range()
+					var tx := clampf(p.center().x + side * OVERSHOOT, r.x + SIZE / 2.0, r.y - SIZE / 2.0)
 					vel = Vector2((tx - center().x) / LEAP_TIME, -0.5 * LEAP_G * LEAP_TIME)
 					phase = "air"
 			"air":
 				vel.y += LEAP_G * dt
 				_move(dt)
+				var t = trunk()
+				if t != null and not t.down() and not t.falling and rect.intersects(t.standing):
+					t.fell()  # crashed into the standing trunk
 			"scream":
 				if timer <= 0.0 and timer > -0.35:  # the scream itself, after the 0.5 s wind-up
-					if not p.dead and rect.grow(SCREAM_REACH).intersects(p.damage_rect()):
+					if not p.dead and scream_hits(p.damage_rect()):
 						p.die((p.center() - center()).normalized())
 				elif timer <= -0.35:
 					if then_slam:
@@ -1600,13 +1642,15 @@ class Ape extends Ent:
 		var t := clampf(absf(target.x - from.x) / 220.0, 0.7, 1.3)
 		stones.append([from, Vector2((target.x - from.x) / t, (target.y - from.y) / t - 0.5 * STONE_G * t)])
 	func _move(dt: float) -> void:
-		var step := vel * dt
+		rem += vel * dt  # whole pixels move, the rest carries over (Ent.rem)
+		var step := rem.round()
+		rem -= step
 		var r := Rect2i(rect)
-		r.position.x = int(round(rect.position.x + step.x))
+		r.position.x += int(step.x)
 		if w.collide_solid(r) == null:
 			rect.position.x = r.position.x
 		r = Rect2i(rect)
-		r.position.y = int(round(rect.position.y + step.y))
+		r.position.y += int(step.y)
 		if w.collide_solid(r) == null:
 			rect.position.y = r.position.y
 		elif vel.y > 0:
@@ -1621,8 +1665,6 @@ class Ape extends Ent:
 			out.append(Rect2i(Vector2i(s[0]) - Vector2i(STONE / 2, STONE / 2), Vector2i(STONE, STONE)))
 		if slam_t > 0:
 			out.append(slam_box())
-		if phase == "scream" and timer <= 0.0 and timer > -0.35:
-			out.append(rect.grow(SCREAM_REACH))
 		return out
 	# The landing shockwave along the ground, both sides of the body.
 	func slam_box() -> Rect2i:
@@ -1722,9 +1764,9 @@ class Ape extends Ent:
 			var sb := Rect2(slam_box())
 			ci.draw_rect(sb, Color(0.85, 0.75, 0.55, 0.35 + slam_t))
 			ci.draw_rect(Rect2(sb.position, Vector2(sb.size.x, 2)), Color(1, 0.95, 0.8, 0.8))
-		if phase == "scream" and timer <= 0.0:  # the scream's reach
+		if phase == "scream" and timer <= 0.0 and timer > -0.35:  # the scream's reach
 			var c := center()
 			for k in 3:
-				ci.draw_arc(c, SIZE / 2.0 + SCREAM_REACH * (k + 1) / 3.0 + fmod(clock * 30.0, 6.0), 0, TAU, 24, Color(1, 0.9, 0.7, 0.5 - k * 0.12), 2.0)
+				ci.draw_arc(c, minf(scream_radius(), scream_radius() * (k + 1) / 3.0 + fmod(clock * 30.0, 6.0)), 0, TAU, 24, Color(1, 0.9, 0.7, 0.5 - k * 0.12), 2.0)
 		elif phase == "scream":  # wind-up warning
 			ci.draw_arc(center(), SIZE / 2.0 + SCREAM_REACH, 0, TAU, 24, Color(1, 0.4, 0.3, 0.35), 1.0)

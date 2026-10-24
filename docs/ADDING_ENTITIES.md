@@ -113,3 +113,12 @@ A brand-new variant needs:
 - a `VARIANTS` entry for its speed, warning, recovery and scale;
 - `variant_hp()`, if it changes HP;
 - a palette in `EnemyArt.TINTS`.
+
+### Contoured and circular damage areas
+
+`Ent.touch_rect()` remains the broad contact bound. The Ape verifies contact
+against `body_boxes()` inside `touch()` so empty head corners do not deal damage;
+its debug body overlay displays the same bands. `damage_boxes()` exposes rectangular
+extra attacks. `damage_circles()` returns `[centre, radius]` entries for the hitbox
+overlay; circular attacks must also use their matching geometric collision check
+(the Ape's `scream_hits()` uses circle-versus-player-rectangle distance).

@@ -203,6 +203,20 @@ func check_character_animation() -> void:
 	check(planted, "run poses plant one foot instead of spreading both feet along the ground")
 	check(lifted > 0, "run cycle lifts the recovering foot above the ground")
 	check(run_poses.size() == 8, "run cycle has eight distinct contact and passing poses")
+	var idle_pose := atlas.get_region(Rect2i(0,0,16,16))
+	var clear_face := true
+	var airborne := true
+	for animation in ["jump", "apex", "fall"]:
+		var spec: Array = art.ANIMATIONS[animation]
+		var poses := {}
+		for i in int(spec[1]):
+			var pose := atlas.get_region(Rect2i(i*16,int(spec[0])*16,16,16))
+			poses[pose.get_data().hex_encode()] = true
+			airborne = airborne and pose.get_data() != idle_pose.get_data()
+			clear_face = clear_face and pose.get_region(Rect2i(5,4,6,5)).get_data() == idle_pose.get_region(Rect2i(5,4,6,5)).get_data()
+		check(poses.size() == int(spec[1]), "%s has distinct authored airborne poses" % animation)
+	check(clear_face, "airborne arms stay below the face instead of painting over it")
+	check(airborne, "jump, apex and fall use airborne silhouettes rather than standing poses")
 	var actor = PlayerScript.new(null, Vector2(40, 40))
 	actor.on_ground = true
 	actor._update_visuals(DT)
@@ -1128,14 +1142,37 @@ func check_bugfixes() -> void:
 	Game.editor_level = {}
 
 # Boss 1, the Ape: distance picks the attack; a stone fells the trunk; spikes hurt it; three hits beat it.
+func check_ape_hitbox_shapes() -> void:
+	make_world([{"t":"boss_ape","x":200,"y":192}])
+	var ape = w.ents.filter(func(e): return e is E.Ape)[0]
+	check(ape.has_method("body_boxes"), "Ape has a smaller contoured body hitbox")
+	if not ape.has_method("body_boxes"): return
+	check(ape.touch_rect().size == Vector2i(22,22), "Ape body bounds use 70 percent linear size rounded to pixels")
+	var head_corner := Rect2i(ape.touch_rect().position, Vector2i(2,2))
+	var head_middle := Rect2i(ape.rect.position+Vector2i(15,6),Vector2i(2,2))
+	check(not ape.body_hits(head_corner) and ape.body_hits(head_middle), "Ape head contour excludes empty corners but includes the head")
+	ape.phase = "scream"
+	ape.timer = -0.1
+	var c: Vector2 = ape.center()
+	check(ape.scream_hits(Rect2i(Vector2i(c)+Vector2i(37,-1),Vector2i(2,2))), "round scream reaches the cardinal edge")
+	check(not ape.scream_hits(Rect2i(Vector2i(c)+Vector2i(33,33),Vector2i(2,2))), "round scream excludes the old square corners")
+	check(ape.damage_circles().size()==1 and ape.damage_boxes().is_empty(), "scream overlay exposes the actual circular damage shape")
+	check(ape.scream_hits(Rect2i(Vector2i(c)+Vector2i(39,-1),Vector2i(4,2))), "scream detects an overlapping player edge even when their centre is outside")
+	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
+	check(arena.entities.all(func(e): return e.t != "ape_trunk"), "Ape arena removes the tree obstacle")
+	var boss: Dictionary = arena.entities.filter(func(e): return e.t == "boss_ape")[0]
+	check(not boss.has("range2") and int(boss.range[0]) == 72 and int(boss.range[1]) == 568, "Ape arena uses one unrestricted fighting range")
+	check(arena.tiles[19].substr(44,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
+
 func check_ape() -> void:
 	var floor_y := 28 * 8
 	var keep_inv: bool = Game.settings.invincible
 	var find := func(cls): return w.ents.filter(func(e): return is_instance_of(e, cls))
 	# far: a stone thrown in an arc towards the player
 	Game.settings.invincible = true
-	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32}])
+	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32, "range": [0, 480]}])
 	var ape = find.call(E.Ape)[0]
+	ape.phase = "idle"  # awake, the player far away
 	var thrown := false
 	for k in 120:
 		step()
@@ -1154,6 +1191,32 @@ func check_ape() -> void:
 		if trunk.down():
 			break
 	check(trunk.down() and trunk.collidable and trunk.rect == Rect2i(200, floor_y, 112, 8) and w.broken.has(trunk.id), "a stone fells the trunk into a bridge as long as it was tall, and it stays down (%s)" % trunk.rect)
+	# it sleeps until the player comes near
+	make_world([{"t": "boss_ape", "x": 400, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	step(10)
+	var slept: bool = ape.phase == "sleep"
+	p().pos = Vector2(300, floor_y)
+	step(5)
+	check(slept and ape.phase != "sleep", "the Ape wakes when the player comes near")
+	# a leap that meets the standing trunk fells it; then, outside its new range, it leaps across
+	make_world([{"t": "ape_trunk", "x": 200, "y": floor_y - 112, "w": 16, "h": 112},
+		{"t": "boss_ape", "x": 120, "y": floor_y - 32, "range": [40, 216], "range2": [330, 460]}])
+	ape = find.call(E.Ape)[0]
+	trunk = find.call(E.ApeTrunk)[0]
+	p().pos = Vector2(236, floor_y)
+	ape.phase = "idle"
+	for k in 200:
+		step()
+		if trunk.down():
+			break
+	check(trunk.down(), "the Ape's leap crashes into the standing trunk and fells it")
+	p().pos = Vector2(400, floor_y)
+	for k in 240:
+		step()
+		if ape.phase != "air" and ape.center().x >= 330:
+			break
+	check(ape.center().x >= 330 and ape.center().x <= 460, "with the trunk down the Ape leaps across into its second range (at %s)" % ape.center().x)
 	# mid range: the leap lands past the player, on the far side from the Ape
 	make_world([{"t": "boss_ape", "x": 380, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
@@ -1941,6 +2004,7 @@ func _ready() -> void:
 	check_energy()
 	check_bugfixes()
 	check_bestiary()
+	check_ape_hitbox_shapes()
 	check_ape()
 	check_background_parallax()
 

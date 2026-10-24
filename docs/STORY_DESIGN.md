@@ -78,13 +78,22 @@ Attacks, chosen by distance to the player:
 | Slam | mid | Jumps and slams the ground. Overshoots on purpose (below). |
 | Scream | near | Reaches 3 units around the Ape. |
 
-Gimmick:
-1. **Phase 1: the trunk.** The player stands on a specific spot to bait a throw and dodges it. The stone hits a target and knocks down a trunk, which becomes the way to the other side of the arena.
-2. **Phase 2: the spikes.** On the other side, trick the Ape into landing on spikes.
-   - The slam aims a bit **past** the player, not at them.
-   - Standing still still gets the player hit, because of the arc.
-   - Moving **toward** the Ape is completely safe, an easy dodge once learned.
-3. Repeat 3-4 times. After each hit the Ape screams and slams, and **more spikes appear**: the Ape gets easier to kill while the arena gets more dangerous.
+Arena and collision:
+- The tree obstacle, fallen-trunk bridge, bridge pit and tree-bait tutorial are removed.
+  The former pit is filled with solid ground. The Ape uses one leap range across
+  the arena (`range: [72, 568]`); there is no tree-dependent `range2` stage.
+- Lure the Ape's overshooting leaps onto spikes. Three spike hits beat it;
+  subsequent hits introduce more spike patches. Gates and the energy reward remain.
+- Body contact uses 70% of the original width and height, rounded from 32 to
+  **22×22 pixels**, centred inside the sprite's movement footprint. Three bands
+  narrow the upper body around the head and shoulders; the head follows crouching.
+  This is 70% per dimension, not 70% of area. Drawing and terrain movement retain
+  the original 32×32 footprint, so boss placement and landing remain stable.
+- The scream is an exact circle centred on the Ape, radius **40 pixels** (16px
+  half-body + 24px reach). Collision uses the nearest point of the player's damage
+  rectangle, so square corners are safe while an overlapping edge is still hit.
+  Its 0.5s wind-up and 0.35s active window remain. Hitbox debug drawing uses the
+  same body bands and circle; the scream animation stays inside its damage radius.
 
 ## 3. Energy
 
@@ -145,8 +154,8 @@ Water:
 Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
-Past the jungle: the Ape Arena, with the fight built (see section 2: trunk gimmick, three spike hits, gated exits, exhaustion after), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
-NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
+Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, three spike hits, gated exits, exhaustion after), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
+NPCs, quests, the roar, the house doors, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
 `tools/story/gen_first_stretch.py` generated these rooms once; edit them in-game from now on.
 `tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.
 
@@ -160,10 +169,13 @@ NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the 
 - 2026-10-24: water drain doubled again, to 2 every 0.1 s (20 per second).
 - 2026-10-24: water drain set to 80% of that: 1.6 every 0.1 s (16 per second). No energy, no jump. Jump cost lowered to 5.
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
-- 2026-10-24: Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards energy drops to 5 and an energy orb appears. The power-up reward is still open.
+- 2026-10-24 (superseded by tree removal below): Ape arena reworked: you meet the Ape first, on your side of the pit. Get past it, stand past the tree, and its stone or leap fells the tree across the pit; it follows you over for the spike phase.
+- 2026-10-24 (tree setup superseded below): Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards energy drops to 5 and an energy orb appears. The power-up reward is still open.
 - 2026-10-24: the run starts with a base of 50 energy that always regenerates; energy blocks add 100 each. A jump needs its 5.
 - 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
+
+- 2026-10-24: Removed the arena tree puzzle and bridge pit, unified the leap range, reduced body-contact bounds to 22×22 with a head contour, and made scream collision circular (40px radius).
 
 ## 8. Open questions
 
@@ -174,3 +186,4 @@ NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the 
 5. How the two branches meet again, if they do.
 6. Wall grab costs 20 or 30 per second?
 7. How much energy collectibles restore (the energy orb refills everything for now).
+

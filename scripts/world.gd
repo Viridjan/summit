@@ -768,11 +768,16 @@ func _draw_hitboxes(cull: Rect2i) -> void:
 		if e.solid or e.jumpthru:  # what the player collides with
 			if e.collidable:
 				draw_rect(Rect2(e.rect), HITBOX_KEY[0][1], false, -1.0)
+		elif e is E.Ape:
+			for box in e.body_boxes():
+				draw_rect(Rect2(box), HITBOX_KEY[1][1] if e.collidable else Color(HITBOX_KEY[1][1],0.3), false, -1.0)
 		elif e.touch_rect().has_area():  # what the player touches: pickups, hazards, triggers
 			draw_rect(Rect2(e.touch_rect()), HITBOX_KEY[1][1] if e.collidable else Color(HITBOX_KEY[1][1], 0.3), false, -1.0)
 	for e in ents:  # what hurts besides the bodies: projectiles, puddles, the Ape's stones, scream and slam
 		for b in e.damage_boxes():
 			draw_rect(Rect2(b), HITBOX_KEY[2][1], false, -1.0)
+		for circle in e.damage_circles():
+			draw_arc(circle[0],circle[1],0,TAU,64,HITBOX_KEY[2][1],-1.0)
 	draw_rect(Rect2(player.hitbox()), HITBOX_KEY[3][1], false, -1.0)
 	draw_rect(Rect2(player.damage_rect()), HITBOX_KEY[4][1], false, -1.0)  # what hazards test against
 	if player.attacking():

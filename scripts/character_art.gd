@@ -37,18 +37,35 @@ const STAND := [
 	"    dd dd   ",
 	"   kkk kk   ",
 ]
-# Side-view contact / down / passing / recovery, then the opposite leg.
-# Exactly one planted boot; the other bends above the baseline. D is the far leg.
-const RUN_LEGS := [
-	[" Dddd   ", " kk dd  ", "    kkk "],
-	[" Dddd   ", " Dkdd   ", "   kkk  "],
-	[" Dddd   ", "  d Dk  ", "  kkk   "],
-	[" Dddd   ", " dd Dkk ", " kkk    "],
-	[" dDDD   ", " kk DD  ", "    kkk "],
-	[" dDDD   ", " dkDD   ", "   kkk  "],
-	[" dDDD   ", "  D dk  ", "  kkk   "],
-	[" dDDD   ", " DD dkk ", " kkk    "],
+# Side-on contact, compression, passing and recovery; then the opposite leg.
+# Four lower rows leave space for bent knees. D identifies the far leg.
+const RUN_LOWER := [
+	["   pDddd    ", "    D dd    ", "   kk dd    ", "      kkk   "],
+	["   pDddd    ", "    DDdd    ", "    Dkdd    ", "     kkk    "],
+	["   pDddd    ", "     dDD    ", "     d Dkk  ", "    kkk     "],
+	["   pDddd    ", "    dd DD   ", "    dd  kk  ", "   kkk      "],
+	["   pdDDD    ", "    d DD    ", "   kk DD    ", "      kkk   "],
+	["   pdDDD    ", "    ddDD    ", "    dkDD    ", "     kkk    "],
+	["   pdDDD    ", "     Ddd    ", "     D dkk  ", "    kkk     "],
+	["   pdDDD    ", "    DD dd   ", "    DD  kk  ", "   kkk      "],
 ]
+# Full poses keep hands below the face and connect sleeves, hips and bent legs.
+const AIR_POSES := {
+	"jump": [
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbbs ", "  ppbbBBb   ", "   pDddd    ", "    D ddkk  ", "    Ddk     ", "   kkk      "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDdddd   ", "    DD ddkk ", "    kkkdd   ", "       kk   "],
+	],
+	"apex": [
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDddd    ", "    D dd    ", "    kkddk   ", "      kk    "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbs  ", "  ppbbBBbb  ", "   pDddd    ", "    DDdd    ", "     kkdd   ", "       kk   "],
+	],
+	"fall": [
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbb  ", "   pDdddbs  ", "    DDdd    ", "    D  dd   ", "    kk kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDdddb   ", "    Dddd    ", "    D  ddk  ", "    kk      "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbs  ", "   pDdddb   ", "    DDdd    ", "    D  dd   ", "    kk kk   "],
+		["    HLLH    ", "   hHHHHH   ", "   hHHHss   ", "   hHsses   ", "   hHssss   ", "   hhbbbb   ", "  ppbbBBbb  ", "  ppbbBBbbs ", "   pDdddb   ", "    Dddd    ", "    Dk dd   ", "       kk   "],
+	],
+}
 const CROUCH := [
 	"    HLLH    ",
 	"   hHHHHH   ",
@@ -127,7 +144,7 @@ static func hair_shades(hair_color: Color) -> Dictionary:
 
 # How far the head sits below its usual spot on this frame (the hair anchor follows it).
 static func head_drop(animation: String, column: int) -> int:
-	return 1 if animation == "idle" and column in IDLE_EXHALE else 0
+	return 1 if (animation == "idle" and column in IDLE_EXHALE) or (animation == "run" and column in [1, 5]) else 0
 
 static func frame(animation: String, clock: float) -> Vector2i:
 	var spec: Array = ANIMATIONS[animation]
@@ -174,7 +191,17 @@ static func _pose(img: Image, origin: Vector2i, animation: String, i: int, color
 	# Landing has a hand-drawn intermediate pose; never resample pixel clusters.
 	if height == 10:
 		rows = STAND.slice(0, 8) + STAND.slice(10, 12)
-	if animation == "climb":
+	if animation == "run":
+		rows = STAND.slice(0, 8) + RUN_LOWER[i]
+		rows = rows.duplicate()
+		# The visible sleeve swings opposite the forward knee.
+		rows[6] = ["  ppbbBBbs  ", "  ppbbBBbb  ", "  ppbbBBbb  ", "  ppbbBBbbs "][i % 4]
+		rows[7] = ["  ppbbBBbb  ", "  ppbbBBbs  ", "  ppbbBBbbs ", "  ppbbBBbb  "][i % 4]
+		if head_drop(animation, i):
+			rows = [""] + rows.slice(0, 7) + rows.slice(8)
+	elif AIR_POSES.has(animation):
+		rows = AIR_POSES[animation][i]
+	elif animation == "climb":
 		rows = CLIMB_REACH if i % 2 == 0 else CLIMB_PULL
 	elif animation == "wall_slide":
 		rows = WALL_SLIDE
@@ -196,24 +223,10 @@ static func _pose(img: Image, origin: Vector2i, animation: String, i: int, color
 				img.set_pixelv(origin + Vector2i(x + 2 + lean, top + y), colors[row[x]])
 	if height < STANDING_HEIGHT:
 		return
-	# A connected hip anchors both legs; only the lower silhouette changes.
-	if animation == "run":
-		_box(img, origin, Rect2i(4, 13, 10, 3), Color.TRANSPARENT)
-		var legs: Array = RUN_LEGS[i]
-		for y in legs.size():
-			var row: String = legs[y]
-			for x in row.length():
-				if colors.has(row[x]):
-					img.set_pixelv(origin + Vector2i(5 + lean + x, 13 + y), colors[row[x]])
 
-	elif animation in ["jump", "dash", "fly"]:
+	if animation in ["dash", "fly"]:
 		_box(img, origin, Rect2i(5, 14, 8, 2), Color.TRANSPARENT)
 		_box(img, origin, Rect2i(6 + lean, 14, 2, 2), colors["d"])
 		_box(img, origin, Rect2i(5 + lean, 15, 3, 1), colors["k"])
 		_box(img, origin, Rect2i(9 + lean, 13, 2, 2), colors["d"])
 		_box(img, origin, Rect2i(10 + lean, 14, 2, 1), colors["k"])
-	# The raised sleeve meets the shoulder instead of floating beside the face.
-	if animation in ["jump", "fall"]:
-		var reach := 0
-		_box(img, origin, Rect2i(10 + lean, 8 - reach, 2, 4 + reach), colors["b"])
-		_box(img, origin, Rect2i(10 + lean, 7 - reach, 2, 1), colors["s"])

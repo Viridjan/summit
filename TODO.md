@@ -43,7 +43,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Cove Town houses enterable through doors (placeholder note in the room)
 - [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end
-- [x] Ape boss arena room (`a1_ape_arena`): spiked pit with a log standing in for the fallen trunk, ledges at both exits, a hole down to the left branch; the fight itself is notes until the boss exists
+- [x] Ape boss arena (`a1_ape_arena`): open fighting floor, ledges at both exits and a gated hole to the left branch; tree, bridge pit and tree instructions removed
 - [x] Right branch room: sand cave climbing at about 25° (`s1_sand_cave`), crumble blocks over pits stand in for breakable sand
 - [ ] Sand cave: Ape chase, rock fall that seals it, sword reward (notes for now)
 - [x] Shore (`s2_shore`): the mountain's foot with a star out of reach, the sea, the lighthouse tower; raft is a note
@@ -56,8 +56,9 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [x] Ape boss (`boss_ape`), 4 units (32x32), 3 hits; arena `a1_ape_arena`; tests in `check_ape()`
 - [x] Stone throw (far): parabolic, 2x2-unit stone (sprite = hitbox, per the exact-hitbox rule)
 - [x] Slam (mid): a leap that lands 3 units past the player; safe when moving toward the Ape; the landing sends a shockwave 2 units out along the ground (jump it)
-- [x] Scream (near): 3-unit reach, with a wind-up ring
-- [x] Gimmick: walk past the trunk to wake it, stand behind the trunk so a stone fells it into a bridge (`ape_trunk`); lure its leaps onto spikes, a new patch after each hit
+- [x] Scream (near): circular damage, 40px radius, with matching wind-up and debug rings
+- [x] Open arena: one leap range; lure leaps onto spikes, with a new spike patch after each hit
+- [x] Ape body contact: 70% linear bounds (22×22), narrowed around the head and shoulders; debug overlay matches
 - [x] Exits sealed during the fight (`boss_gate`); beaten for the run
 - [x] Post-boss exhaustion: energy drops to 5, an energy orb appears
 - [ ] Ape reanimates (later: the chase in the sand cave?)
