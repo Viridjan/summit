@@ -120,7 +120,7 @@ Regeneration:
 
 Water:
 - Underwater is a layer on top of the player's state: slow sinking, drag, and jump becomes a swim stroke. Waterfalls are a layer too: inside one the player is pushed down and can't rise.
-- Staying in water costs 0.05 energy every 0.1 s (0.5 per second), and energy doesn't regenerate there.
+- Staying in water costs 0.5 energy every 0.1 s (5 per second), and energy doesn't regenerate there.
 - Running out of energy in water is a death (drowning).
 
 ## 4. Skill points
@@ -152,6 +152,7 @@ NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the 
 - 2026-10-24: the story world starts with **jump only**. Dash, climb and attack are adventure abilities unlocked by orbs (`Game.has_ability`).
 - 2026-10-24: the big jump gets nothing for now. It stays uncrossable until dash comes from a later level.
 - 2026-10-24: water drains energy (0.05 every 0.1 s, no regeneration in water); out of energy in water = death.
+- 2026-10-24: water drain raised 10x, to 0.5 every 0.1 s (5 per second).
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 

@@ -350,7 +350,8 @@ func _process(_dt: float) -> void:
 	for e in p.transition_log:
 		t += "%.2fs  %s -> %s\n" % [e[0], PlayerScript.STATE_NAMES[e[1]], PlayerScript.STATE_NAMES[e[2]]]
 	log_label.text = t
-	live_vals[0].text = PlayerScript.STATE_NAMES[p.state] + ("  + Attack" if p.attacking() else "") + ("  (dead)" if p.dead else "")
+	var on_layers: String = "".join(StateGraph.LAYERS.filter(func(l): return StateGraph.layer_on(p, l[0])).map(func(l): return "  + " + l[0]))
+	live_vals[0].text = PlayerScript.STATE_NAMES[p.state] + on_layers + ("  (dead)" if p.dead else "")
 	for i in LIVE.size():
 		var prop: String = LIVE[i][1]
 		live_vals[i + 1].text = _fmt(p.ducking() if prop == "collider" else p.get(prop))
@@ -372,7 +373,7 @@ class StateGraph extends Control:
 	# States stacked top to bottom. Each transition is an angled arrow:
 	# downward ones run on the right, upward ones on the left, wider for longer jumps.
 	var player
-	const HW := 52.0  # half width of a state box
+	const HW := 60.0  # half width of a state box
 	# One line per PlayerScript.STATE_NAMES entry, same order.
 	const HELP := [
 		"Normal: running, jumping, falling, wall jumps. Most time is spent here.",
@@ -385,19 +386,30 @@ class StateGraph extends Control:
 		"Dream Dash: dashing through a dream block, moving straight until you exit.",
 		"Star Fly: feather flight; steer freely until the timer runs out.",
 	]
-	# The attack is a layer on top of the state machine (drawn in its own row under it), not a state.
-	const ATTACK_HELP := "Attack (layer): a swing in the held direction (attack key). It runs on top of the current state: while running, dashing (a dash attack), climbing or flying. Not inside bubbles or dream blocks. Lit while swinging."
+	# Layers run on top of the state machine (rows under it, lit while active), not states: [name, help].
+	const LAYERS := [
+		["Attack", "Attack (layer): a swing in the held direction (attack key). It runs on top of the current state: while running, dashing (a dash attack), climbing or flying. Not inside bubbles or dream blocks. Lit while swinging."],
+		["Underwater", "Underwater (layer): centre inside water. Buoyancy slows sinking, drag caps speed, jump mid-water is a swim stroke; energy drains (adventure). Runs on top of the current state."],
+		["Waterfall", "Waterfall (layer): inside falling water. Pushes the player down, so they can't rise or jump up through it. Runs on top of the current state."],
+	]
+	static func layer_on(p, layer: String) -> bool:
+		match layer:
+			"Attack": return p.attacking()
+			"Underwater": return p.underwater
+			"Waterfall": return p.in_waterfall
+		return false
 
 	func _init() -> void:
 		tooltip_text = " "  # non-empty, so Godot asks _get_tooltip
 
 	func _get_tooltip(at: Vector2) -> String:
 		var n: int = PlayerScript.STATE_NAMES.size()
-		var i := clampi(int(at.y / (size.y / (n + 1))), 0, n)
+		var i := clampi(int(at.y / (size.y / (n + LAYERS.size()))), 0, n + LAYERS.size() - 1)
 		if absf(at.x - size.x / 2.0) > HW or player == null:
 			return ""
-		if i == n:
-			return "%s\nSwings this life: %d." % [ATTACK_HELP, player.attack_log.size()]
+		if i >= n:
+			var help: String = LAYERS[i - n][1]
+			return help + ("\nSwings this life: %d." % player.attack_log.size() if i == n else "")
 		var into := 0
 		var out := 0
 		for key in player.transitions:
@@ -410,7 +422,7 @@ class StateGraph extends Control:
 			return
 		var names: Array = PlayerScript.STATE_NAMES
 		var cx := size.x / 2.0
-		var row := size.y / (names.size() + 1)  # last row: the attack layer
+		var row := size.y / (names.size() + LAYERS.size())  # last rows: the layers
 		var ys := []
 		for i in names.size():
 			ys.append(row * (i + 0.5))
@@ -447,14 +459,16 @@ class StateGraph extends Control:
 			var label: String = names[i]
 			var sz := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
 			draw_string(font, Vector2(cx - sz.x / 2, ys[i] + 4), label, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK if cur else Color.WHITE)
-		# attack layer: separate from the states (dashed line), lit while a swing is active
-		var ly := row * (names.size() + 0.5)
+		# layers: separate from the states (dashed line), each lit while active
+		var top := row * names.size()
 		for x in range(int(cx - HW - 20), int(cx + HW + 20), 6):
-			draw_line(Vector2(x, ly - row * 0.5), Vector2(x + 3, ly - row * 0.5), Color(0.6, 0.6, 0.7, 0.6))
-		var on: bool = player.attacking()
-		var lbox := Rect2(cx - HW, ly - row * 0.36, HW * 2, row * 0.72)
-		draw_rect(lbox, Color("ff8a5c") if on else Color(0.2, 0.22, 0.35))
-		draw_rect(lbox, Color.WHITE if on else Color(0.6, 0.6, 0.7), false, 1.0)
-		var lt := "Attack (layer)"
-		var lsz := font.get_string_size(lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
-		draw_string(font, Vector2(cx - lsz.x / 2, ly + 4), lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK if on else Color.WHITE)
+			draw_line(Vector2(x, top), Vector2(x + 3, top), Color(0.6, 0.6, 0.7, 0.6))
+		for k in LAYERS.size():
+			var ly := row * (names.size() + k + 0.5)
+			var on := layer_on(player, LAYERS[k][0])
+			var lbox := Rect2(cx - HW, ly - row * 0.36, HW * 2, row * 0.72)
+			draw_rect(lbox, Color("ff8a5c") if on else Color(0.2, 0.22, 0.35))
+			draw_rect(lbox, Color.WHITE if on else Color(0.6, 0.6, 0.7), false, 1.0)
+			var lt: String = LAYERS[k][0] + " (layer)"
+			var lsz := font.get_string_size(lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+			draw_string(font, Vector2(cx - lsz.x / 2, ly + 4), lt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK if on else Color.WHITE)

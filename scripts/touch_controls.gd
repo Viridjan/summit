@@ -28,7 +28,8 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _input(event: InputEvent) -> void:
-	if not is_visible_in_tree():
+	# hidden: ignore new touches, but still let go of held ones (a lost release would leave a button stuck)
+	if not is_visible_in_tree() and not (event is InputEventScreenTouch and not event.pressed):
 		return
 	if event is InputEventScreenTouch:
 		if event.pressed:

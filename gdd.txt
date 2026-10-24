@@ -247,3 +247,7 @@ Phase 5 - Input and tooling (2026-10-21/22)
   drag, swim stroke, bubbles; water draws over the player) and waterfall (pushed down, can't rise).
   Lake Cave's water now fills the hole, Deep Lake and the shaft. Down + jump drops through jump-throughs.
   Pickups and platforms touch exactly what they draw (tools/check_hitboxes.tscn checks it).
+- 2026-10-24: water drains energy 10x faster: 5/s (0.5 every 0.1 s).
+- 2026-10-24: the debug panel's state machine view lists the layers (Attack, Underwater, Waterfall), lit
+  while active; the live state reads e.g. "Normal + Waterfall". Touch controls always let go of a
+  released finger, even while hidden.

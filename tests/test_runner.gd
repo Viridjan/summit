@@ -1184,13 +1184,13 @@ func check_energy() -> void:
 	p().dead = false
 	p().die(Vector2.ZERO)
 	check(w.deaths == 1 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
-	# water drains 0.05 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
+	# water drains 0.5 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
 	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])
 	step(5)
 	Game.adv.energy = 150.0
 	var before: float = Game.adv.energy
 	step(60)
-	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 0.5), "a second in water costs 0.5 energy, no regeneration (%s)" % (before - Game.adv.energy))
+	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 5.0), "a second in water costs 5 energy, no regeneration (%s)" % (before - Game.adv.energy))
 	Game.adv.energy = 0.004
 	var deaths_before: int = w.deaths
 	step(2)
@@ -1350,6 +1350,9 @@ func _ready() -> void:
 	check(Tuning.names().size() == 99 and Tuning.names().all(func(n): return Tuning.group_of(n) != "Other"), "99 tunables, all grouped (%d)" % Tuning.names().size())
 	check((Tuning.names() + Tuning.DERIVED).all(func(n): return Tuning.HELP.get(n, "") != ""), "every tunable has mouse-over help")
 	check(load("res://scripts/debug_panel.gd").StateGraph.HELP.size() == load("res://scripts/player.gd").STATE_NAMES.size(), "every state has mouse-over help")
+	var graph = load("res://scripts/debug_panel.gd").StateGraph
+	var fake := {"underwater": false, "in_waterfall": true}
+	check(graph.LAYERS.map(func(l): return l[0]) == ["Attack", "Underwater", "Waterfall"] and graph.layer_on(fake, "Waterfall") and not graph.layer_on(fake, "Underwater"), "the state machine view lists the attack, underwater and waterfall layers and lights the active ones")
 	Game.tuning = {"MAX_RUN": 120.0}
 	make_world([])
 	step(5)
