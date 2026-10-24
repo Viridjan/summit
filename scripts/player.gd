@@ -220,6 +220,7 @@ var co_wait := 0.0
 # input
 var in_x := 0
 var in_y := 0
+var prev_in_y := 0  # last tick's in_y: up just pressed = in_y -1 now, not before (house doors)
 var aim_raw := Vector2.ZERO
 var aim_free := Vector2.ZERO  # analog stick direction (free aim); zero on keyboard-only input
 var jump_buf := 0.0
@@ -549,6 +550,7 @@ func aim_vector() -> Vector2:
 
 # ---------------- main update (Player.Update) ----------------
 func update(dt: float) -> void:
+	prev_in_y = in_y
 	_read_input(dt)
 	# adventure: moves not picked up yet do nothing (Game.has_ability is always true elsewhere)
 	if not Game.has_ability("dash"):

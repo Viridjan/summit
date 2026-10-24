@@ -400,9 +400,9 @@ func _place_rect(a: Vector2i, b: Vector2i) -> void:
 	level.entities.append(d)
 	if tool == "zip":
 		zip_pending = d
-	if tool == "door":
+	if tool in E.DOOR_TYPES:
 		var n := 1
-		while level.entities.any(func(e): return e.t == "door" and e.get("id", "") == "d%d" % n):
+		while level.entities.any(func(e): return e.t in E.DOOR_TYPES and e.get("id", "") == "d%d" % n):
 			n += 1
 		d.id = "d%d" % n
 		d.to = ""
@@ -468,7 +468,7 @@ func _left(pressed: bool) -> void:
 			return
 		_push_undo()
 		var hit := _entity_at(c)
-		if tool == "door" and hit >= 0 and level.entities[hit].t == "door":
+		if tool == "door" and hit >= 0 and level.entities[hit].t in E.DOOR_TYPES:
 			_ask_door(level.entities[hit])  # click a door with the Door tool to edit its link
 			return
 		if tool == "tile":

@@ -82,7 +82,7 @@ class Audit:
                     for x, y in entity_cells(entity):
                         if 0 <= x < level["w"] and 0 <= y < level["h"]:
                             self.hazard[self.index(pos[0] + x, pos[1] + y)] |= 1 if kind == "acid" else 2
-                if kind == "door":
+                if kind in ("door", "house_door"):
                     self.door_count += 1
                     key = name, entity.get("id", "")
                     if not key[1] or key in ids:

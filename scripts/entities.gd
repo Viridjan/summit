@@ -42,6 +42,8 @@ const TYPES := {
 	# door: drag its size; "id" names it, "to" = "room:id" (or just "id" in the same level) is where it leads.
 	# Links rooms that don't touch (elevators, trams) or that sit behind a wall.
 	"door": ["Door", true, Color("40e0ff"), Door],
+	# house door: a visible wooden door; stand at it and press up to go through ("id"/"to" like the Door)
+	"house_door": ["House Door", true, Color("8a5a34"), HouseDoor],
 	# placeholders from reference maps: "text" names the thing (e.g. "Crawlid", "grub jar")
 	"enemy": ["Enemy (placeholder)", true, Color("e04848"), Placeholder],
 	# enemies: one row per family, then that family's variants (see CombatEnemy.VARIANTS)
@@ -94,6 +96,8 @@ const TYPES := {
 	# walks the player in d.dir (1 right, -1 left) for d.time seconds on touch; "while_boss": only while an Ape lives
 	"auto_walk": ["Auto Walk", true, Color("a0d0ff"), AutoWalk],
 }
+
+const DOOR_TYPES := ["door", "house_door"]  # objects that link to another door by "id"/"to"
 
 static func make(w, d: Dictionary):
 	var entry = TYPES.get(d.t)
@@ -403,6 +407,34 @@ class Door extends Ent:  # touching it moves the player to the linked door (Worl
 			var t := "%s -> %s" % [d.get("id", "?"), d.get("to", "?")]
 			var f := ThemeDB.fallback_font
 			ci.draw_string(f, Vector2(rect.position) + Vector2(0, -2), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 6, c)
+
+
+# A visible wooden door. Standing at it shows a prompt; pressing up takes the player through
+# (World.after_player_move), to the door its "to" names, like the Door object.
+class HouseDoor extends Door:
+	var near := 0.0  # > 0 while the player stands at it (drawn prompt)
+	func touch(_p) -> void:
+		w.door_near = self
+		near = 0.1
+	func update(dt: float) -> void:
+		near = maxf(0.0, near - dt)
+	func vis_rect() -> Rect2i:
+		return rect.grow(12) if w != null else super.vis_rect()
+	func draw(ci: CanvasItem) -> void:
+		var r := Rect2(rect)
+		var frame := Color("4e3422")
+		ci.draw_rect(r, frame)  # exactly its hitbox: frame, planks inside, a knob
+		var inner := r.grow(-1)
+		ci.draw_rect(inner, Color("8a5a34"))
+		for x in range(int(inner.position.x) + 4, int(inner.end.x), 4):
+			ci.draw_rect(Rect2(x, inner.position.y, 1, inner.size.y), Color("6e4628"))
+		ci.draw_rect(Rect2(inner.position.x, inner.position.y + 2, inner.size.x, 1), Color("6e4628"))
+		ci.draw_rect(Rect2(inner.end.x - 3, inner.position.y + inner.size.y / 2.0, 2, 2), Color("e0c060"))
+		if near > 0:  # prompt: an arrow above the door
+			var c := Vector2(r.position.x + r.size.x / 2.0, r.position.y - 6 + roundf(sin(Time.get_ticks_msec() / 150.0)))
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-3, 2), c + Vector2(3, 2), c + Vector2(0, -2)]), Color.WHITE)
+		if w == null and d.has("to"):
+			super.draw(ci)  # editor: the link label
 
 
 class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, harmless

@@ -188,7 +188,7 @@ func check_doors() -> void:
 	for source in Game.adv_world.rooms:
 		var level: Dictionary = Game.adv_world.rooms[source].level
 		for door in level.entities:
-			if door.t != "door":
+			if door.t not in Entities.DOOR_TYPES:
 				continue
 			var rect := Rect2i(int(door.x), int(door.y), int(door.get("w", 8)), int(door.get("h", 8)))
 			for duck in [false, true]:

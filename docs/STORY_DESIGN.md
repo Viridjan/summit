@@ -154,8 +154,8 @@ Water:
 Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
-Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, three spike hits, gated exits, exhaustion after), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
-NPCs, quests, the roar, the house doors, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
+Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, three spike hits, gated exits, exhaustion after), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
+NPCs, quests, the roar, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
 `tools/story/gen_first_stretch.py` generates these rooms, but only the rooms you name (`... worlds/story a1_ape_arena`, or `all`), since rooms are also edited in-game.
 `tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.
 
@@ -175,6 +175,8 @@ NPCs, quests, the roar, the house doors, the chase, the rock fall, the raft and 
 - 2026-10-24 (tree setup superseded below): Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards energy drops to 5 and an energy orb appears. The power-up reward is still open.
 - 2026-10-24: the run starts with a base of 50 energy that always regenerates; energy blocks add 100 each. A jump needs its 5.
 - 2026-10-24: Ape arena 70% as wide (56 tiles); entering, the player is walked off the ledge into it and the entrance shuts until the Ape is beaten. Sand Cave, Shore and Lighthouse Top moved 24 tiles left to stay attached.
+- 2026-10-24: the lighthouse reworked: a solid tower on the shore with a house door at its foot, an inside room (Lighthouse Stairs, two screens of zigzag platforms) and a door at the top onto the gallery where the silent village is.
+- 2026-10-24: Cove Town's houses open: house doors (stand at one, press up) lead to the Villager's House and the Quest Giver's House, where the NPCs will live (notes for now).
 - 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 

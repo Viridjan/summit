@@ -53,14 +53,14 @@ class World:
         for name, (ox, oy, lvl) in self.rooms.items():
             for e in lvl["entities"]:
                 to = e.get("to", "")
-                if e["t"] != "door" or not to:
+                if e["t"] not in ("door", "house_door") or not to:
                     continue
                 rn, did = to.split(":", 1) if ":" in to else (name, to)
                 if rn not in self.rooms:
                     continue
                 dox, doy, dl = self.rooms[rn]
                 for t in dl["entities"]:
-                    if t["t"] == "door" and t.get("id") == did:
+                    if t["t"] in ("door", "house_door") and t.get("id") == did:
                         dest = (dox + (int(t["x"]) + int(t.get("w", T)) // 2) // T, doy + (int(t["y"]) + int(t.get("h", T))) // T - 1)
                         for c in range(int(e.get("w", T)) // T):
                             for r in range(int(e.get("h", T)) // T):

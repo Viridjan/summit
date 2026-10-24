@@ -202,7 +202,7 @@ def unblock_acid(world_dir):
                 for y in range(ey, ey + int(e["h"]) // T):
                     for x in range(ex, ex + int(e["w"]) // T):
                         acid[y * W + x] = True
-            elif e["t"] == "door":
+            elif e["t"] in ("door", "house_door"):
                 doors[n + ":" + e["id"]] = (ey * W + ex, e["to"] if ":" in e["to"] else n + ":" + e["to"])
                 door_tiles.extend((y * W + x) for y in range(ey, ey + int(e.get("h", T)) // T) for x in range(ex, ex + int(e.get("w", T)) // T))
     if not rects:
@@ -280,7 +280,7 @@ def drop_unreachable(world_dir):
             ex, ey = ox + int(e["x"]) // T, oy + int(e["y"]) // T
             if e["t"] == "acid":
                 acid.update((x, y) for y in range(ey, ey + int(e["h"]) // T) for x in range(ex, ex + int(e["w"]) // T))
-            elif e["t"] == "door":
+            elif e["t"] in ("door", "house_door"):
                 doors[n + ":" + e["id"]] = ((ex, ey), e["to"] if ":" in e["to"] else n + ":" + e["to"])
             elif e["t"] == "spawn" and n == W_["start"] and not e.get("entrance"):
                 start = (ex, ey)
@@ -311,7 +311,7 @@ def drop_unreachable(world_dir):
         del rooms[n]
         os.remove(os.path.join(world_dir, n + ".json"))
     for n, (L, _) in rooms.items():
-        L["entities"] = [e for e in L["entities"] if not (e["t"] == "door" and ":" in e["to"] and e["to"].split(":")[0] in gone)]
+        L["entities"] = [e for e in L["entities"] if not (e["t"] in ("door", "house_door") and ":" in e["to"] and e["to"].split(":")[0] in gone)]
     _save(world_dir, rooms)
     with open(os.path.join(world_dir, "world.json"), "w") as f:
         json.dump(W_, f, indent="\t")
@@ -360,7 +360,7 @@ def add_spawns(world_dir):
             if run:
                 seeds.append(run)
         for e in L["entities"]:
-            if e["t"] == "door":
+            if e["t"] in ("door", "house_door"):
                 ex, ey = int(e["x"]) // T, int(e["y"]) // T
                 seeds.append([(ex + i, ey + j) for i in range(max(1, int(e.get("w", T)) // T))
                               for j in range(max(1, int(e.get("h", T)) // T)) if is_open(ex + i, ey + j)])

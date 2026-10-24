@@ -40,13 +40,14 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [x] Start meadow: flat, few jumps and spikes, no enemies (`m1_meadow`)
 - [x] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked (`m2_big_jump`, star on the far side)
 - [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); roar is a note until positional audio exists. Expanded with 4 rooms of their own: Roar Tunnel (left), Cave Teeth and Cove Tunnel (right), Deep Lake (below: a hole in the lake floor drops in, a jump-through shaft leads back up)
-- [ ] Cove Town houses enterable through doors (placeholder note in the room)
+- [x] Cove Town houses enterable through house doors (`house_door`: stand at it, press up): Villager's House, Quest Giver's House
 - [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end
 - [x] Ape boss arena (`a1_ape_arena`): open fighting floor, ledges at both exits and a gated hole to the left branch; tree, bridge pit and tree instructions removed; 56 tiles wide (70%); entering walks you in (`auto_walk`) and the way back shuts (`boss_gate` with `closes_behind`)
 - [x] Right branch room: sand cave climbing at about 25° (`s1_sand_cave`), crumble blocks over pits stand in for breakable sand
 - [ ] Sand cave: Ape chase, rock fall that seals it, sword reward (notes for now)
-- [x] Shore (`s2_shore`): the mountain's foot with a star out of reach, the sea, the lighthouse tower; raft is a note
+- [x] Shore (`s2_shore`): the mountain's foot with a star out of reach, the sea, the lighthouse tower (a house door at its foot); raft is a note
+- [x] Lighthouse Stairs (`lh1_lighthouse_stairs`): the tower's inside, two screens of zigzag platforms between a door at the bottom and one onto the gallery
 - [x] Lighthouse top (`s3_lighthouse_top`): silent village and the mirrored flame as notes until NPCs exist
 - [x] Left branch rooms: Jungle Depths (`l1_jungle_depths`), Net Trap (`l2_net_trap`, a door stands in for the net lift), Treetop Village (`l3_treetop_village`, a branch floor so nobody falls; jump-throughs stand in for the moving bridges)
 - [ ] Left branch: net capture animation, moving bridges, wall grab reward (notes for now)

@@ -84,6 +84,7 @@ What the checkers don't model:
 - **What it does:** a rectangle with an `id` and a target `to` = `room:id`, or just `id` for a door in the same level. Touching it moves you to the target door, keeping your speed and your height in the doorway. You can't bounce straight back: the door you arrive on stays inactive until you step off it.
 - **In the editors:** drag a rectangle with the Door tool, then type the id and target; click a door with the Door tool to edit it. The world editor draws every door link as a cyan line.
 - The story world's net trap uses one as a stand-in for the net lift.
+- **House Door** (`house_door`): the same link, drawn as a wooden door, and it only works when you stand at it and press up (a ▲ prompt shows). Cove Town's houses use them.
 
 ## Repeatable world accessibility audit
 

@@ -42,6 +42,18 @@
 			"entrance": true
 		},
 		{
+			"t": "spawn",
+			"x": 80,
+			"y": 144,
+			"entrance": true
+		},
+		{
+			"t": "spawn",
+			"x": 160,
+			"y": 144,
+			"entrance": true
+		},
+		{
 			"t": "jumpthru",
 			"x": 64,
 			"y": 120,
@@ -78,22 +90,22 @@
 			"y": 104
 		},
 		{
-			"t": "note",
+			"t": "house_door",
 			"x": 80,
-			"y": 144,
-			"text": "NPC (not built yet): villager"
+			"y": 128,
+			"w": 16,
+			"h": 24,
+			"id": "h1",
+			"to": "h1_villager_house:out"
 		},
 		{
-			"t": "note",
-			"x": 208,
-			"y": 144,
-			"text": "NPC (not built yet): quest giver, quest rewards a skill point"
-		},
-		{
-			"t": "note",
-			"x": 120,
-			"y": 144,
-			"text": "Houses: doors into them come later"
+			"t": "house_door",
+			"x": 160,
+			"y": 128,
+			"w": 16,
+			"h": 24,
+			"id": "h2",
+			"to": "h2_quest_house:out"
 		}
 	]
 }

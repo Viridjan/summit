@@ -5,7 +5,7 @@ extends Node
 const E := preload("res://scripts/entities.gd")
 const TYPES := ["refill", "refill_two", "ability_dash", "ability_climb", "ability_attack", "energy_block", "energy_orb",
 	"strawberry", "booster", "booster_red", "bumper", "feather", "goal", "jumpthru", "leaf", "crumble", "breakwall",
-	"boss_ape", "ape_trunk", "boss_gate"]
+	"boss_ape", "ape_trunk", "boss_gate", "house_door"]
 
 class Canvas extends Node2D:
 	var e

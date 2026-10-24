@@ -445,6 +445,44 @@ func check_shipped_world() -> void:
 		step()
 	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
 	ww.queue_free()
+	# house doors: standing at one does nothing; pressing up goes inside, and up again (a new press) comes back out
+	Game.adv = Adventure.new_run(story)
+	Game.adv.room = "t1_cove_town"
+	Game.adv.spawn = null
+	Game.level = story.rooms["t1_cove_town"].level
+	var hw = load("res://scripts/world.gd").new()
+	w = hw
+	add_child(hw)
+	hw.set_physics_process(false)
+	hw.player = Bot.new(hw, Vector2(88, 19 * 8))
+	step(20)
+	var stayed: bool = hw.room == "t1_cove_town" and hw.door_near != null
+	p().hold = {"up": true}
+	step(3)
+	var inside: String = hw.room
+	step(20)  # still holding up: no bounce straight back
+	var held_inside: String = hw.room
+	p().hold = {}
+	step(5)
+	p().hold = {"up": true}
+	step(3)
+	p().hold = {}
+	check(stayed and inside == "h1_villager_house" and held_inside == inside and hw.room == "t1_cove_town", "house door: up at it goes inside, a new up press comes back out (%s, %s, %s)" % [inside, held_inside, hw.room])
+	# the lighthouse: the shore door leads into the stairs, the stairs' top door out onto the lamp's gallery
+	hw.player.pos = Vector2(0, 0)
+	hw.enter_room("s2_shore", Vector2(45 * 8, 19 * 8))
+	step(5)
+	p().hold = {"up": true}
+	step(3)
+	p().hold = {}
+	var in_stairs: String = hw.room
+	p().pos = Vector2(16 * 8, 5 * 8)  # at the top door (as if climbed)
+	step(5)
+	p().hold = {"up": true}
+	step(3)
+	p().hold = {}
+	check(in_stairs == "lh1_lighthouse_stairs" and hw.room == "s3_lighthouse_top", "lighthouse: shore door into the stairs, top door out to the lamp (%s, %s)" % [in_stairs, hw.room])
+	hw.queue_free()
 	sw.queue_free()
 	w = keep_w
 	Game.adv = {}

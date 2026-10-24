@@ -103,9 +103,20 @@ t.open(30, G, 37, 20); t.water(30, G, 37, 20)    # the sea, ending a tile short 
 t.ent("spawn", 2, 18)
 t.ent("energy_orb", 5, 17)
 t.ent("energy_block", 20, 13)
-t.ent("note", 10, 18, text="NPC (not built yet): villager")
-t.ent("note", 26, 18, text="NPC (not built yet): quest giver, quest rewards a skill point")
-t.ent("note", 15, 18, text="Houses: doors into them come later")
+t.ents.append({"t": "house_door", "x": 10 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h1", "to": "h1_villager_house:out"})
+t.ents.append({"t": "house_door", "x": 20 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h2", "to": "h2_quest_house:out"})
+
+# Cove Town's houses, inside (reached through their house doors; press up at a door)
+def house(name, title, town_door, note):
+    h = Room(name, title, 30, 14, "building", fill="1")
+    h.open(1, 1, 28, 11)                     # floor rows 12..13
+    h.ents.append({"t": "house_door", "x": 2 * T, "y": 9 * T, "w": 2 * T, "h": 3 * T, "id": "out", "to": "t1_cove_town:" + town_door})
+    h.ents.append({"t": "jumpthru", "x": 9 * T, "y": 8 * T, "w": 4 * T, "h": 8})   # shelves
+    h.ents.append({"t": "jumpthru", "x": 20 * T, "y": 7 * T, "w": 5 * T, "h": 8})
+    h.ent("note", 16, 11, text=note)
+    return h
+h1 = house("h1_villager_house", "Villager's House", "h1", "Villager (NPC, not built yet)")
+h2 = house("h2_quest_house", "Quest Giver's House", "h2", "Quest giver (NPC, not built yet): the quest rewards a skill point")
 
 # 5. Jungle (section 1.5): forest theme, a hollow trunk, leaf platforms, calm Mosstrots; the player drops down again
 def leaf(r, x, y, w): r.ents.append({"t": "leaf", "x": x * T, "y": y * T, "w": w * T, "h": 8})
@@ -187,22 +198,28 @@ s2.ent("note", 4, 8, text="The mountain: clearly climbable, but not yet")
 s2.solid(15, G, 79, 22); s2.solid(79, 0, 79, 22)
 s2.open(56, G, 78, 21); s2.water(56, G, 78, 21)  # the sea
 s2.ent("note", 60, 18, text="Raft to the next island (not built): needs the lighthouse quest")
-s2.solid(44, 0, 44, 18); s2.solid(52, 0, 52, 18); s2.open(44, 16, 44, 18)  # lighthouse, door on the left
-for y in (16, 13, 10, 7, 4, 1):
-    s2.ents.append({"t": "jumpthru", "x": 45 * T, "y": y * T, "w": 7 * T, "h": 8})
-s2.ent("note", 41, 18, text="The lighthouse: climb to the top")
+s2.solid(44, 0, 52, 18); s2.open(44, 16, 45, 18)  # the lighthouse: solid stone, a doorway in its left face
+s2.ents.append({"t": "house_door", "x": 44 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "lh", "to": "lh1_lighthouse_stairs:bottom"})
+s2.ent("note", 41, 18, text="The lighthouse: press up at its door to go in")
 
 s3 = Room("s3_lighthouse_top", "Lighthouse Top", 40, 23, "sky")
-s3.solid(4, 11, 4, 22); s3.solid(12, 11, 12, 22)  # the tower, continued from the shore
-for y in (20, 17, 14):
-    s3.ents.append({"t": "jumpthru", "x": 5 * T, "y": y * T, "w": 7 * T, "h": 8})
-s3.solid(0, 11, 3, 12); s3.solid(13, 11, 39, 12)  # the top: the silent village
-s3.ents.append({"t": "jumpthru", "x": 5 * T, "y": 11 * T, "w": 7 * T, "h": 8})
+s3.solid(4, 13, 12, 22)                      # the tower's top, continued from the shore
+s3.solid(0, 11, 39, 12)                      # the gallery: the silent village
+s3.ents.append({"t": "house_door", "x": 7 * T, "y": 8 * T, "w": 2 * T, "h": 3 * T, "id": "top", "to": "lh1_lighthouse_stairs:top"})
 s3.solid(24, 7, 26, 10)                      # the flame's pedestal
 s3.ent("note", 25, 6, text="Magic flame, aimed one way by mirrors (not built yet)")
 for i, x in enumerate((15, 19, 29, 33)):
     s3.ent("note", x, 10, text='Silent villager (not built): "..."')
 s3.ent("note", 37, 10, text='Silent villager with a quest (not built): "..." Speak to them before the raft works')
+
+# Inside the lighthouse: two screens of stairs, platforms zigzagging up 3 rows apart (jump only)
+lh = Room("lh1_lighthouse_stairs", "Lighthouse Stairs", 20, 46, "temple", fill="1")
+lh.open(1, 1, 18, 43)                        # floor rows 44..45
+lh.ents.append({"t": "house_door", "x": 2 * T, "y": 41 * T, "w": 2 * T, "h": 3 * T, "id": "bottom", "to": "s2_shore:lh"})
+for i, y in enumerate(range(41, 4, -3)):
+    lh.ents.append({"t": "jumpthru", "x": (11 if i % 2 == 0 else 1) * T, "y": y * T, "w": 8 * T, "h": 8})
+lh.ents.append({"t": "house_door", "x": 15 * T, "y": 2 * T, "w": 2 * T, "h": 3 * T, "id": "top", "to": "s3_lighthouse_top:top"})
+lh.ent("note", 6, 43, text="Up the stairs to the lamp")
 
 # Left branch: back through the jungle, a net trap, the treetop village
 l1 = Room("l1_jungle_depths", "Jungle Depths", 80, 23, "forest", fill="1")
@@ -247,7 +264,7 @@ rooms = [(m, 0, 0), (j, 80, 0),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46),
-    (a1, 440, 46), (s1, 496, 23), (s2, 576, 23), (s3, 616, 0), (l1, 440, 69), (l2, 360, 69), (l3, 360, -2)]
+    (a1, 440, 46), (h1, 240, 100), (h2, 280, 100), (lh, 320, 100), (s1, 496, 23), (s2, 576, 23), (s3, 616, 0), (l1, 440, 69), (l2, 360, 69), (l3, 360, -2)]
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))

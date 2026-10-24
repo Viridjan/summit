@@ -6,6 +6,7 @@ extends Control
 # Mouse: LMB select/drag room · RMB or MMB drag pan · wheel zoom.
 
 const Adventure := preload("res://scripts/adventure.gd")
+const E := preload("res://scripts/entities.gd")
 const MapView := preload("res://scripts/map_view.gd")
 const T := 8
 
@@ -95,12 +96,12 @@ func _recalc() -> void:
 	for name in world.rooms:
 		var r: Dictionary = world.rooms[name]
 		for e in r.level.entities:
-			if e.t == "door":
+			if e.t in E.DOOR_TYPES:
 				doors[name + ":" + str(e.get("id", ""))] = [name, Vector2(r.pos * T) + Vector2(float(e.x), float(e.y)) + Vector2(float(e.get("w", T)), float(e.get("h", T))) / 2.0]
 	for key in doors:
 		var name: String = doors[key][0]
 		for e in world.rooms[name].level.entities:
-			if e.t == "door" and name + ":" + str(e.get("id", "")) == key:
+			if e.t in E.DOOR_TYPES and name + ":" + str(e.get("id", "")) == key:
 				var to: String = str(e.get("to", ""))
 				var tk := to if to.contains(":") else name + ":" + to
 				if doors.has(tk):

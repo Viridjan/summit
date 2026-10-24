@@ -292,3 +292,6 @@ Phase 5 - Input and tooling (2026-10-21/22)
   the main adventure and the story world.
 - 2026-10-24: room-safety probes, side-opening check and summary ported to the story world (they defaulted to HK);
   no escapes found; 7 harmless side openings (Lighthouse Top's sky edges, 3 facing rock). Reports: reports/story-*.
+- 2026-10-24: house doors (house_door): a visible wooden door, up at it to go through (same id/to links as
+  Door; Entities.DOOR_TYPES). Cove Town's two houses lead to interiors h1_villager_house and h2_quest_house.
+- 2026-10-24: lighthouse: solid tower with a house door, inside room lh1_lighthouse_stairs (zigzag climb), door out to the top.

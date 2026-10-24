@@ -154,6 +154,7 @@ var spawn_queue: Array = []  # entity dicts to add after this tick (spawn_entity
 var leaving_ents: Array = []
 # Adventure: after crossing into a room sideways the player is walked to the middle of its second tile column.
 var walk_dir := 0
+var door_near = null  # house door the player stands at this tick (press up to go through)
 var walk_target_x := 0.0
 var leaving_rect := Rect2()  # that room, in this room's coordinates
 var pending_door = null  # door touched this tick (Door entity); used after the touch loop
@@ -297,6 +298,10 @@ func after_player_move() -> void:
 	_check_room_exit()
 	if pending_door != null and not player.dead:
 		_go_door(pending_door)
+	elif door_near != null and not player.dead and player.on_ground and player.in_y == -1 and player.prev_in_y != -1:
+		var d = door_near
+		door_near = null
+		_go_door(d)
 	if door_block.has_area() and not door_block.intersects(player.hurt_rect()):
 		door_block = Rect2i()
 	if walk_dir != 0 and (player.dead or (player.pos.x - walk_target_x) * walk_dir >= 0 or player.force_move_x_timer <= 0):
@@ -322,7 +327,7 @@ func _go_door(door) -> void:
 	var lvl: Dictionary = data if target_room == room else (Game.adv_world.rooms[target_room].level if adventure() and Game.adv_world.rooms.has(target_room) else {})
 	var dest = null
 	for e in lvl.get("entities", []):
-		if e.t == "door" and e.get("id", "") == to:
+		if e.t in E.DOOR_TYPES and e.get("id", "") == to:
 			dest = e
 	if dest == null:
 		show_note("door leads to \"%s\", which doesn't exist" % door.d.get("to", ""))
@@ -590,6 +595,7 @@ func touching_spikes(r: Rect2i) -> bool:
 	return false
 
 func player_touch(p) -> void:
+	door_near = null
 	var hr: Rect2i = p.hurt_rect()
 	var dr: Rect2i = p.damage_rect()
 	for e in touchables:
