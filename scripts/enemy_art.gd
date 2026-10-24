@@ -9,9 +9,10 @@ const COLORS := {
 	"P": Color("58446f"), "s": Color("d8d8bd"), "S": Color("8c9e9c"),
 	"g": Color("83b7a0"), "G": Color("436c75"), "e": Color("f4a16b"), "k": Color("253247"),
 	"r": Color("a58a6a"), "R": Color("5e4a3c"), "m": Color("8a6aa8"), "M": Color("4a3866"),
+	"q": Color("c5af89"), "v": Color("b696c5"), "n": Color("b2ce79"), "t": Color("c19a65"),
 	"l": Color("7fae4e"), "L": Color("41673a"), "h": Color("9a7452"), "H": Color("5a3f2e"),
 }
-const BODY := ["o", "O", "b", "B", "p", "P", "g", "G", "s", "S", "r", "R", "m", "M", "l", "L", "h", "H"]  # recoloured by variants
+const BODY := ["o", "O", "b", "B", "p", "P", "g", "G", "s", "S", "r", "R", "m", "M", "l", "L", "h", "H", "q", "v", "n", "t"]  # recoloured by variants
 # variant -> [tint, tint amount, eye colour or null]
 const TINTS := {
 	"swift": [Color("e66786"), 0.55, null],
@@ -28,9 +29,9 @@ const SPRITES := {
 	"enemy_skeleton": ["    ssss    ", "   sssssS   ", "   skskss   ", "    ssSs    ", "     SS     ", "   Ssssss   ", "   s Ss s   ", "   ssss s   ", "     SS     ", "    sS s    ", "    S  S    ", "   ss  ss   "],
 	"enemy_hornback": ["        yy  ", "       yBy  ", "    BBBBBy  ", "   BbbbbBBB ", "  BbbbbbbBeB", "  BbBbbBbBBB", "  BBBBBBBBBB", "   k k  k k "],
 	"enemy_fuzzbob": ["  s      s  ", " sss    sss ", "  sGGGGGGs  ", "  GgggggggG ", " GgggggggggG", " GggeggggegG", " GgggggggggG", "  GgggggggG ", "   GGGGGG   "],
-	"enemy_cragjaw": ["      RRRRRRRR          ", "    RRrrrrrrrrRR        ", "   RrrrrrrrrrrrrR       ", "  RrrSrrrrrrrrrrrR      ", "  RrrrrrrrrrrrrrrrR     ", " RrrrrrrrrrrrrrrrrrR    ", " RrrrrrrrrrrrrrreerR    ", " RrrrrrrrrrrrrrrekrrR   ", " RrrrrrrrrrrrrrrrrrrR   ", " RrrrrrrrrrrrrRRRRRRRR  ", " RrrrrrrrrrrrRyrryrryR  ", " RrrrrrrrrrrrRRRRRRRRR  ", "  RrrrrrrrrrrrrrrrrrR   ", "  RRrrrrrrrrrrrrrrRR    ", "   RrrRRRRRRRRRrrR      ", "   Rrr        RrrR      ", "   RrR        RrR       ", "  kkkk       kkkk       "],
-	"enemy_mosstrot": ["   l  l  l  ", "  lLlLlLlLl ", " lLlllllllLl", " LllllllllL ", " HhhhhhhhheH", " HhhhhhhhhkH ", "  HHHHHHHHH ", "  k k  k k  "],
-	"enemy_murkspore": ["       MMMMMMMM       ", "     MMmmmmmmmmMM     ", "    MmmmymmmmmymmM    ", "   MmmmmmmmmmmmmmmM   ", "   MmmmmmmymmmmmmmM   ", "  MmmmmmmmmmmmmmmmmM  ", "  MMMMMMMMMMMMMMMMMM  ", "    MssssssssssssM    ", "    MsssseesseessM    ", "    MsssssskksssM     ", "     MssssssssM       ", "      MMMMMMMM        ", "       m  m  m        ", "      m   m   m       ", "       m  m  m        "],
+	"enemy_cragjaw": ["       RRR  RRR         ", "     RRqqrRRrrrRR       ", "    RqqrrrrrrrrrrR      ", "   RqrrrRRrrrrrrrrR     ", "  RqrrRRrrrRRrrrrrrR    ", "  RrrRrrrrrrrrRrrrrrR   ", " RqrrrrrrrRrrrrrrerrR   ", " RrrrrrRrrrrrrrrrekrrR  ", " RrrrrrrrrrrrrRrrrrrrR  ", " RrrRrrrrrrrRRRRRRRRRR  ", " RrrrrrrrrrRyRyyRyyRyR  ", " RrrrrRrrrrRkkkkkkkkkR  ", "  RrrrrrrrrRyyRyyRyyRR  ", "  RrrrrrrrrrRRRRRRRRR   ", "   RrrRRRRRRRRRrrR      ", "   RrqR       RrqR      ", "   RrrR       RrrR      ", "  kkkkk      kkkkk      "],
+	"enemy_mosstrot": ["   n  n  l  ", "  nlnnlLllL ", " LnllllllLlL", "  LLLLLLLLL ", " HttthhhhheH", " HhthhhhhekH", "  HHHHHHHHH ", "  kk k  kk  "],
+	"enemy_murkspore": ["       MMMMMMMM       ", "     MMvvvvmmmmMM     ", "    MvvvymmmmyvmmM    ", "   MvvmmmmmmmmmmmmM   ", "   MvmmmyvmmmmmymmM   ", "  MmmmmmmmmmmmmmmmmM  ", "  MMMMMMMMMMMMMMMMMM  ", "   MvMvMvMvMvMvMvM    ", "    MssssSSssssssM    ", "    MsseeksseekssM    ", "     MssSkkSsssM      ", "      MSSssSSMM       ", "       m  m  m        ", "      m   m   m       ", "       M  M  M        "],
 }
 static var _texture: Texture2D
 
@@ -80,10 +81,20 @@ static func atlas() -> Image:
 						var lift := 0
 						if base_kind == "enemy_thornmite" and y >= 7:  # scuttling legs
 							offset = (1 if x % 4 < 2 else -1) if frame % 2 else 0
-						if base_kind in ["enemy_skeleton", "enemy_hornback", "enemy_mosstrot"] and y >= sprite.size() - 3:
+						if base_kind in ["enemy_skeleton", "enemy_hornback"] and y >= sprite.size() - 3:
 							offset = (1 if x < width / 2 else -1) if frame % 2 else 0
-						if base_kind == "enemy_cragjaw" and y >= 15:  # heavy steps
-							offset = (1 if x < width / 2 else -1) if frame % 2 else 0
+						if base_kind == "enemy_cragjaw":
+							# A heavy shoulder roll, with alternating planted feet.
+							if y < 14: lift = [0, 1, 0, 0][frame]
+							if y >= 15:
+								offset = [0, 1, -1, 0][frame] * (1 if x < width / 2 else -1)
+								if (frame == 1 and x < width / 2) or (frame == 3 and x >= width / 2): lift = -1
+						if base_kind == "enemy_mosstrot":
+							if y < 3: offset = [0, 1, 0, -1][frame]
+							if y == sprite.size() - 1:
+								offset = [0, 1, -1, 0][frame] * (1 if x < width / 2 else -1)
+						if base_kind == "enemy_murkspore":
+							lift = [0, -1, 0, 1][frame]
 						if base_kind == "enemy_murkspore" and y >= 12:  # drifting tendrils
 							offset = [0, 1, 0, -1][(frame + y) % 4]
 						if base_kind == "enemy_fuzzbob" and y < 2 and frame % 2:  # wings flap

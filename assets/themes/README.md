@@ -40,3 +40,23 @@ godot --headless --path . --script res://tools/export_themes.gd
 ```
 
 The exporter is self-contained and does not change level data or runtime art.
+
+## Environment refinement
+
+The export tool now builds quieter terrain material clusters, varied decorative
+silhouettes and additional scenery depth for all eight themes. Forest foliage
+uses layered pixel clusters, irregular trunks, branches and roots; rural cottages
+retain pitched roofs with subtle shingles, timber braces and chimney smoke.
+The atlas layout, collision grid and existing room assignments are unchanged.
+
+Open `review/index.html` for before/after compositions; `review/before/` preserves
+the artwork reviewed in this pass. `contact-sheet.png` shows the current eight
+scenes. Both are review assets, not runtime texture dependencies.
+
+### Squared visual style
+
+Environment silhouettes use broad rectangular clusters and clear stepped edges.
+Clouds, foliage, bushes, smoke, stones and mushroom caps avoid rounded outlines.
+Cave ceilings, dunes, hills, waves and vines use stepped profiles. Preserve this
+angular style when extending the packs. The before/after review now compares the
+previous rounded pass against the squared revision.
