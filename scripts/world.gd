@@ -462,6 +462,10 @@ func add_energy_block(key: String) -> void:
 		Adventure.add_energy_block(Game.adv)
 		_save_run()
 
+func drain_energy(amount: float) -> void:
+	if adventure():
+		Adventure.drain_energy(Game.adv, amount)
+
 func refill_energy() -> void:
 	if adventure():
 		Adventure.refill_energy(Game.adv)
@@ -573,13 +577,12 @@ func burst(at: Vector2, col: Color, n: int) -> void:
 func add_trail(p) -> void:
 	trails.append([Rect2(p.hitbox()), p.hair_color(), 0.35])
 
-# In the adventure a hit costs an energy block; only the last block is a death (and refills energy).
-# Surviving a hit respawns like a death but doesn't count one (Hollow Knight's hazard respawn).
+# Every respawn counts as a death. In the adventure a hit also costs an energy block; losing the
+# last one refills energy (a spare block is simply spent, like Hollow Knight's hazard respawn).
 func on_player_death(p, _dir: Vector2) -> void:
-	if not adventure() or not Adventure.hit_energy(Game.adv):
-		deaths += 1
-		if adventure():
-			Adventure.refill_energy(Game.adv)
+	deaths += 1
+	if adventure() and not Adventure.hit_energy(Game.adv):
+		Adventure.refill_energy(Game.adv)
 	respawn_timer = 0.6
 	burst(p.center(), p.hair_color(), 12)
 	shake_t = 0.3 if Game.settings.shake else 0.0

@@ -138,6 +138,10 @@ static func water_energy(run: Dictionary, dt: float) -> bool:
 	run.energy = maxf(0.0, run.energy - WATER_DRAIN * dt)
 	return run.energy > 0
 
+# Wears energy down by up to amount, never below 0 and never refusing (a jump always happens).
+static func drain_energy(run: Dictionary, amount: float) -> void:
+	run.energy = maxf(0.0, run.energy - amount)
+
 # Pays for an action; false (nothing spent) when there isn't enough.
 static func spend_energy(run: Dictionary, amount: float) -> bool:
 	if run.energy < amount:

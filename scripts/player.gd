@@ -132,6 +132,7 @@ const WATER_SURFACE_REACH := 12  # px: with the surface this close above the cen
 # Layer: applied on top of whatever state runs (_layers), not a state of its own.
 const WATERFALL_PUSH := 70.0  # inside a waterfall: pulled down towards this speed...
 const WATERFALL_FORCE := 600.0  # ...this hard (px/s²): jumps still rise, but much less
+const JUMP_ENERGY := 10.0  # adventure: each jump wears this much energy (never blocks the jump)
 const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)
@@ -853,6 +854,7 @@ func _co_resume() -> void:
 
 # ---------------- jumps ----------------
 func jump(particles := true) -> void:
+	w.drain_energy(JUMP_ENERGY)
 	jump_buf = 0
 	jump_grace_timer = 0
 	var_jump_timer = VAR_JUMP_TIME

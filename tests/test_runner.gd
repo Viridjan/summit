@@ -352,6 +352,8 @@ func check_shipped_world() -> void:
 	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave (swims over the hole) -> cove town -> jungle
 	Game.adv_world = story
 	Game.adv = Adventure.new_run(story)
+	Game.adv.blocks = 30  # a big energy budget: this checks the route, not the energy tuning (jumps and water drain it)
+	Game.adv.energy = 3000.0
 	Game.adv_temp = true
 	Game.level = story.rooms[story.start].level
 	var sw = load("res://scripts/world.gd").new()
@@ -1184,10 +1186,25 @@ func check_energy() -> void:
 	step(3)
 	check(Game.adv.blocks == 2, "an energy block is taken once per run")
 	p().die(Vector2.ZERO)
-	check(w.deaths == 0 and Game.adv.energy == 100.0, "a hit with a block to spare costs the block, not a life")
+	check(w.deaths == 1 and Game.adv.energy == 100.0, "a hit with a block to spare costs the block, and counts as a death (a respawn)")
 	p().dead = false
 	p().die(Vector2.ZERO)
-	check(w.deaths == 1 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
+	check(w.deaths == 2 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
+	# each jump wears 10 energy, down to 0 but never blocking the jump
+	make_world([])
+	step(5)
+	Game.adv.energy = 100.0
+	p().tap = {"jump": true}
+	step()
+	var after_jump: float = Game.adv.energy
+	step(60)
+	Game.adv.energy = 4.0
+	var y0: float = p().pos.y
+	p().tap = {"jump": true}
+	step(3)
+	check(absf(after_jump - 90.0) < 0.2 and Game.adv.energy == 0.0 and p().pos.y < y0, "a jump costs 10 energy; with less left it takes what's there and still jumps (%s, %s)" % [after_jump, Game.adv.energy])
+	Game.adv.energy = 100.0
+
 	# HUD energy bars: one per block, filled by its share of the energy
 	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(150.0, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD energy bars fill block by block (%s)" % [fills])

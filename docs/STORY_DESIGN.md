@@ -112,6 +112,7 @@ Costs:
 - Sword swing: 10 per swing.
 - Sword hit: 15 more per enemy hit (25 for a swing that lands). Swing only when you mean it.
 - Wall grab: 20-30 per second while holding on.
+- Jump: 10 per jump. It never blocks the jump: with less than 10 left it takes what's there.
 - Some abilities cost a whole block and have to be recovered before reuse.
 
 Regeneration:
@@ -157,6 +158,7 @@ NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the 
 - 2026-10-24: water drain doubled to 1 every 0.1 s (10 per second); the waterfall pull is softer (jumps rise, less).
 - 2026-10-24: water drain doubled again, to 2 every 0.1 s (20 per second).
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
+- 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 
 ## 8. Open questions

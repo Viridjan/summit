@@ -260,3 +260,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: water drain doubled again: 20/s (2 every 0.1 s).
 - 2026-10-24: HUD: bolt + one bar per energy block (top left, stars below), area name (top centre),
   timer and skull + deaths (top right). Drawn by World.Hud.
+- 2026-10-24: each jump costs 10 adventure energy (never blocks it; wall jumps and swim strokes are free).
+- 2026-10-24: the death counter counts every respawn (spare-block hits too).
