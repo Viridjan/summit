@@ -373,11 +373,15 @@ func check_shipped_world() -> void:
 		# one ground jump per landing (a second buffered tap would wall-jump); walk, don't jump, under a low ceiling (hollow trunks)
 		if walk > 0:
 			walk -= 1
+		elif p().state == p().ST_SWIM:  # swim: stroke whenever the last one is done
+			if p().stroke_timer <= 0 and p().underwater:
+				p().tap["jump"] = true
 		elif p().on_ground and p().speed.y >= 0 and sw.collide_solid(head) == null:
 			if absf(p().pos.x - jumped_at) < 1:  # the last jump got nowhere (a trunk ahead): walk a bit instead
 				walk = 20
 			jumped_at = p().pos.x
-			p().tap["jump"] = walk == 0
+			if walk == 0:
+				p().tap["jump"] = true
 		step()
 		if sw.room != story_seen[-1]:
 			story_seen.append(sw.room)
@@ -1351,8 +1355,8 @@ func _ready() -> void:
 	check((Tuning.names() + Tuning.DERIVED).all(func(n): return Tuning.HELP.get(n, "") != ""), "every tunable has mouse-over help")
 	check(load("res://scripts/debug_panel.gd").StateGraph.HELP.size() == load("res://scripts/player.gd").STATE_NAMES.size(), "every state has mouse-over help")
 	var graph = load("res://scripts/debug_panel.gd").StateGraph
-	var fake := {"underwater": false, "in_waterfall": true}
-	check(graph.LAYERS.map(func(l): return l[0]) == ["Attack", "Underwater", "Waterfall"] and graph.layer_on(fake, "Waterfall") and not graph.layer_on(fake, "Underwater"), "the state machine view lists the attack, underwater and waterfall layers and lights the active ones")
+	var fake := {"in_waterfall": true}
+	check(graph.LAYERS.map(func(l): return l[0]) == ["Attack", "Waterfall"] and graph.layer_on(fake, "Waterfall"), "the state machine view lists the attack and waterfall layers and lights the active ones")
 	Game.tuning = {"MAX_RUN": 120.0}
 	make_world([])
 	step(5)
@@ -1499,15 +1503,50 @@ func _ready() -> void:
 	check(held == 60 * 20, "infinite stamina keeps the player on the wall (held %d frames, min stamina %.1f)" % [held, min_st])
 	Game.settings.infinite_stamina = false
 
-	# environment layers (Player._layers) sit on top of the state machine: water and waterfalls
+	# Normal (Underwater) replaces Normal in water: slow sinking, no walking on the floor, a weaker jump
 	make_world([{"t": "water", "x": 0, "y": 8 * 8, "w": 60 * 8, "h": 22 * 8}])
 	p().pos = Vector2(88, 14 * 8)
 	step(40)
 	var sink: float = p().speed.y
-	var uw: bool = p().underwater and p().state == p().ST_NORMAL
+	check(p().state == p().ST_SWIM and sink <= p().WATER_MAX_FALL + 0.01, "in water the state is Normal (Underwater), sinking slowly (%s)" % sink)
 	p().tap = {"jump": true}
 	step()
-	check(uw and sink <= p().WATER_MAX_FALL + 0.01 and p().speed.y < 0, "underwater is a layer on the normal state: slow sinking (%s), a jump mid-water is a stroke (%s)" % [sink, p().speed.y])
+	check(p().state == p().ST_SWIM and p().speed.y < 0, "Jumping (Underwater) works mid-water (%s)" % p().speed.y)
+	step(400)  # settle on the floor
+	var bed_x: float = p().pos.x
+	p().hold = {"right": true}
+	step(30)
+	check(p().on_ground and absf(p().pos.x - bed_x) < 2, "no walking on the floor underwater (moved %s px)" % (p().pos.x - bed_x))
+	p().hold = {}
+	var bed_y: float = p().pos.y
+	var top_swim := bed_y
+	p().tap = {"jump": true}
+	for k in 40:
+		step()
+		top_swim = minf(top_swim, p().pos.y)
+	make_world([])
+	step(10)
+	var ground_y: float = p().pos.y
+	var top_jump := ground_y
+	p().tap = {"jump": true}
+	p().hold = {"jump": true}
+	for k in 40:
+		step()
+		top_jump = minf(top_jump, p().pos.y)
+	p().hold = {}
+	check(p().state == p().ST_NORMAL and bed_y - top_swim > 4 and bed_y - top_swim < ground_y - top_jump, "Jumping (Underwater) rises less than a jump (%s px vs %s px); out of water it's Normal again" % [bed_y - top_swim, ground_y - top_jump])
+	# shallow water (2 tiles): with the surface this close, jump leaps out like a normal jump
+	make_world([{"t": "water", "x": 0, "y": 26 * 8, "w": 60 * 8, "h": 2 * 8}])
+	step(30)
+	var in_shallow: bool = p().state == p().ST_SWIM
+	p().tap = {"jump": true}
+	p().hold = {"jump": true}
+	var top_out: float = p().pos.y
+	for k in 40:
+		step()
+		top_out = minf(top_out, p().pos.y)
+	p().hold = {}
+	check(in_shallow and top_out < 26 * 8 - 8, "near the surface, jump leaps out of the water (feet up to %s, surface %s)" % [top_out, 26 * 8])
 	make_world([{"t": "waterfall", "x": 64, "y": 0, "w": 48, "h": 30 * 8}])
 	p().pos = Vector2(88, 27 * 8)
 	step(5)

@@ -251,3 +251,6 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: the debug panel's state machine view lists the layers (Attack, Underwater, Waterfall), lit
   while active; the live state reads e.g. "Normal + Waterfall". Touch controls always let go of a
   released finger, even while hidden.
+- 2026-10-24: underwater is now a state, Normal (Underwater), replacing Normal in water: no walking on the
+  floor, no normal jump; Jumping (Underwater) is a weaker stroke (~14 px vs ~29 px), a full jump out when
+  the surface is within 12 px. Waterfall stays a layer.

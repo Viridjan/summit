@@ -7,8 +7,8 @@ const CharacterArt := preload("res://scripts/character_art.gd")
 # Position is the bottom-centre of the hitbox and always holds whole pixels;
 # sub-pixel movement lives in `rem`, like Monocle's Actor.
 
-enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY }
-const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly"]
+enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY, ST_SWIM }
+const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly", "Normal (Underwater)"]
 
 # Movement tuning. These were Celeste's constants; they are vars so they can be tuned
 # in-game (see scripts/tuning.gd). Defaults below are the Celeste values.
@@ -120,13 +120,17 @@ const HB_NORMAL := Rect2i(-4, -11, 8, 11)
 const HB_DUCK := Rect2i(-4, -6, 8, 6)
 const HB_FLY := Rect2i(-4, -10, 8, 8)
 const HURT_NORMAL := Rect2i(-4, -11, 8, 9)
-# Environment layers: modifiers applied on top of whatever state runs (_layers), never states of their own.
-const WATER_MAX_FALL := 40.0  # underwater: buoyancy caps sinking...
+# Normal (Underwater), ST_SWIM: replaces Normal while the player's centre is in water.
+const WATER_MAX_FALL := 40.0  # buoyancy caps sinking...
 const WATER_BUOYANCY := 0.6  # ...and cancels this share of gravity
 const WATER_MAX_RISE := 110.0
-const WATER_MAX_X := 55.0  # drag pulls faster speeds down to this
+const WATER_MAX_X := 55.0  # swimming speed; faster speeds are dragged down to it
 const WATER_DRAG := 500.0
-const WATER_STROKE := -80.0  # jump while swimming (off the ground)
+const WATER_ACCEL := 400.0
+const WATER_STROKE := -100.0  # Jumping (Underwater): ~14 px of rise, against ~27 px for a normal jump
+const WATER_STROKE_COOLDOWN := 0.3
+const WATER_SURFACE_REACH := 12  # px: with the surface this close above the centre, jump leaps out (a normal jump)
+# Layer: applied on top of whatever state runs (_layers), not a state of its own.
 const WATERFALL_PUSH := 90.0  # inside a waterfall: can't rise, pushed down at least this fast
 const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
@@ -147,7 +151,8 @@ var hurtbox := HURT_NORMAL
 var state := ST_NORMAL
 var prev_state := ST_NORMAL
 var dead := false
-var underwater := false  # layer: centre inside water (_layers)
+var underwater := false  # centre inside water: Normal becomes Normal (Underwater)
+var stroke_timer := 0.0
 var in_waterfall := false  # layer: hurtbox inside a waterfall
 var bubble_t := 0.0
 
@@ -342,25 +347,43 @@ func dash_attacking() -> bool:
 func can_dash() -> bool:
 	return dash_buf > 0 and dash_cooldown_timer <= 0 and dashes > 0 and DASH_DIRS != 0
 
-# Environment layers on top of the current state: water (buoyancy, drag, swim strokes) and waterfalls (pushed down).
-func _layers(dt: float) -> void:
-	underwater = w.liquid_at(Rect2i(Vector2i(center()), Vector2i.ONE), "water")
+# Layers on top of the current state: a waterfall pushes the player down.
+func _layers(_dt: float) -> void:
 	in_waterfall = w.liquid_at(hurt_rect(), "waterfall")
-	if underwater:
-		if not on_ground:
-			speed.y -= GRAVITY * WATER_BUOYANCY * dt
-			if state == ST_NORMAL and jump_pressed():
-				jump_buf = 0
-				speed.y = WATER_STROKE
-		speed.y = clampf(speed.y, -WATER_MAX_RISE, maxf(WATER_MAX_FALL, approach(speed.y, WATER_MAX_FALL, WATER_DRAG * 2 * dt)))
-		if absf(speed.x) > WATER_MAX_X:
-			speed.x = approach(speed.x, WATER_MAX_X * signf(speed.x), WATER_DRAG * dt)
-		bubble_t -= dt
-		if bubble_t <= 0:
-			bubble_t = 0.45
-			w.parts.append([center() + Vector2(facing * 3, -5), Vector2(0, -18), 0.9, Color(0.85, 0.95, 1.0)])
 	if in_waterfall:
 		speed.y = maxf(speed.y, WATERFALL_PUSH)
+
+# ---------------- NORMAL (UNDERWATER) ----------------
+# Replaces Normal in water: no walking on the floor and no normal jump; Jumping (Underwater) is a weaker
+# stroke that works from the floor or mid-water. Dash still works. Leaving the water returns to Normal.
+func _swim_update(dt: float) -> int:
+	if not underwater:
+		return ST_NORMAL
+	if can_dash():
+		return _start_dash()
+	if on_ground:  # the floor gives no footing: no walking
+		speed.x = approach(speed.x, 0, RUN_ACCEL * dt)
+	elif absf(speed.x) > WATER_MAX_X:
+		speed.x = approach(speed.x, WATER_MAX_X * signf(speed.x), WATER_DRAG * dt)
+	else:
+		speed.x = approach(speed.x, WATER_MAX_X * move_x, WATER_ACCEL * dt)
+	if not on_ground:
+		speed.y = approach(speed.y, WATER_MAX_FALL, GRAVITY * (1.0 - WATER_BUOYANCY) * dt)
+	speed.y = maxf(speed.y, -WATER_MAX_RISE)
+	stroke_timer -= dt
+	if jump_pressed() and stroke_timer <= 0:
+		stroke_timer = WATER_STROKE_COOLDOWN
+		on_ground = false
+		if not w.liquid_at(Rect2i(Vector2i(center()) - Vector2i(0, WATER_SURFACE_REACH), Vector2i.ONE), "water"):
+			jump()  # the surface is close: a full jump out of the water
+		else:  # Jumping (Underwater)
+			jump_buf = 0
+			speed.y = WATER_STROKE
+	bubble_t -= dt
+	if bubble_t <= 0:
+		bubble_t = 0.45
+		w.parts.append([center() + Vector2(facing * 3, -5), Vector2(0, -18), 0.9, Color(0.85, 0.95, 1.0)])
+	return ST_SWIM
 
 func jump_pressed() -> bool:
 	return jump_buf > 0
@@ -638,6 +661,7 @@ func update(dt: float) -> void:
 			hop_wait_x = 0
 
 	# state machine + coroutine
+	underwater = w.liquid_at(Rect2i(Vector2i(center()), Vector2i.ONE), "water")
 	_state_update(dt)
 	if dead:
 		return
@@ -715,6 +739,7 @@ func _state_update(dt: float) -> void:
 		ST_LAUNCH: ns = _launch_update(dt)
 		ST_DREAM_DASH: ns = _dream_dash_update(dt)
 		ST_STAR_FLY: ns = _star_fly_update(dt)
+		ST_SWIM: ns = _swim_update(dt)
 	if dead:
 		return
 	_set_state(ns)
@@ -774,6 +799,10 @@ func _set_state(ns: int) -> void:
 			_dream_dash_begin()
 		ST_STAR_FLY:
 			_star_fly_begin()
+		ST_SWIM:
+			set_ducking(false)
+			auto_jump = false
+			var_jump_timer = 0
 
 func _co_resume() -> void:
 	match state:
@@ -1186,6 +1215,8 @@ func _dream_dash_check(dir: Vector2) -> bool:
 
 # ---------------- NORMAL ----------------
 func _normal_update(dt: float) -> int:
+	if underwater:
+		return ST_SWIM
 	var lb := lift_boost()
 	if lb.y < 0 and was_on_ground and not on_ground and speed.y >= 0:
 		speed.y = lb.y

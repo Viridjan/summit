@@ -119,7 +119,8 @@ Regeneration:
 - Only inside the current block: a block that is fully spent doesn't refill.
 
 Water:
-- Underwater is a layer on top of the player's state: slow sinking, drag, and jump becomes a swim stroke. Waterfalls are a layer too: inside one the player is pushed down and can't rise.
+- Underwater is its own state, **Normal (Underwater)**, which replaces Normal in water: slow sinking, no walking on the floor, and no normal jump. **Jumping (Underwater)** is a weaker stroke (about half a jump's height) that works from the floor or mid-water; with the surface close above, it leaps out of the water like a normal jump. Dash still works.
+- Waterfalls are a layer on top of the current state: inside one the player is pushed down and can't rise.
 - Staying in water costs 0.5 energy every 0.1 s (5 per second), and energy doesn't regenerate there.
 - Running out of energy in water is a death (drowning).
 
