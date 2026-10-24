@@ -81,7 +81,7 @@ What the checkers don't model:
 
 # Reference worlds (`res://worlds/`)
 
-There are four extra worlds, picked with **World:** in the Adventure menu. Each one has its own save, and each run starts with dash and climb.
+There are two extra worlds, picked with **World:** in the Adventure menu. Each one has its own save, and each run starts with dash, climb and attack.
 They are room shapes traced from each game's full map, scaled so the player has the same size relative to the world as that game's character.
 They are **not made playable**: there are no platforms inside the big rooms, no gates and no items.
 Fix them by playtesting in the level editor and the world editor.
@@ -92,11 +92,9 @@ At the matched size the originals had too many passages only 1 tile tall. `SCALE
 | World | Source map | Matched scale (×2 applied) | Rooms |
 |---|---|---|---|
 | Metroid Zero Mission (Zebes) | vgmaps in-game maps, 7 areas | Samus' standing hitbox is 2 blocks (mzm decomp `sSamusHitboxData`); a map tile is one 15×10-block screen (`minimap.c`) → a screen = 10.3×6.9 tiles, ×2 | 134 rooms |
-| Symphony of the Night (Dracula's Castle) | vgmaps in-game map | Alucard's collision box is 47 px (sotn-decomp `g_SensorsCeilingDefault` −22 to `g_SensorsFloorDefault` +25); a map square = 256 px → 7.5 tiles, ×2 | 48 rooms |
 | Hollow Knight (Hallownest) | hallownest.net (real screenshots) + wiki "Clean map updated" + Map Genie markers | Knight ≈ 1.3 units; 50 px of the hallownest.net map (full zoom) = 1 tile (estimate), ×2 | 225 rooms |
-| Silksong (Pharloom) | wiki "Silksong Full Map Clean" | same map drawing scale assumed as Hollow Knight, Hornet ≈ 1.6 units → 0.25 tiles/px (least certain), ×2 | 197 rooms |
 
-**How rooms are made (all four worlds):**
+**How rooms are made (both worlds):**
 - **Every passage is at least 2×2:** an open tile counts as navigable only inside a fully open 2×2 square. Rock is carved until every open tile is, and 2×2 spots that touch only at a corner or through a 1-tile-high gap are joined.
   - Rock that spikes sit on, and rock around pools, is never carved. A few narrow spots remain there.
 - **One area per room:** a room never holds two open areas that don't connect inside it. Such a room is cut again between the areas. Tiny bits of a passage clipped off at a room's edge (under 160 tiles) become rock, and so do leftover slivers under 40 tiles.

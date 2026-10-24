@@ -340,7 +340,7 @@ func check_shipped_world() -> void:
 	Game.adv = {}
 	# reference worlds: listed in the menu, load, start with every ability
 	var listed: Array = Game.world_list()
-	check(listed.size() == 5 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world and the 4 reference worlds (%d)" % listed.size())
+	check(listed.size() == 3 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world and the 2 reference worlds (%d)" % listed.size())
 	for w in listed.slice(1):
 		var rw := Adventure.load_world(w[1])
 		var has_spawn: bool = rw.rooms.has(rw.start) and rw.rooms[rw.start].level.entities.any(func(e): return e.t == "spawn")

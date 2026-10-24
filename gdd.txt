@@ -87,8 +87,7 @@ games (docs/WORLD_DESIGN.md): village and well, crossroads hub, dash-orb arena,
 vertical shaft, climb vault, castle corridor, clock tower, spire, crown (goal).
 
 Reference worlds (res://worlds/, picked in Adventure > World):
-  Hallownest (Hollow Knight) 225 rooms, Pharloom (Silksong) 197,
-  Dracula's Castle (SotN) 48, Zebes (Metroid ZM) 134.
+  Hallownest (Hollow Knight) 225 rooms, Zebes (Metroid ZM) 134.
   Original room layouts traced at each game's character scale, at 2x scale,
   linked by doors, no overlaps, merged redundant maps, thin strips fixed.
   King's Pass hand-fixed (breakable wall, entrance).
@@ -228,3 +227,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
   energy as health (blocks of 100), NPCs, positional audio, skill points; tasks in TODO.md.
 - 2026-10-24: energy (adventure): 100 per block, start with 1, regen 3/s inside the current block,
   a hit costs a block (hazard respawn), last block = death. Attack is now an adventure ability.
+- 2026-10-24: Silksong (Pharloom) and Symphony of the Night (Dracula's Castle) reference worlds removed.

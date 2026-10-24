@@ -40,8 +40,8 @@ walk off a room's edge into the next one. You start without dash and climb; orbs
 M shows every room explored so far. Progress saves automatically (`user://save.cfg`, section `[adventure]`).
 The shipped world (14 rooms styled after Hollow Knight, Silksong, Symphony of the Night and Metroid Zero Mission)
 is described in `docs/WORLD_DESIGN.md`; `tools/world_check.py` / `tools/world_softlock.py` check reachability and gates.
-**World:** in the Adventure menu switches to one of four reference worlds in `res://worlds/` (Hallownest, Pharloom,
-Dracula's Castle, Zebes): the original rooms traced at each game's character scale and linked by doors, not yet playable;
+**World:** in the Adventure menu switches to one of two reference worlds in `res://worlds/` (Hallownest,
+Zebes): the original rooms traced at each game's character scale and linked by doors, not yet playable;
 the world editor edits the picked world (cyan lines = door links).
 
 **World editor** (Adventure → World Editor, only when run from source because it writes `res://adventure/`):

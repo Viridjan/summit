@@ -1,13 +1,11 @@
-# Rebuilds the four reference worlds (res://worlds/) from their map images, scaled so the player matches
+# Rebuilds the two reference worlds (res://worlds/) from their map images, scaled so the player matches
 # each game's character, then doubled (SCALE). Each world is cut into non-overlapping rectangular rooms along
 # its natural walls (see partition), every room is made reachable (passages, door links), and objects are
 # placed. Not navigable on purpose: shapes only, to be playtested and fixed in the editors.
 #
-# Usage: python3 -I tools/reference_worlds.py <maps_dir> worlds [world,world,...]   (default: all four)
+# Usage: python3 -I tools/reference_worlds.py <maps_dir> worlds [world,world,...]   (default: both)
 # Map images are not in the repo; download them into <maps_dir> under these names:
 #   hk_clean.png      https://cdn.wikimg.net/en/hkwiki/images/9/9c/Clean_map_updated.png (hollowknight.wiki)
-#   ss_clean.png      https://cdn.wikimg.net/en/hkwiki/images/7/75/Silksong_Full_Map_Clean.png (hollowknight.wiki)
-#   sotn_ingame.png   https://www.vgmaps.com/Atlas/PSX/Castlevania-SymphonyOfTheNight-Castles(In-GameMap).png
 #   mzm_<Area>.png    https://www.vgmaps.com/Atlas/GBA/Metroid-ZeroMission-<Area>(In-GameMap).png
 #                     for Area in Brinstar Crateria Kraid Norfair Ridley Tourian Chozodia
 # Hollow Knight also uses (in <maps_dir>):
@@ -21,10 +19,7 @@
 # character's height becomes 1.375 tiles:
 #   Metroid Zero Mission: Samus standing hitbox = 2 blocks (mzm decomp, sSamusHitboxData); a map tile is one
 #     15x10-block screen (minimap.c) -> 1 block = 0.6875 tiles, a screen = 10.3 x 6.9 tiles.
-#   Symphony of the Night: Alucard collision = 47 px (sotn-decomp, g_SensorsCeilingDefault -22 to
-#     g_SensorsFloorDefault +25); a map square = 256 px -> 7.5 x 7.5 tiles.
 #   Hollow Knight: Knight ~1.3 units; Hallownest ~1200 units across ~4150 map px -> 0.31 tiles per map px.
-#   Silksong: same map drawing scale assumed, Hornet ~1.6 units -> 0.25 tiles per map px (least certain).
 import json, os, sys
 from collections import deque
 import numpy as np
@@ -512,7 +507,7 @@ def components(open_mask, min_size):
     return label
 
 
-# ---------------------------------------------------------------- Hollow Knight / Silksong
+# ---------------------------------------------------------------- Hollow Knight
 def hk_tiles(path, s):
     a = np.asarray(Image.open(path).convert("RGB")).astype(np.int32)
     L = a.max(axis=2)
@@ -899,7 +894,7 @@ def hk_features(maps, solid, f, to_tile):
     return allx
 
 
-# ---------------------------------------------------------------- cell maps (Metroid, Symphony of the Night)
+# ---------------------------------------------------------------- cell maps (Metroid)
 def cell_world(is_room, sides, sx, sy):
     """is_room: rows x cols bool. sides[(cx, cy, s)] in {'open', 'door', 'wall'} for s in l r t b.
     Each cell becomes a block of tiles (sx, sy tiles per cell, fractional ok). Rooms = cells joined by open sides.
@@ -1002,63 +997,12 @@ def mzm_cells(path):
     return is_room, sides
 
 
-def sotn_cells(path, x_end):
-    """vgmaps in-game map: cells ~21.73 x 20.11 px (fitted), borders at 9.25 + 21.73k, 14.75 + 20.11k.
-    Blue/navy/red/water = room; white border = wall; a blue notch through the border = door."""
-    a = np.asarray(Image.open(path).convert("RGB")).astype(int)[:, :x_end]
-    H, W = a.shape[:2]
-    r, g, b = a[:, :, 0], a[:, :, 1], a[:, :, 2]
-    white = a.min(axis=2) > 200
-    roomc = ((b > 80) & (r < 120) & ~white) | ((r > 170) & (g < 90) & (b < 90)) | ((g > 170) & (b > 170) & (r < 120))
-    PX, PY, OX, OY = 21.73, 20.11, 9.25, 14.75
-    cols, rows = int((W - OX) / PX), int((H - OY) / PY)
-    is_room = np.zeros((rows, cols), bool)
-    for cy in range(rows):
-        for cx in range(cols):
-            x0, y0 = OX + cx * PX, OY + cy * PY
-            blk = roomc[int(y0 + PY * 0.3):int(y0 + PY * 0.7), int(x0 + PX * 0.3):int(x0 + PX * 0.7)]
-            is_room[cy, cx] = blk.mean() > 0.5
-    is_room[:8, :19] = False   # legend box
-    is_room[:6, :] = False     # titles
-    sides = {}
-    for cy in range(rows):
-        for cx in range(cols):
-            x0, y0 = OX + cx * PX, OY + cy * PY
-            for s in "lrtb":
-                if s in "lr":
-                    x = int(round(x0 if s == "l" else x0 + PX))
-                    strip_w = white[int(y0 + PY * 0.15):int(y0 + PY * 0.85), x - 2:x + 3]
-                    strip_r = roomc[int(y0 + PY * 0.15):int(y0 + PY * 0.85), x - 2:x + 3]
-                else:
-                    y = int(round(y0 if s == "t" else y0 + PY))
-                    strip_w = white[y - 2:y + 3, int(x0 + PX * 0.15):int(x0 + PX * 0.85)]
-                    strip_r = roomc[y - 2:y + 3, int(x0 + PX * 0.15):int(x0 + PX * 0.85)]
-                # across the border: fully room-coloured = same room; white with a room-coloured notch = door
-                across = strip_r.all(axis=1 if s in "lr" else 0) if strip_r.size else np.array([False])
-                if strip_w.mean() < 0.15:
-                    sides[(cx, cy, s)] = "open"
-                elif across.any():
-                    sides[(cx, cy, s)] = "door"
-                else:
-                    sides[(cx, cy, s)] = "wall"
-    for (cx, cy, s), k in list(sides.items()):
-        if s in "rb":
-            o = (cx + 1, cy, "l") if s == "r" else (cx, cy + 1, "t")
-            if o in sides and k != sides[o]:
-                sides[(cx, cy, s)] = sides[o] = "door" if "door" in (k, sides[o]) else "wall"
-    return is_room, sides
-
-
 # ---------------------------------------------------------------- build
 def build(maps, out, only=None):
     """only: world folder names to rebuild (default all). Rebuilding a world overwrites edits made to it."""
     want = lambda name: only is None or name in only
     if want("hollow_knight"):
         build_hk(maps, out)
-    if want("silksong"):
-        build_ss(maps, out)
-    if want("symphony_of_the_night"):
-        build_sotn(maps, out)
     if want("metroid_zero_mission"):
         build_mzm(maps, out)
     # seal edge openings that lead nowhere, then a spawn near every room entrance (dying or Retry returns you there)
@@ -1066,7 +1010,7 @@ def build(maps, out, only=None):
     spec = importlib.util.spec_from_file_location("world_fixups", os.path.join(os.path.dirname(os.path.abspath(__file__)), "world_fixups.py"))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    for name in ("hollow_knight", "silksong", "symphony_of_the_night", "metroid_zero_mission"):
+    for name in ("hollow_knight", "metroid_zero_mission"):
         if want(name):
             mod.seal_edges(os.path.join(out, name))
             mod.settle_liquids(os.path.join(out, name))
@@ -1097,24 +1041,6 @@ def kings_pass(solid):
         top = 417 + (x - 918) // 2
         solid[top:top + 11, x] = False
     return [{"t": "breakwall", "x": 870, "y": 417, "w": 3, "h": 11}]
-
-
-def build_ss(maps, out):
-    s = 0.25 * SCALE
-    solid = hk_tiles(os.path.join(maps, "ss_clean.png"), s)
-    label = regions(hk_areas(os.path.join(maps, "ss_clean.png"), s, solid), 800 * SCALE * SCALE)  # drops glow halos
-    write_world(os.path.join(out, "silksong"), label < 0, "Pharloom",
-                (int(1150 * s), int(2960 * s)), [(int(1150 * s), int(2940 * s), "Moss Grotto (start, approximate)")], thin_links=True)
-
-
-def build_sotn(maps, out):
-    # Symphony of the Night: Dracula's Castle (left half of the image)
-    is_room, sides = sotn_cells(os.path.join(maps, "sotn_ingame.png"), 1390)
-    c = 7.5 * SCALE
-    solid, label, doors = cell_world(is_room, sides, c, c)
-    write_world(os.path.join(out, "symphony_of_the_night"), solid, "Dracula's Castle",
-                (int((140 - 9.25) / 21.73 * c), int((910 - 14.75) / 20.11 * c)),
-                [(int((150 - 9.25) / 21.73 * c), int((905 - 14.75) / 20.11 * c), "Entrance (start)")])
 
 
 def build_mzm(maps, out):
@@ -1153,5 +1079,5 @@ def build_mzm(maps, out):
 
 
 if __name__ == "__main__":
-    # python3 -I tools/reference_worlds.py <maps_dir> worlds [hollow_knight,silksong,...]
+    # python3 -I tools/reference_worlds.py <maps_dir> worlds [hollow_knight,metroid_zero_mission]
     build(sys.argv[1], sys.argv[2], sys.argv[3].split(",") if len(sys.argv) > 3 else None)
