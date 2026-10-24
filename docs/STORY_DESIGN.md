@@ -93,7 +93,7 @@ Flavour: the hero is exhausted. Boss fights drain all their energy. After the Ap
 Energy is also health:
 - It replaces hearts. The icon is still undecided; it shows as **blocks**.
 - **1 block = 100 energy** in code. Every value below is in code units.
-- The game starts with **1 block**, so one hit kills during platforming (until a shield is unlocked later).
+- The game starts with a **base of 50** that always regenerates. A hit costs 100, so on the base alone one hit kills during platforming (until a shield is unlocked later).
 - With 1 block the player can use one ability, then has to rest before using another.
 - The 2nd block comes from the first city.
 
@@ -112,17 +112,18 @@ Costs:
 - Sword swing: 10 per swing.
 - Sword hit: 15 more per enemy hit (25 for a swing that lands). Swing only when you mean it.
 - Wall grab: 20-30 per second while holding on.
-- Jump: 10 per jump. It never blocks the jump: with less than 10 left it takes what's there.
+- Jump: 5 per jump, and a jump needs those 5: with less there's no jump (wall jumps and swim strokes stay free).
 - Some abilities cost a whole block and have to be recovered before reuse.
 
 Regeneration:
 - About 3 energy per second.
-- Only inside the current block: a block that is fully spent doesn't refill.
+- The base (the first 50) always refills, even from 0.
+- Above it, only inside the current block: an extra block that is fully spent doesn't refill.
 
 Water:
 - Underwater is its own state, **Normal (Underwater)**, which replaces Normal in water: slow sinking, no walking on the floor (along it the player moves as mid-water), and no normal jump. **Jumping (Underwater)** is a weaker stroke (about half a jump's height) that works from the floor or mid-water, every time jump is pressed; with the surface close above, it leaps out of the water like a normal jump. Dash still works.
 - Waterfalls are a layer on top of the current state: inside one the player is pulled down, so jumps rise much less.
-- Staying in water costs 2 energy every 0.1 s (20 per second), and energy doesn't regenerate there.
+- Staying in water costs 1.6 energy every 0.1 s (16 per second), and energy doesn't regenerate there.
 - Running out of energy in water is a death (drowning).
 
 ## 4. Skill points
@@ -157,8 +158,10 @@ NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the 
 - 2026-10-24: water drain raised 10x, to 0.5 every 0.1 s (5 per second).
 - 2026-10-24: water drain doubled to 1 every 0.1 s (10 per second); the waterfall pull is softer (jumps rise, less).
 - 2026-10-24: water drain doubled again, to 2 every 0.1 s (20 per second).
+- 2026-10-24: water drain set to 80% of that: 1.6 every 0.1 s (16 per second). No energy, no jump. Jump cost lowered to 5.
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
 - 2026-10-24: Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards energy drops to 5 and an energy orb appears. The power-up reward is still open.
+- 2026-10-24: the run starts with a base of 50 energy that always regenerates; energy blocks add 100 each. A jump needs its 5.
 - 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 

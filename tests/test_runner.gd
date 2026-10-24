@@ -1143,6 +1143,7 @@ func check_ape() -> void:
 			thrown = ape.stones[0][1].x < 0 and ape.stones[0][1].y < 0
 			break
 	check(thrown, "the Ape throws a stone in an arc at a far player")
+	check(ape.damage_boxes().size() == 1 and ape.damage_boxes()[0].size == Vector2i(16, 16), "the hitbox overlay sees the flying stone (%s)" % [ape.damage_boxes()])
 	# phase 1: a stone that meets the standing trunk fells it into a bridge at its base (and it stays down)
 	make_world([{"t": "ape_trunk", "x": 200, "y": floor_y - 112, "w": 16, "h": 112}, {"t": "boss_ape", "x": 380, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
@@ -1189,6 +1190,22 @@ func check_ape() -> void:
 	ape._land()
 	step(90)
 	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "three hits beat the Ape: gates open, it stays beaten, an energy orb appears")
+	# the landing slams the ground: a shockwave hits beside the body, not just under it
+	Game.settings.invincible = false
+	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(200 + 32 + 10, floor_y)  # just right of the body
+	ape.phase = "air"
+	ape._land()
+	step(2)
+	var slam_hit: bool = p().dead
+	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(200 + 32 + 30, floor_y)  # out of reach
+	ape.phase = "air"
+	ape._land()
+	step(2)
+	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(184, floor_y - 8, 64, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
 	# near: the scream reaches around its body
 	Game.settings.invincible = keep_inv
 	make_world([{"t": "boss_ape", "x": 140, "y": floor_y - 32}])
@@ -1251,21 +1268,29 @@ func check_energy() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
 	var run := Adventure.new_run(world)
-	check(run.blocks == 1 and run.energy == 100.0, "a run starts with one full energy block")
-	check(Adventure.spend_energy(run, 10) and run.energy == 90.0, "spending takes energy")
+	check(run.blocks == 1 and run.energy == 50.0 and Adventure.energy_max(run) == 50.0, "a run starts with the base: 50 energy")
+	check(Adventure.spend_energy(run, 10) and run.energy == 40.0, "spending takes energy")
 	Adventure.regen_energy(run, 1.0)
-	check(is_equal_approx(run.energy, 93.0), "energy regenerates 3 per second (%s)" % run.energy)
+	check(is_equal_approx(run.energy, 43.0), "energy regenerates 3 per second (%s)" % run.energy)
 	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 100.0, "regeneration stops at the top of the block")
-	check(not Adventure.spend_energy(run, 150) and run.energy == 100.0, "can't spend more than you have")
+	check(run.energy == 50.0, "regeneration stops at the top of the base")
+	run.energy = 0.0
+	Adventure.regen_energy(run, 2.0)
+	check(is_equal_approx(run.energy, 6.0), "the base always regenerates, even from 0 (%s)" % run.energy)
+	Adventure.regen_energy(run, 100.0)
+	check(not Adventure.spend_energy(run, 80) and run.energy == 50.0, "can't spend more than you have")
 	Adventure.add_energy_block(run)
-	check(run.blocks == 2 and run.energy == 200.0, "a new block arrives full")
+	check(run.blocks == 2 and run.energy == 150.0 and Adventure.energy_max(run) == 150.0, "a new block adds a full 100")
 	Adventure.spend_energy(run, 100)
 	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 100.0, "a fully spent block doesn't refill")
+	check(run.energy == 50.0, "a fully spent block doesn't refill")
 	Adventure.spend_energy(run, 30)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 100.0, "a partly spent block refills to its top")
+	check(run.energy == 50.0, "the base refills, but not the spent block above it")
+	Adventure.refill_energy(run)
+	Adventure.spend_energy(run, 30)
+	Adventure.regen_energy(run, 100.0)
+	check(run.energy == 150.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
@@ -1273,41 +1298,41 @@ func check_energy() -> void:
 	Game.adv_temp = true
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.energy == 200.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block")
+	check(Game.adv.blocks == 2 and Game.adv.energy == 150.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block")
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
 	check(Game.adv.blocks == 2, "an energy block is taken once per run")
 	p().die(Vector2.ZERO)
-	check(w.deaths == 1 and Game.adv.energy == 100.0, "a hit with a block to spare costs the block, and counts as a death (a respawn)")
+	check(w.deaths == 1 and Game.adv.energy == 50.0, "a hit with a block to spare costs the block, and counts as a death (a respawn)")
 	p().dead = false
 	p().die(Vector2.ZERO)
-	check(w.deaths == 2 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
-	# each jump wears 10 energy, down to 0 but never blocking the jump
+	check(w.deaths == 2 and Game.adv.energy == 150.0, "a hit on the base alone is a death and refills energy")
+	# each jump costs 5 energy and needs it: with less there's no jump
 	make_world([])
 	step(5)
-	Game.adv.energy = 100.0
+	Game.adv.energy = 50.0
 	p().tap = {"jump": true}
 	step()
 	var after_jump: float = Game.adv.energy
 	step(60)
-	Game.adv.energy = 4.0
+	Game.adv.energy = 3.0
 	var y0: float = p().pos.y
 	p().tap = {"jump": true}
-	step(3)
-	check(absf(after_jump - 90.0) < 0.2 and Game.adv.energy == 0.0 and p().pos.y < y0, "a jump costs 10 energy; with less left it takes what's there and still jumps (%s, %s)" % [after_jump, Game.adv.energy])
+	step(4)
+	check(absf(after_jump - 45.0) < 0.2 and p().on_ground and p().pos.y == y0, "a jump costs 5 energy; with less than 5 there's no jump (%s)" % after_jump)
 	Game.adv.energy = 100.0
 
 	# HUD energy bars: one per block, filled by its share of the energy
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(150.0, 3)
-	check(fills == [1.0, 0.5, 0.0], "HUD energy bars fill block by block (%s)" % [fills])
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(100.0, 3)
+	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
 
-	# water drains 2 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
+	# water drains 1.6 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
 	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])
 	step(5)
 	Game.adv.energy = 150.0
 	var before: float = Game.adv.energy
 	step(60)
-	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 20.0), "a second in water costs 20 energy, no regeneration (%s)" % (before - Game.adv.energy))
+	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 16.0), "a second in water costs 16 energy, no regeneration (%s)" % (before - Game.adv.energy))
 	Game.adv.energy = 0.004
 	var deaths_before: int = w.deaths
 	step(2)

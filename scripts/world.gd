@@ -28,11 +28,11 @@ class Hud extends Control:
 	const SKULL := ["  ####  ", " ###### ", "##.##.##", "########", " ##..## ", "  # # # "]  # 8x6, "." = eye/nose holes
 	var world
 
-	# Fill of each energy block, 0..1, first block first (energy counts 100 per block).
+	# Fill of each bar, 0..1: the base (50) first, then one per extra block (100 each).
 	static func block_fills(energy: float, blocks: int) -> Array:
-		var out := []
-		for i in blocks:
-			out.append(clampf((energy - i * 100.0) / 100.0, 0.0, 1.0))
+		var out := [clampf(energy / Adventure.BASE_ENERGY, 0.0, 1.0)]
+		for i in blocks - 1:
+			out.append(clampf((energy - Adventure.BASE_ENERGY - i * Adventure.ENERGY_PER_BLOCK) / Adventure.ENERGY_PER_BLOCK, 0.0, 1.0))
 		return out
 
 	func _text(font: Font, at: Vector2, s: String, fs: int, col := Color.WHITE) -> void:
@@ -51,12 +51,14 @@ class Hud extends Control:
 			draw_polyline(bolt + PackedVector2Array([bolt[0]]), Color.BLACK, 2.0)
 			var low: bool = Game.adv.energy < 30.0
 			var x := M + 26.0
-			for f in block_fills(Game.adv.energy, int(Game.adv.blocks)):
-				var r := Rect2(x, y + 7, 46, 14)
+			var fills := block_fills(Game.adv.energy, int(Game.adv.blocks))
+			for i in fills.size():
+				var f: float = fills[i]
+				var r := Rect2(x, y + 7, 23 if i == 0 else 46, 14)  # the base holds half a block
 				draw_rect(r.grow(2), Color.BLACK)
 				draw_rect(r, Color(0.12, 0.15, 0.2))
 				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), Color("ff9a4a") if low else Color("7cf0c0"))
-				x += 54.0
+				x += r.size.x + 8.0
 			y += 34.0
 		if w.total_berries > 0:
 			_text(font, Vector2(M, y + 18), "★ %d/%d" % [w.collected.size(), w.total_berries], 18, Color("ffd34e"))
@@ -744,7 +746,11 @@ func _draw_hitboxes(cull: Rect2i) -> void:
 				draw_rect(Rect2(e.rect), Color(1, 0.9, 0.2, 0.8), false, 1.0)
 		elif e.touch_rect().has_area():  # what the player touches: pickups, hazards, triggers
 			draw_rect(Rect2(e.touch_rect()), Color(1, 0.5, 0.1, 0.8) if e.collidable else Color(1, 0.5, 0.1, 0.3), false, 1.0)
+	for e in ents:  # what hurts besides the bodies: projectiles, puddles, the Ape's stones, scream and slam
+		for b in e.damage_boxes():
+			draw_rect(Rect2(b), Color(1, 0.15, 0.2, 0.9), false, 1.0)
 	draw_rect(Rect2(player.hitbox()), Color(0.2, 1, 0.3, 0.9), false, 1.0)
+	draw_rect(Rect2(player.damage_rect()), Color(1, 0.3, 0.8, 0.9), false, 1.0)  # what hazards test against
 	if player.attacking():
 		var c: Vector2 = player.center()
 		var half := deg_to_rad(player.ATTACK_ARC) / 2.0

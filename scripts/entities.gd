@@ -131,6 +131,7 @@ class Ent extends RefCounted:
 
 	func setup() -> void: pass
 	func hurts() -> bool: return false  # true: touching it is damage, checked against the player's smaller damage_rect()
+	func damage_boxes() -> Array: return []  # extra boxes that hurt (projectiles, waves), for the hitbox overlay
 	func update(_dt: float) -> void: pass
 	func draw(_ci: CanvasItem) -> void: pass
 	func touch(_p) -> void: pass  # player hurtbox overlaps touch_rect()
@@ -645,6 +646,16 @@ class CombatEnemy extends Ent:
 					remove = true
 					break
 			if remove: shots.remove_at(i)
+
+	func damage_boxes() -> Array:  # projectiles (as update_shots tests them) and venom puddles
+		var out := []
+		for shots in [get("bones"), get("orbs")]:
+			if shots is Array:
+				for shot in shots:
+					out.append(Rect2i(Vector2i(shot[0]) - Vector2i.ONE, Vector2i(3, 3)))
+		for pd in puddles:
+			out.append(pd[0])
+		return out
 
 	func shots_rect(shots: Array) -> Rect2i:
 		var area := body_rect()
@@ -1482,6 +1493,9 @@ class Ape extends Ent:
 	const STONE_G := 400.0
 	const STONE := 16  # stone size = its hitbox
 	const SCREAM_REACH := 24  # 3 units around the body
+	const SLAM_REACH := 16  # landing shockwave: this far out on both sides, along the ground
+	const SLAM_HEIGHT := 8
+	const SLAM_TIME := 0.2
 	const FAR := 140.0
 	const NEAR := 44.0
 	var hp := HP
@@ -1494,6 +1508,7 @@ class Ape extends Ent:
 	var stones: Array = []  # [centre, velocity]
 	var flash := 0.0
 	var clock := 0.0
+	var slam_t := 0.0  # the landing shockwave is live while > 0
 	var id := ""
 	var x_min := 0.0
 	var x_max := 0.0
@@ -1524,6 +1539,10 @@ class Ape extends Ent:
 		_update_stones(dt)
 		if phase == "gone":
 			return
+		if slam_t > 0:
+			slam_t -= dt
+			if not w.player.dead and slam_box().intersects(w.player.damage_rect()):
+				w.player.die(Vector2(signf(w.player.center().x - center().x), -1).normalized())
 		var p = w.player
 		var dx: float = p.center().x - center().x
 		if phase in ["idle", "throw", "crouch", "scream"]:
@@ -1596,8 +1615,21 @@ class Ape extends Ent:
 			_land()
 		else:
 			vel.y = 0
+	func damage_boxes() -> Array:  # stones, and the scream and the landing shockwave while they're live
+		var out := []
+		for s in stones:
+			out.append(Rect2i(Vector2i(s[0]) - Vector2i(STONE / 2, STONE / 2), Vector2i(STONE, STONE)))
+		if slam_t > 0:
+			out.append(slam_box())
+		if phase == "scream" and timer <= 0.0 and timer > -0.35:
+			out.append(rect.grow(SCREAM_REACH))
+		return out
+	# The landing shockwave along the ground, both sides of the body.
+	func slam_box() -> Rect2i:
+		return Rect2i(rect.position.x - SLAM_REACH, rect.end.y - SLAM_HEIGHT, SIZE + 2 * SLAM_REACH, SLAM_HEIGHT)
 	func _land() -> void:
 		vel = Vector2.ZERO
+		slam_t = SLAM_TIME
 		w.shake_dir(Vector2.DOWN, 0.2)
 		w.dust(Vector2(center().x, rect.end.y), Vector2.UP, 10)
 		var feet := Rect2i(rect.position.x, rect.end.y - 4, rect.size.x, 4)
@@ -1686,6 +1718,10 @@ class Ape extends Ent:
 		ci.draw_rect(Rect2(Vector2(-SIZE / 2.0 + 6, 28), Vector2(8, 4)), dark)  # legs
 		ci.draw_rect(Rect2(Vector2(-SIZE / 2.0 + 18, 28), Vector2(8, 4)), dark)
 		ci.draw_set_transform(Vector2.ZERO)
+		if slam_t > 0:  # the shockwave, exactly its hitbox
+			var sb := Rect2(slam_box())
+			ci.draw_rect(sb, Color(0.85, 0.75, 0.55, 0.35 + slam_t))
+			ci.draw_rect(Rect2(sb.position, Vector2(sb.size.x, 2)), Color(1, 0.95, 0.8, 0.8))
 		if phase == "scream" and timer <= 0.0:  # the scream's reach
 			var c := center()
 			for k in 3:

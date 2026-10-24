@@ -8,15 +8,15 @@
 Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 
 ### Systems
-- [x] Energy as health: blocks of 100, start with 1 block, a hit costs a block (hazard respawn), last block = death; regen 3/s inside the current block (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
+- [x] Energy as health: a base of 50 that always regenerates, blocks of 100 on top; a hit costs 100 (respawn), nothing left = death; regen 3/s (extra blocks only inside the current one) (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
 - [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
 - [x] Story world starts with jump only (`worlds/story`, `"abilities": []`)
 - [ ] Big wavedash jump is a later gate (needs dash): decide which later level gives dash
 - [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
-- [x] Jump costs 10 energy (never blocks the jump; `Player.JUMP_ENERGY`)
+- [x] Jump costs 5 energy and needs it (no jump with less; `Player.JUMP_ENERGY`, `Player.can_jump`)
 - [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
 - [ ] Energy orb refills everything for now; decide how much collectibles restore
-- [x] Water drains energy: 2 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
+- [x] Water drains energy: 1.6 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
 - [x] HUD: energy as a lightning bolt and one bar per block (top left, stars under it), area name (top centre), timer and deaths with a skull (top right)
 - [ ] Interact button (keyboard, controller, touch)
 - [ ] NPC entity + dialogue box; "..." reply for silent NPCs
@@ -55,7 +55,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 ### Boss: the Ape
 - [x] Ape boss (`boss_ape`), 4 units (32x32), 3 hits; arena `a1_ape_arena`; tests in `check_ape()`
 - [x] Stone throw (far): parabolic, 2x2-unit stone (sprite = hitbox, per the exact-hitbox rule)
-- [x] Slam (mid): a leap that lands 3 units past the player; safe when moving toward the Ape
+- [x] Slam (mid): a leap that lands 3 units past the player; safe when moving toward the Ape; the landing sends a shockwave 2 units out along the ground (jump it)
 - [x] Scream (near): 3-unit reach, with a wind-up ring
 - [x] Gimmick: walk past the trunk to wake it, stand behind the trunk so a stone fells it into a bridge (`ape_trunk`); lure its leaps onto spikes, a new patch after each hit
 - [x] Exits sealed during the fight (`boss_gate`); beaten for the run

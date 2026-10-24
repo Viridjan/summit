@@ -264,3 +264,9 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: the death counter counts every respawn (spare-block hits too).
 - 2026-10-24: Boss 1, the Ape (entities.gd Ape/ApeTrunk/BossGate): throw far, leap past the player mid,
   scream near; a stone fells the trunk into a bridge; 3 spike landings beat it; gates open, exhaustion.
+- 2026-10-24: no energy, no jump (adventure); water drain 16/s (1.6 every 0.1 s).
+- 2026-10-24: jump costs 5 energy (was 10).
+- 2026-10-24: the Ape's landing slams the ground: a 0.2 s shockwave 2 units out on both sides.
+- 2026-10-24: hitbox overlay (F2) draws damage boxes in red (Ent.damage_boxes: stones, scream, slam,
+  bones, orbs, puddles) and the player's damage box in pink.
+- 2026-10-24: energy base 50, always regenerating; blocks add 100. A jump needs its 5 energy.

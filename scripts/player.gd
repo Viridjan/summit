@@ -132,7 +132,7 @@ const WATER_SURFACE_REACH := 12  # px: with the surface this close above the cen
 # Layer: applied on top of whatever state runs (_layers), not a state of its own.
 const WATERFALL_PUSH := 70.0  # inside a waterfall: pulled down towards this speed...
 const WATERFALL_FORCE := 600.0  # ...this hard (px/s²): jumps still rise, but much less
-const JUMP_ENERGY := 10.0  # adventure: each jump wears this much energy (never blocks the jump)
+const JUMP_ENERGY := 5.0  # adventure: each jump costs this much, and needs it
 const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)
@@ -371,7 +371,7 @@ func _swim_update(dt: float) -> int:
 	speed.y = maxf(speed.y, -WATER_MAX_RISE)
 	if jump_pressed():  # every press, as often as you like
 		on_ground = false
-		if not w.liquid_at(Rect2i(Vector2i(center()) - Vector2i(0, WATER_SURFACE_REACH), Vector2i.ONE), "water"):
+		if can_jump() and not w.liquid_at(Rect2i(Vector2i(center()) - Vector2i(0, WATER_SURFACE_REACH), Vector2i.ONE), "water"):
 			jump()  # the surface is close: a full jump out of the water
 		else:  # Jumping (Underwater)
 			jump_buf = 0
@@ -853,6 +853,10 @@ func _co_resume() -> void:
 				co_active = false
 
 # ---------------- jumps ----------------
+# Adventure: a jump needs its full cost in energy (wall jumps and swim strokes stay free).
+func can_jump() -> bool:
+	return not w.adventure() or Game.adv.energy >= JUMP_ENERGY
+
 func jump(particles := true) -> void:
 	w.drain_energy(JUMP_ENERGY)
 	jump_buf = 0
@@ -1301,7 +1305,7 @@ func _normal_update(dt: float) -> int:
 			on_ground = false
 			pos.y += 1
 			speed.y = maxf(speed.y, 40.0)  # falling already, or the jump-thru assist would lift us back on top
-		elif jump_grace_timer > 0:
+		elif jump_grace_timer > 0 and can_jump():
 			jump()
 		elif can_unduck():
 			if wall_jump_check(1):
@@ -1555,7 +1559,7 @@ func _hit_squash_update(dt: float) -> int:
 	speed.x = approach(speed.x, 0, HIT_SQUASH_FRICTION * dt)
 	speed.y = approach(speed.y, 0, HIT_SQUASH_FRICTION * dt)
 	if jump_pressed():
-		if on_ground:
+		if on_ground and can_jump():
 			jump()
 		elif wall_jump_check(1):
 			wall_jump(-1)
@@ -1634,7 +1638,7 @@ func _dream_dash_update(dt: float) -> int:
 				return ST_DREAM_DASH
 		elif dream_dash_can_end_timer <= 0:
 			w.freeze_for(0.05)
-			if jump_pressed() and dash_dir.x != 0:
+			if jump_pressed() and dash_dir.x != 0 and can_jump():
 				dream_jump = true
 				jump()
 			elif grab_check and (dash_dir.y >= 0 or dash_dir.x != 0) and ((move_x == 1 and climb_check(1)) or (move_x == -1 and climb_check(-1))):
@@ -1702,7 +1706,7 @@ func _star_fly_update(dt: float) -> int:
 		w.dust(center(), -speed.normalized(), 1, HAIR_FLY)
 
 	if jump_pressed():
-		if on_ground_at(pos, 3):
+		if on_ground_at(pos, 3) and can_jump():
 			jump()
 			return ST_NORMAL
 		elif wall_jump_check(-1):

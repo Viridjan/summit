@@ -9,10 +9,12 @@ const T := 8
 const ABILITIES := ["dash", "climb", "attack"]
 
 # Energy is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
-# The HUD shows blocks; the code counts 100 energy per block. A run starts with 1 block.
+# A run starts with a base of 50 that always regenerates; each energy block picked up adds 100.
+# run.blocks counts the base as the first block (so 1 = just the base).
+const BASE_ENERGY := 50.0
 const ENERGY_PER_BLOCK := 100.0
 const ENERGY_REGEN := 3.0  # per second, only inside a partly spent block
-const WATER_DRAIN := 20.0  # per second while in water (2 every 0.1 s); no regeneration there
+const WATER_DRAIN := 16.0  # per second while in water (1.6 every 0.1 s); no regeneration there
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}
 # Rooms whose file is missing or invalid are skipped.
@@ -123,15 +125,18 @@ static func _open_overlap(a: Dictionary, b: Dictionary, r: Rect2i) -> bool:
 static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
 		"stars": [], "deaths": 0, "time": 0.0, "done": false,
-		"blocks": 1, "energy": ENERGY_PER_BLOCK, "taken": []}  # taken: one-time pickups, "room:x:y"
+		"blocks": 1, "energy": BASE_ENERGY, "taken": []}  # taken: one-time pickups, "room:x:y"
 
 static func energy_max(run: Dictionary) -> float:
-	return run.blocks * ENERGY_PER_BLOCK
+	return BASE_ENERGY + (run.blocks - 1) * ENERGY_PER_BLOCK
 
-# Regeneration stops at the top of the current block: a block spent to its bottom stays empty.
+# The base always regenerates, even from 0. Above it, regeneration stops at the top of the current
+# block: an extra block spent to its bottom stays empty.
 static func regen_energy(run: Dictionary, dt: float) -> void:
-	var top := ceilf(run.energy / ENERGY_PER_BLOCK) * ENERGY_PER_BLOCK
-	run.energy = minf(top, run.energy + ENERGY_REGEN * dt)
+	var top := BASE_ENERGY
+	if run.energy > BASE_ENERGY:
+		top = BASE_ENERGY + ceilf((run.energy - BASE_ENERGY) / ENERGY_PER_BLOCK) * ENERGY_PER_BLOCK
+	run.energy = minf(maxf(top, run.energy), run.energy + ENERGY_REGEN * dt)
 
 # Being in water drains energy. Returns false when it's all gone: the player drowns.
 static func water_energy(run: Dictionary, dt: float) -> bool:
@@ -149,7 +154,7 @@ static func spend_energy(run: Dictionary, amount: float) -> bool:
 	run.energy -= amount
 	return true
 
-# A hit costs one block. Returns false when it was the last one (a death).
+# A hit costs one block (100). Returns false when nothing is left (a death): on the base alone, any hit.
 static func hit_energy(run: Dictionary) -> bool:
 	run.energy -= ENERGY_PER_BLOCK
 	return run.energy > 0
