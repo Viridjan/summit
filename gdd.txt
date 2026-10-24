@@ -303,3 +303,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: buildings with a door are backdrops (entity "building", style house/tower; never collides): Cove Town houses, the lighthouse on the shore and its top.
 - 2026-10-24: house doors use a new "interact" action (keyboard S, pad B), not up.
 - 2026-10-24: all music plays 25% slower and two whole tones lower (MusicEngine.TEMPO_SCALE / TRANSPOSE, applied at playback).
+- 2026-10-24: Options → Audio: Music and Sound Effects volume sliders (0-100%, both default 100%). Effects play at 20% of their synthesized level, so 100% in Options is that.
+- 2026-10-24: music another 20% slower: TEMPO_SCALE 0.6 (60% of written tempo).

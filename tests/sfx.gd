@@ -35,5 +35,14 @@ func run() -> void:
 	game.settings.sfx_volume = 0.7
 	game.apply_settings()
 	check(not AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX")), "Raising SFX volume unmutes effects")
+	check(is_equal_approx(sfx.voices[0].volume_db, -10.0 + linear_to_db(0.2)), "Effects play at 20% of their synthesized level")
+	game.get_music_engine()
+	game.settings.music_volume = 0.0
+	game.apply_settings()
+	check(AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")), "Music volume zero mutes the music")
+	game.settings.music_volume = 0.5
+	game.apply_settings()
+	var mb := AudioServer.get_bus_index("Music")
+	check(not AudioServer.is_bus_mute(mb) and is_equal_approx(AudioServer.get_bus_volume_db(mb), linear_to_db(0.5)), "Music volume sets the Music bus")
 	print("SFX OK" if failures == 0 else "SFX FAILED: %d" % failures)
 	quit(failures)

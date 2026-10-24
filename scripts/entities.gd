@@ -1112,14 +1112,22 @@ class BreakWall extends Ent:
 			ci.draw_rect(r, Color(1, 1, 1, 0.5))
 
 
-class Note extends Ent:  # level-design reminder; text is shown in the HUD while the player stands on it
+class Note extends Ent:  # design reminder or a one-shot authored sound trigger
+	var sound_played := false
 	func touch_rect() -> Rect2i:
 		return rect.grow(8)
 	func touch(_p) -> void:
+		if d.has("sound"):
+			if not sound_played:
+				sound_played = true
+				Game.play_sfx(str(d.sound))
+			return
 		w.show_note(str(d.get("text", "")))
 	func vis_rect() -> Rect2i:
 		return rect.grow(8) if w != null else Rect2i(rect.position - Vector2i(160, 24), Vector2i(328, 40))
 	func draw(ci: CanvasItem) -> void:
+		if w != null and d.has("sound"):
+			return
 		var p := Vector2(rect.position)
 		ci.draw_rect(Rect2(p + Vector2(1, 0), Vector2(6, 8)), Color("ffe08a"))
 		ci.draw_rect(Rect2(p + Vector2(1, 0), Vector2(6, 8)), Color("8a6a2a"), false, 1.0)

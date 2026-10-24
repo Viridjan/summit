@@ -89,7 +89,7 @@ for y in (37, 34, 31, 28, 25, 22, 19):       # the top one (row 19) carries the 
     c.ents.append({"t": "jumpthru", "x": 114 * T, "y": y * T, "w": 5 * T, "h": 8})
 c.ent("spawn", 60, 18)
 c.ent("spawn", 196, 18)
-c.ent("note", 3, 18, text="A roar from the left (stereo audio, not built yet)")
+c.ent("note", 3, 18, text="A roar from the left", sound="cave_roar")
 c.ent("note", 101, 5, text="Dead end")
 c.ent("note", 151, 6, text="Dead end")
 c.ent("strawberry", 82, 39)

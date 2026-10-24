@@ -40,7 +40,8 @@ func _ready() -> void:
 	_toggle(box, "Screen Shake", "shake")
 
 	box.add_child(Game.label("Audio", 22))
-	_choice(box, "Sound effects", "sfx_volume", ["Off", "25%", "50%", "70%", "100%"], [0.0, 0.25, 0.5, 0.7, 1.0])
+	_slider(box, "Music", "music_volume")
+	_slider(box, "Sound Effects", "sfx_volume")
 
 	box.add_child(Game.label("Controls (keyboard)", 22))
 	for a in Game.ACTION_NAMES:
@@ -127,6 +128,26 @@ func _choice(box: VBoxContainer, text: String, key: String, labels: Array, value
 	row.add_child(o)
 	box.add_child(row)
 	return o
+
+# 0..100% in steps of 5; the setting stores 0..1.
+func _slider(box: VBoxContainer, text: String, key: String) -> HSlider:
+	var row := HBoxContainer.new()
+	var l := Label.new()
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(l)
+	var s := HSlider.new()
+	s.custom_minimum_size = Vector2(240, 0)
+	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	s.step = 5
+	s.value = roundf(float(Game.settings[key]) * 100.0)
+	var show := func(v: float): l.text = "%s:  %d%%" % [text, v]
+	show.call(s.value)
+	s.value_changed.connect(func(v: float):
+		show.call(v)
+		_apply(key, v / 100.0))
+	row.add_child(s)
+	box.add_child(row)
+	return s
 
 func _apply(key: String, v) -> void:
 	Game.settings[key] = v

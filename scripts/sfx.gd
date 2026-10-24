@@ -48,10 +48,11 @@ func _ready() -> void:
 		AudioServer.set_bus_name(AudioServer.bus_count - 1, "SFX")
 	for key in SOUNDS:
 		streams[key] = _synthesize(SOUNDS[key])
+	streams["cave_roar"] = _cave_roar()
 	for i in VOICES:
 		var voice := AudioStreamPlayer.new()
 		voice.bus = "SFX"
-		voice.volume_db = -10.0
+		voice.volume_db = -10.0 + linear_to_db(0.2)  # effects at 20% of their synthesized level; the setting scales from there
 		add_child(voice)
 		voices.append(voice)
 	set_volume(float(Game.settings.sfx_volume))
@@ -99,5 +100,47 @@ func _synthesize(spec: Array) -> AudioStreamWAV:
 	var stream := AudioStreamWAV.new()
 	stream.format = AudioStreamWAV.FORMAT_16_BITS
 	stream.mix_rate = rate
+	stream.data = bytes
+	return stream
+
+# Layered vocal harmonics, breath and delayed cave reflections, authored as stereo PCM.
+func _cave_roar() -> AudioStreamWAV:
+	var rate := 22050
+	var duration := 3.4
+	var count := int(rate * duration)
+	var dry := PackedFloat32Array()
+	dry.resize(count)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 48127
+	var phase := 0.0
+	var breath := 0.0
+	for i in count:
+		var seconds := float(i) / rate
+		var t := seconds / duration
+		var pitch := lerpf(92.0, 38.0, t) + sin(seconds * 24.0) * 4.0
+		phase += pitch * TAU / rate
+		breath = lerpf(breath, rng.randf_range(-1.0, 1.0), 0.18)
+		var throat := sin(phase) * 0.48 + sin(phase * 2.0) * 0.23
+		throat += sin(phase * 3.0 + sin(seconds * 31.0)) * 0.13
+		throat += sin(phase * 7.0) * 0.07
+		var envelope := smoothstep(0.0, 0.13, seconds) * pow(1.0 - t, 1.2)
+		var pulse := 0.78 + 0.22 * sin(seconds * 19.0)
+		dry[i] = (throat * pulse + breath * 0.4) * envelope
+	var bytes := PackedByteArray()
+	bytes.resize(count * 4)
+	for i in count:
+		var echo := 0.0
+		for tap in 3:
+			var delay := int(rate * (0.19 + tap * 0.17))
+			if i >= delay:
+				echo += dry[i - delay] * (0.24 / (tap + 1))
+		var left := clampf(dry[i] * 0.85 + echo * 0.3, -0.95, 0.95)
+		var right := clampf(dry[i] * 0.12 + echo * 0.65, -0.95, 0.95)
+		bytes.encode_s16(i * 4, int(left * 28000))
+		bytes.encode_s16(i * 4 + 2, int(right * 28000))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = rate
+	stream.stereo = true
 	stream.data = bytes
 	return stream

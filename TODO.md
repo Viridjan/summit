@@ -39,7 +39,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 ### Rooms
 - [x] Start meadow: flat, few jumps and spikes, no enemies (`m1_meadow`)
 - [x] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked (`m2_big_jump`, star on the far side)
-- [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); roar is a note until positional audio exists. Expanded with 4 rooms of their own: Roar Tunnel (left), Cave Teeth and Cove Tunnel (right), Deep Lake (below: a hole in the lake floor drops in, a jump-through shaft leads back up)
+- [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); Roar Tunnel plays a one-shot stereo cave roar from the left. Expanded with 4 rooms of their own: Roar Tunnel (left), Cave Teeth and Cove Tunnel (right), Deep Lake (below: a hole in the lake floor drops in, a jump-through shaft leads back up)
 - [x] Cove Town houses enterable through house doors (`house_door`: stand at it, press up): Villager's House, Quest Giver's House
 - [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end

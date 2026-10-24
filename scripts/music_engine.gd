@@ -21,7 +21,7 @@ var step_length := 16
 var muffled := false
 
 # Applied when playing, so scores and the studio keep their written tempo and notes.
-const TEMPO_SCALE := 0.75  # every song 25% slower
+const TEMPO_SCALE := 0.6  # every song 40% slower (25%, then another 20%)
 const TRANSPOSE := -4  # every song two whole tones lower (semitones)
 
 const BUS := "Music"
@@ -41,6 +41,7 @@ func _ready() -> void:
 		AudioServer.add_bus_effect(i, lp)
 		AudioServer.set_bus_effect_enabled(i, 0, false)
 	driver.get_audio_player().bus = BUS
+	set_level(float(Game.settings.music_volume))
 	load_demo()
 
 func load_demo() -> void:
@@ -76,7 +77,7 @@ func build_mml(loop: bool = true) -> String:
 	for channel in patterns.size():
 		var voice: SiONVoice = presets.get_voice_preset(PRESETS[instruments[channel]])
 		headers += voice.get_mml(channel, -1, false)
-		tracks += "t%d %%5 @%d v%d q6 l16 %s" % [clampi(roundi(bpm * TEMPO_SCALE), 40, 240), channel, 0 if muted[channel] else 6, "$" if loop else ""]
+		tracks += "t%d %%5 @%d v%d q6 l16 %s" % [clampi(roundi(bpm * TEMPO_SCALE), 20, 240), channel, 0 if muted[channel] else 6, "$" if loop else ""]
 		for note: int in patterns[channel]:
 			if note < 0:
 				tracks += "r%d" % step_length
@@ -90,6 +91,12 @@ func play() -> void:
 	driver.volume = volume
 	driver.play(build_mml())
 	playing = true
+
+# The Options music volume (0..1) on the Music bus; 0 mutes it.
+func set_level(value: float) -> void:
+	var bus := AudioServer.get_bus_index(BUS)
+	AudioServer.set_bus_mute(bus, value <= 0.0)
+	AudioServer.set_bus_volume_db(bus, linear_to_db(clampf(value, 0.001, 1.0)))
 
 func set_muffled(on: bool) -> void:
 	if on != muffled:

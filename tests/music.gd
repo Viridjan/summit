@@ -25,7 +25,7 @@ func run() -> void:
 	engine.patterns = [ [60, -1, 64, 67], [-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1] ]
 	var mml: String = engine.build_mml(false)
 	check(mml.contains("o4g+16r16o5c16o5d+16"), "Edited notes keep their durations and play two whole tones lower")
-	check(mml.contains("t%d " % roundi(engine.bpm * 0.75)), "Songs play 25% slower than written")
+	check(mml.contains("t%d " % roundi(engine.bpm * 0.6)), "Songs play at 60% of their written tempo")
 	var samples: PackedFloat64Array = engine.driver.render(mml, 44100, 2)
 	var peak := 0.0
 	for sample in samples:

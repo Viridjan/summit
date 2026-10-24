@@ -39,7 +39,8 @@
 			"t": "note",
 			"x": 24,
 			"y": 144,
-			"text": "A roar from the left (stereo audio, not built yet)"
+			"text": "A roar from the left",
+			"sound": "cave_roar"
 		}
 	]
 }

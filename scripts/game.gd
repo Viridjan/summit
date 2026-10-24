@@ -54,7 +54,7 @@ var sfx: Node
 var music_engine: Node
 var theme: Theme
 var settings := {
-	"sfx_volume": 0.7,
+	"sfx_volume": 1.0, "music_volume": 1.0,
 	"fullscreen": false, "vsync": true, "shake": true, "hitboxes": false,
 	"game_speed": 1.0, "infinite_stamina": false, "air_dashes": 0, "invincible": false,
 	"keys": DEFAULT_KEYS.duplicate(),
@@ -125,6 +125,8 @@ func _load_settings() -> void:
 		return
 	for k in settings:
 		settings[k] = cf.get_value("s", k, settings[k])
+	if not cf.has_section_key("s", "music_volume"):  # saved before the volume sliders: effects start at 100%
+		settings.sfx_volume = 1.0
 	for a in DEFAULT_KEYS:  # keep any new actions added after the file was saved
 		if not settings.keys.has(a):
 			settings.keys[a] = DEFAULT_KEYS[a]
@@ -140,6 +142,8 @@ func save_settings() -> void:
 func apply_settings() -> void:
 	if is_instance_valid(sfx):
 		sfx.set_volume(float(settings.sfx_volume))
+	if is_instance_valid(music_engine):
+		music_engine.set_level(float(settings.music_volume))
 	var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 	if DisplayServer.window_get_mode() != mode:
 		DisplayServer.window_set_mode(mode)

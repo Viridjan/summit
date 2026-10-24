@@ -155,7 +155,7 @@ Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cov
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
 Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, three spike hits, gated exits, exhaustion after), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
-NPCs, quests, the roar, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
+Roar Tunnel plays a one-shot stereo roar from the left, with cave reflections. NPCs, quests, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
 `tools/story/gen_first_stretch.py` generates these rooms, but only the rooms you name (`... worlds/story a1_ape_arena`, or `all`), since rooms are also edited in-game.
 `tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.
 
