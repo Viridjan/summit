@@ -117,7 +117,7 @@ A brand-new variant needs:
 ### Contoured and circular damage areas
 
 `Ent.touch_rect()` remains the broad contact bound. The Ape verifies contact
-against `body_boxes()` inside `touch()` so empty head corners do not deal damage;
+against `body_boxes()` inside `touch()` (for the Ape: one centred 24px square, smaller than its 32px sprite);
 its debug body overlay displays the same bands. `damage_boxes()` exposes rectangular
 extra attacks. `damage_circles()` returns `[centre, radius]` entries for the hitbox
 overlay; circular attacks must also use their matching geometric collision check

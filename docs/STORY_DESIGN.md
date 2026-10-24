@@ -178,6 +178,7 @@ NPCs, quests, the roar, the house doors, the chase, the rock fall, the raft and 
 - 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 
+- 2026-10-24: the Ape's contact hitbox is one rectangle, 24x24 centred (a bit larger than the head-contour bands it replaced).
 - 2026-10-24: Removed the arena tree puzzle and bridge pit, unified the leap range, reduced body-contact bounds to 22×22 with a head contour, and made scream collision circular (40px radius).
 
 ## 8. Open questions

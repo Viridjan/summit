@@ -1511,7 +1511,7 @@ class AutoWalk extends Ent:
 class Ape extends Ent:
 	const HP := 3
 	const SIZE := 32
-	const BODY_SCALE := 0.7
+	const BODY := 24  # contact box: one square, a bit larger than the 22px body bands it replaced
 	const LEAP_G := 600.0
 	const LEAP_TIME := 0.75
 	const OVERSHOOT := 24.0  # the slam lands this far past the player
@@ -1567,18 +1567,11 @@ class Ape extends Ent:
 			if e is ApeTrunk:
 				return e
 		return null
-	# The movement footprint remains 32px. Contact damage uses smaller silhouette bands.
+	# The movement footprint stays 32px; contact damage uses one centred 24px square.
 	func touch_rect() -> Rect2i:
-		var size := roundi(SIZE * BODY_SCALE)
-		return Rect2i(rect.position + Vector2i((SIZE-size)/2,(SIZE-size)/2),Vector2i(size,size))
+		return Rect2i(rect.position + Vector2i((SIZE - BODY) / 2, (SIZE - BODY) / 2), Vector2i(BODY, BODY))
 	func body_boxes() -> Array:
-		var bounds := touch_rect()
-		var drop := 3 if phase == "crouch" else 0
-		return [
-			Rect2i(bounds.position+Vector2i(5,drop),Vector2i(12,7)),
-			Rect2i(bounds.position+Vector2i(2,7+drop),Vector2i(18,5)),
-			Rect2i(bounds.position+Vector2i(0,12+drop),Vector2i(22,10-drop)),
-		]
+		return [touch_rect()]
 	func body_hits(area: Rect2i) -> bool:
 		for box in body_boxes():
 			if box.intersects(area): return true

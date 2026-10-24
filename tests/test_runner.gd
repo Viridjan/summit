@@ -1149,12 +1149,7 @@ func check_bugfixes() -> void:
 func check_ape_hitbox_shapes() -> void:
 	make_world([{"t":"boss_ape","x":200,"y":192}])
 	var ape = w.ents.filter(func(e): return e is E.Ape)[0]
-	check(ape.has_method("body_boxes"), "Ape has a smaller contoured body hitbox")
-	if not ape.has_method("body_boxes"): return
-	check(ape.touch_rect().size == Vector2i(22,22), "Ape body bounds use 70 percent linear size rounded to pixels")
-	var head_corner := Rect2i(ape.touch_rect().position, Vector2i(2,2))
-	var head_middle := Rect2i(ape.rect.position+Vector2i(15,6),Vector2i(2,2))
-	check(not ape.body_hits(head_corner) and ape.body_hits(head_middle), "Ape head contour excludes empty corners but includes the head")
+	check(ape.body_boxes() == [ape.touch_rect()] and ape.touch_rect() == Rect2i(ape.rect.position + Vector2i(4, 4), Vector2i(24, 24)), "Ape contact is one centred 24px square (%s)" % [ape.body_boxes()])
 	ape.phase = "scream"
 	ape.timer = -0.1
 	var c: Vector2 = ape.center()

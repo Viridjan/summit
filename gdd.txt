@@ -285,3 +285,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: an energy block adds 75 (was 100); hits still cost 100 (Adventure.HIT_ENERGY).
 - 2026-10-24: Ape arena 56 wide; auto_walk carries the player in, the entrance boss_gate closes behind
   (closes_behind); s1/s2/s3 shifted 24 tiles left.
+- 2026-10-24: Ape contact hitbox is one centred 24x24 rectangle (replaces the 22px body bands).
