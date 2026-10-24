@@ -344,7 +344,7 @@ func check_shipped_world() -> void:
 	for w in listed.slice(1):
 		var rw := Adventure.load_world(w[1])
 		var has_spawn: bool = rw.rooms.has(rw.start) and rw.rooms[rw.start].level.entities.any(func(e): return e.t == "spawn")
-		check(rw.rooms.size() > 10 and has_spawn and Adventure.overlaps(rw).is_empty() and Adventure.new_run(rw).abilities == ["dash", "climb"], "%s loads: %d rooms, spawn, no overlaps, starts with dash+climb" % [w[0], rw.rooms.size()])
+		check(rw.rooms.size() > 10 and has_spawn and Adventure.overlaps(rw).is_empty() and Adventure.new_run(rw).abilities == ["dash", "climb", "attack"], "%s loads: %d rooms, spawn, no overlaps, starts with dash+climb+attack" % [w[0], rw.rooms.size()])
 		var ids := {}
 		var door_to := []
 		for rn in rw.rooms:
@@ -1072,6 +1072,58 @@ func check_bestiary() -> void:
 	check(mv.tab == 1, "E switches tabs on the keyboard")
 	mv.queue_free()
 
+# Energy (docs/STORY_DESIGN.md section 3): 100 per block, regen only inside a partly spent block,
+# a hit costs a block, the last block is a death.
+func check_energy() -> void:
+	const Adventure := preload("res://scripts/adventure.gd")
+	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
+	var run := Adventure.new_run(world)
+	check(run.blocks == 1 and run.energy == 100.0, "a run starts with one full energy block")
+	check(Adventure.spend_energy(run, 10) and run.energy == 90.0, "spending takes energy")
+	Adventure.regen_energy(run, 1.0)
+	check(is_equal_approx(run.energy, 93.0), "energy regenerates 3 per second (%s)" % run.energy)
+	Adventure.regen_energy(run, 10.0)
+	check(run.energy == 100.0, "regeneration stops at the top of the block")
+	check(not Adventure.spend_energy(run, 150) and run.energy == 100.0, "can't spend more than you have")
+	Adventure.add_energy_block(run)
+	check(run.blocks == 2 and run.energy == 200.0, "a new block arrives full")
+	Adventure.spend_energy(run, 100)
+	Adventure.regen_energy(run, 10.0)
+	check(run.energy == 100.0, "a fully spent block doesn't refill")
+	Adventure.spend_energy(run, 30)
+	Adventure.regen_energy(run, 100.0)
+	check(run.energy == 100.0, "a partly spent block refills to its top")
+
+	# in the world: a block pickup (once per run), hits, the attack gate
+	Game.adv_world = world
+	Game.adv = Adventure.new_run(world)
+	Game.adv_temp = true
+	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
+	step(3)
+	check(Game.adv.blocks == 2 and Game.adv.energy == 200.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block")
+	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
+	step(3)
+	check(Game.adv.blocks == 2, "an energy block is taken once per run")
+	p().die(Vector2.ZERO)
+	check(w.deaths == 0 and Game.adv.energy == 100.0, "a hit with a block to spare costs the block, not a life")
+	p().dead = false
+	p().die(Vector2.ZERO)
+	check(w.deaths == 1 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
+	make_world([])
+	step(5)
+	p().tap = {"attack": true}
+	step()
+	check(not p().attacking(), "no attack before the attack ability")
+	w.grant_ability("attack")
+	step(5)
+	p().tap = {"attack": true}
+	step()
+	check(p().attacking(), "attack works after picking it up")
+	Game.adv = {}
+	Game.adv_temp = false
+	w.queue_free()
+	w = null
+
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	Game.world_path = FIXTURE_WORLD + "world.json"
@@ -1563,6 +1615,7 @@ func _ready() -> void:
 	check_hk_combat_placements()
 	check_dirs()
 	check_adventure()
+	check_energy()
 	check_bugfixes()
 	check_bestiary()
 

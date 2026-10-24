@@ -35,6 +35,10 @@ const TYPES := {
 	# adventure ability pickups: the part after "ability_" must be in Adventure.ABILITIES
 	"ability_dash": ["Dash Ability", false, Color("ff7a3a"), AbilityOrb],
 	"ability_climb": ["Climb Ability", false, Color("3ad0ff"), AbilityOrb],
+	"ability_attack": ["Attack Ability", false, Color("e8e8e8"), AbilityOrb],
+	# adventure energy (docs/STORY_DESIGN.md): a new block once per run; an orb that refills energy
+	"energy_block": ["Energy Block", false, Color("7cf0c0"), EnergyBlock],
+	"energy_orb": ["Energy Orb", false, Color("b8ffe0"), EnergyOrb],
 	# door: drag its size; "id" names it, "to" = "room:id" (or just "id" in the same level) is where it leads.
 	# Links rooms that don't touch (elevators, trams) or that sit behind a wall.
 	"door": ["Door", true, Color("40e0ff"), Door],
@@ -324,6 +328,52 @@ class AbilityOrb extends Ent:  # adventure pickup that unlocks a move for the re
 		ci.draw_circle(c, 4, col)
 		ci.draw_arc(c, 6.5 + sin(t * 4), 0, TAU, 16, Color(col, 0.5), 1.0)
 		ci.draw_rect(Rect2(c + Vector2(-1, -2), Vector2(2, 2)), Color.WHITE)
+
+
+class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
+	var key := ""
+	var t := 0.0
+	func setup() -> void:
+		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+		if w != null:
+			key = "%s:%d:%d" % [w.room, int(d.x), int(d.y)]
+		collidable = w == null or (w.adventure() and not w.energy_block_taken(key))
+	func update(dt: float) -> void:
+		t += dt
+	func touch(_p) -> void:
+		collidable = false
+		w.add_energy_block(key)
+		w.freeze_for(0.1)
+		w.burst(center(), TYPES[d.t][2], 14)
+	func draw(ci: CanvasItem) -> void:
+		if not collidable:
+			return
+		var c := center() + Vector2(0, round(sin(t * 2.5) * 1.5))
+		var col: Color = TYPES[d.t][2]
+		ci.draw_rect(Rect2(c - Vector2(5, 5), Vector2(10, 10)), col.darkened(0.4))
+		ci.draw_rect(Rect2(c - Vector2(4, 4), Vector2(8, 8)), col)
+		ci.draw_rect(Rect2(c - Vector2(6.5, 6.5), Vector2(13, 13)).grow(sin(t * 4)), Color(col, 0.5), false, 1.0)
+
+
+# ponytail: refills all energy; collectibles that restore part of it come with the energy design
+class EnergyOrb extends Ent:  # adventure: refills energy, back after 2.5 s
+	var t := 0.0
+	func setup() -> void:
+		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+	func update(dt: float) -> void:
+		t += dt
+		if respawn > 0:
+			respawn -= dt
+	func touch(_p) -> void:
+		if respawn <= 0 and w.adventure() and Game.adv.energy < Game.Adventure.energy_max(Game.adv):
+			w.refill_energy()
+			respawn = 2.5
+			w.burst(center(), TYPES[d.t][2], 8)
+	func draw(ci: CanvasItem) -> void:
+		var col: Color = TYPES[d.t][2] if respawn <= 0 else Color(0.3, 0.3, 0.4)
+		var c := center() + Vector2(0, round(sin(t * 3)))
+		ci.draw_circle(c, 3, col)
+		ci.draw_arc(c, 5, 0, TAU, 12, Color(col, 0.6), 1.0)
 
 
 class Door extends Ent:  # touching it moves the player to the linked door (World.door_hit)

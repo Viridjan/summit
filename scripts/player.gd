@@ -496,6 +496,8 @@ func update(dt: float) -> void:
 		dash_buf = 0
 	if not Game.has_ability("climb"):
 		grab_check = false
+	if not Game.has_ability("attack"):
+		attack_buf = 0
 	if Game.settings.infinite_stamina:
 		stamina = CLIMB_MAX_STAMINA
 

@@ -2,7 +2,8 @@
 	"start": "r005",
 	"abilities": [
 		"dash",
-		"climb"
+		"climb",
+		"attack"
 	],
 	"rooms": {
 		"r000": [

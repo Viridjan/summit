@@ -6,7 +6,12 @@ extends RefCounted
 
 const T := 8
 # Moves the player starts the adventure without; ability pickups ("ability_<name>") unlock them.
-const ABILITIES := ["dash", "climb"]
+const ABILITIES := ["dash", "climb", "attack"]
+
+# Energy is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
+# The HUD shows blocks; the code counts 100 energy per block. A run starts with 1 block.
+const ENERGY_PER_BLOCK := 100.0
+const ENERGY_REGEN := 3.0  # per second, only inside a partly spent block
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}
 # Rooms whose file is missing or invalid are skipped.
@@ -116,7 +121,36 @@ static func _open_overlap(a: Dictionary, b: Dictionary, r: Rect2i) -> bool:
 # A fresh run (what the save file stores under [adventure]).
 static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
-		"stars": [], "deaths": 0, "time": 0.0, "done": false}
+		"stars": [], "deaths": 0, "time": 0.0, "done": false,
+		"blocks": 1, "energy": ENERGY_PER_BLOCK, "taken": []}  # taken: one-time pickups, "room:x:y"
+
+static func energy_max(run: Dictionary) -> float:
+	return run.blocks * ENERGY_PER_BLOCK
+
+# Regeneration stops at the top of the current block: a block spent to its bottom stays empty.
+static func regen_energy(run: Dictionary, dt: float) -> void:
+	var top := ceilf(run.energy / ENERGY_PER_BLOCK) * ENERGY_PER_BLOCK
+	run.energy = minf(top, run.energy + ENERGY_REGEN * dt)
+
+# Pays for an action; false (nothing spent) when there isn't enough.
+static func spend_energy(run: Dictionary, amount: float) -> bool:
+	if run.energy < amount:
+		return false
+	run.energy -= amount
+	return true
+
+# A hit costs one block. Returns false when it was the last one (a death).
+static func hit_energy(run: Dictionary) -> bool:
+	run.energy -= ENERGY_PER_BLOCK
+	return run.energy > 0
+
+static func refill_energy(run: Dictionary) -> void:
+	run.energy = energy_max(run)
+
+# A new block, already full.
+static func add_energy_block(run: Dictionary) -> void:
+	run.blocks += 1
+	run.energy += ENERGY_PER_BLOCK
 
 # A saved run with missing or wrong-typed fields filled from a fresh one (older or hand-edited saves).
 # Unusable saves (not a run, or its room is gone) start over.

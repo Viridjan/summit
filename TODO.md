@@ -4,6 +4,58 @@
 - [ ] Adventure backlog (hurt/knockback state, more abilities, event flags, ability gates, map stations, camera zones, room-transition polish, save slots, areas): see `docs/METROID_NOTES.md` section 6.
 - [ ] Replace the three placeholder adventure rooms with real ones (World Editor).
 
+## Story world: chapter 1
+Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
+
+### Systems
+- [x] Energy as health: blocks of 100, start with 1 block, a hit costs a block (hazard respawn), last block = death; regen 3/s inside the current block (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
+- [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
+- [ ] Story world starts with jump only: its world.json gets `"abilities": []`
+- [ ] Decide: big jump needs a wavedash, which needs dash; dash is locked at the start (give dash before the jump, or make it a plain long jump)
+- [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
+- [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
+- [ ] Energy orb refills everything for now; decide how much collectibles restore
+- [ ] Decide the energy icon, then replace the HUD's "Energy n/m" text with blocks
+- [ ] Interact button (keyboard, controller, touch)
+- [ ] NPC entity + dialogue box; "..." reply for silent NPCs
+- [ ] Quests and story flags (village quest gives a skill point; quest NPC unlocks the raft)
+- [ ] Skill points: regeneration, damage, speed, other stats; active abilities later
+- [ ] Positional stereo audio: sounds attached to sprites, panned by position
+- [ ] Research height cues for audio (above/below; HRTF or elevation tricks) before building
+
+### Content
+- [ ] Forest environment theme
+- [ ] Leaf platforms
+- [ ] Waterfall blocks
+- [ ] Breakable sand platforms
+- [ ] Moving bridges between platforms (flexible)
+- [ ] Net trap + capture animation
+- [ ] Raft (needs the quest flag)
+- [ ] Stone lighthouse with a mirror-aimed magic flame
+- [ ] Wandering jungle enemy (walks back and forth, not aggressive)
+
+### Rooms
+- [ ] Start meadow: flat, few jumps and spikes, no enemies
+- [ ] Big wavedash jump (cone shape, tip up)
+- [ ] First lake and dark cave with dead-end tunnels; roar panned left
+- [ ] Cove or small city: 2 NPCs, 2nd energy block, a quest
+- [ ] Jungle: waterfall, lake, big trees and trunks, hills and tunnels, leaf platforms
+- [ ] Ape boss arena: falling-trunk crossing, spikes that grow with each hit
+- [ ] Right branch: 30° sand cave, Ape chase, rock fall seals it; sword reward
+- [ ] Shore: unclimbable mountain to the left (hints, collectibles), raft to the right
+- [ ] Lighthouse silent village (4-5 "..." NPCs, one quest NPC)
+- [ ] Left branch: jungle again, net capture, treetop village (no falling), moving bridges; wall grab reward
+- [ ] Treetop Village: decide where the player goes after it (exits, next area, whether the two branches meet again)
+
+### Boss: the Ape
+- [ ] Ape enemy, 4 units, reanimates
+- [ ] Stone throw (far): parabolic, 2.5-unit sprite, 2x2 hitbox
+- [ ] Slam (mid): jump that overshoots the player; safe when moving toward the Ape
+- [ ] Scream (near): 3-unit reach
+- [ ] Ground slime hazard
+- [ ] Gimmick: thrown stone knocks a trunk down to cross the arena; 3-4 spike hits, more spikes after each
+- [ ] Post-boss exhaustion: power-up, energy drained
+
 ## Power-ups from the reference games
 One ability = one coded unit (player state/flag + orb/pickup entity + tuning vars + test), added methodically per
 `docs/ADDING_ENTITIES.md`. Grouped by scope: items in a group share code, so build them together.

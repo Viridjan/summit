@@ -371,6 +371,19 @@ func show_note(text: String) -> void:
 	note_label.text = "Note: " + text
 	note_t = 0.1
 
+func energy_block_taken(key: String) -> bool:
+	return Game.adv.get("taken", []).has(key)
+
+func add_energy_block(key: String) -> void:
+	if adventure() and not energy_block_taken(key):
+		Game.adv.taken.append(key)
+		Adventure.add_energy_block(Game.adv)
+		_save_run()
+
+func refill_energy() -> void:
+	if adventure():
+		Adventure.refill_energy(Game.adv)
+
 func grant_ability(a: String) -> void:
 	if adventure() and not Game.adv.abilities.has(a):
 		Game.adv.abilities.append(a)
@@ -477,8 +490,13 @@ func burst(at: Vector2, col: Color, n: int) -> void:
 func add_trail(p) -> void:
 	trails.append([Rect2(p.hitbox()), p.hair_color(), 0.35])
 
+# In the adventure a hit costs an energy block; only the last block is a death (and refills energy).
+# Surviving a hit respawns like a death but doesn't count one (Hollow Knight's hazard respawn).
 func on_player_death(p, _dir: Vector2) -> void:
-	deaths += 1
+	if not adventure() or not Adventure.hit_energy(Game.adv):
+		deaths += 1
+		if adventure():
+			Adventure.refill_energy(Game.adv)
 	respawn_timer = 0.6
 	burst(p.center(), p.hair_color(), 12)
 	shake_t = 0.3 if Game.settings.shake else 0.0
@@ -542,6 +560,8 @@ func _physics_process(_delta: float) -> void:
 	else:
 		player.update(dt)
 		after_player_move()
+		if adventure():
+			Adventure.regen_energy(Game.adv, dt)
 	for e in ents:
 		e.update(dt)
 	for i in range(parts.size() - 1, -1, -1):
@@ -568,7 +588,7 @@ func _physics_process(_delta: float) -> void:
 	cam.position = (cam_pos + off).round()
 	note_t -= dt
 	note_label.visible = note_t > 0 and map_view == null
-	hud.text = ("%s    " % data.get("name", "") if adventure() else "") + "Stars %d/%d    Deaths %d    %s" % [collected.size(), total_berries, deaths, Game.fmt_time(time)]
+	hud.text = ("%s    Energy %d/%d    " % [data.get("name", ""), Game.adv.energy, Adventure.energy_max(Game.adv)] if adventure() else "") + "Stars %d/%d    Deaths %d    %s" % [collected.size(), total_berries, deaths, Game.fmt_time(time)]
 	_redraw()
 
 func _clamp_cam(t: Vector2) -> Vector2:

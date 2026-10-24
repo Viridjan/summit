@@ -1,5 +1,8 @@
 {
 	"start": "v1_ashen_village",
+	"abilities": [
+		"attack"
+	],
 	"rooms": {
 		"v1_ashen_village": [
 			0,

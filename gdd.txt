@@ -2,7 +2,7 @@ SUMMIT - GAME DESIGN DOCUMENT
 =============================
 Living document. Updated whenever something important is added or changed;
 newest entries at the bottom of the DEVELOPMENT LOG (section 12).
-Last update: 2026-10-22
+Last update: 2026-10-24
 
 
 1. CONCEPT
@@ -224,3 +224,7 @@ Phase 5 - Input and tooling (2026-10-21/22)
   (Hollow Knight-inspired); all enemies renamed to original names.
 - 2026-10-22: Cragjaw and Murkspore (big families); Giant, Shielded, Brood and Venom
   variants, 2-4 per family; enemy atlas cells grew to 32px.
+- 2026-10-24: story world chapter 1 designed (docs/STORY_DESIGN.md): route, Ape boss,
+  energy as health (blocks of 100), NPCs, positional audio, skill points; tasks in TODO.md.
+- 2026-10-24: energy (adventure): 100 per block, start with 1, regen 3/s inside the current block,
+  a hit costs a block (hazard respawn), last block = death. Attack is now an adventure ability.
