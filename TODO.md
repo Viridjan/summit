@@ -15,8 +15,8 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
 - [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
 - [ ] Energy orb refills everything for now; decide how much collectibles restore
-- [x] Water drains energy: 0.5 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
-- [ ] Decide the energy icon, then replace the HUD's "Energy n/m" text with blocks
+- [x] Water drains energy: 2 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
+- [x] HUD: energy as a lightning bolt and one bar per block (top left, stars under it), area name (top centre), timer and deaths with a skull (top right)
 - [ ] Interact button (keyboard, controller, touch)
 - [ ] NPC entity + dialogue box; "..." reply for silent NPCs
 - [ ] Quests and story flags (village quest gives a skill point; quest NPC unlocks the raft)

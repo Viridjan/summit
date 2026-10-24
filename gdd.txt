@@ -254,3 +254,9 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-24: underwater is now a state, Normal (Underwater), replacing Normal in water: no walking on the
   floor, no normal jump; Jumping (Underwater) is a weaker stroke (~14 px vs ~29 px), a full jump out when
   the surface is within 12 px. Waterfall stays a layer.
+- 2026-10-24: underwater, the floor no longer stops the player: along it they move as mid-water (air poses).
+- 2026-10-24: water drain doubled (10/s); waterfalls pull down (600 px/s² towards 70 px/s) instead of pinning.
+- 2026-10-24: underwater jump has no cooldown: every press is a stroke.
+- 2026-10-24: water drain doubled again: 20/s (2 every 0.1 s).
+- 2026-10-24: HUD: bolt + one bar per energy block (top left, stars below), area name (top centre),
+  timer and skull + deaths (top right). Drawn by World.Hud.

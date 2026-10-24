@@ -12,7 +12,7 @@ const ABILITIES := ["dash", "climb", "attack"]
 # The HUD shows blocks; the code counts 100 energy per block. A run starts with 1 block.
 const ENERGY_PER_BLOCK := 100.0
 const ENERGY_REGEN := 3.0  # per second, only inside a partly spent block
-const WATER_DRAIN := 5.0  # per second while in water (0.5 every 0.1 s); no regeneration there
+const WATER_DRAIN := 20.0  # per second while in water (2 every 0.1 s); no regeneration there
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}
 # Rooms whose file is missing or invalid are skipped.

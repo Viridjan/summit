@@ -119,9 +119,9 @@ Regeneration:
 - Only inside the current block: a block that is fully spent doesn't refill.
 
 Water:
-- Underwater is its own state, **Normal (Underwater)**, which replaces Normal in water: slow sinking, no walking on the floor, and no normal jump. **Jumping (Underwater)** is a weaker stroke (about half a jump's height) that works from the floor or mid-water; with the surface close above, it leaps out of the water like a normal jump. Dash still works.
-- Waterfalls are a layer on top of the current state: inside one the player is pushed down and can't rise.
-- Staying in water costs 0.5 energy every 0.1 s (5 per second), and energy doesn't regenerate there.
+- Underwater is its own state, **Normal (Underwater)**, which replaces Normal in water: slow sinking, no walking on the floor (along it the player moves as mid-water), and no normal jump. **Jumping (Underwater)** is a weaker stroke (about half a jump's height) that works from the floor or mid-water, every time jump is pressed; with the surface close above, it leaps out of the water like a normal jump. Dash still works.
+- Waterfalls are a layer on top of the current state: inside one the player is pulled down, so jumps rise much less.
+- Staying in water costs 2 energy every 0.1 s (20 per second), and energy doesn't regenerate there.
 - Running out of energy in water is a death (drowning).
 
 ## 4. Skill points
@@ -154,6 +154,8 @@ NPCs, quests, the roar, the house doors, the Ape, the chase, the rock fall, the 
 - 2026-10-24: the big jump gets nothing for now. It stays uncrossable until dash comes from a later level.
 - 2026-10-24: water drains energy (0.05 every 0.1 s, no regeneration in water); out of energy in water = death.
 - 2026-10-24: water drain raised 10x, to 0.5 every 0.1 s (5 per second).
+- 2026-10-24: water drain doubled to 1 every 0.1 s (10 per second); the waterfall pull is softer (jumps rise, less).
+- 2026-10-24: water drain doubled again, to 2 every 0.1 s (20 per second).
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
 - 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
 

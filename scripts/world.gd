@@ -21,6 +21,61 @@ class Background extends Node2D:
 	func _draw() -> void:
 		screen._draw_background(self)
 
+# On-screen HUD: energy (top left), area name (top centre), timer and deaths (top right).
+class Hud extends Control:
+	const M := 16.0  # margin from the screen edges
+	const BOLT := [Vector2(10, 0), Vector2(1, 16), Vector2(8, 16), Vector2(4, 28), Vector2(18, 10), Vector2(11, 10), Vector2(16, 0)]
+	const SKULL := ["  ####  ", " ###### ", "##.##.##", "########", " ##..## ", "  # # # "]  # 8x6, "." = eye/nose holes
+	var world
+
+	# Fill of each energy block, 0..1, first block first (energy counts 100 per block).
+	static func block_fills(energy: float, blocks: int) -> Array:
+		var out := []
+		for i in blocks:
+			out.append(clampf((energy - i * 100.0) / 100.0, 0.0, 1.0))
+		return out
+
+	func _text(font: Font, at: Vector2, s: String, fs: int, col := Color.WHITE) -> void:
+		draw_string_outline(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color.BLACK)
+		draw_string(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
+
+	func _draw() -> void:
+		var font := get_theme_font("font", "Label")
+		var w = world
+		var sz := get_viewport_rect().size
+		var y := M
+		# top left: energy (adventure) as a bolt and one bar per block, then the stars
+		if w.adventure():
+			var bolt := PackedVector2Array(BOLT.map(func(p): return p + Vector2(M, y)))
+			draw_colored_polygon(bolt, Color("ffd84a"))
+			draw_polyline(bolt + PackedVector2Array([bolt[0]]), Color.BLACK, 2.0)
+			var low: bool = Game.adv.energy < 30.0
+			var x := M + 26.0
+			for f in block_fills(Game.adv.energy, int(Game.adv.blocks)):
+				var r := Rect2(x, y + 7, 46, 14)
+				draw_rect(r.grow(2), Color.BLACK)
+				draw_rect(r, Color(0.12, 0.15, 0.2))
+				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), Color("ff9a4a") if low else Color("7cf0c0"))
+				x += 54.0
+			y += 34.0
+		if w.total_berries > 0:
+			_text(font, Vector2(M, y + 18), "★ %d/%d" % [w.collected.size(), w.total_berries], 18, Color("ffd34e"))
+		# top centre: the area's name
+		var area: String = w.data.get("name", "")
+		var aw := font.get_string_size(area, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x
+		_text(font, Vector2((sz.x - aw) / 2.0, M + 24), area, 26)
+		# top right: timer, deaths under it
+		var t: String = Game.fmt_time(w.time)
+		_text(font, Vector2(sz.x - M - font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 26).x, M + 24), t, 26)
+		var d := str(w.deaths)
+		var dx: float = sz.x - M - font.get_string_size(d, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x
+		_text(font, Vector2(dx, M + 54), d, 22)
+		for row in SKULL.size():  # skull icon left of the number, 3 px per pixel
+			for col in 8:
+				var c: String = SKULL[row][col]
+				if c != " ":
+					draw_rect(Rect2(dx - 32 + col * 3, M + 36 + row * 3, 3, 3), Color.BLACK if c == "." else Color("e8e4dc"))
+
 var tile_layer: TileLayer
 var background: Background
 
@@ -65,7 +120,7 @@ var done := false
 
 var ui: CanvasLayer
 var touch: Control  # phone controls, only on touchscreens
-var hud: Label
+var hud: Hud
 var note_label: Label  # design note under the player (entities.gd Note)
 var note_t := 0.0
 var spawn_queue: Array = []  # entity dicts to add after this tick (spawn_entity); never saved
@@ -110,11 +165,11 @@ func _ready() -> void:
 	cam.make_current()
 	ui = CanvasLayer.new()
 	add_child(ui)
-	hud = Label.new()
-	hud.position = Vector2(16, 10)
+	hud = Hud.new()
+	hud.world = self
 	hud.theme = Game.theme
-	hud.add_theme_color_override("font_outline_color", Color.BLACK)
-	hud.add_theme_constant_override("outline_size", 6)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	ui.add_child(hud)
 	if TouchControls.wanted():
 		touch = TouchControls.new()
@@ -615,7 +670,7 @@ func _physics_process(_delta: float) -> void:
 	cam.position = (cam_pos + off).round()
 	note_t -= dt
 	note_label.visible = note_t > 0 and map_view == null
-	hud.text = ("%s    Energy %d/%d    " % [data.get("name", ""), Game.adv.energy, Adventure.energy_max(Game.adv)] if adventure() else "") + "Stars %d/%d    Deaths %d    %s" % [collected.size(), total_berries, deaths, Game.fmt_time(time)]
+	hud.queue_redraw()
 	_redraw()
 
 func _clamp_cam(t: Vector2) -> Vector2:

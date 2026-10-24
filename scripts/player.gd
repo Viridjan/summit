@@ -128,10 +128,10 @@ const WATER_MAX_X := 55.0  # swimming speed; faster speeds are dragged down to i
 const WATER_DRAG := 500.0
 const WATER_ACCEL := 400.0
 const WATER_STROKE := -100.0  # Jumping (Underwater): ~14 px of rise, against ~27 px for a normal jump
-const WATER_STROKE_COOLDOWN := 0.3
 const WATER_SURFACE_REACH := 12  # px: with the surface this close above the centre, jump leaps out (a normal jump)
 # Layer: applied on top of whatever state runs (_layers), not a state of its own.
-const WATERFALL_PUSH := 90.0  # inside a waterfall: can't rise, pushed down at least this fast
+const WATERFALL_PUSH := 70.0  # inside a waterfall: pulled down towards this speed...
+const WATERFALL_FORCE := 600.0  # ...this hard (px/s²): jumps still rise, but much less
 const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)
@@ -152,7 +152,6 @@ var state := ST_NORMAL
 var prev_state := ST_NORMAL
 var dead := false
 var underwater := false  # centre inside water: Normal becomes Normal (Underwater)
-var stroke_timer := 0.0
 var in_waterfall := false  # layer: hurtbox inside a waterfall
 var bubble_t := 0.0
 
@@ -347,32 +346,29 @@ func dash_attacking() -> bool:
 func can_dash() -> bool:
 	return dash_buf > 0 and dash_cooldown_timer <= 0 and dashes > 0 and DASH_DIRS != 0
 
-# Layers on top of the current state: a waterfall pushes the player down.
-func _layers(_dt: float) -> void:
+# Layers on top of the current state: a waterfall pulls the player down.
+func _layers(dt: float) -> void:
 	in_waterfall = w.liquid_at(hurt_rect(), "waterfall")
-	if in_waterfall:
-		speed.y = maxf(speed.y, WATERFALL_PUSH)
+	if in_waterfall and speed.y < WATERFALL_PUSH:
+		speed.y = approach(speed.y, WATERFALL_PUSH, WATERFALL_FORCE * dt)
 
 # ---------------- NORMAL (UNDERWATER) ----------------
-# Replaces Normal in water: no walking on the floor and no normal jump; Jumping (Underwater) is a weaker
-# stroke that works from the floor or mid-water. Dash still works. Leaving the water returns to Normal.
+# Replaces Normal in water: no walking on the floor (it moves as mid-water) and no normal jump; Jumping (Underwater) is a weaker
+# stroke that works from the floor or mid-water, every time jump is pressed. Dash still works. Leaving the water returns to Normal.
 func _swim_update(dt: float) -> int:
 	if not underwater:
 		return ST_NORMAL
 	if can_dash():
 		return _start_dash()
-	if on_ground:  # the floor gives no footing: no walking
-		speed.x = approach(speed.x, 0, RUN_ACCEL * dt)
-	elif absf(speed.x) > WATER_MAX_X:
+	# horizontal: the same as mid-water, also along the floor (no walking: the air poses, swim speed)
+	if absf(speed.x) > WATER_MAX_X:
 		speed.x = approach(speed.x, WATER_MAX_X * signf(speed.x), WATER_DRAG * dt)
 	else:
 		speed.x = approach(speed.x, WATER_MAX_X * move_x, WATER_ACCEL * dt)
 	if not on_ground:
 		speed.y = approach(speed.y, WATER_MAX_FALL, GRAVITY * (1.0 - WATER_BUOYANCY) * dt)
 	speed.y = maxf(speed.y, -WATER_MAX_RISE)
-	stroke_timer -= dt
-	if jump_pressed() and stroke_timer <= 0:
-		stroke_timer = WATER_STROKE_COOLDOWN
+	if jump_pressed():  # every press, as often as you like
 		on_ground = false
 		if not w.liquid_at(Rect2i(Vector2i(center()) - Vector2i(0, WATER_SURFACE_REACH), Vector2i.ONE), "water"):
 			jump()  # the surface is close: a full jump out of the water
@@ -1874,7 +1870,7 @@ func _animation() -> String:
 		return "wall_slide"
 	if ducking():
 		return "duck"
-	if not on_ground:
+	if not on_ground or state == ST_SWIM:  # underwater: always the air poses, never walking
 		if speed.y < -40:
 			return "jump"
 		if speed.y < 40:

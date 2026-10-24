@@ -374,7 +374,7 @@ func check_shipped_world() -> void:
 		if walk > 0:
 			walk -= 1
 		elif p().state == p().ST_SWIM:  # swim: stroke whenever the last one is done
-			if p().stroke_timer <= 0 and p().underwater:
+			if i % 15 == 0 and p().underwater:
 				p().tap["jump"] = true
 		elif p().on_ground and p().speed.y >= 0 and sw.collide_solid(head) == null:
 			if absf(p().pos.x - jumped_at) < 1:  # the last jump got nowhere (a trunk ahead): walk a bit instead
@@ -1188,13 +1188,17 @@ func check_energy() -> void:
 	p().dead = false
 	p().die(Vector2.ZERO)
 	check(w.deaths == 1 and Game.adv.energy == 200.0, "a hit on the last block is a death and refills energy")
-	# water drains 0.5 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
+	# HUD energy bars: one per block, filled by its share of the energy
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(150.0, 3)
+	check(fills == [1.0, 0.5, 0.0], "HUD energy bars fill block by block (%s)" % [fills])
+
+	# water drains 2 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
 	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])
 	step(5)
 	Game.adv.energy = 150.0
 	var before: float = Game.adv.energy
 	step(60)
-	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 5.0), "a second in water costs 5 energy, no regeneration (%s)" % (before - Game.adv.energy))
+	check(w.in_water() and is_equal_approx(before - Game.adv.energy, 20.0), "a second in water costs 20 energy, no regeneration (%s)" % (before - Game.adv.energy))
 	Game.adv.energy = 0.004
 	var deaths_before: int = w.deaths
 	step(2)
@@ -1512,11 +1516,15 @@ func _ready() -> void:
 	p().tap = {"jump": true}
 	step()
 	check(p().state == p().ST_SWIM and p().speed.y < 0, "Jumping (Underwater) works mid-water (%s)" % p().speed.y)
+	step(2)
+	p().tap = {"jump": true}
+	step()
+	check(p().speed.y == p().WATER_STROKE, "underwater, jump works every time it's pressed (%s)" % p().speed.y)
 	step(400)  # settle on the floor
 	var bed_x: float = p().pos.x
 	p().hold = {"right": true}
 	step(30)
-	check(p().on_ground and absf(p().pos.x - bed_x) < 2, "no walking on the floor underwater (moved %s px)" % (p().pos.x - bed_x))
+	check(p().on_ground and p().pos.x - bed_x > 20 and p()._animation() != "run", "along the floor underwater the player moves as mid-water, not walking (moved %s px, pose %s)" % [p().pos.x - bed_x, p()._animation()])
 	p().hold = {}
 	var bed_y: float = p().pos.y
 	var top_swim := bed_y
@@ -1552,11 +1560,24 @@ func _ready() -> void:
 	step(5)
 	var fall_floor: float = p().pos.y
 	p().tap = {"jump": true}
+	p().hold = {"jump": true}
 	var top_y := fall_floor
-	for k in 10:
+	for k in 40:
 		step()
 		top_y = minf(top_y, p().pos.y)
-	check(p().in_waterfall and top_y >= fall_floor - 1, "a waterfall layer pushes down: no jumping up inside it (rose %s px)" % (fall_floor - top_y))
+	p().hold = {}
+	var fall_rise: float = fall_floor - top_y
+	make_world([])
+	step(5)
+	var free_floor: float = p().pos.y
+	p().tap = {"jump": true}
+	p().hold = {"jump": true}
+	var free_top := free_floor
+	for k in 40:
+		step()
+		free_top = minf(free_top, p().pos.y)
+	p().hold = {}
+	check(fall_rise > 8 and fall_rise < (free_floor - free_top) * 0.8, "a waterfall layer pulls down: a jump inside it still rises, but less (%s px vs %s px)" % [fall_rise, free_floor - free_top])
 
 	# down + jump on a jump-through drops through it; jump alone still jumps
 	make_world([{"t": "jumpthru", "x": 64, "y": 20 * 8, "w": 48, "h": 8}])
