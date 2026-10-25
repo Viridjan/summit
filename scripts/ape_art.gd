@@ -14,7 +14,36 @@ const LIGHT := Color("876047")
 const RIDGE := Color("a17a58")
 const SKIN := Color("b58d6b")
 const SKIN_DARK := Color("775b4e")
+const SILVER := Color("a5937a")
+const SILVER_DARK := Color("776e62")
 static var _textures: Dictionary = {}
+static var _impacts: Dictionary = {}
+
+# Four crisp dust/stone frames fill the active damage strip without a solid debug-style rectangle.
+static func impact_texture(width: int, height: int, frame: int) -> Texture2D:
+	frame = clampi(frame, 0, 3)
+	var key := "%d:%d:%d" % [width, height, frame]
+	if not _impacts.has(key):
+		var img := Image.create(width, height, false, Image.FORMAT_RGBA8)
+		img.fill(Color.TRANSPARENT)
+		var earth := Color("8c7053")
+		var dust := Color("c6a575")
+		var rim := Color("f4dfab")
+		for x in width:
+			var distance := absf(x - (width - 1) * 0.5) / (width * 0.5)
+			var crest := clampi(2 + int(3.0 * absf(sin(x * 0.39 + frame * 0.9))) + int(distance * 2), 2, height - 1)
+			for y in range(height - crest, height):
+				var color := earth if y == height - 1 else dust
+				color.a = 1.0 - frame * 0.12
+				img.set_pixel(x, y, color)
+			img.set_pixel(x, height - crest, rim)
+			# Broken highlights and flying grit make the wave read as a ground impact.
+			if posmod(x + frame * 3, 11) < 2:
+				img.set_pixel(x, maxi(0, height - crest - 2), dust)
+			if posmod(x + frame, 7) == 0:
+				img.set_pixel(x, height - 2, earth)
+		_impacts[key] = ImageTexture.create_from_image(img)
+	return _impacts[key]
 
 # Run is a 4-frame loop; other poses are still. Canonical frame feeds both the key and build().
 # Normalize pose/frame cache identity and reuse its generated GPU texture.
@@ -45,7 +74,7 @@ static func box(img: Image, x: int, y: int, w: int, h: int, color: Color) -> voi
 static func build(pose: String, frame: int) -> Image:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
 	img.fill(Color.TRANSPARENT)
-	var drop := 3 if pose == "crouch" else 1 if pose == "run" and frame % 2 else 0
+	var drop := 5 if pose == "land" else 3 if pose == "crouch" else 1 if pose == "run" and frame % 2 else 0
 	var lift := -3 if pose == "air" else 0
 	# Rear haunch and foot, behind the silverback's sloping trunk.
 	poly(img, [[3,17+drop],[11,17],[14,24],[10,29+lift],[13,30+lift],[13,32+lift],[4,32+lift],[3,28],[5,24]], INK)
@@ -59,6 +88,11 @@ static func build(pose: String, frame: int) -> Image:
 	poly(img, [[5,13+drop],[10,8+drop],[16,6+drop],[19,8+drop],[13,10+drop],[9,14+drop],[8,19+drop],[5,21+drop]], LIGHT)
 	box(img, 8, 10+drop, 2, 2, RIDGE)
 	box(img, 5, 15+drop, 2, 3, RIDGE)
+	# Silver saddle follows the shoulder plane; clustered edges retain the coarse pixel style.
+	poly(img, [[5,12+drop],[9,8+drop],[14,6+drop],[18,7+drop],[14,9+drop],[11,12+drop],[9,17+drop],[6,19+drop]], SILVER_DARK)
+	poly(img, [[6,12+drop],[10,8+drop],[14,7+drop],[16,7+drop],[12,10+drop],[9,14+drop],[7,17+drop]], SILVER)
+	box(img, 9, 9+drop, 2, 1, Color("c7b497"))
+	poly(img, [[10,20+drop],[15,18+drop],[20,15+drop],[19,20+drop],[15,23],[9,24]], SHADOW)
 	# Profile: low cranium, brow ridge, a single visible eye and protruding muzzle.
 	poly(img, [[17,2+drop],[23,2+drop],[26,5+drop],[26,8+drop],[30,10+drop],[31,14+drop],[28,17+drop],[22,16+drop],[18,12+drop],[16,7+drop]], INK)
 	poly(img, [[18,3+drop],[22,3+drop],[24,5+drop],[24,9+drop],[21,12+drop],[18,10+drop],[17,6+drop]], FUR)
@@ -71,12 +105,22 @@ static func build(pose: String, frame: int) -> Image:
 	box(img, 23, 7+drop, 4, 2, INK) # heavy brow
 	box(img, 24, 8+drop, 1, 1, Color("edc578"))
 	box(img, 26, 14+drop, 3, 1, INK)
+	box(img, 24, 11+drop, 1, 2, LIGHT)
+	box(img, 28, 12+drop, 2, 1, RIDGE)
 	if pose == "scream":
 		box(img, 25, 12+drop, 6, 5, INK)
 		box(img, 26, 12+drop, 4, 1, Color("e6d4ad"))
 		box(img, 26, 16+drop, 4, 1, Color("b37665"))
 	# Forearm bends and grounded knuckles carry the weight; throw reaches overhead.
-	if pose == "throw":
+	if pose == "land":
+		# Broad planted fists and a low shoulder line sell the weight of the landing.
+		poly(img, [[11,17],[17,16],[21,21],[23,26],[29,27],[30,32],[20,32],[17,28],[14,24],[10,22]], INK)
+		poly(img, [[12,18],[16,18],[19,22],[20,27],[23,29],[20,30],[18,27],[16,24],[12,22]], FUR)
+		box(img, 13, 19, 4, 2, LIGHT)
+		box(img, 22, 28, 6, 3, SKIN_DARK)
+		for finger in 3:
+			box(img, 23 + finger * 2, 29, 1, 1, SKIN)
+	elif pose == "throw":
 		poly(img, [[14,13],[12,9],[15,4],[19,0],[23,0],[23,4],[19,7],[19,14]], INK)
 		poly(img, [[15,12],[14,9],[17,5],[20,2],[22,2],[21,4],[17,8],[18,12]], LIGHT)
 		box(img, 19, 0, 7, 3, SKIN_DARK)
