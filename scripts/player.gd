@@ -149,7 +149,7 @@ const WATER_SURFACE_REACH := 12  # px: with the surface this close above the cen
 # Layer: applied on top of whatever state runs (_layers), not a state of its own.
 const WATERFALL_PUSH := 70.0  # inside a waterfall: pulled down towards this speed...
 const WATERFALL_FORCE := 600.0  # ...this hard (px/s²): jumps still rise, but much less
-const JUMP_ENERGY := 5.0  # adventure: each jump costs this much, and needs it
+const JUMP_ENERGY := 2.5  # adventure: each jump costs this much, and needs it
 const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)

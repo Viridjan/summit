@@ -67,7 +67,7 @@ func _draw() -> void:
 	y = _line(font, y, "LOSS", Color("ff8a6a"))
 	y = _line(font, y, "  jump: -%.0f, needs %.0f (wall jumps, swim strokes free)  can jump: %s" % [Player.JUMP_ENERGY, Player.JUMP_ENERGY, "yes" if run.energy >= Player.JUMP_ENERGY else "NO"])
 	y = _line(font, y, "  water: -%.1f/s, drown at 0" % Adventure.WATER_DRAIN)
-	y = _line(font, y, "  (a hit is always a death; energy is untouched by it)", Color(0.7, 0.7, 0.7))
+	y = _line(font, y, "  respawn: base bar refilled to %.0f (a hit is always a death)" % Adventure.BASE_ENERGY, Color(0.7, 0.7, 0.7))
 	y = _line(font, y, "  hair grey below 20%% (%.1f)" % (0.2 * mx), Color(0.7, 0.7, 0.7))
 	# graph: last HISTORY s, max at the top, dashed lines at block boundaries
 	y += 4

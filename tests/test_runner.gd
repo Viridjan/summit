@@ -1385,8 +1385,8 @@ func check_ape_hitbox_shapes() -> void:
 	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
 	check(arena.entities.all(func(e): return e.t != "ape_trunk"), "Ape arena removes the tree obstacle")
 	var boss: Dictionary = arena.entities.filter(func(e): return e.t == "boss_ape")[0]
-	check(not boss.has("range2") and int(boss.range[0]) == 8 and int(boss.range[1]) == 440 and int(arena.w) == 56, "Ape arena (70%% wide) uses one unrestricted fighting range")
-	check(arena.tiles[19].substr(44,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
+	check(not boss.has("range2") and int(boss.range[0]) == 8 and int(boss.range[1]) == 304 and int(arena.w) == 39, "Ape arena (39 tiles wide) uses one unrestricted fighting range")
+	check(arena.tiles[19].substr(20,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
 	# the Ape gets everywhere in the arena: leaps at players all over it never stick or end inside terrain, and land
 	# on the floor, both exit ledges and every platform, edge to edge
 	var keep_lv = Game.level
@@ -1401,7 +1401,7 @@ func check_ape_hitbox_shapes() -> void:
 	aw.set_physics_process(false)
 	var bape = aw.ents.filter(func(e): return e.d.t == "boss_ape")[0]
 	var spots := []
-	for x in range(1, 55):
+	for x in range(1, int(lv2.w) - 1):
 		for y in range(1, 22):
 			if lv2.tiles[y][x] == "0" and lv2.tiles[y - 1][x] == "0" and lv2.tiles[y + 1][x] == "1":
 				spots.append(Vector2(x * 8 + 4, (y + 1) * 8))
@@ -1434,14 +1434,14 @@ func check_ape_hitbox_shapes() -> void:
 	var surfaces := {}
 	for y in range(5, 22):
 		var run := 0
-		for x in range(1, 56):
+		for x in range(1, int(lv2.w)):
 			var ok: bool = lv2.tiles[y][x] == "1" and range(1, 5).all(func(k): return lv2.tiles[y - k][x] == "0")
 			run = run + 1 if ok else 0
 			if run >= 3:
 				surfaces[y] = true
 	var missed: Array = surfaces.keys().filter(func(y): return not rows.has(y))
 	# (spots with no room above for its 32px arc, like the right exit ledge under the row-11 block, stay Ape-free)
-	check(bad == 0 and missed.is_empty() and cols.size() > 30,
+	check(bad == 0 and missed.is_empty() and cols.size() > 24,
 		"the Ape reaches every surface it fits on and is never stuck or inside rock (%d bad, missed rows %s, %d columns)" % [bad, missed, cols.size()])
 	# conditional rooms: once the Ape is beaten, entering the arena loads its aftermath variant
 	var Adv = load("res://scripts/adventure.gd")
@@ -1598,7 +1598,51 @@ func check_ape() -> void:
 	ape.phase = "air"
 	ape._land()
 	step(2)
-	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(184, floor_y - 8, 64, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
+	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(176, floor_y - 8, 80, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
+	check(is_equal_approx(ape.timer + 2 * DT, 0.6 * E.Ape.PAUSE), "the Ape waits 15%% less after a landing (%s)" % ape.timer)
+	# enraged (2 hits taken): a scream is followed by 2 hops in place, shockwaves 125% then 150% wide; landings drop 2 logs
+	Game.settings.invincible = true
+	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	ape.hp = E.Ape.ENRAGED_HP
+	p().pos = Vector2(60, floor_y)
+	ape.phase = "scream"
+	ape.timer = -0.34
+	var widths := []
+	var xs := []
+	var logs_seen := 0
+	for k in 240:
+		step()
+		if is_equal_approx(ape.slam_t, E.Ape.SLAM_TIME):  # landed this tick
+			widths.append(ape.slam_box().size.x)
+			xs.append(ape.rect.position.x)
+		logs_seen = maxi(logs_seen, ape.logs.size())
+	check(widths.size() >= 2 and widths[0] == 100 and widths[1] == 120 and xs[0] == 200 and xs[1] == 200, "enraged scream: 2 hops in place, shockwaves 100 then 120 wide (%s at %s)" % [widths, xs])
+	check(logs_seen == 0, "the hops in place drop no logs (%d)" % logs_seen)
+	ape.phase = "air"
+	ape.slam_scale = 1.0
+	ape._land()
+	check(ape.logs.size() == 2 and is_equal_approx(ape.logs[1][2] - ape.logs[0][2], E.Ape.LOG_GAP), "an enraged leap drops 2 logs, 0.5 s apart (%s)" % [ape.logs])
+	var apart := true
+	var spread := {}
+	for k in 200:
+		ape.logs.clear()
+		ape._drop_logs()
+		apart = apart and absf(ape.logs[0][0].x - ape.logs[1][0].x) >= E.Ape.LOG.x
+		spread[int(ape.logs[0][0].x / 64)] = true
+	check(apart and spread.size() >= 4, "the 2 logs land at random spots across the arena and never overlap (%d zones)" % spread.size())
+	# enraged stones split in two when they reach the ground
+	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	ape.hp = E.Ape.ENRAGED_HP
+	ape.phase = "gone"
+	ape.stones.append([Vector2(120, floor_y - 40), Vector2(0, 100), E.Ape.STONE])
+	var halves := 0
+	for k in 60:
+		step()
+		halves = maxi(halves, ape.stones.filter(func(st): return st[2] == E.Ape.STONE / 2).size())
+	check(halves == 2, "an enraged stone splits in two on the ground (%d halves)" % halves)
+	Game.settings.invincible = false
 	# near: the scream reaches around its body
 	Game.settings.invincible = keep_inv
 	make_world([{"t": "boss_ape", "x": 140, "y": floor_y - 32}])
@@ -1664,29 +1708,29 @@ func check_energy() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
 	var run := Adventure.new_run(world)
-	check(run.blocks == 1 and run.energy == 25.0 and Adventure.energy_max(run) == 25.0, "a run starts with the base: 25 energy")
-	check(Adventure.spend_energy(run, 10) and run.energy == 15.0, "spending takes energy")
+	check(run.blocks == 1 and run.energy == 20.0 and Adventure.energy_max(run) == 20.0, "a run starts with the base: 20 energy")
+	check(Adventure.spend_energy(run, 10) and run.energy == 10.0, "spending takes energy")
 	Adventure.regen_energy(run, 1.0)
-	check(is_equal_approx(run.energy, 21.0), "energy regenerates 6 per second (%s)" % run.energy)
+	check(is_equal_approx(run.energy, 16.0), "energy regenerates 6 per second (%s)" % run.energy)
 	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 25.0, "regeneration stops at the top of the base")
+	check(run.energy == 20.0, "regeneration stops at the top of the base")
 	run.energy = 0.0
 	Adventure.regen_energy(run, 2.0)
 	check(is_equal_approx(run.energy, 12.0), "the base always regenerates, even from 0 (%s)" % run.energy)
 	Adventure.regen_energy(run, 100.0)
-	check(not Adventure.spend_energy(run, 80) and run.energy == 25.0, "can't spend more than you have")
+	check(not Adventure.spend_energy(run, 80) and run.energy == 20.0, "can't spend more than you have")
 	Adventure.add_energy_block(run)
-	check(run.blocks == 2 and run.energy == 35.0 and Adventure.energy_max(run) == 35.0, "a new block adds a full 10")
+	check(run.blocks == 2 and run.energy == 30.0 and Adventure.energy_max(run) == 30.0, "a new block adds a full 10")
 	Adventure.spend_energy(run, 20)
 	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 25.0, "a fully spent block doesn't refill")
+	check(run.energy == 20.0, "a fully spent block doesn't refill")
 	Adventure.spend_energy(run, 20)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 25.0, "the base refills, but not the spent block above it")
+	check(run.energy == 20.0, "the base refills, but not the spent block above it")
 	Adventure.refill_energy(run)
 	Adventure.spend_energy(run, 5)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 35.0, "a partly spent block refills to its top")
+	check(run.energy == 30.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
@@ -1694,7 +1738,7 @@ func check_energy() -> void:
 	Game.adv_temp = true
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.energy == 35.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (10)")
+	check(Game.adv.blocks == 2 and Game.adv.energy == 30.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (10)")
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
 	check(Game.adv.blocks == 2, "an energy block is taken once per run")
@@ -1705,7 +1749,13 @@ func check_energy() -> void:
 	Game.adv.energy = 0.0
 	p().die(Vector2.ZERO)
 	check(w.deaths == 2 and after_hit == 12.0 and Game.adv.energy == 0.0, "a hit is always a death, and leaves energy as it was")
-	# each jump costs 5 energy and needs it: with less there's no jump
+	w.respawn()  # the respawn refills the base bar; extra blocks above it stay as they were
+	var low: float = Game.adv.energy
+	Game.adv.energy = 30.0
+	p().die(Vector2.ZERO)
+	w.respawn()
+	check(low == Adventure.BASE_ENERGY and Game.adv.energy >= 30.0 and not p().dead, "respawn comes back with full base energy (%s), never lowers it (%s)" % [low, Game.adv.energy])
+	# each jump costs 2.5 energy and needs it: with less there's no jump
 	make_world([])
 	step(5)
 	Game.adv.energy = 50.0
@@ -1713,24 +1763,24 @@ func check_energy() -> void:
 	step()
 	var after_jump: float = Game.adv.energy
 	step(60)
-	Game.adv.energy = 3.0
+	Game.adv.energy = 2.0
 	var y0: float = p().pos.y
 	p().tap = {"jump": true}
 	step(4)
-	check(absf(after_jump - 45.0) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 5 energy; with less than 5 there's no jump (%s)" % after_jump)
-	check(w.energy_log.size() > 0 and w.energy_log[-1][1] == "jump" and is_equal_approx(w.energy_log[-1][2], -5.0), "energy changes are logged with their cause (%s)" % [w.energy_log])
+	check(absf(after_jump - 47.5) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 2.5 energy; with less there's no jump (%s)" % after_jump)
+	check(w.energy_log.size() > 0 and w.energy_log[-1][1] == "jump" and is_equal_approx(w.energy_log[-1][2], -2.5), "energy changes are logged with their cause (%s)" % [w.energy_log])
 	var EP = load("res://scripts/energy_panel.gd")
 	var ep = EP.new()
 	ep.world = w
 	add_child(ep)
 	ep._process(0.0)
-	check(EP.regen_top(20.0) == 25.0 and EP.regen_top(30.0) == 35.0 and EP.regen_top(35.0) == 35.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
+	check(EP.regen_top(15.0) == 20.0 and EP.regen_top(25.0) == 30.0 and EP.regen_top(30.0) == 30.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
 		"F3 energy panel: regen top per block, live rate and history")
 	ep.free()
 	Game.adv.energy = 100.0
 
 	# HUD energy bars: one per block, filled by its share of the energy
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(30.0, 3)
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(25.0, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
 	Game.adv.energy = 0.19 * Adventure.energy_max(Game.adv)
 	var grey: bool = p().hair_color() == p().HAIR_USED

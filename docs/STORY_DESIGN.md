@@ -87,6 +87,11 @@ Arena and collision:
   the arena (`range: [72, 568]`); there is no tree-dependent `range2` stage.
 - Lure the Ape's overshooting leaps onto spikes. Three spike hits beat it;
   subsequent hits introduce more spike patches. Gates and the energy reward remain.
+- Arena 39 tiles wide (2026-10-25, 30% narrower; Sand Cave, Shore, Lighthouse moved 17 tiles left).
+  Idle waits are 15% shorter; the landing shockwave reaches 24 px each side.
+- Enraged after 2 hits: stones split in two on the ground, every leap (not the hops) shakes 2 logs
+  loose from the ceiling (random spots, never overlapping, 0.5 s apart), and a scream is followed by
+  2 hops in place with shockwaves 125% then 150% as wide.
 - Body contact uses 70% of the original width and height, rounded from 32 to
   **22×22 pixels**, centred inside the sprite's movement footprint. Three bands
   narrow the upper body around the head and shoulders; the head follows crouching.
@@ -105,7 +110,7 @@ Arena and collision:
 Energy is also health:
 - It replaces hearts. The icon is still undecided; it shows as **blocks**.
 - **1 block = 100 energy** in code. Every value below is in code units.
-- In code now (scripts/adventure.gd; F3 in game shows it all live): the run starts with a **base of 25** that always regenerates (6/s). Each energy block picked up adds **10** (capacity and energy). A jump costs and needs 5. A hit is always a death and doesn't touch energy. Water drains 20.8/s and stops regeneration; 0 in water drowns. An energy orb refills to max (back after 2.5 s). Hair turns grey below 20%.
+- In code now (scripts/adventure.gd; F3 in game shows it all live): the run starts with a **base of 20** that always regenerates (6/s). Each energy block picked up adds **10** (capacity and energy). A jump costs and needs 2.5. A hit is always a death; the respawn refills the base bar. Water drains 20.8/s and stops regeneration; 0 in water drowns. An energy orb refills to max (back after 2.5 s). Hair turns grey below 20%.
 - With 1 block the player can use one ability, then has to rest before using another.
 - The 2nd block comes from the first city.
 

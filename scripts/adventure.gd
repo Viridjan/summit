@@ -18,7 +18,7 @@ const ABILITIES := ["dash", "climb", "attack"]
 # Energy is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
 # A run starts with a base of 25 that always regenerates; each energy block picked up adds 10.
 # run.blocks counts the base as the first block (so 1 = just the base).
-const BASE_ENERGY := 25.0
+const BASE_ENERGY := 20.0
 const ENERGY_PER_BLOCK := 10.0  # what an energy block pickup adds
 const ENERGY_REGEN := 6.0  # per second, only inside a partly spent block
 const WATER_DRAIN := 20.8  # per second while in water (2.08 every 0.1 s); no regeneration there

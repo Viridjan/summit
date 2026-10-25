@@ -819,13 +819,23 @@ func burst(at: Vector2, col: Color, n: int) -> void:
 func add_trail(p) -> void:
 	trails.append([Rect2(p.hitbox()), p.hair_color(), 0.35])
 
-# Every hit is a death (a respawn); energy has nothing to do with it and stays as it was.
+# Every hit is a death (a respawn); energy has nothing to do with it, and the respawn refills the base bar.
 # Count the death and start the short respawn delay.
 func on_player_death(p, _dir: Vector2) -> void:
 	deaths += 1
 	respawn_timer = 0.6
 	burst(p.center(), p.hair_color(), 12)
 	shake_t = 0.3 if Game.settings.shake else 0.0
+
+# Rebuild the room (or go back to the last safe one) with the base energy bar full; extra blocks keep their energy.
+func respawn() -> void:
+	Game.play_sfx("respawn")
+	if adventure() and spawn_room != room:  # this room has no safe point: back to the last one
+		enter_room(spawn_room, spawn)
+	_build()
+	if adventure() and Game.adv.energy < Adventure.BASE_ENERGY:
+		energy_event("respawn (base refill)", Adventure.BASE_ENERGY - Game.adv.energy)
+		Game.adv.energy = Adventure.BASE_ENERGY
 
 # Bank a following star, persist its ID and show its collection burst.
 func collect_berry(b) -> void:
@@ -906,10 +916,7 @@ func _physics_process(_delta: float) -> void:
 	if player.dead:
 		respawn_timer -= dt
 		if respawn_timer <= 0:
-			Game.play_sfx("respawn")
-			if adventure() and spawn_room != room:  # this room has no safe point: back to the last one
-				enter_room(spawn_room, spawn)
-			_build()
+			respawn()
 	else:
 		player.update(dt)
 		after_player_move()
