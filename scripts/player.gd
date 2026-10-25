@@ -162,6 +162,8 @@ const HAIR_FLY := Color("f2eb6d")
 # Ownership and physical state: w supplies collision/services; speed is velocity, not a per-frame displacement.
 var w  # world
 var pos := Vector2.ZERO
+var prev_pos := Vector2.ZERO  # pos before the latest physics tick (render interpolation)
+var draw_off := Vector2.ZERO  # set by World each displayed frame: where the body is drawn between ticks, minus pos
 # Fractional motion accumulator: e.g. repeated 0.25px steps become one whole-pixel move after four updates.
 var rem := Vector2.ZERO
 var speed := Vector2.ZERO
@@ -2075,10 +2077,10 @@ func draw(ci: CanvasItem) -> void:
 	var shades := CharacterArt.hair_shades(hc)
 	# Fill between clumps before adding highlights: sharp turns cannot split the lock.
 	for i in range(hair.size() - 1, 0, -1):
-		ci.draw_line(hair[i - 1].round(), hair[i].round(), shades["h"], 2 if i < 3 else 1, false)
+		ci.draw_line((hair[i - 1] + draw_off).round(), (hair[i] + draw_off).round(), shades["h"], 2 if i < 3 else 1, false)
 	for i in range(hair.size() - 1, -1, -1):
 		var mask: Array = CharacterArt.HAIR_CLUMPS[mini(i, CharacterArt.HAIR_CLUMPS.size() - 1)]
-		var tl := hair[i].round() - Vector2(floori(mask[0].length() / 2.0), floori(mask.size() / 2.0))
+		var tl := (hair[i] + draw_off).round() - Vector2(floori(mask[0].length() / 2.0), floori(mask.size() / 2.0))
 		for y in mask.size():
 			for x in mask[y].length():
 				var ch: String = mask[y][x if facing > 0 else mask[y].length() - 1 - x]
@@ -2091,7 +2093,7 @@ func draw(ci: CanvasItem) -> void:
 		mod = Color(1, 0.95, 0.6)
 	var f := _frame()
 	var sc := Vector2(scale.x * facing, scale.y)
-	ci.draw_set_transform(pos.round(), 0, sc)
+	ci.draw_set_transform((pos + draw_off).round(), 0, sc)
 	ci.draw_texture_rect_region(CharacterArt.texture(hc), Rect2(-8, -16, 16, 16), Rect2(f * 16, Vector2(16, 16)), mod)
 	ci.draw_set_transform(Vector2.ZERO)
 	if attacking():

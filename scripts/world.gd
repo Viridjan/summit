@@ -178,6 +178,10 @@ var near_queue: Array[String] = []  # neighbours still to build, one per frame (
 
 var cam: Camera2D
 var cam_pos := Vector2.ZERO
+# Render interpolation: physics runs at 60 Hz, the screen often faster (120/144/165 Hz). Each displayed frame
+# draws the camera and the player between their last two ticks (_process), so motion doesn't judder or blur.
+var cam_prev := Vector2.ZERO
+var cam_now := Vector2.ZERO
 var freeze := 0.0
 var shake_t := 0.0
 var deaths := 0
@@ -284,6 +288,7 @@ func _ready() -> void:
 	_load_near()
 	_scan_floor_gaps()
 	cam_pos = _clamp_cam(player.camera_target())
+	snap_interp()
 
 # Recreate the collision grid and entity objects; keep_player preserves the actor during a room transition.
 func _build(keep_player := false) -> void:
@@ -444,6 +449,7 @@ func _go_door(door) -> void:
 	else:
 		enter_room(target_room, at)
 		cam_pos = _clamp_cam(player.camera_target())  # a door can lead anywhere: don't sweep the view across the world
+		snap_interp()
 	door_block = Rect2i(dr)
 
 # Swap room data while retaining player motion, update respawn/progress and reposition cached terrain.
@@ -507,6 +513,9 @@ func enter_room(next: String, at = null) -> void:
 	_scan_floor_gaps()
 	_unstick()
 	cam_pos -= room_origin - old_origin  # keep the view where it was, then ease into the new room
+	cam_prev -= room_origin - old_origin  # interpolation follows the re-based coordinates
+	cam_now -= room_origin - old_origin
+	player.prev_pos -= room_origin - old_origin
 	if map_view != null:
 		_toggle_map()
 
@@ -537,7 +546,21 @@ func _load_near() -> void:
 		near_layers[n].position = Vector2(rooms[n].pos * T) - room_origin
 
 # Refresh non-physics presentation and load queued neighboring artwork without building it all in one frame.
+# Snap interpolation after a jump of the view or the player (room change, door, respawn): no sweep across.
+func snap_interp() -> void:
+	cam_now = cam_pos
+	cam_prev = cam_pos
+	if player != null:
+		player.prev_pos = player.pos
+		player.draw_off = Vector2.ZERO
+
 func _process(_delta: float) -> void:
+	if player != null:
+		var f := Engine.get_physics_interpolation_fraction()
+		var c := cam_prev.lerp(cam_now, f) if cam_prev.distance_to(cam_now) < 64.0 else cam_now
+		cam.position = c.round()
+		player.draw_off = (player.prev_pos.lerp(player.pos, f) - player.pos) if player.prev_pos.distance_to(player.pos) < 16.0 else Vector2.ZERO
+		_redraw()
 	if is_instance_valid(Game.music_engine):
 		Game.music_engine.set_muffled(paused or map_view != null)
 	if touch != null:
@@ -867,6 +890,8 @@ func _unhandled_input(event: InputEvent) -> void:
 # Order matters: player movement produces contacts/transitions before entities react to the new position.
 # A fixed DT preserves the original movement feel; the assist speed scales simulated time deliberately.
 func _physics_process(_delta: float) -> void:
+	cam_prev = cam_now  # no tick (paused, frozen) = no motion to interpolate
+	player.prev_pos = player.pos
 	if paused or done or map_view != null:
 		return
 	if debug_panel != null and (debug_panel.typing() or debug_panel.sim_paused):
@@ -912,7 +937,8 @@ func _physics_process(_delta: float) -> void:
 	if shake_t > 0:
 		shake_t -= dt
 		off = Vector2(randi_range(-1, 1), randi_range(-1, 1))
-	cam.position = (cam_pos + off).round()
+	cam_now = cam_pos + off
+	cam.position = cam_now.round()
 	note_t -= dt
 	note_label.visible = note_t > 0 and map_view == null
 	hud.queue_redraw()
@@ -1117,6 +1143,7 @@ func _restart() -> void:
 	door_block = Rect2i()
 	_build()
 	cam_pos = _clamp_cam(player.camera_target())
+	snap_interp()
 
 # Choose a return-button label appropriate to adventure or editor playtesting.
 func _exit_label() -> String:

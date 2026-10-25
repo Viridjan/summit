@@ -357,3 +357,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Ape arena walk-in works on every entry: AutoWalk takes over from the room-change walk-in (which cancelled it when entering sideways).
 - 2026-10-25: Ape throws from 72 px (was 96): scream <= 44, leap 44-72, throw > 72.
 - 2026-10-25: Ape throws from 72 px. Kept user's World Editor arena edits (only platform 10-12 r14, block r11 cols 49-50 making the right exit ledge Ape-free, note removed) and Lighthouse Stairs at (618,-14); generator updated to match. Arena coverage test reads surfaces from the layout.
+- 2026-10-25: Render interpolation: physics stays 60 Hz; each displayed frame draws the camera and the player between their last two ticks (World._process, Player.draw_off). Fixes the judder/blur on 120-165 Hz screens; room changes rebase it, doors/respawns snap.

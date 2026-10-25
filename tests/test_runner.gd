@@ -549,6 +549,7 @@ func check_shipped_world() -> void:
 	p().hold = {}  # let go: the walk carries on by itself
 	for k in 40:
 		step()
+	check(ww.cam_prev.distance_to(ww.cam_now) < 8.0, "render interpolation follows a room change instead of sweeping (cam %s -> %s)" % [ww.cam_prev, ww.cam_now])
 	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
 	ww.queue_free()
 	# house doors: standing at one (or pressing up) does nothing; interact goes inside, and again comes back out
@@ -1250,7 +1251,7 @@ func check_enemy_variants() -> void:
 	probe.queue_redraw()
 	await get_tree().process_frame
 	await get_tree().process_frame
-	check(not recording.destinations.is_empty() and absf(recording.destinations[-1].size.y) == art.SIZE * 2, "Giant enemies draw at twice the size")
+	check(recording.destinations.any(func(r): return absf(r.size.y) == art.SIZE * 2), "Giant enemies draw at twice the size")
 	probe.free()
 	art._texture = previous
 	Game.settings.invincible = false
