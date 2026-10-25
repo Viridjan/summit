@@ -11,7 +11,7 @@ Updated 2026-10-25. The original missing-art inventory is now implemented in
   The dedicated falling-rock hazard behavior remains separate; this pass
   supplies graphics. The Ape's projectiles retain their earlier stone artwork
   at the user's request.
-- Treetop elves and lighthouse mages: three appearances each, with idle,
+- Treetop elves and lighthouse mages: five appearances each, with idle,
   walk, talk and gesture rows. Five animated decorative inhabitants are placed
   in each village. Dialogue, quests and NPC movement are not implemented.
 - Shore, volcano and volcanic cave: complete compatible terrain, corner,

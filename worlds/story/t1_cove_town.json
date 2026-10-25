@@ -89,12 +89,12 @@
 			"y": 144
 		},
 		{
-			"t": "energy_orb",
+			"t": "stamina_orb",
 			"x": 40,
 			"y": 136
 		},
 		{
-			"t": "energy_block",
+			"t": "stamina_block",
 			"x": 160,
 			"y": 104
 		},

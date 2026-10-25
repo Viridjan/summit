@@ -94,7 +94,7 @@
 			"anchor": "bottom center",
 			"cell": [
 				16,
-				24
+				16
 			],
 			"collision": "Artwork only; gameplay defines collision separately.",
 			"file": "elf.png",
@@ -105,13 +105,13 @@
 				"talk",
 				"gesture"
 			],
-			"variants": 3
+			"variants": 5
 		},
 		{
 			"anchor": "bottom center",
 			"cell": [
 				16,
-				24
+				16
 			],
 			"collision": "Artwork only; gameplay defines collision separately.",
 			"file": "mage.png",
@@ -122,7 +122,7 @@
 				"talk",
 				"gesture"
 			],
-			"variants": 3
+			"variants": 5
 		},
 		{
 			"anchor": "bottom center",

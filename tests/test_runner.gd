@@ -84,6 +84,9 @@ func make_world(ents: Array, extra_tiles := []) -> void:
 	add_child(w)
 	w.set_physics_process(false)
 	w.player = Bot.new(w, w.spawn)
+	for e in w.ents:  # the Ape's random stone throw would make attack tests flaky: pin it off (tests turn it on)
+		if e is E.Ape:
+			e.throw_chance = 0.0
 
 # Advance a specified number of fixed physics steps with scripted input, making the test reproducible.
 func step(n := 1) -> void:
@@ -94,7 +97,7 @@ func step(n := 1) -> void:
 		if not w.player.dead:
 			w.player.update(DT)
 			w.after_player_move()
-			w.update_energy(DT)
+			w.update_stamina(DT)
 		for e in w.ents:
 			e.update(DT)
 
@@ -383,12 +386,12 @@ func check_shipped_world() -> void:
 	var story_ents := []
 	for rn in story.rooms:
 		story_ents += story.rooms[rn].level.entities.map(func(e): return e.t)
-	check(story_ents.has("energy_block") and story_ents.filter(func(t): return t.begins_with("enemy")).all(func(t): return t == "enemy_mosstrot"), "story has the town's energy block, and its only enemies are calm Mosstrots")
+	check(story_ents.has("stamina_block") and story_ents.filter(func(t): return t.begins_with("enemy")).all(func(t): return t == "enemy_mosstrot"), "story has the town's stamina block, and its only enemies are calm Mosstrots")
 	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave (swims over the hole) -> cove town -> jungle
 	Game.adv_world = story
 	Game.adv = Adventure.new_run(story)
-	Game.adv.blocks = 30  # a big energy budget: this checks the route, not the energy tuning (jumps and water drain it)
-	Game.adv.energy = 3000.0
+	Game.adv.blocks = 30  # a big stamina budget: this checks the route, not the stamina tuning (jumps and water drain it)
+	Game.adv.stamina = 3000.0
 	Game.adv_temp = true
 	Game.settings.invincible = true  # the route only: past The Hole there are hazards a hold-right bot can't dodge
 	Game.level = story.rooms[story.start].level
@@ -1297,11 +1300,11 @@ func check_bugfixes() -> void:
 	check(run.room == "a2_little_gap" and run.spawn == null and run.deaths == 0 and run.stars == [] and run.abilities is Array
 		and run.visited == ["a2_little_gap"] and run.has("time"), "partial save gets defaults (%s)" % run)
 	check(Adventure.restore_run(aw, "junk").room == aw.start and Adventure.restore_run(aw, {"room": "gone"}).room == aw.start, "unusable save starts a fresh run")
-	var bad := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": ["bad", {}], "blocks": -20, "energy": 99999.0, "deaths": -3, "time": INF, "stars": [1, "s"]})
-	check(bad.spawn == null and bad.blocks == 1 and bad.energy == Adventure.energy_max(bad) and bad.deaths == 0 and bad.time == 0.0 and bad.stars == ["s"], "malformed save values are normalized (%s)" % bad)
+	var bad := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": ["bad", {}], "blocks": -20, "stamina": 99999.0, "deaths": -3, "time": INF, "stars": [1, "s"]})
+	check(bad.spawn == null and bad.blocks == 1 and bad.stamina == Adventure.stamina_max(bad) and bad.deaths == 0 and bad.time == 0.0 and bad.stars == ["s"], "malformed save values are normalized (%s)" % bad)
 	check(Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": [1.0, NAN]}).spawn == null, "non-finite spawn is dropped")
-	var legacy := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": [40, 80], "blocks": 2.0, "energy": 30, "deaths": 4})
-	check(legacy.spawn == [40, 80] and legacy.blocks == 2 and legacy.energy == 30.0 and legacy.deaths == 4, "valid int/float saves keep their values (%s)" % legacy)
+	var legacy := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": [40, 80], "blocks": 2.0, "stamina": 30, "deaths": 4})
+	check(legacy.spawn == [40, 80] and legacy.blocks == 2 and legacy.stamina == 30.0 and legacy.deaths == 4, "valid int/float saves keep their values (%s)" % legacy)
 	Game.adv_world = aw
 	Game.adv = bad
 	Game.level = aw.rooms[bad.room].level
@@ -1468,7 +1471,7 @@ func check_ape_hitbox_shapes() -> void:
 	var after: Dictionary = Adv.room_level(sw2, "a1_ape_arena", [ape_id])
 	check(base_lv.entities.any(func(e): return e.t == "boss_ape") and not after.entities.any(func(e): return e.t == "boss_ape" or e.t == "boss_gate")
 		and after.tiles == base_lv.tiles and after.entities.filter(func(e): return e.t == "spawn").size() == base_lv.entities.filter(func(e): return e.t == "spawn").size()
-		and after.entities.any(func(e): return e.t == "energy_orb"),
+		and after.entities.any(func(e): return e.t == "stamina_orb"),
 		"a beaten Ape's arena comes back as its variant: no boss or gates, same terrain and spawns, the orb")
 
 # The volcanic guardian (eastern island): eruptions under the player, plugs broken by baited eruptions, victory.
@@ -1527,6 +1530,7 @@ func check_ape() -> void:
 	Game.settings.invincible = true
 	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32, "range": [0, 480]}])
 	var ape = find.call(E.Ape)[0]
+	ape.throw_chance = 1.0
 	ape.phase = "idle"  # awake, the player far away
 	var thrown := false
 	for k in 120:
@@ -1536,6 +1540,34 @@ func check_ape() -> void:
 			break
 	check(thrown, "the Ape throws a stone in an arc at a far player")
 	check(ape.damage_boxes().size() == 1 and ape.damage_boxes()[0].size == Vector2i(16, 16), "the hitbox overlay sees the flying stone (%s)" % [ape.damage_boxes()])
+	# the throw is random (20% of attacks); distance only picks scream or leap
+	ape.throw_chance = E.Ape.THROW_CHANCE
+	var throws := 0
+	for k in 1000:
+		ape.phase = "idle"
+		ape.timer = 0.0
+		ape.update(0.0)
+		throws += 1 if ape.phase == "throw" else 0
+	ape.throw_chance = 0.0
+	check(throws > 150 and throws < 250, "the Ape throws on about 20%% of its attacks (%d of 1000)" % throws)
+	# cornered: the player between the Ape and a wall it would scream all the way to: it leaps instead
+	var cwall := []
+	for y in range(10, 28):
+		cwall.append([30, y])
+	make_world([{"t": "boss_ape", "x": 30 * 8 - 32 - 12, "y": floor_y - 32}], cwall)
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(30 * 8 - 5, floor_y)
+	ape.phase = "idle"
+	ape.timer = 0.0
+	ape.update(0.0)
+	var cornered_phase: String = ape.phase
+	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(200 + 32 + 10, floor_y)
+	ape.phase = "idle"
+	ape.timer = 0.0
+	ape.update(0.0)
+	check(cornered_phase == "crouch" and ape.phase == "scream", "no scream when it would fill the gap to the wall behind the player (%s; in the open: %s)" % [cornered_phase, ape.phase])
 	# phase 1: a stone that meets the standing trunk fells it into a bridge at its base (and it stays down)
 	make_world([{"t": "ape_trunk", "x": 200, "y": floor_y - 112, "w": 16, "h": 112}, {"t": "boss_ape", "x": 380, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
@@ -1640,7 +1672,7 @@ func check_ape() -> void:
 	ape.rect.position = Vector2i(92, floor_y - 32)  # onto the lone spike
 	ape._land()
 	step(90)
-	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "the last hit beats the Ape: gates open, it stays beaten, an energy orb appears")
+	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.StaminaOrb).size() == 1, "the last hit beats the Ape: gates open, it stays beaten, an stamina orb appears")
 	# dying before leaving the room: the rebuilt room keeps the spikes as the fight left them, and the orb
 	var live_spikes := func(): return find.call(E.Spikes).filter(func(e): return e.collidable).map(func(e): return Vector2i(e.d.x, e.d.y))
 	var left_by_fight: Array = live_spikes.call()
@@ -1649,7 +1681,7 @@ func check_ape() -> void:
 	step(3)
 	var after_death: Array = live_spikes.call()
 	after_death.sort()
-	check(after_death == left_by_fight and find.call(E.EnergyOrb).size() == 1, "after the fight, a death in the room keeps its spikes as they were (%s vs %s)" % [after_death, left_by_fight])
+	check(after_death == left_by_fight and find.call(E.StaminaOrb).size() == 1, "after the fight, a death in the room keeps its spikes as they were (%s vs %s)" % [after_death, left_by_fight])
 	# the landing slams the ground: a shockwave hits beside the body, not just under it
 	Game.settings.invincible = false
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
@@ -1666,7 +1698,7 @@ func check_ape() -> void:
 	ape._land()
 	step(2)
 	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(186, floor_y - 8, 60, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
-	check(is_equal_approx(ape.timer + 2 * DT, 0.6 * E.Ape.PAUSE), "the Ape waits 15%% less after a landing (%s)" % ape.timer)
+	check(is_equal_approx(ape.timer + 2 * DT, 0.6 * E.Ape.PAUSE), "the Ape waits less after a landing (%s)" % ape.timer)
 	# enraged (2 hits taken): a scream is followed by 2 hops in place, shockwaves 130% then 170% wide, a log each
 	Game.settings.invincible = true
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
@@ -1779,96 +1811,120 @@ func check_bestiary() -> void:
 	check(mv.tab == 1, "E switches tabs on the keyboard")
 	mv.queue_free()
 
-# Energy (docs/STORY_DESIGN.md section 3): 100 per block, regen only inside a partly spent block,
+# Stamina (docs/STORY_DESIGN.md section 3): 100 per block, regen only inside a partly spent block,
 # a hit costs a block, the last block is a death.
-# Regression coverage for energy. The assertions below state the expected behavior of this case.
-func check_energy() -> void:
+# Regression coverage for stamina. The assertions below state the expected behavior of this case.
+func check_stamina() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
 	var run := Adventure.new_run(world)
-	check(run.blocks == 1 and run.energy == 20.0 and Adventure.energy_max(run) == 20.0, "a run starts with the base: 20 energy")
-	check(Adventure.spend_energy(run, 10) and run.energy == 10.0, "spending takes energy")
-	Adventure.regen_energy(run, 1.0)
-	check(is_equal_approx(run.energy, 16.0), "energy regenerates 6 per second (%s)" % run.energy)
-	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 20.0, "regeneration stops at the top of the base")
-	run.energy = 0.0
-	Adventure.regen_energy(run, 2.0)
-	check(is_equal_approx(run.energy, 12.0), "the base always regenerates, even from 0 (%s)" % run.energy)
-	Adventure.regen_energy(run, 100.0)
-	check(not Adventure.spend_energy(run, 80) and run.energy == 20.0, "can't spend more than you have")
-	Adventure.add_energy_block(run)
-	check(run.blocks == 2 and run.energy == 30.0 and Adventure.energy_max(run) == 30.0, "a new block adds a full 10")
-	Adventure.spend_energy(run, 20)
-	Adventure.regen_energy(run, 10.0)
-	check(run.energy == 20.0, "a fully spent block doesn't refill")
-	Adventure.spend_energy(run, 20)
-	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 20.0, "the base refills, but not the spent block above it")
-	Adventure.refill_energy(run)
-	Adventure.spend_energy(run, 5)
-	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 30.0, "a partly spent block refills to its top")
+	check(run.blocks == 1 and run.stamina == 40.0 and Adventure.stamina_max(run) == 40.0, "a run starts with the base: 40 stamina")
+	check(Adventure.spend_stamina(run, 20) and run.stamina == 20.0, "spending takes stamina")
+	Adventure.regen_stamina(run, 0.01)
+	check(is_equal_approx(run.stamina, 20.0 + 0.12), "at half full stamina regenerates at the full 12 per second (%s)" % run.stamina)
+	check(Adventure.regen_factor(0.0) == 0.5 and Adventure.regen_factor(0.25) == 0.75 and Adventure.regen_factor(0.5) == 1.0
+		and Adventure.regen_factor(0.75) == 0.875 and Adventure.regen_factor(1.0) == 0.75, "regen x0.5 empty, x1 at half, x0.75 full")
+	Adventure.regen_stamina(run, 10.0)
+	check(run.stamina == 40.0, "regeneration stops at the top of the base")
+	run.stamina = 0.0
+	Adventure.regen_stamina(run, 0.01)
+	check(is_equal_approx(run.stamina, 0.06), "the base always regenerates, even from 0, at half speed (%s)" % run.stamina)
+	Adventure.regen_stamina(run, 100.0)
+	check(not Adventure.spend_stamina(run, 160) and run.stamina == 40.0, "can't spend more than you have")
+	Adventure.add_stamina_block(run)
+	check(run.blocks == 2 and run.stamina == 60.0 and Adventure.stamina_max(run) == 60.0, "a new block adds a full 20")
+	Adventure.spend_stamina(run, 40)
+	Adventure.regen_stamina(run, 10.0)
+	check(run.stamina == 40.0, "a fully spent block doesn't refill")
+	Adventure.spend_stamina(run, 40)
+	Adventure.regen_stamina(run, 100.0)
+	check(run.stamina == 40.0, "the base refills, but not the spent block above it")
+	Adventure.refill_stamina(run)
+	Adventure.spend_stamina(run, 10)
+	Adventure.regen_stamina(run, 100.0)
+	check(run.stamina == 60.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
 	Game.adv = Adventure.new_run(world)
 	Game.adv_temp = true
-	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
+	make_world([{"t": "stamina_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.energy == 30.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (10)")
-	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
+	check(Game.adv.blocks == 2 and Game.adv.stamina == 60.0 and Game.adv.taken.size() == 1, "stamina block pickup adds a full block (20)")
+	make_world([{"t": "stamina_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2, "an energy block is taken once per run")
-	Game.adv.energy = 12.0
+	check(Game.adv.blocks == 2, "an stamina block is taken once per run")
+	Game.adv.stamina = 12.0
 	p().die(Vector2.ZERO)
-	var after_hit: float = Game.adv.energy
+	var after_hit: float = Game.adv.stamina
 	p().dead = false
-	Game.adv.energy = 0.0
+	Game.adv.stamina = 0.0
 	p().die(Vector2.ZERO)
-	check(w.deaths == 2 and after_hit == 12.0 and Game.adv.energy == 0.0, "a hit is always a death, and leaves energy as it was")
+	check(w.deaths == 2 and after_hit == 12.0 and Game.adv.stamina == 0.0, "a hit is always a death, and leaves stamina as it was")
 	w.respawn()  # the respawn refills the base bar; extra blocks above it stay as they were
-	var low: float = Game.adv.energy
-	Game.adv.energy = 30.0
+	var low: float = Game.adv.stamina
+	Game.adv.stamina = 60.0
 	p().die(Vector2.ZERO)
 	w.respawn()
-	check(low == Adventure.BASE_ENERGY and Game.adv.energy >= 30.0 and not p().dead, "respawn comes back with full base energy (%s), never lowers it (%s)" % [low, Game.adv.energy])
-	# each jump costs 2.5 energy and needs it: with less there's no jump
+	check(low == Adventure.BASE_STAMINA and Game.adv.stamina >= 60.0 and not p().dead, "respawn comes back with full base stamina (%s), never lowers it (%s)" % [low, Game.adv.stamina])
+	# each jump costs 5 stamina and needs it: with less there's no jump
 	make_world([])
 	step(5)
-	Game.adv.energy = 50.0
+	Game.adv.stamina = 100.0
 	p().tap = {"jump": true}
 	step()
-	var after_jump: float = Game.adv.energy
+	var after_jump: float = Game.adv.stamina
 	step(60)
-	Game.adv.energy = 2.0
+	Game.adv.stamina = 4.0
 	var y0: float = p().pos.y
 	p().tap = {"jump": true}
 	step(4)
-	check(absf(after_jump - 47.5) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 2.5 energy; with less there's no jump (%s)" % after_jump)
-	check(w.energy_log.size() > 0 and w.energy_log[-1][1] == "jump" and is_equal_approx(w.energy_log[-1][2], -2.5), "energy changes are logged with their cause (%s)" % [w.energy_log])
-	check(w.energy_totals.has("jump") and w.energy_totals.jump[0] >= 1 and is_equal_approx(w.energy_totals.jump[1], -2.5 * w.energy_totals.jump[0]) and w.energy_totals.has("regen"),
-		"F3 recap: totals per cause (%s)" % [w.energy_totals])
-	var EP = load("res://scripts/energy_panel.gd")
+	check(absf(after_jump - 95.0) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 5 stamina; with less there's no jump (%s)" % after_jump)
+	check(w.stamina_log.size() > 0 and w.stamina_log[-1][1] == "jump" and is_equal_approx(w.stamina_log[-1][2], -5.0), "stamina changes are logged with their cause (%s)" % [w.stamina_log])
+	check(w.stamina_totals.has("jump") and w.stamina_totals.jump[0] >= 1 and is_equal_approx(w.stamina_totals.jump[1], -5.0 * w.stamina_totals.jump[0]) and w.stamina_totals.has("regen"),
+		"F3 recap: totals per cause (%s)" % [w.stamina_totals])
+	# a wall jump costs a jump's stamina too, and needs it
+	var wall := []
+	for y in range(10, 28):
+		wall.append([20, y])
+	make_world([], wall)
+	step(5)
+	Game.adv.stamina = 100.0
+	p().pos = Vector2(20 * 8 - 4, 22 * 8)  # in the air, hugging the wall on the right
+	p().speed = Vector2.ZERO
+	p().on_ground = false
+	p().jump_grace_timer = 0.0  # no coyote time: this is a wall jump
+	p().tap = {"jump": true}
+	step()
+	var after_wall: float = Game.adv.stamina
+	p().pos = Vector2(20 * 8 - 4, 22 * 8)
+	p().speed = Vector2.ZERO
+	Game.adv.stamina = 4.0
+	p().jump_grace_timer = 0.0
+	p().tap = {"jump": true}
+	step()
+	check(absf(after_wall - 95.0) < 0.3 and w.stamina_log[0][1] == "wall jump" and p().speed.x >= 0.0,
+		"a wall jump costs 5 stamina; with less there's none (%s, then speed %s)" % [after_wall, p().speed])
+	var EP = load("res://scripts/stamina_panel.gd")
 	var ep = EP.new()
 	ep.world = w
 	add_child(ep)
 	ep._process(0.0)
 	var vr := Rect2(Vector2.ZERO, ep.get_viewport_rect().size)
 	check(vr.encloses(ep.get_global_rect()) and ep.size.x > 100, "F3 panel is on screen (%s in %s)" % [ep.get_global_rect(), vr])
-	check(EP.regen_top(15.0) == 20.0 and EP.regen_top(25.0) == 30.0 and EP.regen_top(30.0) == 30.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
-		"F3 energy panel: regen top per block, live rate and history")
+	check(EP.regen_top(30.0) == 40.0 and EP.regen_top(50.0) == 60.0 and EP.regen_top(60.0) == 60.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
+		"F3 stamina panel: regen top per block, live rate and history")
 	ep.free()
-	Game.adv.energy = 100.0
+	Game.adv.stamina = 100.0
 
-	# HUD energy bars: one per block, filled by its share of the energy
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(25.0, 3)
-	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
-	Game.adv.energy = 0.19 * Adventure.energy_max(Game.adv)
+	# HUD stamina bars: one per block, filled by its share of the stamina
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(50.0, 3)
+	check(fills == [1.0, 0.5, 0.0], "HUD stamina bars: the base, then block by block (%s)" % [fills])
+	Game.adv.stamina = 0.19 * Adventure.stamina_max(Game.adv)
 	var grey: bool = p().hair_color() == p().HAIR_USED
-	Game.adv.energy = 0.21 * Adventure.energy_max(Game.adv)
-	check(grey and p().hair_color() != p().HAIR_USED, "hair turns grey below 20% energy")
-	Game.adv.energy = 100.0
+	Game.adv.stamina = 0.21 * Adventure.stamina_max(Game.adv)
+	check(grey and p().hair_color() != p().HAIR_USED, "hair turns grey below 20% stamina")
+	Game.adv.stamina = 100.0
 	# touch controls keep their distance to the nearest screen edges on any screen shape (phones are wider than 16:9)
 	var tc = load("res://scripts/touch_controls.gd").new()
 	tc.size = Vector2(1560, 720)
@@ -1877,19 +1933,19 @@ func check_energy() -> void:
 	check(tc.at(Vector2(1150, 600)) == Vector2(1150, 840) and tc.at(Vector2(190, 540)) == Vector2(190, 780), "touch controls hug the bottom on a tall screen")
 	tc.free()
 	var Hud = load("res://scripts/world.gd").Hud
-	check(Hud.bar_color(0.0).is_equal_approx(Color("ff4a3a")) and Hud.bar_color(0.5).is_equal_approx(Color("ffd84a")) and Hud.bar_color(1.0).is_equal_approx(Color("7cf0c0")), "HUD energy bar colour: red empty, yellow half, mint full (%s %s %s)" % [Hud.bar_color(0.0), Hud.bar_color(0.5), Hud.bar_color(1.0)])
+	check(Hud.bar_color(0.0).is_equal_approx(Color("ff4a3a")) and Hud.bar_color(0.5).is_equal_approx(Color("ffd84a")) and Hud.bar_color(1.0).is_equal_approx(Color("7cf0c0")), "HUD stamina bar colour: red empty, yellow half, mint full (%s %s %s)" % [Hud.bar_color(0.0), Hud.bar_color(0.5), Hud.bar_color(1.0)])
 
-	# water drains 2.08 energy every 0.1 s and stops regeneration; at 0 energy in water the player dies
+	# water drains 4 stamina every 0.1 s and stops regeneration; at 0 stamina in water the player dies
 	make_world([{"t": "water", "x": 0, "y": 20 * 8, "w": 40 * 8, "h": 10 * 8}])
 	step(5)
-	Game.adv.energy = 150.0
-	var before: float = Game.adv.energy
+	Game.adv.stamina = 150.0
+	var before: float = Game.adv.stamina
 	step(60)
-	check(w.in_water() and absf(before - Game.adv.energy - 20.8) < 0.01, "a second in water costs 20.8 energy, no regeneration (%s)" % (before - Game.adv.energy))
-	Game.adv.energy = 0.004
+	check(w.in_water() and absf(before - Game.adv.stamina - 40.0) < 0.01, "a second in water costs 40 stamina, no regeneration (%s)" % (before - Game.adv.stamina))
+	Game.adv.stamina = 0.004
 	var deaths_before: int = w.deaths
 	step(2)
-	check(p().dead and w.deaths == deaths_before + 1, "out of energy in water: the player dies")
+	check(p().dead and w.deaths == deaths_before + 1, "out of stamina in water: the player dies")
 	make_world([])
 	step(5)
 	p().tap = {"attack": true}
@@ -2178,6 +2234,20 @@ func _ready() -> void:
 		if p().state != p().ST_CLIMB:
 			break
 	check(p().state != p().ST_CLIMB, "running out of stamina drops the player")
+	# in the adventure the climb drains the one stamina bar (a full base bar = a full climb meter), and the
+	# ground doesn't refill it; no regeneration while on the wall
+	var keep_adv: Dictionary = Game.adv
+	Game.adv = {"stamina": 40.0, "blocks": 1, "abilities": ["dash", "climb", "attack"]}
+	p().hold = {"grab": true, "up": true}
+	step(30)
+	var climbed_to: float = Game.adv.stamina
+	var as_climb: float = p().stamina
+	p().hold = {}
+	step(40)
+	var after_landing: float = Game.adv.stamina
+	Game.adv = keep_adv
+	check(climbed_to < 35.0 and is_equal_approx(as_climb, climbed_to * 110.0 / 40.0) and after_landing <= climbed_to + 40 * 0.2,
+		"adventure climbing drains the stamina bar, and landing doesn't refill it (%s, then %s)" % [climbed_to, after_landing])
 	# infinite stamina (assist option): hang on the same wall for 20 s
 	Game.settings.infinite_stamina = true
 	make_world([], wall)
@@ -2493,7 +2563,7 @@ func _ready() -> void:
 	check_big_enemies()
 	check_dirs()
 	check_adventure()
-	check_energy()
+	check_stamina()
 	check_bugfixes()
 	check_bestiary()
 	check_ape_hitbox_shapes()

@@ -44,9 +44,9 @@ def main():
             "i12_crystal_pocket": [("landmark", 136, 120, 1)],
         }.get(name, [])
         decorate(name, "volcanic_cave", props=props)
-    decorate("l3_treetop_village", people=[("elf", x, 136, i % 3) for i, x in enumerate((96, 248, 376, 488, 584))], clear_notes=["Village NPCs (not built)"])
+    decorate("l3_treetop_village", people=[("elf", x, 144, i % 5) for i, x in enumerate((96, 248, 376, 488, 584))], clear_notes=["Village NPCs (not built)"])
     decorate("s3_lighthouse_top", props=[("beacon", 192, 24, 0), ("mirror", 160, 64, 0)],
-             people=[("mage", x, 64, i % 3) for i, x in enumerate((112, 144, 224, 256, 288))],
+             people=[("mage", x, 72, i % 5) for i, x in enumerate((112, 144, 224, 256, 288))],
              clear_notes=["Silent villager", "Magic flame, aimed"])
     print("Dressed island environments, landmarks, treetop elves and lighthouse mages")
 

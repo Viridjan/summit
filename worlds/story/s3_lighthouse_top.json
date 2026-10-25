@@ -79,36 +79,36 @@
 		{
 			"t": "village_mage",
 			"x": 112,
-			"y": 64,
+			"y": 72,
 			"variant": 0,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_mage",
 			"x": 144,
-			"y": 64,
+			"y": 72,
 			"variant": 1,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_mage",
 			"x": 224,
-			"y": 64,
+			"y": 72,
 			"variant": 2,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_mage",
 			"x": 256,
-			"y": 64,
-			"variant": 0,
+			"y": 72,
+			"variant": 3,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_mage",
 			"x": 288,
-			"y": 64,
-			"variant": 1,
+			"y": 72,
+			"variant": 4,
 			"art_tag": "regions-v1"
 		}
 	]

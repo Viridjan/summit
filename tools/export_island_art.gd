@@ -14,7 +14,7 @@ func _initialize() -> void:
 	var manifest := {"source": "scripts/island_art.gd", "provenance": "Original procedural pixel art authored for Summit; no third-party source images.", "filter": "nearest", "frames": 4, "assets": []}
 	for kind in ["serpent", "rock", "rock_warning", "rock_impact", "eruption", "vent", "elf", "mage", "landmark", "raft", "mirror", "beacon", "lava"]:
 		var poses: Array = Art.SERPENT_POSES if kind == "serpent" else Art.PEOPLE_POSES if kind in ["elf", "mage"] else ["idle", "broken"] if kind == "vent" else ["idle"]
-		var variants := 3 if kind in ["elf", "mage", "landmark"] else 1
+		var variants := 5 if kind in ["elf", "mage"] else 3 if kind == "landmark" else 1
 		var sample := Art.build(kind, poses[0], 0, 0)
 		var size := sample.get_size()
 		var sheet := Art.canvas(size.x*4, size.y*poses.size()*variants)

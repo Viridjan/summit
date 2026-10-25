@@ -81,7 +81,7 @@ var REBOUND_SPEED_Y := -120.0
 var REBOUND_VAR_JUMP_TIME := 0.15
 var DREAM_DASH_MIN_TIME := 0.1
 var DREAM_DASH_END_WIGGLE := 5
-# Wall climbing: stamina is a separate resource from adventure energy; costs below are stamina per second or action.
+# Wall climbing costs stamina (see `stamina`: in the adventure, the one stamina bar); costs below are per second or action.
 var CLIMB_MAX_STAMINA := 110.0
 var CLIMB_UP_COST := 100.0 / 2.2
 var CLIMB_STILL_COST := 100.0 / 10.0
@@ -149,7 +149,7 @@ const WATER_SURFACE_REACH := 12  # px: with the surface this close above the cen
 # Layer: applied on top of whatever state runs (_layers), not a state of its own.
 const WATERFALL_PUSH := 70.0  # inside a waterfall: pulled down towards this speed...
 const WATERFALL_FORCE := 600.0  # ...this hard (px/s²): jumps still rise, but much less
-const JUMP_ENERGY := 2.5  # adventure: each jump costs this much, and needs it
+const JUMP_STAMINA := 5.0  # adventure: each jump costs this much, and needs it
 const DAMAGE_SCALE := 0.8  # hazards and enemies hit a box 20% smaller than the hurtbox
 const HURT_DUCK := Rect2i(-4, -6, 8, 4)
 const HURT_FLY := Rect2i(-3, -9, 6, 6)
@@ -191,7 +191,24 @@ var dash_attack_timer := 0.0
 var dash_cooldown_timer := 0.0
 var dash_refill_cooldown_timer := 0.0
 var dashes := 1
-var stamina := CLIMB_MAX_STAMINA
+var _grip := CLIMB_MAX_STAMINA  # the climb meter outside the adventure
+# Climbing stamina (CLIMB_* units, 0..CLIMB_MAX_STAMINA). In the adventure it is the one stamina bar, read in climb
+# units (a full base bar = a full climb meter): climbing drains the bar, and the climb code's refills (ground,
+# crystals, Celeste's climb-jump refund) don't fill it, only its own regeneration and orbs do.
+var stamina: float:
+	get:
+		return minf(Game.adv.stamina * _climb_units(), CLIMB_MAX_STAMINA) if _shared_stamina() else _grip
+	set(v):
+		if not _shared_stamina():
+			_grip = v
+		elif v < stamina and not Game.settings.infinite_stamina:
+			var cost := minf(Game.adv.stamina, (stamina - v) / _climb_units())
+			Game.adv.stamina -= cost
+			w._tally("climbing", -cost, 1.0 / 60.0)  # F3 recap (one drain per tick: counts seconds)
+func _shared_stamina() -> bool:
+	return w != null and w.adventure() and not Game.adv.is_empty()
+func _climb_units() -> float:
+	return CLIMB_MAX_STAMINA / Game.Adventure.BASE_STAMINA
 var max_fall := MAX_FALL
 var wall_slide_timer := WALL_SLIDE_TIME
 var wall_slide_dir := 0
@@ -953,15 +970,15 @@ func _co_resume() -> void:
 				co_active = false
 
 # ---------------- jumps ----------------
-# Adventure: a jump needs its full cost in energy (wall jumps and swim strokes stay free).
-# Check adventure energy before an ordinary jump; other jumping actions have their own rules.
+# Adventure: a jump, wall jumps included, needs its full cost in stamina (swim strokes stay free).
+# Check adventure stamina before an ordinary jump; other jumping actions have their own rules.
 func can_jump() -> bool:
-	return not w.adventure() or Game.adv.energy >= JUMP_ENERGY
+	return not w.adventure() or Game.adv.stamina >= JUMP_STAMINA
 
-# Start a normal jump, spend its adventure energy and reset the variable-height jump timer.
+# Start a normal jump, spend its adventure stamina and reset the variable-height jump timer.
 func jump(particles := true) -> void:
 	sfx("jump")
-	w.drain_energy(JUMP_ENERGY)
+	w.drain_stamina(JUMP_STAMINA)
 	jump_buf = 0
 	jump_grace_timer = 0
 	var_jump_timer = VAR_JUMP_TIME
@@ -1002,6 +1019,7 @@ func super_jump() -> void:
 # Jump away from a wall and briefly force movement outward so the player clears it.
 func wall_jump(dir: int) -> void:
 	sfx("wall_jump")
+	w.drain_stamina(JUMP_STAMINA, "wall jump")
 	set_ducking(false)
 	jump_buf = 0
 	jump_grace_timer = 0
@@ -1027,6 +1045,7 @@ func wall_jump(dir: int) -> void:
 # Apply the stronger wall-jump variant associated with a vertical dash.
 func super_wall_jump(dir: int) -> void:
 	sfx("wall_jump")
+	w.drain_stamina(JUMP_STAMINA, "wall jump")
 	set_ducking(false)
 	jump_buf = 0
 	jump_grace_timer = 0
@@ -1443,7 +1462,7 @@ func _normal_update(dt: float) -> int:
 			speed.y = maxf(speed.y, 40.0)  # falling already, or the jump-thru assist would lift us back on top
 		elif jump_grace_timer > 0 and can_jump():
 			jump()
-		elif can_unduck():
+		elif can_unduck() and can_jump():  # jumps off a wall cost stamina too
 			if wall_jump_check(1):
 				if facing == 1 and grab_check and stamina > 0:
 					climb_jump()
@@ -1966,8 +1985,8 @@ func _draw_attack(ci: CanvasItem) -> void:
 func hair_color() -> Color:
 	if state == ST_STAR_FLY:
 		return HAIR_FLY if (star_fly_timer > STAR_FLY_END_FLASH or flash) else HAIR_NORMAL
-	if w != null and w.adventure() and Game.adv.energy < 0.2 * Game.Adventure.energy_max(Game.adv):
-		return HAIR_USED  # grey below 20% energy
+	if w != null and w.adventure() and Game.adv.stamina < 0.2 * Game.Adventure.stamina_max(Game.adv):
+		return HAIR_USED  # grey below 20% stamina
 	if dashes == 2:
 		return HAIR_TWO
 	if dashes == 1:

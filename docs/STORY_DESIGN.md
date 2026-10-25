@@ -24,7 +24,7 @@ The player faces right from the start, and the route mostly moves right.
 ### 1.4 Cove or small city
 - Further right: a cove or small town with a couple of NPCs.
 - NPCs don't exist in the game yet (see Systems).
-- **The second energy block is collected here.**
+- **The second stamina block is collected here.**
 - Has at least one quest that rewards a skill point (true for every village).
 
 ### 1.5 Jungle (right of the city)
@@ -48,7 +48,7 @@ Past the Ape the path splits. Each side changes the story.
 - The chase replays one planned run (`ApeChase.plan` in `scripts/entities.gd`): the player's own movement code, off spikes and breakables, with the Ape's whole 24px contact box clear of the terrain. Breakable rock (low ceiling, hanging chunks): the player passes under it, the Ape smashes through (not saved, so it is back after a death).
 - At a small gap the player hears the Ape hit the wall; rocks fall and seal the cave behind them. This starts the second part.
   Built: six breakable rocks (the low ceiling over the third pit and five hanging chunks) hurt the Ape as it smashes them (it blinks). The player only dies if the Ape gets past them: a tunnel-high line at its centre, so corners don't save you. Each landing shakes debris off the ceiling. The Ape itself triggers the end: reaching its last stretch (`end`), the ceiling caves in just ahead of it (`seal`), stopping it and sealing the way back for good.
-- Reward on this path: **the sword** (see Energy for its costs).
+- Reward on this path: **the sword** (see Stamina for its costs).
 - The sealed cave can't be re-entered, so the only way is right, to the shore.
 - The shore offers two options:
   1. **Left: a mountain.** Clearly climbable, but beyond the player's current abilities. Hints that it can be climbed later; nothing else for now (maybe some collectibles).
@@ -86,12 +86,14 @@ Arena and collision:
   The former pit is filled with solid ground. The Ape uses one leap range across
   the arena (`range: [72, 568]`); there is no tree-dependent `range2` stage.
 - Lure the Ape's overshooting leaps onto spikes. Three spike hits beat it;
-  subsequent hits introduce more spike patches. Gates and the energy reward remain.
+  subsequent hits introduce more spike patches. Gates and the stamina reward remain.
 - Arena 31 tiles wide and empty (2026-10-25, user's World Editor edit: no ledges, platforms, starting spikes or
   walk-in; both doorways drop into it). Idle waits are 15% shorter; the landing shockwave is 60 px wide.
 - Spikes come only from logs: every leap, the hops in place too, shakes one log loose at a random spot (never overlapping
   another); where it breaks on the ground it leaves a 1-tile spike. Landing on spikes hurts the Ape and breaks
   exactly those. No spikes are generated on hits.
+- Attack choice: a stone throw on 20% of attacks at random; otherwise scream within 44 px, leap beyond. No scream
+  when the player is cornered against a wall the scream reaches (it leaps instead). Waits x0.765.
 - Enraged after 2 hits: stones split in two on the ground, and a scream is followed by 2 hops in place with
   shockwaves 130% then 170% as wide.
 - Body contact uses 70% of the original width and height, rounded from 32 to
@@ -105,20 +107,25 @@ Arena and collision:
   Its 0.5s wind-up and 0.35s active window remain. Hitbox debug drawing uses the
   same body bands and circle; the scream animation stays inside its damage radius.
 
-## 3. Energy
+## 3. Stamina
 
-(Dropped: boss fights no longer drain energy.)
+(Dropped: boss fights no longer drain stamina.)
 
-Energy is also health:
+Stamina is also health:
 - It replaces hearts. The icon is still undecided; it shows as **blocks**.
-- **1 block = 100 energy** in code. Every value below is in code units.
-- In code now (scripts/adventure.gd; F3 in game shows it all live): the run starts with a **base of 20** that always regenerates (6/s). Each energy block picked up adds **10** (capacity and energy). A jump costs and needs 2.5. A hit is always a death; the respawn refills the base bar. Water drains 20.8/s and stops regeneration; 0 in water drowns. An energy orb refills to max (back after 2.5 s). Hair turns grey below 20%.
+- **1 block = 100 stamina** in code. Every value below is in code units.
+- In code now (scripts/adventure.gd; F3 in game shows it all live): energy is called **stamina** (2026-10-25). The run
+  starts with a **base of 40** that always regenerates; each stamina block picked up adds **20**. Regeneration is
+  k x 12/s, k by how full the bar is: 0.5 empty, 1 at half, 0.75 full; none in water or while climbing. A jump or
+  wall jump costs and needs 5. Climbing drains the same bar (one full base bar = one Celeste climb meter); the
+  ground doesn't refill it. Water drains 40/s; 0 in water drowns. A hit is always a death; the respawn refills the
+  base bar. A stamina orb refills to max (back after 2.5 s). Hair turns grey below 20%.
 - With 1 block the player can use one ability, then has to rest before using another.
 - The 2nd block comes from the first city.
 
-More energy unlocks more abilities:
+More stamina unlocks more abilities:
 
-| Energy | Unlocks |
+| Stamina | Unlocks |
 |---|---|
 | some | jump about 10% higher |
 | more | attack |
@@ -135,15 +142,15 @@ Costs:
 - Some abilities cost a whole block and have to be recovered before reuse.
 
 Regeneration:
-- 6 energy per second (doubled from 3 on 2026-10-24).
+- 6 stamina per second (doubled from 3 on 2026-10-24).
 - The base (the first 50) always refills, even from 0.
 - Above it, only inside the current block: an extra block that is fully spent doesn't refill.
 
 Water:
 - Underwater is its own state, **Normal (Underwater)**, which replaces Normal in water: slow sinking, no walking on the floor (along it the player moves as mid-water), and no normal jump. **Jumping (Underwater)** is a weaker stroke (about half a jump's height) that works from the floor or mid-water, every time jump is pressed; with the surface close above, it leaps out of the water like a normal jump. Dash still works.
 - Waterfalls are a layer on top of the current state: inside one the player is pulled down, so jumps rise much less.
-- Staying in water costs 2.08 energy every 0.1 s (20.8 per second), and energy doesn't regenerate there.
-- Running out of energy in water is a death (drowning).
+- Staying in water costs 2.08 stamina every 0.1 s (20.8 per second), and stamina doesn't regenerate there.
+- Running out of stamina in water is a death (drowning).
 
 ## 4. Skill points
 
@@ -161,7 +168,7 @@ Water:
 ## 6. Built so far
 
 `worlds/story/` (Adventure menu → World: Story), 18 rooms, jump only:
-Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
+Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (stamina block on a roof).
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
 Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, four spike hits, gated exits), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in Jungle Hills' floor → Jungle Depths; roots cover it until the Ape is beaten. Leaving the arena on the left (floor-level opening), the Ape follows you leftward through Jungle Hills until the big trunk's low hollow stops it, just short of the hole (`ape_chase` with `dir: -1`, `after`) → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
@@ -173,22 +180,22 @@ Roar Tunnel plays a one-shot stereo roar from the left, with cave reflections. N
 
 - 2026-10-24: the story world starts with **jump only**. Dash, climb and attack are adventure abilities unlocked by orbs (`Game.has_ability`).
 - 2026-10-24: the big jump gets nothing for now. It stays uncrossable until dash comes from a later level.
-- 2026-10-24: water drains energy (0.05 every 0.1 s, no regeneration in water); out of energy in water = death.
+- 2026-10-24: water drains stamina (0.05 every 0.1 s, no regeneration in water); out of stamina in water = death.
 - 2026-10-24: water drain raised 10x, to 0.5 every 0.1 s (5 per second).
 - 2026-10-24: water drain doubled to 1 every 0.1 s (10 per second); the waterfall pull is softer (jumps rise, less).
 - 2026-10-24: water drain doubled again, to 2 every 0.1 s (20 per second).
-- 2026-10-24: water drain set to 80% of that: 1.6 every 0.1 s (16 per second). No energy, no jump. Jump cost lowered to 5.
+- 2026-10-24: water drain set to 80% of that: 1.6 every 0.1 s (16 per second). No stamina, no jump. Jump cost lowered to 5.
 - 2026-10-24: water drain raised 30%, to 2.08 every 0.1 s (20.8 per second).
-- 2026-10-24: an energy block adds 75 (was 100); a hit still costs 100.
+- 2026-10-24: an stamina block adds 75 (was 100); a hit still costs 100.
 - 2026-10-24: waterfall blocks (my reading of the brief): falling water the player can walk through but not jump up; it pushes them down.
 - 2026-10-24 (superseded by tree removal below): Ape arena reworked: you meet the Ape first, on your side of the pit. Get past it, stand past the tree, and its stone or leap fells the tree across the pit; it follows you over for the spike phase.
-- 2026-10-24 (tree setup superseded below): Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards energy drops to 5 and an energy orb appears. The power-up reward is still open.
-- 2026-10-24: the run starts with a base of 50 energy that always regenerates; energy blocks add 100 each. A jump needs its 5.
+- 2026-10-24 (tree setup superseded below): Ape fight built. Walking past the trunk wakes it; standing behind the trunk baits the stone that fells it. Stones are 2x2 units with the sprite the same size as the hitbox. Exits are sealed until it's beaten; afterwards stamina drops to 5 and an stamina orb appears. The power-up reward is still open.
+- 2026-10-24: the run starts with a base of 50 stamina that always regenerates; stamina blocks add 100 each. A jump needs its 5.
 - 2026-10-24: Ape arena 70% as wide (56 tiles); entering, the player is walked off the ledge into it and the entrance shuts until the Ape is beaten. Sand Cave, Shore and Lighthouse Top moved 24 tiles left to stay attached.
 - 2026-10-24: the lighthouse reworked: a solid tower on the shore with a house door at its foot, an inside room (Lighthouse Stairs, two screens of zigzag platforms) and a door at the top onto the gallery where the silent village is.
 - 2026-10-24: Cove Town's houses open: house doors (stand at one, press up) lead to the Villager's House and the Quest Giver's House, where the NPCs will live (notes for now).
 - 2026-10-24: the death counter counts every respawn, including hits that only cost a spare block.
-- 2026-10-24: energy built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills energy.
+- 2026-10-24: stamina built first. A hit with a block to spare costs the block and respawns the player at the room's spawn, like Hollow Knight's hazard respawn; the last block is a death and refills stamina.
 
 - 2026-10-24: the Ape's contact hitbox is one rectangle, 24x24 centred (a bit larger than the head-contour bands it replaced).
 - 2026-10-24: Removed the arena tree puzzle and bridge pit, unified the leap range, reduced body-contact bounds to 22×22 with a head contour, and made scream collision circular (40px radius).
@@ -200,7 +207,7 @@ Design: `docs/reviews/eastern-island/`. Generator: `tools/story/gen_island.py` (
 - Shores: West (arrival), North (up a ladder; a star on a cliff), South (down through a crust; a star), East.
 - Volcano: Foothills, Volcano Ascent (narrow, two screens tall), Crater (lava pools), East Slope down to the East Shore.
 - Under the volcano: Sea Cave, Junction, Flooded Hall (deep water crossed on stone pillars while rocks fall from the
-  ceiling: `rockfall`), Echo Gallery, Lower Maze, Vent Shaft, Quiet Refuge (energy orb), Guardian Chamber (40x46).
+  ceiling: `rockfall`), Echo Gallery, Lower Maze, Vent Shaft, Quiet Refuge (stamina orb), Guardian Chamber (40x46).
   Optional: Crystal Pocket (a star).
 - Jump only. Vertical links are shafts of jump-throughs 3 rows apart; a crust (jump-through flush with a floor)
   drops through with down + jump. `tests/test_island.py`: every room and star reachable, far rooms lead back.
@@ -212,10 +219,10 @@ Design: `docs/reviews/eastern-island/`. Generator: `tools/story/gen_island.py` (
 ## 8. Open questions
 
 1. Which later level gives dash, so the big jump (section 1.2) can be crossed.
-2. Energy thresholds for each unlock (+10% jump, attack, abilities).
-3. Energy icon to use instead of hearts.
+2. Stamina thresholds for each unlock (+10% jump, attack, abilities).
+3. Stamina icon to use instead of hearts.
 4. Where the Treetop Village leads.
 5. How the two branches meet again, if they do.
 6. Wall grab costs 20 or 30 per second?
-7. How much energy collectibles restore (the energy orb refills everything for now).
+7. How much stamina collectibles restore (the stamina orb refills everything for now).
 

@@ -39,7 +39,7 @@ static func build(kind: String, pose: String, frame: int, variant: int) -> Image
 	frame = posmod(frame, 4)
 	match kind:
 		"serpent": return serpent(pose, frame)
-		"elf", "mage": return person(kind, pose, frame, posmod(variant, 3))
+		"elf", "mage": return person(kind, pose, frame, posmod(variant, 5))
 		"rock", "rock_warning", "rock_impact", "eruption", "vent": return effect(kind, pose, frame)
 		"landmark": return landmark(posmod(variant, 3))
 		"raft": return raft(frame)
@@ -103,48 +103,71 @@ static func serpent(pose: String, frame: int) -> Image:
 		box(img, 5+frame*2, 50, 5, 2, body)
 	return img
 
+# Native 16px cells like Nori: silhouettes vary by a few pixels, never by scaling.
 static func person(kind: String, pose: String, frame: int, variant: int) -> Image:
-	var img := canvas(16, 24)
-	var cloth: Color = [Color("557954"), Color("9a754d"), Color("648f85")][variant] if kind == "elf" else [Color("5d648f"), Color("8c687f"), Color("728690")][variant]
-	var hair: Color = [Color("c8ad73"), Color("563e38"), Color("c3c2b4")][variant]
-	var skin := Color("dfaf82") if variant != 1 else Color("b68161")
+	var img := canvas(16, 16)
+	var elf := kind == "elf"
+	var cloth: Color = [Color("648563"), Color("76805a"), Color("55786b"), Color("81916b"), Color("628476")][variant] if elf else [Color("676e91"), Color("777491"), Color("677e91"), Color("7d7599"), Color("687c89")][variant]
+	var hair: Color = [Color("c5a675"), Color("745744"), Color("b9b6a0"), Color("ad875d"), Color("786855")][variant]
+	var skin: Color = [Color("e3b48e"), Color("c08c6a"), Color("dfaf87"), Color("d7a47d"), Color("bd9275")][variant]
+	var height: int = [12, 13, 14, 11, 13][variant] if elf else [14, 13, 15, 12, 14][variant]
+	var top := 16-height
 	var bob := 1 if pose in ["talk", "walk"] and frame%2 else 0
 	var step: int = [-1, 0, 1, 0][frame] if pose == "walk" else 0
-	# Stable bottom anchor, separate feet even beneath the mage's robe.
-	box(img, 5-step, 21, 3, 3, INK); box(img, 9+step, 21, 3, 3, INK)
-	if kind == "elf":
-		poly(img, [[5,11+bob],[11,11+bob],[13,20],[10,21],[8,19],[5,21],[3,20]], INK)
-		poly(img, [[6,12+bob],[10,12+bob],[11,19],[8,18],[5,19]], cloth)
-		box(img, 5, 16+bob, 7, 2, Color("705343"))
-		poly(img, [[4,7+bob],[0,5+bob],[2,10+bob],[5,11+bob]], skin)
-		poly(img, [[11,7+bob],[15,5+bob],[14,10+bob],[11,11+bob]], skin)
+	var head_y := top + (1 if elf else 3) + bob
+	var chest_y := head_y+4
+	# Two separate feet, same baseline as Nori. Clothing uses broad flat clusters.
+	box(img,5-step,14,2,2,INK); box(img,9+step,14,2,2,INK)
+	if elf:
+		box(img,5,chest_y,6,maxi(1,14-chest_y),cloth)
+		box(img,5,13,6,1,Color("796248"))
+		box(img,6,14,1,1,cloth); box(img,9,14,1,1,cloth)
+		# Pointed ears remain readable at actual player scale.
+		box(img,3,head_y+1,2,1,skin); box(img,11,head_y,2 if variant%2 else 3,1,skin)
 	else:
-		poly(img, [[5,10+bob],[11,10+bob],[14,22],[2,22]], INK)
-		poly(img, [[6,11+bob],[10,11+bob],[12,21],[4,21]], cloth)
-		box(img, 7, 13+bob, 2, 8-bob, GOLD)
-	# Head, flat hair cap, a single profile eye and clear ears/hood.
-	box(img, 4, 4+bob, 8, 8, INK)
-	box(img, 5, 6+bob, 7, 5, skin)
-	box(img, 4, 4+bob, 8, 3, hair)
-	box(img, 4, 6+bob, 2, 5, hair)
-	box(img, 10, 8+bob, 1, 1, INK)
-	if pose == "idle" and frame == 3: box(img, 10, 8+bob, 1, 1, skin)
-	if kind == "elf":
-		poly(img, [[4,5+bob],[5,1+bob],[11,3+bob],[13,6+bob]], cloth)
-		box(img, 7, 3+bob, 3, 1, GOLD)
+		poly(img,[[5,chest_y],[10,chest_y],[12,15],[4,15]],cloth)
+		box(img,7,chest_y,1,maxi(1,15-chest_y),GOLD)
+		# Individuals carry different staff heads, or a book instead.
+		if variant != 1:
+			box(img,2,head_y+3,1,13-head_y,Color("ae9067"))
+			box(img,1,head_y+2,3,1,GOLD if frame%2 else Color("b4abc7"))
+		else:
+			box(img,2,12,3,3,INK); box(img,3,12,2,2,GOLD)
+	box(img,5,head_y,6,4,skin)
+	box(img,4,head_y,2,4,hair)
+	box(img,5,head_y-1,5,1,hair)
+	box(img,10,head_y+1,1,1,skin if pose == "idle" and frame == 3 else INK)
+	if elf:
+		match variant:
+			0: # swept leaf cap
+				poly(img,[[4,head_y],[6,top],[10,top+1],[11,head_y+1]],cloth)
+			1: # short ponytail and a low cap
+				box(img,3,head_y+2,1,4,hair); box(img,5,top,5,1,cloth)
+			2: # narrow hood with a single leaf tip
+				box(img,4,head_y-1,1,5,cloth); box(img,6,top,2,1,cloth)
+			3: # shorter, uncovered tousled hair
+				box(img,6,top,2,1,hair); box(img,9,top+1,2,1,hair)
+			4: # longer braid and a small pale scarf
+				box(img,3,head_y+2,1,5,hair); box(img,5,chest_y,5,1,GOLD)
 	else:
-		poly(img, [[3,6+bob],[5,3+bob],[7,0+bob],[10,3+bob],[12,6+bob]], cloth)
-		box(img, 2, 6+bob, 12, 2, INK)
-		box(img, 3, 6+bob, 10, 1, cloth)
-		if variant == 2: box(img, 7, 10+bob, 4, 3, hair)
-	var hand_y := 14+bob
-	if pose == "gesture": hand_y = 9 + frame%2
-	box(img, 11, hand_y, 3, 3, cloth)
-	box(img, 13, hand_y, 2, 2, skin)
-	if pose == "talk": box(img, 10, 10+bob, 2, 1, INK if frame%2 else skin)
-	if kind == "mage":
-		box(img, 1, 11, 1, 12, Color("a18261"))
-		box(img, 0, 10, 3, 2, GOLD if frame%2 else Color("aa97c1"))
+		match variant:
+			0: # pointed hat
+				poly(img,[[4,head_y],[7,top],[10,head_y]],cloth)
+				box(img,3,head_y,9,1,INK)
+			1: # folded hood, book holder
+				box(img,4,top+1,7,2,cloth); box(img,4,head_y,1,4,cloth)
+			2: # taller bent hat and short beard
+				poly(img,[[4,head_y],[7,top],[10,top],[8,top+1],[10,head_y]],cloth)
+				box(img,7,head_y+3,3,2,Color("c8c5b5"))
+			3: # short hat, short cloak
+				box(img,5,top+1,5,2,cloth); box(img,4,head_y,8,1,cloth)
+			4: # broad brim, asymmetrical shoulder wrap
+				box(img,5,top+1,4,2,cloth); box(img,3,head_y,10,1,INK)
+				box(img,4,chest_y,4,1,Color("aba3b7"))
+	var hand_y := mini(13,chest_y+1)
+	if pose == "gesture": hand_y = head_y+1+frame%2
+	box(img,11,hand_y,2,1,skin)
+	if pose == "talk" and frame%2: box(img,10,head_y+3,1,1,INK)
 	return img
 
 static func effect(kind: String, pose: String, frame: int) -> Image:

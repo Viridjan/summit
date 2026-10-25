@@ -125,36 +125,36 @@
 		{
 			"t": "village_elf",
 			"x": 96,
-			"y": 136,
+			"y": 144,
 			"variant": 0,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_elf",
 			"x": 248,
-			"y": 136,
+			"y": 144,
 			"variant": 1,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_elf",
 			"x": 376,
-			"y": 136,
+			"y": 144,
 			"variant": 2,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_elf",
 			"x": 488,
-			"y": 136,
-			"variant": 0,
+			"y": 144,
+			"variant": 3,
 			"art_tag": "regions-v1"
 		},
 		{
 			"t": "village_elf",
 			"x": 584,
-			"y": 136,
-			"variant": 1,
+			"y": 144,
+			"variant": 4,
 			"art_tag": "regions-v1"
 		}
 	]

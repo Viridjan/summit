@@ -33,7 +33,7 @@ const LIVE_HELP := {
 	"speed": "Velocity x, y in px/s (negative y = up).",
 	"facing": "1 = right, -1 = left.",
 	"dashes": "Dashes left before touching the ground or a crystal.",
-	"stamina": "Climbing stamina; drains while grabbing walls, refills on the ground.",
+	"stamina": "Climbing stamina (climb units). In the adventure it is the stamina bar itself; elsewhere a climb meter that refills on the ground.",
 	"on_ground": "Standing on something solid this frame.",
 	"on_safe_ground": "Standing on ground that banks following stars (not crumbling/moving blocks).",
 	"ducking": "Crouched (smaller hitbox).",
@@ -413,7 +413,7 @@ class StateGraph extends Control:
 		"Launch: thrown by a bumper; air control is reduced until speed drops.",
 		"Dream Dash: dashing through a dream block, moving straight until you exit.",
 		"Star Fly: feather flight; steer freely until the timer runs out.",
-		"Normal (Underwater): replaces Normal while the player's centre is in water. No walking on the floor (it moves as mid-water) and no normal jump: Jumping (Underwater) is a weaker stroke, from the floor or mid-water, every time jump is pressed. Slow sinking; dash still works; energy drains (adventure).",
+		"Normal (Underwater): replaces Normal while the player's centre is in water. No walking on the floor (it moves as mid-water) and no normal jump: Jumping (Underwater) is a weaker stroke, from the floor or mid-water, every time jump is pressed. Slow sinking; dash still works; stamina drains (adventure).",
 	]
 	# Layers run on top of the state machine (rows under it, lit while active), not states: [name, help].
 	const LAYERS := [

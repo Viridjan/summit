@@ -125,7 +125,7 @@ c.ent("note", 101, 5, text="Dead end")
 c.ent("note", 151, 6, text="Dead end")
 c.ent("strawberry", 82, 39)
 
-# 4. Cove town: two NPCs, the second energy block, a quest
+# 4. Cove town: two NPCs, the second stamina block, a quest
 t = Room("t1_cove_town", "Cove Town", 40, 23, "sea")
 t.solid(0, G, 39, 22); t.solid(0, 0, 0, 15); t.solid(39, 0, 39, 14)  # right edge rows 15..18 lead into the jungle
 t.ents.append({"t": "jumpthru", "x": 8 * T, "y": 15 * T, "w": 6 * T, "h": 8})   # roof
@@ -133,8 +133,8 @@ t.ents.append({"t": "jumpthru", "x": 18 * T, "y": 15 * T, "w": 6 * T, "h": 8})  
 t.building(8, 14, 6, 5, "house"); t.building(18, 14, 6, 5, "house")  # backdrops, not walls
 t.open(30, G, 37, 20); t.water(30, G, 37, 20)    # the sea, ending a tile short of the jungle exit (flat entrance)
 t.ent("spawn", 2, 18)
-t.ent("energy_orb", 5, 17)
-t.ent("energy_block", 20, 13)
+t.ent("stamina_orb", 5, 17)
+t.ent("stamina_block", 20, 13)
 t.ents.append({"t": "house_door", "x": 10 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h1", "to": "h1_villager_house:out"})
 t.ents.append({"t": "house_door", "x": 20 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h2", "to": "h2_quest_house:out"})
 
@@ -216,11 +216,11 @@ a1b = Room("a1_ape_arena_after", "Ape Arena", AW, 23, "forest", fill="1")
 a1b.g = [row[:] for row in a1.g]  # ponytail: ignored at runtime (the base room's tiles are used), kept valid
 for y in range(5, 9): a1b.ent("spikes_right", 1, y)
 for y in range(4, 9): a1b.ent("spikes_left", AW - 2, y)
-a1b.ent("energy_orb", AW - 8, 16)
+a1b.ent("stamina_orb", AW - 8, 16)
 
 # Right branch: a long sand cave climbing at about 14 degrees (30 rows over 120 columns), then the shore and the
 # lighthouse. Jump-only challenges (no abilities yet), with the beaten Ape chasing the player up it.
-# The climb is 15 steps 2 tiles high (each costs one jump: 5 energy), with flats between them for the challenges.
+# The climb is 15 steps 2 tiles high (each costs one jump: 5 stamina), with flats between them for the challenges.
 SW = 120
 s1 = Room("s1_sand_cave", "Sand Cave", SW, 46, "sand", fill="1")
 STEPS = [(k * SW + 8) // 16 for k in range(1, 16)]  # first column of each step: 8, 15, 23 ... 113
@@ -250,7 +250,7 @@ for hx in (32, 47, 62, 70, 85):  # hanging rock: the player runs under it, the c
 # The Ape stops at "end": the ceiling just ahead of it caves in ("seal"), for good. Overtaking the player kills.
 s1.ents.append({"t": "ape_chase", "x": 0, "y": top[0] * T - 32, "trigger": 12 * T, "end": 99 * T,
                 "seal": [102 * T, (top[102] - 7) * T, 2 * T, 7 * T]})
-s1.ent("note", 116, top[116] - 1, text="Reward: the sword (not built yet; needs 2 energy blocks to use)")
+s1.ent("note", 116, top[116] - 1, text="Reward: the sword (not built yet; needs 2 stamina blocks to use)")
 
 s2 = Room("s2_shore", "Shore", 80, 23, "sea")
 s2.solid(0, 9, 14, 22); s2.solid(0, 0, 0, 0)  # the cliff we come out on, the mountain's foot

@@ -50,9 +50,9 @@ const TYPES := {
 	"ability_dash": ["Dash Ability", false, Color("ff7a3a"), AbilityOrb],
 	"ability_climb": ["Climb Ability", false, Color("3ad0ff"), AbilityOrb],
 	"ability_attack": ["Attack Ability", false, Color("e8e8e8"), AbilityOrb],
-	# adventure energy (docs/STORY_DESIGN.md): a new block once per run; an orb that refills energy
-	"energy_block": ["Energy Block", false, Color("7cf0c0"), EnergyBlock],
-	"energy_orb": ["Energy Orb", false, Color("b8ffe0"), EnergyOrb],
+	# adventure stamina (docs/STORY_DESIGN.md): a new block once per run; an orb that refills stamina
+	"stamina_block": ["Stamina Block", false, Color("7cf0c0"), StaminaBlock],
+	"stamina_orb": ["Stamina Orb", false, Color("b8ffe0"), StaminaOrb],
 	# door: drag its size; "id" names it, "to" = "room:id" (or just "id" in the same level) is where it leads.
 	# Links rooms that don't touch (elevators, trams) or that sit behind a wall.
 	"door": ["Door", true, Color("40e0ff"), Door],
@@ -419,26 +419,26 @@ class AbilityOrb extends Ent:  # adventure pickup that unlocks a move for the re
 		ci.draw_rect(Rect2(c + Vector2(-1, -2), Vector2(2, 2)), Color.WHITE)
 
 
-# One-time adventure upgrade that increases energy capacity and records its room-specific pickup ID.
-class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
+# One-time adventure upgrade that increases stamina capacity and records its room-specific pickup ID.
+class StaminaBlock extends Ent:  # adventure: +1 stamina block, once per run
 	var key := ""
 	var t := 0.0
-	# Initialize EnergyBlock dimensions, collision flags and starting data before World uses the object.
+	# Initialize StaminaBlock dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 		if w != null:
 			key = "%s:%d:%d" % [w.room, int(d.x), int(d.y)]
-		collidable = w == null or (w.adventure() and not w.energy_block_taken(key))
-	# Advance EnergyBlock timers and behavior for dt seconds; this is called by World, not by Godot automatically.
+		collidable = w == null or (w.adventure() and not w.stamina_block_taken(key))
+	# Advance StaminaBlock timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
-	# Apply EnergyBlock interaction when World reports an overlapping player.
+	# Apply StaminaBlock interaction when World reports an overlapping player.
 	func touch(_p) -> void:
 		collidable = false
-		w.add_energy_block(key)
+		w.add_stamina_block(key)
 		w.freeze_for(0.1)
 		w.burst(center(), TYPES[d.t][2], 14)
-	# Draw EnergyBlock at its current pose; this must also work for an editor preview with no World.
+	# Draw StaminaBlock at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -449,25 +449,25 @@ class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
 		ci.draw_rect(Rect2(c - Vector2(6.5, 6.5), Vector2(13, 13)).grow(sin(t * 4)), Color(col, 0.5), false, 1.0)
 
 
-# ponytail: refills all energy; collectibles that restore part of it come with the energy design
-# Reusable adventure energy refill with a delay before it becomes available again.
-class EnergyOrb extends Ent:  # adventure: refills energy, back after 2.5 s
+# ponytail: refills all stamina; collectibles that restore part of it come with the stamina design
+# Reusable adventure stamina refill with a delay before it becomes available again.
+class StaminaOrb extends Ent:  # adventure: refills stamina, back after 2.5 s
 	var t := 0.0
-	# Initialize EnergyOrb dimensions, collision flags and starting data before World uses the object.
+	# Initialize StaminaOrb dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 1, rect.position.y - 1, 10, 10)  # exactly the sprite
-	# Advance EnergyOrb timers and behavior for dt seconds; this is called by World, not by Godot automatically.
+	# Advance StaminaOrb timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
 			respawn -= dt
-	# Apply EnergyOrb interaction when World reports an overlapping player.
+	# Apply StaminaOrb interaction when World reports an overlapping player.
 	func touch(_p) -> void:
-		if respawn <= 0 and w.adventure() and Game.adv.energy < Game.Adventure.energy_max(Game.adv):
-			w.refill_energy()
+		if respawn <= 0 and w.adventure() and Game.adv.stamina < Game.Adventure.stamina_max(Game.adv):
+			w.refill_stamina()
 			respawn = 2.5
 			w.burst(center(), TYPES[d.t][2], 8)
-	# Draw EnergyOrb at its current pose; this must also work for an editor preview with no World.
+	# Draw StaminaOrb at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var col: Color = TYPES[d.t][2] if respawn <= 0 else Color(0.3, 0.3, 0.4)
 		var c := center() + Vector2(0, round(sin(t * 3)))
@@ -1243,8 +1243,8 @@ class MurksporeEnemy extends CombatEnemy:
 			ci.draw_circle(orb[0].round(), 1.2, Color("f0d8ff"))
 
 
-# Water/acid region. Water drains adventure energy; acid is a lethal contact surface.
-class Liquid extends Ent:  # water: drains adventure energy (World.update_energy); acid: kills on touch (like spikes)
+# Water/acid region. Water drains adventure stamina; acid is a lethal contact surface.
+class Liquid extends Ent:  # water: drains adventure stamina (World.update_stamina); acid: kills on touch (like spikes)
 	# Report whether Liquid currently participates in lethal contact checks.
 	func hurts() -> bool: return d.t == "acid"
 	# Initialize Liquid dimensions, collision flags and starting data before World uses the object.
@@ -2076,7 +2076,7 @@ class AutoWalk extends Ent:
 # the standing trunk fells it. Landing on spikes is a hit: it screams, leaps again, the spikes in its range
 # crumble and the next patch appears (d.spikes, one list per hit: [x, y, count] in px; author them on the
 # other side). Four hits (HP) beat it: the exits open, the
-# an energy orb appears (d.orb).
+# an stamina orb appears (d.orb).
 # Arena boss: choose a stone throw, leap/slam or scream according to player distance and fight state.
 class Ape extends Ent:
 	const HP := 4
@@ -2091,10 +2091,10 @@ class Ape extends Ent:
 	const SLAM_REACH := 14  # landing shockwave (60 px wide in all): this far out on both sides, along the ground
 	const SLAM_HEIGHT := 8
 	const SLAM_TIME := 0.2
-	const FAR := 96.0  # throw beyond this (radial, centre to centre, px); leap between NEAR and FAR; scream within NEAR
+	const THROW_CHANCE := 0.2  # each attack: a stone throw at random; otherwise distance picks scream or leap
 	const NEAR := 44.0
 	const WAKE := 220.0
-	const PAUSE := 0.85  # idle waits between attacks are scaled by this
+	const PAUSE := 0.765  # idle waits between attacks are scaled by this (0.85, then 10% less)
 	const ENRAGED_HP := HP - 2  # from 2 hits on: stones split, screams add 2 hops in place
 	const HOP_SCALE := [1.7, 1.3]  # shockwave width of the 2nd and 1st hop (indexed by hops left)
 	const LOG := Vector2i(19, 6)  # 20% smaller than the first 24x8
@@ -2109,6 +2109,7 @@ class Ape extends Ent:
 	var stage := 0
 	var then_slam := false
 	var hops := 0  # in-place hops still to do after an enraged scream
+	var throw_chance := THROW_CHANCE  # tests pin it to 0 or 1
 	var slam_scale := 1.0
 	var logs: Array = []  # [top-left, vy, wait]
 	var stones: Array = []  # [centre, velocity, size]
@@ -2211,11 +2212,11 @@ class Ape extends Ent:
 						_go("crouch", 0.45)
 					elif p.center().x < r.x or p.center().x > r.y:  # player out of its reach (past the trunk): leap at them
 						_go("crouch", 0.45)
+					elif randf() < throw_chance:
+						_go("throw", 0.7)
 					elif absf(p.center().y - center().y) > absf(dx):  # player above or below (steeper than 45 degrees): leap
 						_go("crouch", 0.45)
-					elif dist > FAR:
-						_go("throw", 0.7)
-					elif dist > NEAR:
+					elif dist > NEAR or _cornered(p):
 						_go("crouch", 0.45)
 					else:
 						_go("scream", 0.5)
@@ -2262,6 +2263,16 @@ class Ape extends Ent:
 			"dying":
 				if timer <= 0:
 					_beaten()
+	# The player is between the Ape and a wall, and the scream would cover all the floor up to that wall: no way to
+	# dodge it, so it leaps instead.
+	func _cornered(p) -> bool:
+		var side := signf(p.center().x - center().x)
+		var c := center()
+		var x := c.x
+		while absf(x - c.x) <= scream_radius() and w.collide_solid(Rect2i(int(x), int(c.y), 1, 1)) == null:
+			x += side
+		return absf(x - c.x) <= scream_radius()
+
 	# Change the boss phase and set its duration, emitting the appropriate one-time attack cue.
 	func _go(ph: String, t: float) -> void:
 		if ph == "scream":
@@ -2357,7 +2368,7 @@ class Ape extends Ent:
 		w.break_wall(id)
 		w.shake_dir(Vector2.ZERO, 0.4)
 		if d.has("orb"):
-			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
+			w.spawn_entity({"t": "stamina_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
 	# Rebuilt after a death in the room it was beaten in: the spikes go back to how the fight left them, the orb too.
 	func _restore_aftermath() -> void:
 		restored = true
@@ -2372,12 +2383,12 @@ class Ape extends Ent:
 			if not have.has(str(k)):
 				w.spawn_entity({"t": k[0], "x": k[1], "y": k[2]})
 		if d.has("orb"):
-			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
+			w.spawn_entity({"t": "stamina_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
 	# Hitbox overlay (F2): how it picks its attack, by the straight-line distance from its centre to the player's.
 	func _draw_ranges(ci: CanvasItem) -> void:
 		var c := center()
 		var font := ThemeDB.fallback_font
-		for b in [[NEAR, "scream", Color(1, 0.35, 0.3)], [FAR, "leap", Color(1, 0.8, 0.3)], [WAKE, "throw / wake", Color(0.4, 0.75, 1)]]:
+		for b in [[NEAR, "scream (else leap; 20% throw)", Color(1, 0.35, 0.3)], [WAKE, "wake", Color(0.4, 0.75, 1)]]:
 			ci.draw_arc(c, b[0], 0.0, TAU, 96, Color(b[2], 0.7), 1.0)
 			ci.draw_string(font, c + Vector2(-12.0, -b[0] + 7.0), "%s %d" % [b[1], b[0]], HORIZONTAL_ALIGNMENT_LEFT, -1, 6, b[2])
 		for d in [Vector2(1, 1), Vector2(-1, 1)]:  # above/below these diagonals it always leaps
@@ -2834,7 +2845,7 @@ class ChaseRunner extends "res://scripts/player.gd":
 
 
 # What the chasing Ape's runner sees of the world: the same collision, none of the player's side effects
-# (energy, sounds, dust, touches, deaths, room exits).
+# (stamina, sounds, dust, touches, deaths, room exits).
 # Collision adapter for the planner. It borrows real terrain but disables gameplay side effects.
 class ChaseWorld:
 	var real
@@ -2887,4 +2898,4 @@ class ChaseWorld:
 	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func on_player_death(_p, _dir: Vector2) -> void: pass
 	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
-	func drain_energy(_amount: float) -> void: pass
+	func drain_stamina(_amount: float, _why := "") -> void: pass

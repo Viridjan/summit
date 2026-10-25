@@ -381,3 +381,7 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Ape arena left exit at floor level (the high doorway is closed; Jungle Hills' right ledge lowered). The hole to Jungle Depths is covered (boss_gate "until") until the Ape is beaten; then leaving the arena left, the Ape chases leftward (ApeChase dir -1, after) and stops at the big trunk.
 - 2026-10-25: F3 energy panel gets a recap: per cause, how often (or how long) and how much energy since the level started, plus total spent/gained.
 - 2026-10-25: Fix: F3 energy panel was placed off-screen (position instead of top-right offsets).
+- 2026-10-25: All energy values doubled (whole numbers): base 40, block +20, regen 12/s, water 41.6/s, jump 5; HUD bar 0.46 px per energy (same look).
+- 2026-10-25: Wall jumps (and super wall jumps) cost a jump's energy (5) and need it; climb jumps already did.
+- 2026-10-25: Ape attacks: a stone throw at random on 20% of attacks; otherwise distance picks scream (<= 44 px) or leap. No scream when the player is cornered against a wall the scream would fully reach (it leaps). Idle waits 10% shorter (x0.765 overall).
+- 2026-10-25: Energy renamed stamina everywhere (code, level types stamina_block / stamina_orb, F3 stamina_panel, action stamina_debug; old saves' "energy" read as stamina). Regen = k x 12/s with k 0.5 empty -> 1 at half -> 0.75 full. Water drain 40/s. Climbing merged into the stamina bar in the adventure (a full base bar = a full climb meter; no regen on the wall; ground/crystal climb refills don't fill it); editor levels keep the separate climb meter.

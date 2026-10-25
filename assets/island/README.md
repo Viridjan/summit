@@ -16,7 +16,7 @@ atlas has four frame columns; rows are grouped first by appearance, then pose.
 | Rock warning / impact | 24×8 / 32×16 | four warning / breakup frames |
 | Eruption | 24×32 | four fire-column frames |
 | Vent | 16×8 | intact, broken |
-| Elf / mage | 16×24 | idle, walk, talk, gesture; three appearances each |
+| Elf / mage | 16×16 | idle, walk, talk, gesture; five appearances each |
 | Landmark | 32×32 | split rock, crystal group, root arch (three variants) |
 | Raft | 48×24 | four sail frames |
 | Mirror / beacon | 24×24 / 24×32 | mirror; animated magical flame |
@@ -31,6 +31,9 @@ atlas has four frame columns; rows are grouped first by appearance, then pose.
   falling-rock pack is exported for a future dedicated rockfall hazard;
   no new rockfall gameplay was added. Warning and impact assets are available.
 - Five elves inhabit Treetop Village and five mages inhabit Lighthouse Top.
+  Their visible heights range from 11–15 pixels, close to Nori's 12-pixel
+  standing height. Each has different headwear/hair, proportions and small
+  accessories, as well as subtle palette changes; they share a foot baseline.
   These are animated decorative entities. Walking/talking/gesture rows are
   available, but default placements idle. No dialogue, quests or pathfinding
   were added. Magic flame and mirror are visual props, not a mirror puzzle.

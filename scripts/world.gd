@@ -49,7 +49,7 @@ const HITBOX_KEY := [
 	["Attack swing", Color(0.55, 0.8, 1, 0.9)],
 ]
 
-# On-screen HUD: energy (top left), area name (top centre), timer and deaths (top right).
+# On-screen HUD: stamina (top left), area name (top centre), timer and deaths (top right).
 # Draws black bars around the fixed game view when the window has extra screen space.
 class Letterbox extends Control:
 	# Read the chosen level, build the playable room and interface, then prepare music and neighboring terrain.
@@ -74,8 +74,8 @@ class Hud extends Control:
 	const SKULL := ["  ####  ", " ###### ", "##.##.##", "########", " ##..## ", "  # # # "]  # 8x6, "." = eye/nose holes
 	var world
 
-	# Energy bar colour by how full the whole bar is: red when empty, yellow at half, mint when full.
-	# Choose the HUD energy-bar color from its remaining percentage.
+	# Stamina bar colour by how full the whole bar is: red when empty, yellow at half, mint when full.
+	# Choose the HUD stamina-bar color from its remaining percentage.
 	static func bar_color(pct: float) -> Color:
 		pct = clampf(pct, 0.0, 1.0)
 		if pct < 0.5:
@@ -83,11 +83,11 @@ class Hud extends Control:
 		return Color("ffd84a").lerp(Color("7cf0c0"), pct * 2.0 - 1.0)
 
 	# Fill of each bar, 0..1: the base first, then one per extra block.
-	# Convert current energy into the per-block fill values used by the HUD.
-	static func block_fills(energy: float, blocks: int) -> Array:
-		var out := [clampf(energy / Adventure.BASE_ENERGY, 0.0, 1.0)]
+	# Convert current stamina into the per-block fill values used by the HUD.
+	static func block_fills(stamina: float, blocks: int) -> Array:
+		var out := [clampf(stamina / Adventure.BASE_STAMINA, 0.0, 1.0)]
 		for i in blocks - 1:
-			out.append(clampf((energy - Adventure.BASE_ENERGY - i * Adventure.ENERGY_PER_BLOCK) / Adventure.ENERGY_PER_BLOCK, 0.0, 1.0))
+			out.append(clampf((stamina - Adventure.BASE_STAMINA - i * Adventure.STAMINA_PER_BLOCK) / Adventure.STAMINA_PER_BLOCK, 0.0, 1.0))
 		return out
 
 	# Draw a small HUD text item with consistent font/position settings.
@@ -101,18 +101,18 @@ class Hud extends Control:
 		var w = world
 		var sz := get_viewport_rect().size
 		var y := M
-		# top left: energy (adventure) as a bolt and one bar per block, then the stars
+		# top left: stamina (adventure) as a bolt and one bar per block, then the stars
 		if w.adventure():
 			var bolt := PackedVector2Array(BOLT.map(func(p): return p + Vector2(M, y)))
 			draw_colored_polygon(bolt, Color("ffd84a"))
 			draw_polyline(bolt + PackedVector2Array([bolt[0]]), Color.BLACK, 2.0)
-			var col := bar_color(Game.adv.energy / Adventure.energy_max(Game.adv))
+			var col := bar_color(Game.adv.stamina / Adventure.stamina_max(Game.adv))
 			var x := M + 26.0
-			var fills := block_fills(Game.adv.energy, int(Game.adv.blocks))
+			var fills := block_fills(Game.adv.stamina, int(Game.adv.blocks))
 			for i in fills.size():
 				var f: float = fills[i]
-				var cap: float = Adventure.BASE_ENERGY if i == 0 else Adventure.ENERGY_PER_BLOCK
-				var r := Rect2(x, y + 7, roundf(cap * 0.92), 14)  # bar width follows what it holds (0.92 px per energy)
+				var cap: float = Adventure.BASE_STAMINA if i == 0 else Adventure.STAMINA_PER_BLOCK
+				var r := Rect2(x, y + 7, roundf(cap * 0.46), 14)  # bar width follows what it holds (0.46 px per stamina)
 				draw_rect(r.grow(2), Color.BLACK)
 				draw_rect(r, Color(0.12, 0.15, 0.2))
 				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), col)
@@ -205,9 +205,9 @@ var done := false
 var ui: CanvasLayer
 var spawn_room := ""  # adventure: the room the respawn point (spawn) is in; another room when this one has no safe point
 var kept_spikes := {}  # room -> [[type, x, y]...]: spikes as a boss fight left them, kept for respawns until the room is left
-var energy_log: Array = []  # [time, cause, delta], newest first (F3 panel)
-var energy_totals := {}  # cause -> [times, total delta] since the level started (F3 recap); regen/water: [seconds, total]
-var energy_panel: Control
+var stamina_log: Array = []  # [time, cause, delta], newest first (F3 panel)
+var stamina_totals := {}  # cause -> [times, total delta] since the level started (F3 recap); regen/water: [seconds, total]
+var stamina_panel: Control
 var touch: Control  # phone controls, only on touchscreens
 var hud: Hud
 var note_label: Label  # design note under the player (entities.gd Note)
@@ -640,21 +640,23 @@ func show_note(text: String) -> void:
 	note_label.text = "Note: " + text
 	note_t = 0.1
 
-# Adventure energy: regenerates out of water; in water it drains, and running out there drowns the player.
-# Regenerate adventure energy outside water or drain it underwater, triggering drowning at zero.
-func update_energy(dt: float) -> void:
+# Adventure stamina: regenerates out of water; in water it drains, and running out there drowns the player.
+# Regenerate adventure stamina outside water or drain it underwater, triggering drowning at zero.
+func update_stamina(dt: float) -> void:
 	if not adventure() or player.dead:
 		return
-	var was: float = Game.adv.energy
+	var was: float = Game.adv.stamina
 	var why := "regen"
-	if not in_water():
-		Adventure.regen_energy(Game.adv, dt)
+	if player.state == player.ST_CLIMB:
+		why = "climbing"  # on the wall: no regeneration (the climb drains it)
+	elif not in_water():
+		Adventure.regen_stamina(Game.adv, dt)
 	else:
 		why = "water"
-		if not Adventure.water_energy(Game.adv, dt):
+		if not Adventure.water_stamina(Game.adv, dt):
 			player.die(Vector2.UP)
-	if Game.adv.energy != was:
-		_tally(why, Game.adv.energy - was, dt)
+	if Game.adv.stamina != was:
+		_tally(why, Game.adv.stamina - was, dt)
 
 # A respawn point is safe when the player standing there is out of water and acid, clear of spikes and on ground.
 func safe_spawn(p: Vector2) -> bool:
@@ -676,45 +678,45 @@ func liquid_at(r: Rect2i, t: String) -> bool:
 			return true
 	return false
 
-# Check the persistent pickup list before showing a one-time energy-capacity upgrade.
-func energy_block_taken(key: String) -> bool:
+# Check the persistent pickup list before showing a one-time stamina-capacity upgrade.
+func stamina_block_taken(key: String) -> bool:
 	return Game.adv.get("taken", []).has(key)
 
-# Increase energy capacity, record this pickup and save the updated run.
-func add_energy_block(key: String) -> void:
+# Increase stamina capacity, record this pickup and save the updated run.
+func add_stamina_block(key: String) -> void:
 	Game.play_sfx("unlock")
-	if adventure() and not energy_block_taken(key):
+	if adventure() and not stamina_block_taken(key):
 		Game.adv.taken.append(key)
-		Adventure.add_energy_block(Game.adv)
-		energy_event("energy block (+capacity)", Adventure.ENERGY_PER_BLOCK)
+		Adventure.add_stamina_block(Game.adv)
+		stamina_event("stamina block (+capacity)", Adventure.STAMINA_PER_BLOCK)
 		_save_run()
 
-# Spend adventure energy for an action; standalone levels have no adventure energy cost.
-func drain_energy(amount: float, why := "jump") -> void:
+# Spend adventure stamina for an action; standalone levels have no adventure stamina cost.
+func drain_stamina(amount: float, why := "jump") -> void:
 	if adventure():
-		var was: float = Game.adv.energy
-		Adventure.drain_energy(Game.adv, amount)
-		energy_event(why, Game.adv.energy - was)
+		var was: float = Game.adv.stamina
+		Adventure.drain_stamina(Game.adv, amount)
+		stamina_event(why, Game.adv.stamina - was)
 
-# Add to the F3 recap: how often (or how long) a cause changed energy, and by how much in all.
+# Add to the F3 recap: how often (or how long) a cause changed stamina, and by how much in all.
 func _tally(why: String, delta: float, amount: float) -> void:
-	var t: Array = energy_totals.get(why, [0.0, 0.0])
-	energy_totals[why] = [t[0] + amount, t[1] + delta]
+	var t: Array = stamina_totals.get(why, [0.0, 0.0])
+	stamina_totals[why] = [t[0] + amount, t[1] + delta]
 
-# Remember a one-off energy change and its cause, for the F3 energy panel (last few only).
-func energy_event(why: String, delta: float) -> void:
+# Remember a one-off stamina change and its cause, for the F3 stamina panel (last few only).
+func stamina_event(why: String, delta: float) -> void:
 	_tally(why, delta, 1.0)
-	energy_log.push_front([time, why, delta])
-	if energy_log.size() > 10:
-		energy_log.pop_back()
+	stamina_log.push_front([time, why, delta])
+	if stamina_log.size() > 10:
+		stamina_log.pop_back()
 
-# Restore adventure energy to the capacity determined by the current block count.
-func refill_energy() -> void:
+# Restore adventure stamina to the capacity determined by the current block count.
+func refill_stamina() -> void:
 	Game.play_sfx("refill")
 	if adventure():
-		var was: float = Game.adv.energy
-		Adventure.refill_energy(Game.adv)
-		energy_event("energy orb (refill)", Game.adv.energy - was)
+		var was: float = Game.adv.stamina
+		Adventure.refill_stamina(Game.adv)
+		stamina_event("stamina orb (refill)", Game.adv.stamina - was)
 
 # Unlock an adventure move once and save progress so it remains available after a room change.
 func grant_ability(a: String) -> void:
@@ -848,7 +850,7 @@ func burst(at: Vector2, col: Color, n: int) -> void:
 func add_trail(p) -> void:
 	trails.append([Rect2(p.hitbox()), p.hair_color(), 0.35])
 
-# Every hit is a death (a respawn); energy has nothing to do with it, and the respawn refills the base bar.
+# Every hit is a death (a respawn); stamina has nothing to do with it, and the respawn refills the base bar.
 # Count the death and start the short respawn delay.
 func on_player_death(p, _dir: Vector2) -> void:
 	deaths += 1
@@ -856,15 +858,15 @@ func on_player_death(p, _dir: Vector2) -> void:
 	burst(p.center(), p.hair_color(), 12)
 	shake_t = 0.3 if Game.settings.shake else 0.0
 
-# Rebuild the room (or go back to the last safe one) with the base energy bar full; extra blocks keep their energy.
+# Rebuild the room (or go back to the last safe one) with the base stamina bar full; extra blocks keep their stamina.
 func respawn() -> void:
 	Game.play_sfx("respawn")
 	if adventure() and spawn_room != room:  # this room has no safe point: back to the last one
 		enter_room(spawn_room, spawn)
 	_build()
-	if adventure() and Game.adv.energy < Adventure.BASE_ENERGY:
-		energy_event("respawn (base refill)", Adventure.BASE_ENERGY - Game.adv.energy)
-		Game.adv.energy = Adventure.BASE_ENERGY
+	if adventure() and Game.adv.stamina < Adventure.BASE_STAMINA:
+		stamina_event("respawn (base refill)", Adventure.BASE_STAMINA - Game.adv.stamina)
+		Game.adv.stamina = Adventure.BASE_STAMINA
 
 # Bank a following star, persist its ID and show its collection burst.
 func collect_berry(b) -> void:
@@ -899,15 +901,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_toggle_debug()
 		return
-	elif event.is_action_pressed("energy_debug"):
+	elif event.is_action_pressed("stamina_debug"):
 		get_viewport().set_input_as_handled()
-		if energy_panel != null:
-			energy_panel.queue_free()
-			energy_panel = null
+		if stamina_panel != null:
+			stamina_panel.queue_free()
+			stamina_panel = null
 		else:
-			energy_panel = load("res://scripts/energy_panel.gd").new()
-			energy_panel.world = self
-			ui.add_child(energy_panel)
+			stamina_panel = load("res://scripts/stamina_panel.gd").new()
+			stamina_panel.world = self
+			ui.add_child(stamina_panel)
 		return
 	elif event.is_action_pressed("hitboxes"):
 		get_viewport().set_input_as_handled()
@@ -949,7 +951,7 @@ func _physics_process(_delta: float) -> void:
 	else:
 		player.update(dt)
 		after_player_move()
-		update_energy(dt)
+		update_stamina(dt)
 	for e in ents:
 		e.update(dt)
 	for i in range(parts.size() - 1, -1, -1):

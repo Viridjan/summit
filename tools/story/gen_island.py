@@ -144,7 +144,7 @@ v.thru(9, 14, 26); v.thru(9, 14, 23)                         # back up to the lo
 
 r = room("i15_quiet_refuge", "Quiet Refuge", 24, 16, CAVE, 804, 108)
 r.open(1, 2, 22, 12); r.open(0, 9, 0, 12); r.open(23, 9, 23, 12)
-r.ent("energy_orb", 12, 11)
+r.ent("stamina_orb", 12, 11)
 
 # The Guardian: bait three eruptions onto the vent plugs (floor, middle ledge, high ledge). Jump-through rungs
 # link the tiers.

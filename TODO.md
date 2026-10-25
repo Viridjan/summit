@@ -8,16 +8,16 @@
 Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 
 ### Systems
-- [x] Energy as health: a base of 50 that always regenerates, blocks of 75 on top; a hit costs 100 (respawn), nothing left = death; regen 6/s (extra blocks only inside the current one) (`Adventure.*_energy`, HUD line, `energy_block` + `energy_orb` pickups)
+- [x] Stamina as health: a base of 50 that always regenerates, blocks of 75 on top; a hit costs 100 (respawn), nothing left = death; regen 6/s (extra blocks only inside the current one) (`Adventure.*_stamina`, HUD line, `stamina_block` + `stamina_orb` pickups)
 - [x] Attack is an adventure ability (`ability_attack` orb); existing worlds list it in their start abilities
 - [x] Story world starts with jump only (`worlds/story`, `"abilities": []`)
 - [ ] Big wavedash jump is a later gate (needs dash): decide which later level gives dash
-- [ ] Decide energy thresholds, then build the unlocks: +10% jump, attack, abilities
-- [x] Jump costs 5 energy and needs it (no jump with less; `Player.JUMP_ENERGY`, `Player.can_jump`)
-- [ ] Energy costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_energy`); decide wall grab 20 or 30/s
-- [ ] Energy orb refills everything for now; decide how much collectibles restore
-- [x] Water drains energy: 2.08 every 0.1 s, no regeneration in water; at 0 energy in water the player dies (`Adventure.water_energy`, `World.update_energy`)
-- [x] HUD: energy as a lightning bolt and one bar per block (top left, stars under it), area name (top centre), timer and deaths with a skull (top right)
+- [ ] Decide stamina thresholds, then build the unlocks: +10% jump, attack, abilities
+- [x] Jump costs 5 stamina and needs it (no jump with less; `Player.JUMP_STAMINA`, `Player.can_jump`)
+- [ ] Stamina costs: sword needs 200, swing 10, hit +15 (`Adventure.spend_stamina`); decide wall grab 20 or 30/s
+- [ ] Stamina orb refills everything for now; decide how much collectibles restore
+- [x] Water drains stamina: 2.08 every 0.1 s, no regeneration in water; at 0 stamina in water the player dies (`Adventure.water_stamina`, `World.update_stamina`)
+- [x] HUD: stamina as a lightning bolt and one bar per block (top left, stars under it), area name (top centre), timer and deaths with a skull (top right)
 - [ ] Interact button (keyboard, controller, touch)
 - [ ] NPC entity + dialogue box; "..." reply for silent NPCs
 - [ ] Quests and story flags (village quest gives a skill point; quest NPC unlocks the raft)
@@ -41,7 +41,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [x] Big wavedash jump (cone shape, tip up); uncrossable at the start, comes back when dash is unlocked (`m2_big_jump`, star on the far side)
 - [x] First lake and dark cave with dead-end tunnels (`c1_lake_cave`); Roar Tunnel plays a one-shot stereo cave roar from the left. Expanded with 4 rooms of their own: Roar Tunnel (left), Cave Teeth and Cove Tunnel (right), Deep Lake (below: a hole in the lake floor drops in, a jump-through shaft leads back up)
 - [x] Cove Town houses enterable through house doors (`house_door`: stand at it, press up): Villager's House, Quest Giver's House
-- [x] Cove or small city: 2nd energy block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
+- [x] Cove or small city: 2nd stamina block (`t1_cove_town`); the 2 NPCs and the quest are notes until NPCs exist
 - [x] Jungle: Jungle Edge (hollow trunk, leaf climb) → drop → Jungle Falls (waterfall, lake, tunnel hill) → Jungle Hills (tunnel hill, trunk, leaf climb); the Ape is a note at the end
 - [x] Ape boss arena (`a1_ape_arena`): open fighting floor, ledges at both exits and a gated hole to the left branch; tree, bridge pit and tree instructions removed; 56 tiles wide (70%); entering walks you in (`auto_walk`) and the way back shuts (`boss_gate` with `closes_behind`)
 - [x] Right branch room: sand cave climbing at about 25° (`s1_sand_cave`), crumble blocks over pits stand in for breakable sand
@@ -61,7 +61,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [x] Open arena: one leap range; lure leaps onto spikes, with a new spike patch after each hit
 - [x] Ape body contact: 70% linear bounds (22×22), narrowed around the head and shoulders; debug overlay matches
 - [x] Exits sealed during the fight (`boss_gate`); beaten for the run
-- [x] Post-boss exhaustion: energy drops to 5, an energy orb appears
+- [x] Post-boss exhaustion: stamina drops to 5, an stamina orb appears
 - [ ] Ape reanimates (later: the chase in the sand cave?)
 - [ ] Ground slime hazard
 - [ ] The Ape's power-up reward (decide which)
@@ -113,7 +113,7 @@ Pickups that raise the value for the run and save it: 1 horizontal -> 2 four-way
 - [ ] Bomb blocks and bomb jump (MZM Bombs); screen-wide blast (MZM Power Bombs)
 
 ### Combat base (needed by everything below)
-- [ ] Player health + hurt/knockback (HK masks, MZM energy)
+- [ ] Player health + hurt/knockback (HK masks, MZM stamina)
 - [ ] Resource meter for skills (HK soul, SS silk), filled by hitting enemies
 - [ ] Healing from the meter (HK Focus, SS bind)
 
@@ -135,7 +135,7 @@ Pickups that raise the value for the run and save it: 1 horizontal -> 2 four-way
 - [ ] Rune Rage (SS); check details
 
 ### Capacity pickups (save data)
-- [ ] Extra health (HK Mask Shards, MZM Energy Tanks)
+- [ ] Extra health (HK Mask Shards, MZM Stamina Tanks)
 - [ ] Bigger meter (HK Vessel Fragments)
 - [ ] Ammo tanks (MZM Missile, Super Missile, Power Bomb tanks)
 - [ ] Stat boosts (SotN Dracula's relics: Heart, Tooth, Rib, Ring, Eye of Vlad)

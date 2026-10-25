@@ -63,7 +63,7 @@ Culling means skipping drawing when nothing from an object is visible. A large v
 | `world.gd` | Current room simulation, object lists, camera, transitions and in-game overlays |
 | `player.gd` | Player movement, collision response, sword and visual state |
 | `entities.gd` | Placed object registry and individual object/enemy behavior |
-| `adventure.gd` | World-layout queries, progress normalization and energy rules |
+| `adventure.gd` | World-layout queries, progress normalization and stamina rules |
 | `editor.gd` | Editing the tiles and objects in one room |
 | `world_editor.gd` | Positioning room files and displaying their connections |
 | `options.gd`, `menu.gd` | Settings and navigation interfaces |
@@ -90,7 +90,7 @@ A subclass uses `extends` to reuse a parent. `super.method()` runs that parent's
 
 A **Dictionary** maps names to values. For example, an entity dictionary can contain `t`, `x`, `y`, `w` and `h`: type, pixel position and optional size. An **Array** is an ordered list. `PackedByteArray` and other packed arrays store many values of one type efficiently.
 
-Level JSON stores a room name, width/height in tiles, tile rows and placed entities. A tile row is a string of `0` and `1`: empty and solid. `world.json` places those room files on the adventure grid. A saved run is different: it stores player progress such as visited rooms, collected IDs, unlocked abilities and energy.
+Level JSON stores a room name, width/height in tiles, tile rows and placed entities. A tile row is a string of `0` and `1`: empty and solid. `world.json` places those room files on the adventure grid. A saved run is different: it stores player progress such as visited rooms, collected IDs, unlocked abilities and stamina.
 
 `duplicate(true)` creates a deep copy, including nested containers. Editors and tests need this when they must change a copy without changing the saved/previous version.
 
@@ -112,7 +112,7 @@ Some actions have multiple stages. `co_step` and `co_wait` implement these short
 
 `CombatEnemy` centralizes health, variant modifiers, safe steps, shields, venom and projectiles. Family subclasses select their own movement/attack sequence. A **phase** is a behavior stage such as idle, windup, attack and recovery. Keeping those stages explicit makes enemy timing inspectable.
 
-The arena Ape chooses attacks by distance and exposes separate contact, stone, scream and slam shapes. The chase Ape instead plans a route using a quiet scripted Player and a collision-only World adapter, then replays recorded feet positions. Planning should not spend the real player's energy, create effects or overwrite progress. A cached route must identify all its relevant inputs; reusing a route after terrain or tuning changed is a logic error.
+The arena Ape chooses attacks by distance and exposes separate contact, stone, scream and slam shapes. The chase Ape instead plans a route using a quiet scripted Player and a collision-only World adapter, then replays recorded feet positions. Planning should not spend the real player's stamina, create effects or overwrite progress. A cached route must identify all its relevant inputs; reusing a route after terrain or tuning changed is a logic error.
 
 ## Drawing and audio vocabulary
 

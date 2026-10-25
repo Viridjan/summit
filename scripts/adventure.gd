@@ -3,7 +3,7 @@ extends RefCounted
 # Static functions are called on this script directly; no scene node needs to be created.
 # world describes the layout and room files; run describes one player's saved progress.
 # Layout positions use tiles (8px each); room_rect converts them into world pixels.
-# Energy is a number, distinct from blocks: blocks determine capacity, while actions spend energy.
+# Stamina is a number, distinct from blocks: blocks determine capacity, while actions spend stamina.
 # Reading help: docs/CODE_GUIDE.md.
 
 # Adventure world: ordinary level files (rooms) placed on one big tile grid, Metroid style.
@@ -15,13 +15,13 @@ const T := 8
 # Moves the player starts the adventure without; ability pickups ("ability_<name>") unlock them.
 const ABILITIES := ["dash", "climb", "attack"]
 
-# Energy is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
-# A run starts with a base of 25 that always regenerates; each energy block picked up adds 10.
+# Stamina is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
+# A run starts with a base of 40 that always regenerates; each stamina block picked up adds 20.
 # run.blocks counts the base as the first block (so 1 = just the base).
-const BASE_ENERGY := 20.0
-const ENERGY_PER_BLOCK := 10.0  # what an energy block pickup adds
-const ENERGY_REGEN := 6.0  # per second, only inside a partly spent block
-const WATER_DRAIN := 20.8  # per second while in water (2.08 every 0.1 s); no regeneration there
+const BASE_STAMINA := 40.0  # all stamina values doubled 2026-10-25: whole numbers (a jump costs 5)
+const STAMINA_PER_BLOCK := 20.0  # what an stamina block pickup adds
+const STAMINA_REGEN_MAX := 12.0  # per second at the best fill (see regen_factor), only inside a partly spent block
+const WATER_DRAIN := 40.0  # per second while in water (4 every 0.1 s); no regeneration there
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}
 # Rooms whose file is missing or invalid are skipped.
@@ -171,53 +171,60 @@ static func _open_overlap(a: Dictionary, b: Dictionary, r: Rect2i) -> bool:
 	return false
 
 # A fresh run (what the save file stores under [adventure]).
-# Create the initial progress record with start room, starting abilities and base energy.
+# Create the initial progress record with start room, starting abilities and base stamina.
 static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
 		"stars": [], "deaths": 0, "time": 0.0, "done": false,
-		"blocks": 1, "energy": BASE_ENERGY, "taken": []}  # taken: one-time pickups, "room:x:y"
+		"blocks": 1, "stamina": BASE_STAMINA, "taken": []}  # taken: one-time pickups, "room:x:y"
 
-# Calculate energy capacity from the base allowance plus collected extra blocks.
-static func energy_max(run: Dictionary) -> float:
-	return BASE_ENERGY + (run.blocks - 1) * ENERGY_PER_BLOCK
+# Calculate stamina capacity from the base allowance plus collected extra blocks.
+static func stamina_max(run: Dictionary) -> float:
+	return BASE_STAMINA + (run.blocks - 1) * STAMINA_PER_BLOCK
 
 # The base always regenerates, even from 0. Above it, regeneration stops at the top of the current
 # block: an extra block spent to its bottom stays empty.
-# Regenerate within the permitted current energy block without refilling already spent upper blocks.
-static func regen_energy(run: Dictionary, dt: float) -> void:
-	var top := BASE_ENERGY
-	if run.energy > BASE_ENERGY:
-		top = BASE_ENERGY + ceilf((run.energy - BASE_ENERGY) / ENERGY_PER_BLOCK) * ENERGY_PER_BLOCK
-	run.energy = minf(maxf(top, run.energy), run.energy + ENERGY_REGEN * dt)
+# Regenerate within the permitted current stamina block without refilling already spent upper blocks.
+static func regen_stamina(run: Dictionary, dt: float) -> void:
+	var top := BASE_STAMINA
+	if run.stamina > BASE_STAMINA:
+		top = BASE_STAMINA + ceilf((run.stamina - BASE_STAMINA) / STAMINA_PER_BLOCK) * STAMINA_PER_BLOCK
+	var rate := STAMINA_REGEN_MAX * regen_factor(run.stamina / stamina_max(run))
+	run.stamina = minf(maxf(top, run.stamina), run.stamina + rate * dt)
 
-# Being in water drains energy. Returns false when it's all gone: the player drowns.
-# Drain energy for the elapsed underwater time and report whether any energy remains.
-static func water_energy(run: Dictionary, dt: float) -> bool:
-	run.energy = maxf(0.0, run.energy - WATER_DRAIN * dt)
-	return run.energy > 0
+# Regeneration speed as a share of STAMINA_REGEN_MAX, by how full the bar is (0..1): 0.5 when empty, rising
+# linearly to 1 at half full, then down linearly to 0.75 when full.
+static func regen_factor(fill: float) -> float:
+	fill = clampf(fill, 0.0, 1.0)
+	return 0.5 + fill if fill <= 0.5 else 1.0 - 0.5 * (fill - 0.5)
 
-# Wears energy down by up to amount, never below 0 and never refusing (a jump always happens).
+# Being in water drains stamina. Returns false when it's all gone: the player drowns.
+# Drain stamina for the elapsed underwater time and report whether any stamina remains.
+static func water_stamina(run: Dictionary, dt: float) -> bool:
+	run.stamina = maxf(0.0, run.stamina - WATER_DRAIN * dt)
+	return run.stamina > 0
+
+# Wears stamina down by up to amount, never below 0 and never refusing (a jump always happens).
 # Subtract an action cost without going below zero; this function itself never refuses the action.
-static func drain_energy(run: Dictionary, amount: float) -> void:
-	run.energy = maxf(0.0, run.energy - amount)
+static func drain_stamina(run: Dictionary, amount: float) -> void:
+	run.stamina = maxf(0.0, run.stamina - amount)
 
 # Pays for an action; false (nothing spent) when there isn't enough.
-# Pay only when enough energy is available; return whether payment succeeded.
-static func spend_energy(run: Dictionary, amount: float) -> bool:
-	if run.energy < amount:
+# Pay only when enough stamina is available; return whether payment succeeded.
+static func spend_stamina(run: Dictionary, amount: float) -> bool:
+	if run.stamina < amount:
 		return false
-	run.energy -= amount
+	run.stamina -= amount
 	return true
 
-# Set current energy to the full capacity of the collected blocks.
-static func refill_energy(run: Dictionary) -> void:
-	run.energy = energy_max(run)
+# Set current stamina to the full capacity of the collected blocks.
+static func refill_stamina(run: Dictionary) -> void:
+	run.stamina = stamina_max(run)
 
 # A new block, already full.
-# Increase capacity by one block and add the new block energy immediately.
-static func add_energy_block(run: Dictionary) -> void:
+# Increase capacity by one block and add the new block stamina immediately.
+static func add_stamina_block(run: Dictionary) -> void:
 	run.blocks += 1
-	run.energy += ENERGY_PER_BLOCK
+	run.stamina += STAMINA_PER_BLOCK
 
 # A saved run with missing or wrong-typed fields filled from a fresh one (older or hand-edited saves).
 # Unusable saves (not a run, or its room is gone) start over.
@@ -226,6 +233,9 @@ static func restore_run(world: Dictionary, run) -> Dictionary:
 	var fresh := new_run(world)
 	if not run is Dictionary or not world.rooms.has(run.get("room")):
 		return fresh
+	if run.has("energy") and not run.has("stamina"):  # saves from before energy was renamed stamina
+		run.stamina = run.energy
+		run.erase("energy")
 	for k in fresh:
 		if run.has(k) and fresh[k] != null and typeof(run[k]) != typeof(fresh[k]) and not (_finite(run[k]) and _finite(fresh[k])):
 			run.erase(k)  # int and float are interchangeable (JSON and older saves mix them)
@@ -235,7 +245,7 @@ static func restore_run(world: Dictionary, run) -> Dictionary:
 	run.blocks = maxi(1, int(run.blocks)) if _finite(run.blocks) else 1
 	run.deaths = maxi(0, int(run.deaths)) if _finite(run.deaths) else 0
 	run.time = maxf(0.0, run.time) if _finite(run.time) else 0.0
-	run.energy = clampf(run.energy, 0.0, energy_max(run)) if _finite(run.energy) else energy_max(run)
+	run.stamina = clampf(run.stamina, 0.0, stamina_max(run)) if _finite(run.stamina) else stamina_max(run)
 	for k in ["abilities", "visited", "stars", "taken"]:
 		run[k] = run[k].filter(func(x): return x is String)
 	if not run.visited.has(run.room):
