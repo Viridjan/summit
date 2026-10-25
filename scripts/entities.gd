@@ -2127,6 +2127,21 @@ class Ape extends Ent:
 				w.spawn_entity({"t": k[0], "x": k[1], "y": k[2]})
 		if d.has("orb"):
 			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
+	# Hitbox overlay (F2): how it picks its attack, by the horizontal distance from its centre to the player's.
+	func _draw_ranges(ci: CanvasItem) -> void:
+		var c := center()
+		var top := float(rect.end.y) - 72.0
+		var font := ThemeDB.fallback_font
+		var bands := [[0.0, NEAR, "scream", Color(1, 0.35, 0.3)], [NEAR, FAR, "leap", Color(1, 0.8, 0.3)], [FAR, WAKE, "throw", Color(0.4, 0.75, 1)]]
+		for b in bands:
+			for side in [-1.0, 1.0]:
+				var x0: float = c.x + side * b[0]
+				var x1: float = c.x + side * b[1]
+				ci.draw_rect(Rect2(minf(x0, x1), top, absf(x1 - x0), 72.0), Color(b[3], 0.12))
+				ci.draw_line(Vector2(x1, top), Vector2(x1, top + 72.0), Color(b[3], 0.7), 1.0)
+			ci.draw_string(font, Vector2(c.x + (b[0] + b[1]) / 2.0 - 10.0, top + 7.0), b[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 6, b[3])
+			ci.draw_string(font, Vector2(c.x + b[1] - 8.0, top - 1.0), "%d" % b[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 6, b[3])
+		ci.draw_string(font, Vector2(c.x + WAKE - 30.0, top + 15.0), "wakes inside", HORIZONTAL_ALIGNMENT_LEFT, -1, 6, Color(0.4, 0.75, 1))
 	# Move thrown stones, then resolve player, trunk and solid-terrain impacts.
 	func _update_stones(dt: float) -> void:
 		var t = trunk() if w != null else null
@@ -2159,6 +2174,8 @@ class Ape extends Ent:
 			ci.draw_rect(Rect2(at + Vector2(3, 3), Vector2(5, 3)), Color("b0aa9c"))
 		if phase == "gone":
 			return
+		if w != null and Game.settings.hitboxes and not self is ApeChase:
+			_draw_ranges(ci)
 		var a := 1.0 if phase != "dying" else clampf(timer / 1.2, 0.0, 1.0)
 		var pose := phase
 		if phase in ["chase", "running"]:

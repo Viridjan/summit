@@ -16,8 +16,13 @@ const PRESETS := ["square", "triangle8", "saw", "snare", "closedhh", "bassdrumm"
 const INSTRUMENT_NAMES := ["Pulse", "Triangle", "Saw", "Snare", "Hi-hat", "Kick", "FM piano"]
 const NOTE_NAMES := ["c", "c+", "d", "d+", "e", "f", "f+", "g", "g+", "a", "a+", "b"]
 
-var driver: SiONDriver
-var presets: SiONVoicePresetUtil
+# The SiON synth is a native add-on built for Linux only; elsewhere (web, Windows...) the engine plays each
+# song's recording instead (assets/music, made by tools/bake_music.gd), so patterns edited in the studio
+# don't sound there. SiON classes are reached by name so this script loads without the add-on.
+var synth := ClassDB.class_exists("SiONDriver") and OS.get_environment("SUMMIT_NO_SYNTH") == ""
+var driver  # SiONDriver
+var presets  # SiONVoicePresetUtil
+var baked: AudioStreamPlayer  # without the synth
 var patterns: Array = []
 var instruments: Array[int] = [0, 2, 1, 3]
 var muted: Array[bool] = [false, false, false, false]
@@ -38,10 +43,14 @@ const MUFFLE_HZ := 600.0  # low-pass cutoff while muffled (pause menu, map)
 
 # Create the single SiON driver, prepare its voices and Music bus, then load the initial demo.
 func _ready() -> void:
-	presets = SiONVoicePresetUtil.generate_voices()
-	driver = SiONDriver.create()
-	add_child(driver)
-	driver.volume = volume
+	if synth:
+		presets = ClassDB.class_call_static("SiONVoicePresetUtil", "generate_voices")
+		driver = ClassDB.class_call_static("SiONDriver", "create")
+		add_child(driver)
+		driver.volume = volume
+	else:
+		baked = AudioStreamPlayer.new()
+		add_child(baked)
 	if AudioServer.get_bus_index(BUS) == -1:
 		AudioServer.add_bus()
 		var i := AudioServer.bus_count - 1
@@ -50,7 +59,7 @@ func _ready() -> void:
 		lp.cutoff_hz = MUFFLE_HZ
 		AudioServer.add_bus_effect(i, lp)
 		AudioServer.set_bus_effect_enabled(i, 0, false)
-	driver.get_audio_player().bus = BUS
+	(driver.get_audio_player() if synth else baked).bus = BUS
 	set_level(float(Game.settings.music_volume))
 	load_demo()
 
@@ -90,7 +99,7 @@ func build_mml(loop: bool = true) -> String:
 	var headers := ""
 	var tracks := ""
 	for channel in patterns.size():
-		var voice: SiONVoice = presets.get_voice_preset(PRESETS[instruments[channel]])
+		var voice = presets.get_voice_preset(PRESETS[instruments[channel]])
 		headers += voice.get_mml(channel, -1, false)
 		tracks += "t%d %%5 @%d v%d q6 l16 %s" % [clampi(roundi(bpm * TEMPO_SCALE), 20, 240), channel, 0 if muted[channel] else 6, "$" if loop else ""]
 		for note: int in patterns[channel]:
@@ -104,9 +113,23 @@ func build_mml(loop: bool = true) -> String:
 
 # Start/restart synthesis using the current pattern data and driver volume.
 func play() -> void:
+	playing = true
+	if not synth:
+		var path := baked_path(environment)
+		if ResourceLoader.exists(path):
+			var stream: AudioStreamWAV = load(path)
+			stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			stream.loop_begin = 0
+			stream.loop_end = int(stream.get_length() * stream.mix_rate)
+			baked.stream = stream
+			baked.play()
+		return
 	driver.volume = volume
 	driver.play(build_mml())
-	playing = true
+
+# The recording of an environment's song ("" is the mountain).
+static func baked_path(key: String) -> String:
+	return "res://assets/music/%s.wav" % (key if key != "" else "mountain")
 
 # The Options music volume (0..1) on the Music bus; 0 mutes it.
 # Apply the user music volume on its dedicated audio bus without changing effect volume.
@@ -121,10 +144,14 @@ func set_muffled(on: bool) -> void:
 
 # Stop synthesis and clear the transport flag used by gameplay and studio controls.
 func stop() -> void:
-	driver.stop()
+	if synth:
+		driver.stop()
+	else:
+		baked.stop()
 	playing = false
 
 # Stop the driver and release the manually owned preset utility during shutdown.
 func _exit_tree() -> void:
 	stop()
-	presets.free()
+	if presets != null:
+		presets.free()

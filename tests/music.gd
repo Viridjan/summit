@@ -87,5 +87,18 @@ func run() -> void:
 	game.main.get_child(0).engine.stop()
 	game.main.queue_free()
 	await process_frame
+	# Without the synth (web, non-Linux builds) every environment plays its baked recording, looping.
+	var fallback = load("res://scripts/music_engine.gd").new()
+	fallback.synth = false
+	root.add_child(fallback)
+	for key in fallback.EnvironmentMusic.KEYS:
+		check(ResourceLoader.exists(fallback.baked_path(key)), "Baked recording exists for '%s'" % key)
+	fallback.follow_environment("forest")
+	var st: AudioStreamWAV = fallback.baked.stream
+	check(fallback.playing and fallback.baked.playing and st != null and st.loop_mode == AudioStreamWAV.LOOP_FORWARD
+		and absf(st.get_length() - 29.54) < 0.1 and fallback.baked.bus == "Music", "Without the synth the forest song plays from its recording, looping")
+	fallback.stop()
+	check(not fallback.baked.playing, "Stopping stops the recording")
+	fallback.free()
 	print("MUSIC OK" if failures == 0 else "MUSIC FAILED: %d" % failures)
 	root.get_node("Game").quit_game(failures)
