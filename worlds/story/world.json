@@ -1,18 +1,9 @@
 {
-	"start": "m1_meadow",
 	"abilities": [],
 	"rooms": {
-		"m1_meadow": [
-			0,
-			0
-		],
-		"m2_big_jump": [
-			80,
-			0
-		],
-		"m3_the_hole": [
-			80,
-			23
+		"a1_ape_arena": [
+			440,
+			69
 		],
 		"c0_roar_tunnel": [
 			40,
@@ -34,9 +25,13 @@
 			120,
 			69
 		],
-		"t1_cove_town": [
+		"h1_villager_house": [
 			240,
-			46
+			123
+		],
+		"h2_quest_house": [
+			280,
+			123
 		],
 		"j1_jungle_edge": [
 			280,
@@ -50,21 +45,33 @@
 			360,
 			69
 		],
-		"a1_ape_arena": [
+		"l1_jungle_depths": [
 			440,
-			69
+			92
 		],
-		"h1_villager_house": [
-			240,
-			123
+		"l2_net_trap": [
+			360,
+			92
 		],
-		"h2_quest_house": [
-			280,
-			123
+		"l3_treetop_village": [
+			360,
+			21
 		],
 		"lh1_lighthouse_stairs": [
-			320,
-			123
+			618,
+			-14
+		],
+		"m1_meadow": [
+			0,
+			0
+		],
+		"m2_big_jump": [
+			80,
+			0
+		],
+		"m3_the_hole": [
+			80,
+			23
 		],
 		"s1_sand_cave": [
 			496,
@@ -78,24 +85,17 @@
 			656,
 			23
 		],
-		"l1_jungle_depths": [
-			440,
-			92
-		],
-		"l2_net_trap": [
-			360,
-			92
-		],
-		"l3_treetop_village": [
-			360,
-			21
+		"t1_cove_town": [
+			240,
+			46
 		]
 	},
+	"start": "m1_meadow",
 	"variants": {
 		"a1_ape_arena": [
 			{
-				"when": "a1_ape_arena:ape_144_120",
-				"room": "a1_ape_arena_after"
+				"room": "a1_ape_arena_after",
+				"when": "a1_ape_arena:ape_144_120"
 			}
 		]
 	}

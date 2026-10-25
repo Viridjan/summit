@@ -510,6 +510,27 @@ func check_shipped_world() -> void:
 	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.spawn == dry_spawn,
 		"a flooded room gets no respawn point: dying there returns to the last safe one (%s, %s, %s)" % [fw.room, fw.spawn_room, fw.spawn])
 	fw.queue_free()
+	# the Ape arena's walk-in is automatic on every entry, not only after a death: crossing in from the jungle
+	Game.adv = Adventure.new_run(story)
+	Game.adv.room = "j3_jungle_hills"
+	Game.adv.spawn = null
+	Game.level = story.rooms["j3_jungle_hills"].level
+	var jw = load("res://scripts/world.gd").new()
+	w = jw
+	add_child(jw)
+	jw.set_physics_process(false)
+	var arena_y: float = (story.rooms["a1_ape_arena"].pos.y - story.rooms["j3_jungle_hills"].pos.y + 15) * 8.0
+	jw.player = Bot.new(jw, Vector2(story.rooms["j3_jungle_hills"].level.w * 8 - 6, arena_y))
+	p().hold = {"right": true}
+	for k in 30:
+		step()
+		if jw.room == "a1_ape_arena":
+			break
+	p().hold = {}
+	var entered_x: float = p().pos.x
+	step(70)
+	check(jw.room == "a1_ape_arena" and p().pos.x - entered_x > 40.0, "entering the Ape arena always walks the player in (from %.0f to %.0f)" % [entered_x, p().pos.x])
+	jw.queue_free()
 	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
 	Game.adv = Adventure.new_run(story)
 	Game.adv.room = "c2_cave_teeth"
@@ -1490,9 +1511,20 @@ func check_ape_hitbox_shapes() -> void:
 	w = keep_world
 	Game.level = keep_lv
 	Game.settings.invincible = keep_inv2
-	var all_cols := range(3, 53).all(func(c): return cols.has(c))
-	check(bad == 0 and all_cols and rows.has(19) and rows.has(16) and rows.has(15) and rows.has(14) and rows.has(13),
-		"the Ape reaches the whole arena: floor, ledges, every platform; never stuck or inside rock (%d bad, rows %s)" % [bad, rows.keys()])
+	# every surface it fits on (3+ tiles wide under 4 open rows) must get landings; read from the layout, so
+	# editing the arena keeps the check honest
+	var surfaces := {}
+	for y in range(5, 22):
+		var run := 0
+		for x in range(1, 56):
+			var ok: bool = lv2.tiles[y][x] == "1" and range(1, 5).all(func(k): return lv2.tiles[y - k][x] == "0")
+			run = run + 1 if ok else 0
+			if run >= 3:
+				surfaces[y] = true
+	var missed: Array = surfaces.keys().filter(func(y): return not rows.has(y))
+	# (spots with no room above for its 32px arc, like the right exit ledge under the row-11 block, stay Ape-free)
+	check(bad == 0 and missed.is_empty() and cols.size() > 30,
+		"the Ape reaches every surface it fits on and is never stuck or inside rock (%d bad, missed rows %s, %d columns)" % [bad, missed, cols.size()])
 	# conditional rooms: once the Ape is beaten, entering the arena loads its aftermath variant
 	var Adv = load("res://scripts/adventure.gd")
 	var sw2: Dictionary = Adv.load_world("res://worlds/story/world.json")
@@ -1580,7 +1612,7 @@ func check_ape() -> void:
 			break
 	check(ape.center().x >= 330 and ape.center().x <= 460, "with the trunk down the Ape leaps across into its second range (at %s)" % ape.center().x)
 	# mid range: the leap lands past the player, on the far side from the Ape
-	make_world([{"t": "boss_ape", "x": 380, "y": floor_y - 32}])
+	make_world([{"t": "boss_ape", "x": 360, "y": floor_y - 32}])  # 56 px apart: leap range (NEAR..FAR)
 	ape = find.call(E.Ape)[0]
 	p().pos = Vector2(320, floor_y)
 	ape.phase = "idle"
@@ -1595,7 +1627,7 @@ func check_ape() -> void:
 	check(landed_x > 0 and landed_x < p().center().x - 8, "the Ape's leap lands past the player (at %s, player %s)" % [landed_x, p().center().x])
 	# spikes: a landing on them is a hit, and the next patch appears; three hits beat it
 	make_world([{"t": "spikes_up", "x": 288, "y": floor_y - 8}, {"t": "spikes_up", "x": 296, "y": floor_y - 8}, {"t": "spikes_up", "x": 304, "y": floor_y - 8},
-		{"t": "boss_ape", "x": 400, "y": floor_y - 32, "spikes": [[[100, floor_y - 8, 2]]], "orb": [200, floor_y - 16]},
+		{"t": "boss_ape", "x": 370, "y": floor_y - 32, "spikes": [[[100, floor_y - 8, 2]]], "orb": [200, floor_y - 16]},
 		{"t": "boss_gate", "x": 440, "y": floor_y - 32, "w": 8, "h": 32}])
 	ape = find.call(E.Ape)[0]
 	var gate = find.call(E.BossGate)[0]

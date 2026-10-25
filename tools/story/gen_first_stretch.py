@@ -205,7 +205,7 @@ a1.ents.append({"t": "auto_walk", "x": 0, "y": 11 * T, "w": 3 * T, "h": 4 * T, "
 a1.ents.append({"t": "boss_gate", "x": 0, "y": 11 * T, "w": T, "h": 4 * T, "closes_behind": True})
 a1.spikes_up(42, 44, 18)
 # solid platforms, uneven: the Ape lands on them too, and can't fit under the low ones (16-24 px gaps)
-ARENA_PLATFORMS = [(29, 32, 16), (34, 36, 13), (38, 41, 15), (10, 12, 14)]
+ARENA_PLATFORMS = [(10, 12, 14), (49, 50, 11)]  # as edited in the World Editor (2026-10-25)
 for x0, x1, py in ARENA_PLATFORMS:
     a1.solid(x0, py, x1, py)
 for y in range(5, 9): a1.ent("spikes_right", 1, y)    # wall spikes, out of the Ape's range: they stay all fight
@@ -217,7 +217,6 @@ a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T,
     "orb": [45 * T, 16 * T]})
 a1.ents.append({"t": "boss_gate", "x": 55 * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
 a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
-a1.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 # After the Ape (world.json "variants"): the same terrain and spawns, with no boss or gates, the spikes as the
 # fight leaves them (the last patch and the walls) and the orb.
 APE_ID = "a1_ape_arena:ape_%d_%d" % (18 * T, 15 * T)
@@ -227,7 +226,6 @@ for x0, n in ((8, 2), (26, 2)): a1b.spikes_up(x0, x0 + n - 1, 18)
 for y in range(5, 9): a1b.ent("spikes_right", 1, y)
 for y in range(4, 9): a1b.ent("spikes_left", 54, y)
 a1b.ent("energy_orb", 45, 16)
-a1b.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 
 # Right branch: a long sand cave climbing at about 14 degrees (30 rows over 120 columns), then the shore and the
 # lighthouse. Jump-only challenges (no abilities yet), with the beaten Ape chasing the player up it.
@@ -349,7 +347,7 @@ rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23 + D), (j1, 280, 23 + D), (j2, 280, 46 + D), (j3, 360, 46 + D),
-    (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 320, 100 + D), (s1, 496, 23 + D), (s2, 616, 23 + D),
+    (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 618, -14), (s1, 496, 23 + D), (s2, 616, 23 + D),
     (s3, 656, 0 + D), (l1, 440, 69 + D), (l2, 360, 69 + D), (l3, 360, -2 + D)]
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:

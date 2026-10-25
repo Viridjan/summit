@@ -1837,6 +1837,7 @@ class AutoWalk extends Ent:
 		if used or (d.get("while_boss", false) and not Ape.alive_in(w)):
 			return
 		used = true
+		w.walk_dir = 0  # takes over from a room change's short walk-in, which would otherwise cut it short
 		p.force_move_x = int(d.get("dir", 1))
 		p.force_move_x_timer = float(d.get("time", 0.6))
 	# Draw AutoWalk at its current pose; this must also work for an editor preview with no World.
@@ -1871,7 +1872,7 @@ class Ape extends Ent:
 	const SLAM_REACH := 16  # landing shockwave: this far out on both sides, along the ground
 	const SLAM_HEIGHT := 8
 	const SLAM_TIME := 0.2
-	const FAR := 96.0  # throw beyond this (centre to centre, px); leap between NEAR and FAR; scream within NEAR
+	const FAR := 72.0  # throw beyond this (centre to centre, px); leap between NEAR and FAR; scream within NEAR
 	const NEAR := 44.0
 	const WAKE := 220.0
 	var hp := HP
