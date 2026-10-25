@@ -380,3 +380,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Island reorganized into 17 smaller rooms: West/North/South/East shores, Foothills, Ascent, Crater, East Slope, Sea Cave, Junction, Flooded Hall (water + falling rocks, new `rockfall` entity), Echo Gallery, Lower Maze, Vent Shaft, Refuge, Guardian Chamber, Crystal Pocket. Raft lands on the West Shore.
 - 2026-10-25: Ape arena left exit at floor level (the high doorway is closed; Jungle Hills' right ledge lowered). The hole to Jungle Depths is covered (boss_gate "until") until the Ape is beaten; then leaving the arena left, the Ape chases leftward (ApeChase dir -1, after) and stops at the big trunk.
 - 2026-10-25: F3 energy panel gets a recap: per cause, how often (or how long) and how much energy since the level started, plus total spent/gained.
+- 2026-10-25: Fix: F3 energy panel was placed off-screen (position instead of top-right offsets).

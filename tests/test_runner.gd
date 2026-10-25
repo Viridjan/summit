@@ -1854,6 +1854,8 @@ func check_energy() -> void:
 	ep.world = w
 	add_child(ep)
 	ep._process(0.0)
+	var vr := Rect2(Vector2.ZERO, ep.get_viewport_rect().size)
+	check(vr.encloses(ep.get_global_rect()) and ep.size.x > 100, "F3 panel is on screen (%s in %s)" % [ep.get_global_rect(), vr])
 	check(EP.regen_top(15.0) == 20.0 and EP.regen_top(25.0) == 30.0 and EP.regen_top(30.0) == 30.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
 		"F3 energy panel: regen top per block, live rate and history")
 	ep.free()

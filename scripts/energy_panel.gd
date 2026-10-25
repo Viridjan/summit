@@ -11,9 +11,11 @@ var history: Array = []  # [time, energy]
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	position = Vector2(-W - 12, 40)
-	size = Vector2(W, 670)
+	set_anchors_preset(Control.PRESET_TOP_RIGHT)  # offsets from the top-right corner (position would be from the left)
+	offset_left = -W - 12
+	offset_right = -12
+	offset_top = 40
+	offset_bottom = 40 + 670
 
 func _process(_dt: float) -> void:
 	if world == null or not world.adventure():
