@@ -320,35 +320,8 @@ func _remove_dir(dir: String) -> void:
 # Regression coverage for shipped world. The assertions below state the expected behavior of this case.
 func check_shipped_world() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
-	var world := Adventure.load_world(Game.ADVENTURE_DIR + "world.json")
-	var files := Array(DirAccess.get_files_at(Game.ADVENTURE_DIR)).filter(func(f): return f.ends_with(".json") and f != "world.json")
-	check(world.rooms.size() == files.size() and world.rooms.has(world.start), "shipped world loads every room file (%d/%d)" % [world.rooms.size(), files.size()])
-	check(Adventure.overlaps(world).is_empty(), "shipped rooms don't overlap")
-	var links := {}
-	for seg in Adventure.doorways(world):
-		var mid: Vector2 = (seg[0] + seg[1]) / 2.0
-		var dir: Vector2 = (seg[1] - seg[0]).normalized().orthogonal()
-		var a := Adventure.room_at(world, mid + dir * 4)
-		var b := Adventure.room_at(world, mid - dir * 4)
-		links[a] = links.get(a, []) + [b]
-		links[b] = links.get(b, []) + [a]
-	var seen := {world.start: true}
-	var todo := [world.start]
-	while not todo.is_empty():
-		for n in links.get(todo.pop_back(), []):
-			if n != "" and not seen.has(n):
-				seen[n] = true
-				todo.append(n)
-	check(seen.size() == world.rooms.size(), "every shipped room is connected to the start (%d/%d)" % [seen.size(), world.rooms.size()])
-	var counts := {}
-	for n in world.rooms:
-		for e in world.rooms[n].level.entities:
-			counts[e.t] = counts.get(e.t, 0) + 1
-			if e.t == "note":
-				check(str(e.get("text", "")) != "", "note in %s has text" % n)
-	check(counts.get("ability_dash", 0) == 1 and counts.get("ability_climb", 0) == 1 and counts.get("goal", 0) == 1, "shipped world has one dash orb, one climb orb, one goal")
 	# entrance spawns (tools/world_fixups.py): on ground with 2 tiles of headroom, in every world
-	for wp in Game.world_list().map(func(x): return x[1]):
+	for wp in [Game.STORY_WORLD]:
 		var wd := Adventure.load_world(wp)
 		var bad_spawns := []
 		var n_spawns := 0
@@ -404,9 +377,6 @@ func check_shipped_world() -> void:
 	w.queue_free()
 	w = null
 	Game.adv = {}
-	# worlds in the menu: the main world and the story world
-	var listed: Array = Game.world_list()
-	check(listed.size() == 2 and listed[0][1] == Game.STORY_WORLD and listed[1][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the story world first, then Summit (%d)" % listed.size())
 	# story world (docs/STORY_DESIGN.md): jump only at the start, the first stretch of rooms
 	var story := Adventure.load_world(Game.WORLDS_DIR + "story/world.json")
 	check(story.start == "m1_meadow" and story.rooms.size() >= 4 and Adventure.overlaps(story).is_empty() and Adventure.new_run(story).abilities.is_empty(), "story world loads, starts in the meadow with jump only (%d rooms)" % story.rooms.size())
@@ -737,59 +707,6 @@ func check_shipped_world() -> void:
 	check(lost.path.is_empty() and plan_ms < E.ApeChase.PLAN_BUDGET_MS * 3 and lost.phase == "dying", "no route: planning stops in budget (%d ms) and the Ape leaves (%s)" % [plan_ms, lost.phase])
 	nw.free()
 	E.ApeChase._plans.clear()
-	for w in listed.slice(2).filter(func(x): return not x[1].contains("/story/")):
-		var rw := Adventure.load_world(w[1])
-		var has_spawn: bool = rw.rooms.has(rw.start) and rw.rooms[rw.start].level.entities.any(func(e): return e.t == "spawn")
-		check(rw.rooms.size() > 10 and has_spawn and Adventure.overlaps(rw).is_empty() and Adventure.new_run(rw).abilities == ["dash", "climb", "attack"], "%s loads: %d rooms, spawn, no overlaps, starts with dash+climb+attack" % [w[0], rw.rooms.size()])
-		var ids := {}
-		var door_to := []
-		for rn in rw.rooms:
-			for e in rw.rooms[rn].level.entities:
-				if e.t == "door":
-					ids[rn + ":" + e.id] = true
-					door_to.append(e.to)
-		check(door_to.all(func(t): return ids.has(t)), "%s: all %d doors lead to a door that exists" % [w[0], door_to.size()])
-		# room boxes never overlap, and every room is reachable from the start (passages + doors)
-		var names: Array = rw.rooms.keys()
-		var boxes_ok := true
-		for i in names.size():
-			for j in range(i + 1, names.size()):
-				if Adventure.room_rect(rw.rooms[names[i]]).intersects(Adventure.room_rect(rw.rooms[names[j]])):
-					boxes_ok = false
-		check(boxes_ok, "%s: no two room boxes overlap" % w[0])
-		var nb := {}
-		for a in names:  # touching rooms with open tiles on both sides of their shared edge
-			var ra: Rect2i = Rect2i(rw.rooms[a].pos, Vector2i(rw.rooms[a].level.w, rw.rooms[a].level.h))
-			for b in names:
-				var rb: Rect2i = Rect2i(rw.rooms[b].pos, Vector2i(rw.rooms[b].level.w, rw.rooms[b].level.h))
-				var linked := false
-				if ra.end.x == rb.position.x:
-					for ty in range(maxi(ra.position.y, rb.position.y), mini(ra.end.y, rb.end.y)):
-						if Adventure._open(rw.rooms[a], ra.end.x - 1, ty) and Adventure._open(rw.rooms[b], rb.position.x, ty):
-							linked = true
-							break
-				elif ra.end.y == rb.position.y:
-					for tx in range(maxi(ra.position.x, rb.position.x), mini(ra.end.x, rb.end.x)):
-						if Adventure._open(rw.rooms[a], tx, ra.end.y - 1) and Adventure._open(rw.rooms[b], tx, rb.position.y):
-							linked = true
-							break
-				if linked:
-					nb[a] = nb.get(a, []) + [b]
-					nb[b] = nb.get(b, []) + [a]
-		for rn in rw.rooms:
-			for e in rw.rooms[rn].level.entities:
-				if e.t == "door":
-					var tr: String = str(e.to).get_slice(":", 0)
-					nb[rn] = nb.get(rn, []) + [tr]
-					nb[tr] = nb.get(tr, []) + [rn]
-		var reach := {rw.start: true}
-		var queue := [rw.start]
-		while not queue.is_empty():
-			for n in nb.get(queue.pop_back(), []):
-				if n != "" and not reach.has(n):
-					reach[n] = true
-					queue.append(n)
-		check(reach.size() == rw.rooms.size(), "%s: every room is reachable from the start (%d/%d)" % [w[0], reach.size(), rw.rooms.size()])
 
 # Regression coverage for doors. The assertions below state the expected behavior of this case.
 func check_doors() -> void:
@@ -1931,8 +1848,8 @@ func check_adventure() -> void:
 	var run: Dictionary = cf.get_value("adventure", Game._run_key(), {})
 	check(Game.has_adventure_save() and run.get("room") == "a2_little_gap" and run.get("abilities") == ["dash"], "adventure run saves and loads")
 	var key := Game._run_key()
-	Game.world_path = Game.ADVENTURE_DIR + "world.json"
-	check(Game._run_key() == "run" and key != "run" and not Game.has_adventure_save(), "each world keeps its own save (main world keeps the old key)")
+	Game.world_path = Game.STORY_WORLD
+	check(Game._run_key() == "run_story" and key != "run_story" and not Game.has_adventure_save(), "each world keeps its own save")
 	Game.world_path = FIXTURE_WORLD + "world.json"
 	Game.adv = {}
 	DirAccess.remove_absolute(Game.save_path)
@@ -1953,7 +1870,7 @@ func check_adventure() -> void:
 	var again := Adventure.load_world(Game.world_path)
 	check(again.rooms.a3_stairs.pos == Vector2i(80, 10) and added == "a1_first_steps_2" and again.rooms.has(added), "world editor moves and adds rooms and saves them")
 	we.queue_free()
-	Game.world_path = Game.ADVENTURE_DIR + "world.json"
+	Game.world_path = Game.STORY_WORLD
 	_remove_dir(dir)
 
 # Start the test/benchmark scene, configure its disposable fixtures and run the checks.

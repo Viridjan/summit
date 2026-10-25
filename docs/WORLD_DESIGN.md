@@ -1,6 +1,6 @@
 # World design
 
-The shipped adventure (`res://adventure/`): 14 rooms in 4 areas, each borrowing from one game.
+The former Summit world (`res://adventure/`, removed 2026-10-25; still in git history): 14 rooms in 4 areas, each borrowing from one game.
 This is a study from knowledge of the games, not from their data files; Metroid Zero Mission
 details come from the decompilation notes in `METROID_NOTES.md`.
 
@@ -158,7 +158,7 @@ door-arrival and room-entry methods with rendering and save writes disabled. It 
 alignment along shared room edges (standing and crouched, 1/4/8 px steps), doorway contact offsets and
 open outer edges; `--phase edges|doors|bounds` runs one part, and `--phase replay` runs three seeded story
 spots (Cove Tunnel into Cove Town, the net-trap door, the Meadow's open sky) through the 60 Hz state
-machine. `--world res://adventure/world.json --output /tmp/adventure-safety.json` checks another world.
+machine. `--world <path>/world.json --output /tmp/other-safety.json` checks another world.
 Exit code 1 = a failure was reproduced, 2 = bad configuration, 0 = none found.
 
 `check_side_openings.py` groups open left/right edge tiles that face no room or a neighbour's wall

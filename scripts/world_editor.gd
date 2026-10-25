@@ -7,7 +7,7 @@ extends Control
 # Reading help: docs/CODE_GUIDE.md.
 
 # World editor (main menu > World Editor, only when run from source): places adventure rooms on the world grid.
-# Rooms are ordinary level files in res://adventure/; world.json stores where each one sits.
+# Rooms are ordinary level files in the world folder (res://worlds/story/); world.json stores where each one sits.
 # Drag a room to move it (snaps to tiles); where two rooms touch, matching open tiles become passages (green).
 # Overlapping rooms are outlined red. Every change is saved straight away.
 # Mouse: LMB select/drag room · RMB or MMB drag pan · wheel zoom.

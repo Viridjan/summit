@@ -38,15 +38,12 @@ Breakable Wall: solid until hit 3 times with the attack (`hp` in the level file)
 Title screen → Adventure → New Game / Continue. The adventure is one big world of connected rooms (Metroid style):
 walk off a room's edge into the next one. You start without dash and climb; orbs in the world unlock them.
 M shows every room explored so far. Progress saves automatically (`user://save.cfg`, section `[adventure]`).
-The shipped world (14 rooms styled after Hollow Knight, Silksong, Symphony of the Night and Metroid Zero Mission)
-is described in `docs/WORLD_DESIGN.md`; `tools/world_check.py` / `tools/world_softlock.py` check reachability and gates.
-**World:** in the Adventure menu switches to the story world (`res://worlds/story/`, chapter 1 in progress, see
-`docs/STORY_DESIGN.md`); the world editor edits the picked world (cyan lines = door links).
+The game ships one world, the story (`res://worlds/story/`, chapter 1 in progress, see `docs/STORY_DESIGN.md`); the world editor edits it (cyan lines = door links).
 
-**World editor** (main menu → World Editor, only when run from source because it writes `res://adventure/`):
+**World editor** (main menu → World Editor, only when run from source because it writes `res://worlds/story/`):
 drag rooms on the grid; where two rooms touch and both have open tiles on the shared edge, that's a passage (green).
 "+ Add empty room" (placed right of the selected room) or "+ Add copy of my level", Edit room (opens the level editor; "World" goes back),
-Playtest from here, Set as start. Files: `res://adventure/world.json` (room positions) + one level file per room.
+Playtest from here, Set as start. Files: `res://worlds/story/world.json` (room positions) + one level file per room.
 Background and ideas for later (doors, gates, map stations, hurt states): `docs/METROID_NOTES.md`.
 
 ## Map and tuning (in-game, also in editor playtests)

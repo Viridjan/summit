@@ -54,20 +54,10 @@ func _main() -> void:
 	body.add_child(Game.button("Quit", func(): Game.quit_game()))
 	play.grab_focus()
 
-# Open the adventure start/continue choices for the selected world.
+# Open the adventure start/continue choices.
 func _adventure() -> void:
 	_clear()
 	body.add_child(Game.label("Adventure", 44))
-	var worlds: Array = Game.world_list()
-	var wi := maxi(0, worlds.map(func(w): return w[1]).find(Game.world_path))
-	var pick := Game.button("World:  %s  >" % worlds[wi][0], func():
-		var nxt: Array = worlds[(wi + 1) % worlds.size()]
-		Game.world_path = nxt[1]
-		Game.settings.world = "" if nxt[1] == Game.STORY_WORLD else nxt[1]
-		Game.save_settings()
-		_adventure())
-	pick.visible = worlds.size() > 1
-	body.add_child(pick)
 	var first: Button = null
 	if Game.has_adventure_save():
 		first = Game.button("Continue", func(): Game.start_adventure(false))

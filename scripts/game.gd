@@ -13,7 +13,6 @@ const Entities := preload("res://scripts/entities.gd")
 const Tuning := preload("res://scripts/tuning.gd")
 const Adventure := preload("res://scripts/adventure.gd")
 const LEVEL_DIR := "user://levels/"
-const ADVENTURE_DIR := "res://adventure/"
 const WORLDS_DIR := "res://worlds/"  # worlds: one folder each with world.json + rooms (docs/WORLD_DESIGN.md)
 const STORY_WORLD := WORLDS_DIR + "story/world.json"  # the default world
 const SETTINGS_PATH := "user://settings.cfg"
@@ -104,7 +103,6 @@ var settings := {
 	"pad": DEFAULT_PAD.duplicate(),
 	"tuning_preset": "",  # active movement preset in user://tuning/ ("" = project defaults)
 	"tuning_open_groups": [],  # debug panel variable groups left open (all collapsed by default)
-	"world": "",  # adventure world picked in the menu ("" = the story world)
 }
 # Player tuning overrides (var name -> value), applied to every new Player. See tuning.gd.
 var tuning: Dictionary = {}
@@ -112,7 +110,7 @@ var tuning: Dictionary = {}
 var level: Dictionary = {}
 var playtest := false
 var editor_level: Dictionary = {}
-var editor_dir := LEVEL_DIR  # where the level editor saves (ADVENTURE_DIR when editing a world room)
+var editor_dir := LEVEL_DIR  # where the level editor saves (the world folder when editing a world room)
 var editor_file := ""  # fixed file name when editing a world room (renaming must not break world.json)
 var editor_return := "menu"  # screen the editor's Menu button goes back to
 var adv: Dictionary = {}  # active adventure run (see start_adventure); empty outside it
@@ -132,8 +130,6 @@ func _ready() -> void:
 	apply_settings()
 	tuning = Tuning.startup(settings.tuning_preset)
 	get_sfx()  # synthesizes every effect (~190 ms) during the boot splash, not on the first click or scream
-	if settings.world != "" and FileAccess.file_exists(settings.world):
-		world_path = settings.world
 
 
 # Return the shared effects service, creating it if needed; all callers then reuse the same voice pool.
@@ -377,20 +373,9 @@ func has_adventure_save() -> bool:
 	cf.load(save_path)
 	return cf.has_section_key("adventure", _run_key())
 
-# "run" for the main world (older saves keep working), "run_<folder>" for the others.
 # Build the configuration key used to keep progress for different worlds separate.
 func _run_key() -> String:
-	return "run" if world_path == ADVENTURE_DIR + "world.json" else "run_" + world_path.get_base_dir().get_file()
-
-# [[title, world.json path]]: the story world first, then Summit, then the other folders in WORLDS_DIR.
-# Discover playable world manifests for the menu selection list.
-func world_list() -> Array:
-	var out := [["Story", STORY_WORLD], ["Summit", ADVENTURE_DIR + "world.json"]]
-	for d in DirAccess.get_directories_at(WORLDS_DIR):
-		var p := WORLDS_DIR + d + "/world.json"
-		if p != STORY_WORLD and FileAccess.file_exists(p):
-			out.append([d.capitalize(), p])
-	return out
+	return "run_" + world_path.get_base_dir().get_file()
 
 # Load the selected world and either create fresh progress or restore its saved run.
 func start_adventure(fresh: bool) -> void:

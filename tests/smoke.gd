@@ -213,7 +213,7 @@ func _ready() -> void:
 	await _frames(5)
 	if not Game.has_adventure_save():
 		_fail("adventure run was not saved")
-	Game.world_path = Game.ADVENTURE_DIR + "world.json"  # the shipped world from here on
+	Game.world_path = Game.STORY_WORLD  # the shipped world from here on
 	Game.goto("world_editor")
 	await _frames(10)
 	await _shot("world_editor")
