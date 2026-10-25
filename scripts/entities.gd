@@ -1872,7 +1872,7 @@ class Ape extends Ent:
 	const SLAM_REACH := 16  # landing shockwave: this far out on both sides, along the ground
 	const SLAM_HEIGHT := 8
 	const SLAM_TIME := 0.2
-	const FAR := 72.0  # throw beyond this (centre to centre, px); leap between NEAR and FAR; scream within NEAR
+	const FAR := 96.0  # throw beyond this (radial, centre to centre, px); leap between NEAR and FAR; scream within NEAR
 	const NEAR := 44.0
 	const WAKE := 220.0
 	var hp := HP
@@ -1966,12 +1966,13 @@ class Ape extends Ent:
 				w.player.die(Vector2(signf(w.player.center().x - center().x), -1).normalized())
 		var p = w.player
 		var dx: float = p.center().x - center().x
+		var dist: float = p.center().distance_to(center())  # attack choice is radial; dx only picks the side
 		if phase in ["idle", "throw", "crouch", "scream"]:
 			facing = 1 if dx > 0 else -1
 		timer -= dt
 		match phase:
 			"sleep":
-				if absf(dx) < WAKE:
+				if dist < WAKE:
 					_go("scream", 0.5)  # the fight opens with a scream
 			"idle":
 				if timer <= 0:
@@ -1980,9 +1981,11 @@ class Ape extends Ent:
 						_go("crouch", 0.45)
 					elif p.center().x < r.x or p.center().x > r.y:  # player out of its reach (past the trunk): leap at them
 						_go("crouch", 0.45)
-					elif absf(dx) > FAR:
+					elif absf(p.center().y - center().y) > absf(dx):  # player above or below (steeper than 45 degrees): leap
+						_go("crouch", 0.45)
+					elif dist > FAR:
 						_go("throw", 0.7)
-					elif absf(dx) > NEAR:
+					elif dist > NEAR:
 						_go("crouch", 0.45)
 					else:
 						_go("scream", 0.5)
@@ -2127,21 +2130,15 @@ class Ape extends Ent:
 				w.spawn_entity({"t": k[0], "x": k[1], "y": k[2]})
 		if d.has("orb"):
 			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
-	# Hitbox overlay (F2): how it picks its attack, by the horizontal distance from its centre to the player's.
+	# Hitbox overlay (F2): how it picks its attack, by the straight-line distance from its centre to the player's.
 	func _draw_ranges(ci: CanvasItem) -> void:
 		var c := center()
-		var top := float(rect.end.y) - 72.0
 		var font := ThemeDB.fallback_font
-		var bands := [[0.0, NEAR, "scream", Color(1, 0.35, 0.3)], [NEAR, FAR, "leap", Color(1, 0.8, 0.3)], [FAR, WAKE, "throw", Color(0.4, 0.75, 1)]]
-		for b in bands:
-			for side in [-1.0, 1.0]:
-				var x0: float = c.x + side * b[0]
-				var x1: float = c.x + side * b[1]
-				ci.draw_rect(Rect2(minf(x0, x1), top, absf(x1 - x0), 72.0), Color(b[3], 0.12))
-				ci.draw_line(Vector2(x1, top), Vector2(x1, top + 72.0), Color(b[3], 0.7), 1.0)
-			ci.draw_string(font, Vector2(c.x + (b[0] + b[1]) / 2.0 - 10.0, top + 7.0), b[2], HORIZONTAL_ALIGNMENT_LEFT, -1, 6, b[3])
-			ci.draw_string(font, Vector2(c.x + b[1] - 8.0, top - 1.0), "%d" % b[1], HORIZONTAL_ALIGNMENT_LEFT, -1, 6, b[3])
-		ci.draw_string(font, Vector2(c.x + WAKE - 30.0, top + 15.0), "wakes inside", HORIZONTAL_ALIGNMENT_LEFT, -1, 6, Color(0.4, 0.75, 1))
+		for b in [[NEAR, "scream", Color(1, 0.35, 0.3)], [FAR, "leap", Color(1, 0.8, 0.3)], [WAKE, "throw / wake", Color(0.4, 0.75, 1)]]:
+			ci.draw_arc(c, b[0], 0.0, TAU, 96, Color(b[2], 0.7), 1.0)
+			ci.draw_string(font, c + Vector2(-12.0, -b[0] + 7.0), "%s %d" % [b[1], b[0]], HORIZONTAL_ALIGNMENT_LEFT, -1, 6, b[2])
+		for d in [Vector2(1, 1), Vector2(-1, 1)]:  # above/below these diagonals it always leaps
+			ci.draw_line(c - d * WAKE, c + d * WAKE, Color(1, 0.8, 0.3, 0.5), 1.0)
 	# Move thrown stones, then resolve player, trunk and solid-terrain impacts.
 	func _update_stones(dt: float) -> void:
 		var t = trunk() if w != null else null

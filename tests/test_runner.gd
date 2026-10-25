@@ -1626,6 +1626,14 @@ func check_ape() -> void:
 			landed_x = ape.center().x
 			break
 	check(landed_x > 0 and landed_x < p().center().x - 8, "the Ape's leap lands past the player (at %s, player %s)" % [landed_x, p().center().x])
+	# player straight above (far enough to be in throw range): it leaps, never throws
+	make_world([{"t": "boss_ape", "x": 360, "y": floor_y - 32}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(ape.center().x + 10, floor_y - 140)
+	ape.phase = "idle"
+	ape.timer = 0.0
+	step()
+	check(ape.phase == "crouch", "a player above the Ape makes it leap (phase %s)" % ape.phase)
 	# spikes: a landing on them is a hit, and the next patch appears; three hits beat it
 	make_world([{"t": "spikes_up", "x": 288, "y": floor_y - 8}, {"t": "spikes_up", "x": 296, "y": floor_y - 8}, {"t": "spikes_up", "x": 304, "y": floor_y - 8},
 		{"t": "boss_ape", "x": 370, "y": floor_y - 32, "spikes": [[[100, floor_y - 8, 2]]], "orb": [200, floor_y - 16]},

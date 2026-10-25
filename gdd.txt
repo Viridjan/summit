@@ -360,3 +360,5 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Render interpolation: physics stays 60 Hz; each displayed frame draws the camera and the player between their last two ticks (World._process, Player.draw_off). Fixes the judder/blur on 120-165 Hz screens; room changes rebase it, doors/respawns snap.
 - 2026-10-25: Music without the SiON synth (web, non-Linux): the engine plays baked recordings (assets/music/*.wav, QOA-compressed on import, looping) made by tools/bake_music.gd (rerun after changing scores/tempo/instruments). SiON classes are reached by name so the script loads without the add-on. Studio edits only sound with the synth.
 - 2026-10-25: F2 hitbox overlay shows the Ape's attack ranges (scream <= 44, leap <= 72, throw beyond, wakes within 220).
+- 2026-10-25: Ape attack choice is radial (straight-line centre distance, not horizontal): scream <= 44, leap 44-96, throw > 96 (throw distance back to 96), wakes within 220. F2 overlay draws circles.
+- 2026-10-25: Ape always leaps when the player is above or below it (vertical gap > horizontal gap); F2 overlay draws the two diagonals.
