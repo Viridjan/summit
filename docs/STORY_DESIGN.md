@@ -116,7 +116,7 @@ Stamina is also health:
 - **1 block = 100 stamina** in code. Every value below is in code units.
 - In code now (scripts/adventure.gd; F3 in game shows it all live): energy is called **stamina** (2026-10-25). The run
   starts with a **base of 40** that always regenerates; each stamina block picked up adds **20**. Regeneration is
-  k x 12/s, k by how full the bar is: 0.5 empty, 1 at half, 0.75 full; none in water or while climbing. A jump or
+  3/s with the bar empty, rising linearly to 12/s at half full, then down to 4/s full; none in water or while climbing. A jump or
   wall jump costs and needs 5. Climbing drains the same bar (one full base bar = one Celeste climb meter); the
   ground doesn't refill it. Water drains 40/s; 0 in water drowns. A hit is always a death; the respawn refills the
   base bar. A stamina orb refills to max (back after 2.5 s). Hair turns grey below 20%.

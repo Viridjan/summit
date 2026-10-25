@@ -61,9 +61,12 @@ var filter: LineEdit
 var pause_box: Button
 var status: Label
 
-# Remember the live World whose player this panel will inspect and tune.
-func _init(w) -> void:
+var part := "tuning"  # "tuning" (F1): movement tuning; "state" (F4): state machine and live variables
+
+# Remember the live World whose player this panel will inspect or tune.
+func _init(w, part_ := "tuning") -> void:
 	world = w
+	part = part_
 
 # Build movement controls, preset actions and live state diagnostics, then synchronize displayed values.
 func _ready() -> void:
@@ -72,11 +75,17 @@ func _ready() -> void:
 	theme = Game.theme.duplicate()
 	theme.default_font_size = 14
 
-	# left: state machine + live variables
+	if part == "state":
+		_build_state()
+	else:
+		_build_tuning()
+
+# F4: the state machine graph, recent transitions and live variables (left side).
+func _build_state() -> void:
 	var left := _panel(Vector2(8, 40), Vector2(440, 672))
 	var lbox := VBoxContainer.new()
 	left.add_child(lbox)
-	lbox.add_child(_label("State machine  (F1 closes)", Color("ffd34e")))
+	lbox.add_child(_label("State machine  (%s closes)" % Game.key_name("state_debug"), Color("ffd34e")))
 	var graph_row := HBoxContainer.new()  # graph | recent transitions, side by side
 	graph_row.add_theme_constant_override("separation", 14)  # room for the right-side arrow counts
 	lbox.add_child(graph_row)
@@ -104,11 +113,12 @@ func _ready() -> void:
 				l.custom_minimum_size.x = l.get_theme_font("font").get_string_size("-0000, -0000", HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 4
 				live_vals.append(l)
 
-	# right: tuning
+# F1: movement tuning, presets, sim pause/step and the hitbox toggle (right side).
+func _build_tuning() -> void:
 	var right := _panel(Vector2(1280 - 448, 8), Vector2(440, 704))
 	var rbox := VBoxContainer.new()
 	right.add_child(rbox)
-	rbox.add_child(_label("Movement tuning", Color("ffd34e")))
+	rbox.add_child(_label("Movement tuning  (%s closes)" % Game.key_name("debug"), Color("ffd34e")))
 	var row := HBoxContainer.new()
 	rbox.add_child(row)
 	preset_menu = OptionButton.new()
@@ -370,6 +380,12 @@ func typing() -> bool:
 # Refresh live state, velocities, resource bars and the diagnostic transition graph.
 func _process(_dt: float) -> void:
 	var p = world.player
+	if part != "state":
+		for n in Tuning.DERIVED:
+			var dl := find_child(n, true, false) as Label
+			if dl:
+				dl.text = _fmt(p.get(n))
+		return
 	graph.player = p
 	graph.queue_redraw()
 	var t := ""
@@ -381,10 +397,6 @@ func _process(_dt: float) -> void:
 	for i in LIVE.size():
 		var prop: String = LIVE[i][1]
 		live_vals[i + 1].text = _fmt(p.ducking() if prop == "collider" else p.get(prop))
-	for n in Tuning.DERIVED:
-		var l := find_child(n, true, false) as Label
-		if l:
-			l.text = _fmt(p.get(n))
 
 # Format numbers and vectors compactly for the live diagnostic labels.
 static func _fmt(v) -> String:

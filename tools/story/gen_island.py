@@ -70,6 +70,9 @@ s.open(1, 2, 38, 16)
 s.open(30, 0, 33, 1); s.ladder(15, 0, (22, 27), (29, 34))   # back up to the west shore
 s.pool(8, 17, 13, 18)
 s.solid(4, 14, 6, 16); s.ent("strawberry", 5, 13)
+# Optional cliff-top route over the tide pool; the floor route stays available.
+s.solid(8, 11, 10, 11); s.solid(12, 10, 19, 10)
+s.ent("strawberry", 16, 9)
 
 e = room("i08_east_shore", "East Shore", 40, 23, SHORE, 868, 46)
 e.open(1, 2, 38, 19); e.open(0, 16, 0, 19)
@@ -81,13 +84,23 @@ e.solid(20, 17, 22, 19); e.ent("strawberry", 21, 16)
 f = room("i04_foothills", "Foothills", 40, 23, VOLCANO, 740, 46)
 f.open(1, 2, 38, 19); f.open(0, 16, 0, 19); f.open(39, 16, 39, 19)
 f.solid(10, 18, 13, 19); f.solid(22, 17, 26, 19); f.solid(30, 18, 32, 19)
+# Introduce one slow, clearly warned falling-rock column over safe dry ground.
+# The flooded hall later combines the same hazard with water and narrow pillars.
+f.ents.append({"t": "rockfall", "x": 18*T, "y": 2*T, "w": T, "h": T, "every": 3.8})
 
 a = room("i05_ascent", "Volcano Ascent", 24, 46, VOLCANO, 780, 23)
 a.open(1, 2, 22, 42); a.open(0, 39, 0, 42); a.open(23, 6, 23, 9)
 a.solid(19, 10, 23, 10)                                      # the shelf at the top exit
 a.solid(19, 30, 22, 34)                                      # outcrop
-for k, y in enumerate(range(40, 12, -3)):
-    a.thru(*((1, 17) if y in (31, 22) else (3, 9) if k % 2 == 0 else (11, 17)), y)  # two wide rest shelves
+# Short rail connections between four natural rock ledges, with two rest shelves.
+# Jump spacing is unchanged; support types and silhouettes vary across the climb.
+for x0, x1, y, solid in [(3,9,40,True), (11,17,37,False), (3,9,34,True),
+                         (1,17,31,False), (3,9,28,True), (11,17,25,False),
+                         (1,17,22,False), (11,17,19,False), (3,9,16,True), (11,17,13,False)]:
+    if solid:
+        a.solid(x0,y,x1,y)
+    else:
+        a.thru(x0,x1,y)
 
 c = room("i06_crater", "Crater", 40, 23, VOLCANO, 804, 23)
 c.open(1, 2, 38, 19); c.open(0, 6, 0, 9); c.open(39, 7, 39, 10)
@@ -99,7 +112,12 @@ c.solid(29, 17, 30, 19); c.solid(31, 14, 32, 19); c.solid(33, 11, 39, 19)  # ste
 d = room("i07_east_slope", "East Slope", 24, 46, VOLCANO, 844, 23)
 d.open(1, 2, 22, 42); d.open(0, 7, 0, 10); d.open(23, 39, 23, 42)
 d.solid(0, 11, 6, 11)
-d.ladder(41, 14, (15, 21), (8, 14))
+# Broad solid landings make descent deliberate; small intervening rails retain
+# a jump-only route back up. This is a different rhythm from the ascent.
+for x0, x1, y in [(8,14,14), (15,21,20), (8,14,26), (15,21,32), (8,14,38)]:
+    d.solid(x0,y,x1,y)
+for x0, x1, y in [(15,21,17), (8,14,23), (15,21,29), (8,14,35), (15,21,41)]:
+    d.thru(x0,x1,y)
 
 # --- Under the volcano ---------------------------------------------------------------------------------------------
 k = room("i09_sea_cave", "Sea Cave", 24, 23, CAVE, 868, 69)
@@ -116,9 +134,14 @@ j.solid(30, 18, 33, 19)
 h = room("i11_flooded_hall", "Flooded Hall", 48, 23, CAVE, 780, 69)
 h.open(1, 2, 46, 21); h.open(0, 8, 0, 11); h.open(47, 10, 47, 13)
 h.solid(40, 14, 47, 21); h.solid(1, 12, 6, 21)               # ledges at both ends
-h.pool(7, 14, 39, 21)                                        # deep water, wall to wall
-for x in (34, 28, 22, 16, 10):
+h.pool(7, 14, 18, 21); h.pool(24, 14, 39, 21)
+for x in (34, 28, 16, 10):
     h.solid(x, 12, x + 1, 21)                                # stone pillars over it
+# A dry central well connects to the vent shaft, closing a genuine maze loop.
+# Rock walls contain the two pools; down+jump on the crust reveals the passage.
+h.solid(19,14,19,22); h.solid(23,14,23,22)
+h.open(20,14,22,22)
+for y in (14,17,20): h.thru(20,22,y)
 h.ents.append({"t": "rockfall", "x": 8 * T, "y": 2 * T, "w": 31 * T, "h": T, "every": 1.2})
 
 g = room("i12_echo_gallery", "Echo Gallery", 40, 23, CAVE, 740, 69)
@@ -126,6 +149,8 @@ g.open(1, 2, 38, 19); g.open(39, 8, 39, 11)
 g.solid(30, 12, 39, 19); g.solid(27, 15, 29, 19); g.solid(24, 18, 26, 19)  # down from the hall
 g.open(4, 20, 7, 22); g.thru(4, 7, 20)                       # crust: down into the lower maze
 g.ents.append({"t": "enemy_mosstrot", "x": 14 * T, "y": 19 * T, "facing": 1})
+# Shallow, recoverable hollows break up the flat floor without adding lethal pits.
+g.open(12,20,16,21); g.thru(12,16,18)
 
 l = room("i13_lower_maze", "Lower Maze", 48, 23, CAVE, 740, 92)
 l.open(1, 2, 46, 19); l.open(4, 0, 7, 1); l.open(47, 16, 47, 19)
@@ -136,11 +161,17 @@ for x in (36, 37, 38):
     l.ent("spikes_up", x, 21)
 l.open(20, 20, 23, 22); l.thru(20, 23, 20)                   # crust: down into the crystal pocket
 l.ents.append({"t": "enemy_mosstrot", "x": 28 * T, "y": 19 * T, "facing": -1})
+# An optional upper passage under the arch and a lower route below its shelf.
+l.solid(18,16,34,16); l.thru(14,19,18); l.thru(32,35,18)
+l.ent("strawberry", 27, 15)
 
 v = room("i14_vent_shaft", "Vent Shaft", 16, 32, CAVE, 788, 92)
 v.open(1, 2, 14, 28); v.open(0, 16, 0, 19); v.open(15, 25, 15, 28)
 v.solid(0, 20, 6, 20)
 v.thru(9, 14, 26); v.thru(9, 14, 23)                         # back up to the lower maze
+v.open(12,0,14,1)
+for x0,x1,y in [(8,14,17), (2,8,14), (8,14,11), (2,8,8), (8,14,5), (8,14,2), (11,14,0)]:
+    v.thru(x0,x1,y)  # up to the flooded hall's dry well
 
 r = room("i15_quiet_refuge", "Quiet Refuge", 24, 16, CAVE, 804, 108)
 r.open(1, 2, 22, 12); r.open(0, 9, 0, 12); r.open(23, 9, 23, 12)

@@ -385,3 +385,7 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Wall jumps (and super wall jumps) cost a jump's energy (5) and need it; climb jumps already did.
 - 2026-10-25: Ape attacks: a stone throw at random on 20% of attacks; otherwise distance picks scream (<= 44 px) or leap. No scream when the player is cornered against a wall the scream would fully reach (it leaps). Idle waits 10% shorter (x0.765 overall).
 - 2026-10-25: Energy renamed stamina everywhere (code, level types stamina_block / stamina_orb, F3 stamina_panel, action stamina_debug; old saves' "energy" read as stamina). Regen = k x 12/s with k 0.5 empty -> 1 at half -> 0.75 full. Water drain 40/s. Climbing merged into the stamina bar in the adventure (a full base bar = a full climb meter; no regen on the wall; ground/crystal climb refills don't fill it); editor levels keep the separate climb meter.
+- 2026-10-25: Stamina regen factor more aggressive: 0.2 empty -> 1 at half -> 0.5 full.
+- 2026-10-25: Stamina regen by fill: 3/s empty -> 12/s at half -> 4/s full (STAMINA_REGEN_EMPTY / _MAX / _FULL).
+- 2026-10-25: Stamina HUD bar twice as wide (0.92 px per stamina; graphics only).
+- 2026-10-25: Debug tools split: F1 movement tuning, F4 state machine + live variables (new), F3 stamina, F2 hitboxes. The pause menu lost "Tuning & State"; its top right has Tuning / State / Stamina buttons.

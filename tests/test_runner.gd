@@ -1474,6 +1474,22 @@ func check_ape_hitbox_shapes() -> void:
 		and after.entities.any(func(e): return e.t == "stamina_orb"),
 		"a beaten Ape's arena comes back as its variant: no boss or gates, same terrain and spawns, the orb")
 
+# Pause menu: the three debug tools top right (no "Tuning & State" entry); F1 tuning and F4 state are separate panels.
+func check_debug_tools() -> void:
+	make_world([])
+	w._set_paused(true)
+	var texts: Array = w.overlay.find_children("*", "Button", true, false).map(func(b): return b.text)
+	var tools: Array = texts.filter(func(t): return t.begins_with("Tuning (") or t.begins_with("State (") or t.begins_with("Stamina ("))
+	var state_btn = w.overlay.find_children("*", "Button", true, false).filter(func(b): return b.text.begins_with("State ("))[0]
+	state_btn.pressed.emit()
+	var opened: bool = not w.paused and w.state_panel != null and w.state_panel.part == "state" and w.state_panel.graph != null and w.debug_panel == null
+	w._toggle_debug()
+	var tuning_ok: bool = w.debug_panel.part == "tuning" and w.debug_panel.graph == null and not w.debug_panel.spins.is_empty()
+	check(tools.size() == 3 and not texts.any(func(t): return t.contains("State)") or t.contains("&")) and opened and tuning_ok and Game.key_name("state_debug") == "F4",
+		"pause menu has Tuning, State and Stamina buttons top right; F1 tuning and F4 state are separate panels (%s)" % [texts])
+	w._toggle_debug()
+	w._toggle_state()
+
 # The volcanic guardian (eastern island): eruptions under the player, plugs broken by baited eruptions, victory.
 func check_guardian() -> void:
 	var floor_y := 28 * 8
@@ -1822,13 +1838,17 @@ func check_stamina() -> void:
 	check(Adventure.spend_stamina(run, 20) and run.stamina == 20.0, "spending takes stamina")
 	Adventure.regen_stamina(run, 0.01)
 	check(is_equal_approx(run.stamina, 20.0 + 0.12), "at half full stamina regenerates at the full 12 per second (%s)" % run.stamina)
-	check(Adventure.regen_factor(0.0) == 0.5 and Adventure.regen_factor(0.25) == 0.75 and Adventure.regen_factor(0.5) == 1.0
-		and Adventure.regen_factor(0.75) == 0.875 and Adventure.regen_factor(1.0) == 0.75, "regen x0.5 empty, x1 at half, x0.75 full")
+	# Lambdas capture local variables, but cannot resolve this function's local script constant.
+	var regen_factor: Callable = Adventure.regen_factor
+	var regen_max: float = Adventure.STAMINA_REGEN_MAX
+	var rate := func(f): return regen_max * regen_factor.call(f)
+	check(is_equal_approx(rate.call(0.0), 3.0) and is_equal_approx(rate.call(0.25), 7.5) and is_equal_approx(rate.call(0.5), 12.0)
+		and is_equal_approx(rate.call(0.75), 8.0) and is_equal_approx(rate.call(1.0), 4.0), "regen 3/s empty, 12/s at half, 4/s full")
 	Adventure.regen_stamina(run, 10.0)
 	check(run.stamina == 40.0, "regeneration stops at the top of the base")
 	run.stamina = 0.0
 	Adventure.regen_stamina(run, 0.01)
-	check(is_equal_approx(run.stamina, 0.06), "the base always regenerates, even from 0, at half speed (%s)" % run.stamina)
+	check(is_equal_approx(run.stamina, 0.03), "the base always regenerates, even from 0, at 3 per second (%s)" % run.stamina)
 	Adventure.regen_stamina(run, 100.0)
 	check(not Adventure.spend_stamina(run, 160) and run.stamina == 40.0, "can't spend more than you have")
 	Adventure.add_stamina_block(run)
@@ -2569,6 +2589,7 @@ func _ready() -> void:
 	check_ape_hitbox_shapes()
 	check_ape()
 	check_guardian()
+	check_debug_tools()
 	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)

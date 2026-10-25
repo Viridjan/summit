@@ -64,7 +64,7 @@ func _draw() -> void:
 	y = _line(font, y, "now: %+.1f/s  %s" % [r[0], r[1]], Color("ffd84a") if r[0] < 0 else Color("9fe0ff"))
 	y += 6
 	y = _line(font, y, "GAIN", Color("7cf0c0"))
-	y = _line(font, y, "  regen k x %.0f/s: k 0.5 empty, 1 at half, 0.75 full (out of water, not climbing)" % Adventure.STAMINA_REGEN_MAX)
+	y = _line(font, y, "  regen %.0f/s empty, %.0f/s at half, %.0f/s full (out of water, not climbing)" % [Adventure.STAMINA_REGEN_EMPTY, Adventure.STAMINA_REGEN_MAX, Adventure.STAMINA_REGEN_FULL])
 	y = _line(font, y, "  stamina block pickup: +%.0f capacity, +%.0f stamina (once each)" % [Adventure.STAMINA_PER_BLOCK, Adventure.STAMINA_PER_BLOCK])
 	y = _line(font, y, "  stamina orb: refill to max, back after 2.5 s")
 	y = _line(font, y, "LOSS", Color("ff8a6a"))

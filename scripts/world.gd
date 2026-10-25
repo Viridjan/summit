@@ -112,7 +112,7 @@ class Hud extends Control:
 			for i in fills.size():
 				var f: float = fills[i]
 				var cap: float = Adventure.BASE_STAMINA if i == 0 else Adventure.STAMINA_PER_BLOCK
-				var r := Rect2(x, y + 7, roundf(cap * 0.46), 14)  # bar width follows what it holds (0.46 px per stamina)
+				var r := Rect2(x, y + 7, roundf(cap * 0.92), 14)  # bar width follows what it holds (0.92 px per stamina)
 				draw_rect(r.grow(2), Color.BLACK)
 				draw_rect(r, Color(0.12, 0.15, 0.2))
 				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), col)
@@ -223,7 +223,8 @@ var leaving_rect := Rect2()  # that room, in this room's coordinates
 var pending_door = null  # door touched this tick (Door entity); used after the touch loop
 var door_block := Rect2i()  # the door we arrived on: ignored until the player steps off it
 var overlay: Control
-var debug_panel: Control  # F1: state machine + tuning
+var debug_panel: Control  # F1: movement tuning
+var state_panel: Control  # F4: state machine and live variables
 var map_view: Control  # M: full-screen map (pauses)
 
 # Request fresh object and background drawing; retained terrain chunks manage their own redraws.
@@ -581,7 +582,7 @@ func _process(_delta: float) -> void:
 	if is_instance_valid(Game.music_engine):
 		Game.music_engine.set_muffled(paused or map_view != null)
 	if touch != null:
-		touch.visible = not (paused or done or map_view != null or debug_panel != null)
+		touch.visible = not (paused or done or map_view != null or debug_panel != null or state_panel != null)
 	if near_queue.is_empty():
 		return
 	var n: String = near_queue.pop_front()
@@ -901,15 +902,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_toggle_debug()
 		return
+	elif map_view == null and (event.is_action_pressed("state_debug") or (state_panel != null and event.is_action_pressed("pause"))):
+		get_viewport().set_input_as_handled()
+		_toggle_state()
+		return
 	elif event.is_action_pressed("stamina_debug"):
 		get_viewport().set_input_as_handled()
-		if stamina_panel != null:
-			stamina_panel.queue_free()
-			stamina_panel = null
-		else:
-			stamina_panel = load("res://scripts/stamina_panel.gd").new()
-			stamina_panel.world = self
-			ui.add_child(stamina_panel)
+		_toggle_stamina_panel()
 		return
 	elif event.is_action_pressed("hitboxes"):
 		get_viewport().set_input_as_handled()
@@ -1141,11 +1140,24 @@ func _set_paused(v: bool) -> void:
 	if not adventure():
 		box.add_child(Game.button("Restart Level", _restart))
 	box.add_child(Game.button("Options", _open_options))
-	box.add_child(Game.button("Tuning && State (%s)" % Game.key_name("debug"), func():
-		_set_paused(false)
-		if debug_panel == null:
-			_toggle_debug()))
 	box.add_child(Game.button(_exit_label(), _exit))
+	# the debug tools, top right: each closes the menu and opens its panel
+	var tools := HBoxContainer.new()
+	tools.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	tools.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	tools.offset_left = -12
+	tools.offset_right = -12
+	tools.offset_top = 12
+	tools.add_theme_constant_override("separation", 8)
+	overlay.add_child(tools)
+	for t in [["Tuning", "debug", _toggle_debug, func(): return debug_panel], ["State", "state_debug", _toggle_state, func(): return state_panel],
+			["Stamina", "stamina_debug", _toggle_stamina_panel, func(): return stamina_panel]]:
+		var b := Game.button("%s (%s)" % [t[0], Game.key_name(t[1])], func():
+			_set_paused(false)
+			if t[3].call() == null:
+				t[2].call())
+		b.add_theme_font_size_override("font_size", 18)
+		tools.add_child(b)
 	resume.grab_focus()
 
 # Create or close the movement-tuning developer panel.
@@ -1156,6 +1168,25 @@ func _toggle_debug() -> void:
 	else:
 		debug_panel = DebugPanel.new(self)
 		ui.add_child(debug_panel)
+
+# Create or close the state machine / live variables panel (F4).
+func _toggle_state() -> void:
+	if state_panel != null:
+		state_panel.queue_free()
+		state_panel = null
+	else:
+		state_panel = DebugPanel.new(self, "state")
+		ui.add_child(state_panel)
+
+# Create or close the stamina panel (F3).
+func _toggle_stamina_panel() -> void:
+	if stamina_panel != null:
+		stamina_panel.queue_free()
+		stamina_panel = null
+	else:
+		stamina_panel = load("res://scripts/stamina_panel.gd").new()
+		stamina_panel.world = self
+		ui.add_child(stamina_panel)
 
 # Create or close the paused map overlay and hide the normal HUD while viewing it.
 func _toggle_map() -> void:
