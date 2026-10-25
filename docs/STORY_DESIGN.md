@@ -87,11 +87,13 @@ Arena and collision:
   the arena (`range: [72, 568]`); there is no tree-dependent `range2` stage.
 - Lure the Ape's overshooting leaps onto spikes. Three spike hits beat it;
   subsequent hits introduce more spike patches. Gates and the energy reward remain.
-- Arena 39 tiles wide (2026-10-25, 30% narrower; Sand Cave, Shore, Lighthouse moved 17 tiles left).
-  Idle waits are 15% shorter; the landing shockwave reaches 24 px each side.
-- Enraged after 2 hits: stones split in two on the ground, every leap (not the hops) shakes 2 logs
-  loose from the ceiling (random spots, never overlapping, 0.5 s apart), and a scream is followed by
-  2 hops in place with shockwaves 125% then 150% as wide.
+- Arena 39 tiles wide and empty (2026-10-25, user's World Editor edit: no ledges, platforms, starting spikes or
+  walk-in; both doorways drop into it). Idle waits are 15% shorter; the landing shockwave is 60 px wide.
+- Spikes come only from logs: every leap (not the hops) shakes one log loose at a random spot (never overlapping
+  another); where it breaks on the ground it leaves a 1-tile spike. Landing on spikes hurts the Ape and breaks
+  exactly those. No spikes are generated on hits.
+- Enraged after 2 hits: stones split in two on the ground, and a scream is followed by 2 hops in place with
+  shockwaves 130% then 170% as wide.
 - Body contact uses 70% of the original width and height, rounded from 32 to
   **22×22 pixels**, centred inside the sprite's movement footprint. Three bands
   narrow the upper body around the head and shoulders; the head follows crouching.

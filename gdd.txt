@@ -368,3 +368,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Energy: base 25 -> 20, jump cost 5 -> 2.5.
 - 2026-10-25: Ape arena exit ledges removed (user's World Editor edit kept, generator matches; small 2-tile stairs under both doorways so they stay jump-reachable). Enraged logs: one pair per real leap (not the hops), 0.5 s apart. Spike hits break only the spikes the Ape landed on.
 - 2026-10-25: Enraged Ape logs fall at random spots across the whole arena range, never overlapping.
+- 2026-10-25: Ape arena emptied by the user (no ledges/platforms/starting spikes/walk-in; check_entrances DROP_IN). Every leap drops 1 log at a random spot; a log leaves a 1-tile spike where it breaks; spikes are never auto-generated, landing on them hurts the Ape and breaks them. Slam 60 px wide (-25%), enraged hops 130%/170%.

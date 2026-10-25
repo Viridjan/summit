@@ -1869,18 +1869,17 @@ class Ape extends Ent:
 	const STONE_G := 400.0
 	const STONE := 16  # stone size = its hitbox
 	const SCREAM_REACH := 24  # 3 units around the body
-	const SLAM_REACH := 24  # landing shockwave: this far out on both sides, along the ground
+	const SLAM_REACH := 14  # landing shockwave (60 px wide in all): this far out on both sides, along the ground
 	const SLAM_HEIGHT := 8
 	const SLAM_TIME := 0.2
 	const FAR := 96.0  # throw beyond this (radial, centre to centre, px); leap between NEAR and FAR; scream within NEAR
 	const NEAR := 44.0
 	const WAKE := 220.0
 	const PAUSE := 0.85  # idle waits between attacks are scaled by this
-	const ENRAGED_HP := HP - 2  # from 2 hits on: stones split, landings drop logs, screams add 2 hops in place
-	const HOP_SCALE := [1.5, 1.25]  # shockwave width of the 2nd and 1st hop (indexed by hops left)
+	const ENRAGED_HP := HP - 2  # from 2 hits on: stones split, screams add 2 hops in place
+	const HOP_SCALE := [1.7, 1.3]  # shockwave width of the 2nd and 1st hop (indexed by hops left)
 	const LOG := Vector2i(24, 8)
 	const LOG_WAIT := 0.4  # the log shakes at the top this long before it drops
-	const LOG_GAP := 0.5  # the second log drops this long after the first
 	var hp := HP
 	var phase := "sleep"  # sleep, idle, throw, crouch, air, scream, hurt, dying, gone
 	var timer := 0.0
@@ -2102,8 +2101,8 @@ class Ape extends Ent:
 			if e is Spikes and e.collidable and e.rect.intersects(feet):
 				_hit()
 				return
-		if enraged() and slam_scale == 1.0:  # a real leap, not one of the hops in place: one pair of logs
-			_drop_logs()
+		if slam_scale == 1.0:  # every real leap (not the hops in place) shakes one log loose
+			_drop_log()
 		if hops > 0:
 			_go("crouch", 0.25)
 		else:
@@ -2123,11 +2122,6 @@ class Ape extends Ent:
 			if e is Spikes and e.dir == "up" and e.collidable and e.rect.intersects(feet):
 				e.collidable = false
 				w.burst(Vector2(e.rect.get_center()), Color("e8e8f0"), 3)
-		var patches: Array = d.get("spikes", [])
-		if stage - 1 < patches.size():
-			for patch in patches[stage - 1]:
-				for i in int(patch[2]):
-					w.spawn_entity({"t": "spikes_up", "x": int(patch[0]) + i * T, "y": int(patch[1])})
 		_go("hurt", 0.8)
 	# Record permanent boss defeat, release the arena and spawn the configured reward.
 	func _beaten() -> void:
@@ -2171,20 +2165,29 @@ class Ape extends Ent:
 	# From 2 hits on.
 	func enraged() -> bool:
 		return hp <= ENRAGED_HP
-	# Two logs shake loose from the ceiling at random spots across the arena, never overlapping each other (or a log
-	# still falling); the second drops 0.5 s after the first.
-	func _drop_logs() -> void:
+	# A log shakes loose from the ceiling at a random spot across the arena, never overlapping a log still falling.
+	func _drop_log() -> void:
 		var r := leap_range()
-		for k in 2:
-			var lx := 0.0
-			for tries in 20:  # ponytail: rejection sampling, fine for an arena much wider than two logs
-				lx = randf_range(r.x, r.y - LOG.x)
-				if logs.all(func(l): return absf(l[0].x - lx) >= LOG.x):
-					break
-			var y := 0
-			while y < w.gh * T and w.collide_solid(Rect2i(int(lx), y, LOG.x, LOG.y)) != null:
-				y += T
-			logs.append([Vector2(lx, y), 0.0, LOG_WAIT + LOG_GAP * k])
+		var lx := 0.0
+		for tries in 20:  # ponytail: rejection sampling, fine for an arena much wider than a log
+			lx = randf_range(r.x, r.y - LOG.x)
+			if logs.all(func(l): return absf(l[0].x - lx) >= LOG.x):
+				break
+		var y := 0
+		while y < w.gh * T and w.collide_solid(Rect2i(int(lx), y, LOG.x, LOG.y)) != null:
+			y += T
+		logs.append([Vector2(lx, y), 0.0, LOG_WAIT])
+	# Where a log breaks on the ground it leaves a 1-tile spike (the only spikes the fight makes).
+	func _log_spike(box: Rect2i) -> void:
+		var tx := int(box.get_center().x) / T
+		var ty := (box.end.y - 1) / T  # the ground row the log broke on
+		var cell := Rect2i(tx * T, (ty - 1) * T, T, T)
+		if not (w.collide_solid(Rect2i(tx * T, ty * T, T, T)) is String) or w.collide_solid(cell) != null:
+			return  # only on open tile ground (not a gate or another block), on an empty cell
+		for e in w.touchables:
+			if e is Spikes and e.collidable and e.rect.intersects(cell):
+				return
+		w.spawn_entity({"t": "spikes_up", "x": tx * T, "y": (ty - 1) * T})
 	# Logs wait, then fall; they kill on contact and break on the ground.
 	func _update_logs(dt: float) -> void:
 		for i in range(logs.size() - 1, -1, -1):
@@ -2199,6 +2202,8 @@ class Ape extends Ent:
 				w.player.die(Vector2.DOWN)
 			elif w.collide_solid(box) == null and l[0].y < w.gh * T + 64:
 				continue
+			else:
+				_log_spike(box)
 			w.burst(Vector2(box.get_center()), Color("6b4a2a"), 8)
 			logs.remove_at(i)
 	# Move thrown stones, then resolve player, trunk and solid-terrain impacts.
@@ -2251,6 +2256,8 @@ class Ape extends Ent:
 			pose = "run"
 		elif phase == "roar":
 			pose = "scream"
+		if slam_t > 0 and phase not in ["hurt", "dying"]:
+			pose = "land"
 		var art = load("res://scripts/ape_art.gd")
 		var o := Vector2(rect.position)
 		var tint := Color(1, 1, 1, a)
@@ -2262,10 +2269,10 @@ class Ape extends Ent:
 			ci.draw_rect(Rect2(3, -5, 8, 6), Color("8a8478"))
 			ci.draw_rect(Rect2(4, -4, 4, 2), Color("b0aa9c"))
 		ci.draw_set_transform(Vector2.ZERO)
-		if slam_t > 0:  # the shockwave, exactly its hitbox
+		if slam_t > 0:  # textured impact stays inside the unchanged damage bounds
 			var sb := Rect2(slam_box())
-			ci.draw_rect(sb, Color(0.85, 0.75, 0.55, 0.35 + slam_t))
-			ci.draw_rect(Rect2(sb.position, Vector2(sb.size.x, 2)), Color(1, 0.95, 0.8, 0.8))
+			var impact_frame := clampi(int((1.0 - slam_t / SLAM_TIME) * 4.0), 0, 3)
+			ci.draw_texture_rect(art.impact_texture(int(sb.size.x), int(sb.size.y), impact_frame), sb, false)
 		if phase == "scream" and timer <= 0.0 and timer > -0.35:  # the scream's reach
 			var c := center()
 			for k in 3:

@@ -480,27 +480,6 @@ func check_shipped_world() -> void:
 	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.spawn == dry_spawn,
 		"a flooded room gets no respawn point: dying there returns to the last safe one (%s, %s, %s)" % [fw.room, fw.spawn_room, fw.spawn])
 	fw.queue_free()
-	# the Ape arena's walk-in is automatic on every entry, not only after a death: crossing in from the jungle
-	Game.adv = Adventure.new_run(story)
-	Game.adv.room = "j3_jungle_hills"
-	Game.adv.spawn = null
-	Game.level = story.rooms["j3_jungle_hills"].level
-	var jw = load("res://scripts/world.gd").new()
-	w = jw
-	add_child(jw)
-	jw.set_physics_process(false)
-	var arena_y: float = (story.rooms["a1_ape_arena"].pos.y - story.rooms["j3_jungle_hills"].pos.y + 15) * 8.0
-	jw.player = Bot.new(jw, Vector2(story.rooms["j3_jungle_hills"].level.w * 8 - 6, arena_y))
-	p().hold = {"right": true}
-	for k in 30:
-		step()
-		if jw.room == "a1_ape_arena":
-			break
-	p().hold = {}
-	var entered_x: float = p().pos.x
-	step(70)
-	check(jw.room == "a1_ape_arena" and p().pos.x - entered_x > 40.0, "entering the Ape arena always walks the player in (from %.0f to %.0f)" % [entered_x, p().pos.x])
-	jw.queue_free()
 	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
 	Game.adv = Adventure.new_run(story)
 	Game.adv.room = "c2_cave_teeth"
@@ -1551,9 +1530,10 @@ func check_ape() -> void:
 	ape.timer = 0.0
 	step()
 	check(ape.phase == "crouch", "a player above the Ape makes it leap (phase %s)" % ape.phase)
-	# spikes: a landing on them is a hit, and the next patch appears; three hits beat it
+	# spikes: a landing on them is a hit and breaks the ones it landed on (no new ones appear); four hits beat it
 	make_world([{"t": "spikes_up", "x": 288, "y": floor_y - 8}, {"t": "spikes_up", "x": 296, "y": floor_y - 8}, {"t": "spikes_up", "x": 304, "y": floor_y - 8},
-		{"t": "boss_ape", "x": 370, "y": floor_y - 32, "spikes": [[[100, floor_y - 8, 2]]], "orb": [200, floor_y - 16]},
+		{"t": "spikes_up", "x": 100, "y": floor_y - 8},
+		{"t": "boss_ape", "x": 370, "y": floor_y - 32, "orb": [200, floor_y - 16]},
 		{"t": "boss_gate", "x": 440, "y": floor_y - 32, "w": 8, "h": 32}])
 	ape = find.call(E.Ape)[0]
 	var gate = find.call(E.BossGate)[0]
@@ -1565,12 +1545,14 @@ func check_ape() -> void:
 		if ape.hp < E.Ape.HP:
 			break
 	step(2)
-	check(ape.hp == E.Ape.HP - 1 and live.call().size() == 2 and live.call().all(func(e): return e.rect.position.x < 120),
-		"landing on spikes hurts the Ape; those spikes crumble and the next patch appears on the other side (hp %d, %d live)" % [ape.hp, live.call().size()])
+	var feet := Rect2i(ape.rect.position.x, ape.rect.end.y - 4, ape.rect.size.x, 4)
+	check(ape.hp == E.Ape.HP - 1 and live.call().size() < 4 and live.call().any(func(e): return e.rect.position.x == 100)
+		and not live.call().any(func(e): return e.rect.intersects(feet)) and not find.call(E.Spikes).any(func(e): return e.rect.position.x < 280 and e.rect.position.x != 100),
+		"landing on spikes hurts the Ape and breaks only those it landed on; none are generated (hp %d, %d live)" % [ape.hp, live.call().size()])
 	step(2)
 	check(gate.collidable, "boss gates stay shut while the Ape lives")
 	ape.hp = 1
-	ape.rect.position = Vector2i(live.call()[0].rect.position.x - 8, floor_y - 32)  # onto the new patch
+	ape.rect.position = Vector2i(92, floor_y - 32)  # onto the lone spike
 	ape._land()
 	step(90)
 	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "the last hit beats the Ape: gates open, it stays beaten, an energy orb appears")
@@ -1598,9 +1580,9 @@ func check_ape() -> void:
 	ape.phase = "air"
 	ape._land()
 	step(2)
-	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(176, floor_y - 8, 80, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
+	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(186, floor_y - 8, 60, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
 	check(is_equal_approx(ape.timer + 2 * DT, 0.6 * E.Ape.PAUSE), "the Ape waits 15%% less after a landing (%s)" % ape.timer)
-	# enraged (2 hits taken): a scream is followed by 2 hops in place, shockwaves 125% then 150% wide; landings drop 2 logs
+	# enraged (2 hits taken): a scream is followed by 2 hops in place, shockwaves 130% then 170% wide, no logs
 	Game.settings.invincible = true
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
@@ -1617,20 +1599,31 @@ func check_ape() -> void:
 			widths.append(ape.slam_box().size.x)
 			xs.append(ape.rect.position.x)
 		logs_seen = maxi(logs_seen, ape.logs.size())
-	check(widths.size() >= 2 and widths[0] == 100 and widths[1] == 120 and xs[0] == 200 and xs[1] == 200, "enraged scream: 2 hops in place, shockwaves 100 then 120 wide (%s at %s)" % [widths, xs])
+	check(widths.size() >= 2 and widths[0] == 78 and widths[1] == 102 and xs[0] == 200 and xs[1] == 200, "enraged scream: 2 hops in place, shockwaves 78 then 102 wide (%s at %s)" % [widths, xs])
 	check(logs_seen == 0, "the hops in place drop no logs (%d)" % logs_seen)
+	# from the start, every leap drops one log at a random spot; logs never overlap; where one breaks, a 1-tile spike
+	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32, "range": [16, 460]}])
+	ape = find.call(E.Ape)[0]
+	p().pos = Vector2(60, floor_y)
 	ape.phase = "air"
-	ape.slam_scale = 1.0
 	ape._land()
-	check(ape.logs.size() == 2 and is_equal_approx(ape.logs[1][2] - ape.logs[0][2], E.Ape.LOG_GAP), "an enraged leap drops 2 logs, 0.5 s apart (%s)" % [ape.logs])
+	check(ape.logs.size() == 1, "a leap drops one log, from the first hit on (%d)" % ape.logs.size())
 	var apart := true
 	var spread := {}
 	for k in 200:
 		ape.logs.clear()
-		ape._drop_logs()
+		ape._drop_log()
+		ape._drop_log()
 		apart = apart and absf(ape.logs[0][0].x - ape.logs[1][0].x) >= E.Ape.LOG.x
 		spread[int(ape.logs[0][0].x / 64)] = true
-	check(apart and spread.size() >= 4, "the 2 logs land at random spots across the arena and never overlap (%d zones)" % spread.size())
+	check(apart and spread.size() >= 4, "logs fall at random spots across the arena and never overlap (%d zones)" % spread.size())
+	ape.logs = [[Vector2(300, 40), 0.0, 0.0]]
+	ape.phase = "gone"
+	for k in 120:
+		step()
+	var made: Array = find.call(E.Spikes).filter(func(e): return e.collidable)
+	check(ape.logs.is_empty() and made.size() == 1 and made[0].dir == "up" and int(made[0].d.x) == 312 and int(made[0].d.y) == floor_y - 8,
+		"a log breaking on the ground leaves a 1-tile spike under its middle (%s)" % [made.map(func(e): return [e.d.x, e.d.y])])
 	# enraged stones split in two when they reach the ground
 	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]

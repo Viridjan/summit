@@ -7,6 +7,8 @@ change (World.enter_room) lands on solid ground: floor (or a jump-through) at th
 """
 import json, os, sys
 
+DROP_IN = {"a1_ape_arena"}  # rooms whose side doorways deliberately drop into them (Ape arena, user's design 2026-10-25)
+
 
 # Find border entrances whose initial walk-in space is blocked or lacks the expected support.
 def bad_entrances(d):
@@ -41,6 +43,8 @@ def bad_entrances(d):
                         spikes[(rx + int(e["x"]) // 8 + i, ry + int(e["y"]) // 8 + j)] = True
     bad = []
     for n, (rx, ry, L) in rooms.items():
+        if n in DROP_IN:
+            continue
         w, h = L["w"], L["h"]
         for side, x, dx in (("left", 0, 1), ("right", w - 1, -1)):
             y = 0

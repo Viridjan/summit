@@ -199,33 +199,20 @@ def door(r, x, y, did, to): r.ents.append({"t": "door", "x": x * T, "y": y * T, 
 AW = 39  # arena width: 30% narrower than the first 56 (2026-10-25); the right branch moved left with it
 a1 = Room("a1_ape_arena", "Ape Arena", AW, 23, "forest", fill="1")
 a1.open(1, 2, AW - 2, G - 1); a1.open(0, 11, 0, 14); a1.open(AW - 1, 12, AW - 1, 15)
-# exit ledges removed in the World Editor (2026-10-25); small stairs (2-tile rises) keep both doorways jump-only reachable
-a1.solid(1, 15, 2, 18); a1.solid(3, 17, 4, 18)                    # left: pillar under the doorway + one step
-a1.solid(AW - 3, 16, AW - 2, 18); a1.solid(AW - 5, 18, AW - 4, 18)  # right: pillar under the doorway + one step
+# As edited in the World Editor (2026-10-25): an empty arena, no ledges, stairs, platforms or starting spikes, no
+# walk-in. Both doorways drop into it (tools/check_entrances.py DROP_IN): the way back left is out of jump reach.
 a1.open(12, G, 15, 22)                       # left branch (lines up with Jungle Depths), gated during the fight
-# One open arena (no tree puzzle). Entering, you're walked off the ledge into it and the way back shuts.
-a1.ents.append({"t": "auto_walk", "x": 0, "y": 11 * T, "w": 3 * T, "h": 4 * T, "dir": 1, "time": 0.7, "while_boss": True})
 a1.ents.append({"t": "boss_gate", "x": 0, "y": 11 * T, "w": T, "h": 4 * T, "closes_behind": True})
-a1.spikes_up(29, 31, 18)
-# solid platforms, uneven: the Ape lands on them too, and can't fit under the low ones (16-24 px gaps)
-ARENA_PLATFORMS = [(10, 12, 14), (AW - 7, AW - 6, 11)]  # as edited in the World Editor (2026-10-25), right one beside the exit ledge
-for x0, x1, py in ARENA_PLATFORMS:
-    a1.solid(x0, py, x1, py)
 for y in range(5, 9): a1.ent("spikes_right", 1, y)    # wall spikes, out of the Ape's range: they stay all fight
 for y in range(4, 9): a1.ent("spikes_left", AW - 2, y)
-a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T,
-    "range": [1 * T, (AW - 1) * T],  # the whole arena, exit ledges included
-    # after each hit the old spikes crumble and new ones appear on the other side (4 hits: 3 patches)
-    "spikes": [[[18 * T, 18 * T, 3]], [[31 * T, 18 * T, 3]], [[6 * T, 18 * T, 2], [24 * T, 18 * T, 2]]],
-    "orb": [31 * T, 16 * T]})
+# every leap drops a log that leaves a 1-tile spike where it breaks; landing on spikes hurts the Ape and breaks them
+a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T, "range": [1 * T, (AW - 1) * T], "orb": [31 * T, 16 * T]})
 a1.ents.append({"t": "boss_gate", "x": (AW - 1) * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
 a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
-# After the Ape (world.json "variants"): the same terrain and spawns, with no boss or gates, the spikes as the
-# fight leaves them (the last patch and the walls) and the orb.
+# After the Ape (world.json "variants"): the same terrain and spawns, with no boss or gates, the wall spikes and the orb.
 APE_ID = "a1_ape_arena:ape_%d_%d" % (18 * T, 15 * T)
 a1b = Room("a1_ape_arena_after", "Ape Arena", AW, 23, "forest", fill="1")
 a1b.g = [row[:] for row in a1.g]  # ponytail: ignored at runtime (the base room's tiles are used), kept valid
-for x0, n in ((6, 2), (24, 2)): a1b.spikes_up(x0, x0 + n - 1, 18)
 for y in range(5, 9): a1b.ent("spikes_right", 1, y)
 for y in range(4, 9): a1b.ent("spikes_left", AW - 2, y)
 a1b.ent("energy_orb", 31, 16)
