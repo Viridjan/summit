@@ -24,17 +24,23 @@ import json, os, sys
 from collections import deque
 
 T = 8
+# World data is in whole units: the World Editor writes 8 as 8.0 (Godot JSON); read those back as ints.
+def unit(text):
+    v = float(text)
+    return int(v) if v.is_integer() else v
+
+
 HAZARD = ("acid", "water", "spikes_up", "spikes_down", "spikes_left", "spikes_right")
 SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru", "leaf")
 
 
 # Close exposed room-edge cells that do not lead to a valid matching neighbor.
 def seal_edges(world_dir):
-    W = json.load(open(os.path.join(world_dir, "world.json")))
+    W = json.load(open(os.path.join(world_dir, "world.json")), parse_float=unit)
     rooms = {}
     for n in W["rooms"]:
         text = open(os.path.join(world_dir, n + ".json")).read()
-        rooms[n] = (json.loads(text), "\n" in text.strip())
+        rooms[n] = (json.loads(text, parse_float=unit), "\n" in text.strip())
     cell = {}
     for n, (x, y) in W["rooms"].items():
         for ty, row in enumerate(rooms[n][0]["tiles"]):
@@ -70,11 +76,11 @@ def seal_edges(world_dir):
 
 # Read the world manifest and associated room dictionaries for the repair pass.
 def _load(world_dir):
-    W = json.load(open(os.path.join(world_dir, "world.json")))
+    W = json.load(open(os.path.join(world_dir, "world.json")), parse_float=unit)
     rooms = {}
     for n in W["rooms"]:
         text = open(os.path.join(world_dir, n + ".json")).read()
-        rooms[n] = (json.loads(text), "\n" in text.strip())
+        rooms[n] = (json.loads(text, parse_float=unit), "\n" in text.strip())
     return W, rooms
 
 
@@ -333,12 +339,12 @@ def drop_unreachable(world_dir):
 
 # Add room entry spawn markers derived from the available passages.
 def add_spawns(world_dir):
-    W = json.load(open(os.path.join(world_dir, "world.json")))
+    W = json.load(open(os.path.join(world_dir, "world.json")), parse_float=unit)
     rooms = {}
     for n, (x, y) in W["rooms"].items():
         path = os.path.join(world_dir, n + ".json")
         text = open(path).read()
-        rooms[n] = (x, y, json.loads(text), "\n" in text.strip())
+        rooms[n] = (x, y, json.loads(text, parse_float=unit), "\n" in text.strip())
     owner = {}  # global open tile -> room
     for n, (x, y, L, _) in rooms.items():
         for ty, row in enumerate(L["tiles"]):

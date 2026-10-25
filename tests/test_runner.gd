@@ -500,6 +500,14 @@ func check_shipped_world() -> void:
 		step()
 	check(ww.cam_prev.distance_to(ww.cam_now) < 8.0, "render interpolation follows a room change instead of sweeping (cam %s -> %s)" % [ww.cam_prev, ww.cam_now])
 	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
+	# a room smaller than the view sits centred, with black around it; entering the next room drops the mask
+	ww.enter_room("h1_villager_house", Vector2(40, 100))
+	for k in 240:
+		ww._physics_process(DT)
+	var small_ok: bool = ww.mask_a > 0.99 and ww.cam_pos.distance_to(Vector2(ww.bounds.get_center())) < 1.0
+	var small_msg := "mask %s cam %s centre %s" % [ww.mask_a, ww.cam_pos, ww.bounds.get_center()]
+	ww.enter_room("t1_cove_town", Vector2(88, 152))
+	check(small_ok and ww.mask_a == 0.0, "a small room is centred and masked in black; the mask drops on entering the next room (%s)" % small_msg)
 	ww.queue_free()
 	# house doors: standing at one (or pressing up) does nothing; interact goes inside, and again comes back out
 	Game.adv = Adventure.new_run(story)
@@ -554,6 +562,36 @@ func check_shipped_world() -> void:
 	p().tap = {"interact": true}
 	step(3)
 	check(in_stairs == "lh1_lighthouse_stairs" and hw.room == "s3_lighthouse_top", "lighthouse: shore door into the stairs, top door out to the lamp (%s, %s)" % [in_stairs, hw.room])
+	# Jungle Hills: the hole to Jungle Depths stays covered until the Ape is beaten; then, leaving the arena on the
+	# left, the Ape follows the player leftward and gives up at the big trunk, short of the hole
+	var ape_id := "a1_ape_arena:ape_144_120"
+	hw.broken.erase(ape_id)
+	E.ApeChase._plans.clear()
+	hw.enter_room("j3_jungle_hills", Vector2(78 * 8, 19 * 8))
+	step(3)
+	var cover = hw.ents.filter(func(e): return e is E.BossGate and e.d.has("until"))[0]
+	var lchase = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	var before_ok: bool = cover.collidable and lchase.phase == "off"
+	hw.broken[ape_id] = true
+	hw.enter_room("j3_jungle_hills", Vector2(78 * 8, 19 * 8))
+	step(3)
+	cover = hw.ents.filter(func(e): return e is E.BossGate and e.d.has("until"))[0]
+	lchase = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	for k in 60:
+		if lchase.planner != null and lchase.planner.done:
+			break
+		step()
+	Game.settings.invincible = true
+	p().pos = Vector2(40 * 8, 19 * 8)  # past the trigger, waiting beyond the trunk
+	for k in 60 * 8:
+		step()
+	Game.settings.invincible = false
+	var lend: Vector2 = lchase.path[-1] if not lchase.path.is_empty() else Vector2.ZERO
+	check(before_ok and not cover.collidable and lchase.dir() == -1 and not lchase.path.is_empty() and lend.x <= 59 * 8 and lend.x > 55 * 8
+		and lchase.phase in ["dying", "gone"] and hw.broken.has(lchase.id),
+		"Jungle Hills: the hole opens and the Ape chases leftward only after the fight, stopping at the trunk (%s, end x %d)" % [lchase.phase, lend.x])
+	hw.broken.erase(ape_id)
+	hw.broken.erase(lchase.id)
 	# the sand cave: the Ape waits, wakes once the player passes its trigger, and chases by the player's own
 	# movement rules; standing still gets the player caught, reaching the end makes it give up for the run
 	E.ApeChase._plans.clear()
@@ -1364,8 +1402,8 @@ func check_ape_hitbox_shapes() -> void:
 	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
 	check(arena.entities.all(func(e): return e.t != "ape_trunk"), "Ape arena removes the tree obstacle")
 	var boss: Dictionary = arena.entities.filter(func(e): return e.t == "boss_ape")[0]
-	check(not boss.has("range2") and int(boss.range[0]) == 8 and int(boss.range[1]) == 304 and int(arena.w) == 39, "Ape arena (39 tiles wide) uses one unrestricted fighting range")
-	check(arena.tiles[19].substr(20,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
+	check(not boss.has("range2") and int(boss.range[0]) == 8 and int(boss.range[1]) == 240 and int(arena.w) == 31, "Ape arena (31 tiles wide) uses one unrestricted fighting range")
+	check(arena.tiles[19].substr(18,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
 	# the Ape gets everywhere in the arena: leaps at players all over it never stick or end inside terrain, and land
 	# on the floor, both exit ledges and every platform, edge to edge
 	var keep_lv = Game.level
@@ -1420,7 +1458,7 @@ func check_ape_hitbox_shapes() -> void:
 				surfaces[y] = true
 	var missed: Array = surfaces.keys().filter(func(y): return not rows.has(y))
 	# (spots with no room above for its 32px arc, like the right exit ledge under the row-11 block, stay Ape-free)
-	check(bad == 0 and missed.is_empty() and cols.size() > 24,
+	check(bad == 0 and missed.is_empty() and cols.size() > 18,
 		"the Ape reaches every surface it fits on and is never stuck or inside rock (%d bad, missed rows %s, %d columns)" % [bad, missed, cols.size()])
 	# conditional rooms: once the Ape is beaten, entering the arena loads its aftermath variant
 	var Adv = load("res://scripts/adventure.gd")
@@ -1432,6 +1470,53 @@ func check_ape_hitbox_shapes() -> void:
 		and after.tiles == base_lv.tiles and after.entities.filter(func(e): return e.t == "spawn").size() == base_lv.entities.filter(func(e): return e.t == "spawn").size()
 		and after.entities.any(func(e): return e.t == "energy_orb"),
 		"a beaten Ape's arena comes back as its variant: no boss or gates, same terrain and spawns, the orb")
+
+# The volcanic guardian (eastern island): eruptions under the player, plugs broken by baited eruptions, victory.
+func check_guardian() -> void:
+	var floor_y := 28 * 8
+	var keep_inv: bool = Game.settings.invincible
+	var door := {"t": "house_door", "x": 400, "y": floor_y - 24, "w": 16, "h": 24, "id": "home", "to": "x:home"}
+	make_world([{"t": "boss_guardian", "x": 200, "y": 16, "w": 96, "h": 64, "door": door},
+		{"t": "vent_plug", "x": 120, "y": floor_y, "w": 16, "h": 8}, {"t": "vent_plug", "x": 300, "y": floor_y, "w": 16, "h": 8},
+		{"t": "boss_gate", "x": 0, "y": floor_y - 32, "w": 8, "h": 32}])
+	var find := func(cls): return w.ents.filter(func(e): return is_instance_of(e, cls))
+	var g = find.call(E.Guardian)[0]
+	var gate = find.call(E.BossGate)[0]
+	Game.settings.invincible = false
+	p().pos = Vector2(200, floor_y)  # off the plugs: the eruption hits the player
+	step(3)
+	check(g.phase == "idle" and gate.collidable, "the guardian wakes when the player is inside, and the gate holds")
+	g.timer = 0.0
+	step()
+	check(g.phase == "warn" and g.target == Vector2(200, floor_y), "it marks the ground under the player (%s at %s)" % [g.phase, g.target])
+	for k in 90:
+		step()
+		if p().dead:
+			break
+	check(p().dead and g.stage == 0, "the eruption kills a player still standing on the mark")
+	# baiting: mark the ground on a plug, step away; the eruption breaks it
+	Game.settings.invincible = true
+	make_world([{"t": "boss_guardian", "x": 200, "y": 16, "w": 96, "h": 64, "door": door},
+		{"t": "vent_plug", "x": 120, "y": floor_y, "w": 16, "h": 8}, {"t": "vent_plug", "x": 300, "y": floor_y, "w": 16, "h": 8},
+		{"t": "boss_gate", "x": 0, "y": floor_y - 32, "w": 8, "h": 32}])
+	g = find.call(E.Guardian)[0]
+	for plug_x in [120, 300]:
+		g.phase = "idle"
+		g.timer = 0.0
+		p().pos = Vector2(plug_x + 8, floor_y)
+		step()
+		p().pos = Vector2(plug_x + 60, floor_y)
+		for k in 120:
+			step()
+			if g.phase == "idle" or g.phase == "dying":
+				break
+	var plugs: Array = find.call(E.VentPlug)
+	check(plugs.all(func(e): return e.broken) and g.stage == 2 and g.phase == "dying", "baited eruptions break the plugs; the last one beats it (%s, stage %d)" % [g.phase, g.stage])
+	step(100)
+	gate = find.call(E.BossGate)[0]
+	check(g.phase == "gone" and w.broken.has(g.id) and not gate.collidable and find.call(E.HouseDoor).size() == 1,
+		"beaten: saved, gates open, the door home appears")
+	Game.settings.invincible = keep_inv
 
 # Regression coverage for ape. The assertions below state the expected behavior of this case.
 func check_ape() -> void:
@@ -1582,7 +1667,7 @@ func check_ape() -> void:
 	step(2)
 	check(slam_hit and not p().dead and ape.slam_box() == Rect2i(186, floor_y - 8, 60, 8), "the Ape's landing slam hits beside it along the ground, not beyond its reach")
 	check(is_equal_approx(ape.timer + 2 * DT, 0.6 * E.Ape.PAUSE), "the Ape waits 15%% less after a landing (%s)" % ape.timer)
-	# enraged (2 hits taken): a scream is followed by 2 hops in place, shockwaves 130% then 170% wide, no logs
+	# enraged (2 hits taken): a scream is followed by 2 hops in place, shockwaves 130% then 170% wide, a log each
 	Game.settings.invincible = true
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
@@ -1600,7 +1685,7 @@ func check_ape() -> void:
 			xs.append(ape.rect.position.x)
 		logs_seen = maxi(logs_seen, ape.logs.size())
 	check(widths.size() >= 2 and widths[0] == 78 and widths[1] == 102 and xs[0] == 200 and xs[1] == 200, "enraged scream: 2 hops in place, shockwaves 78 then 102 wide (%s at %s)" % [widths, xs])
-	check(logs_seen == 0, "the hops in place drop no logs (%d)" % logs_seen)
+	check(logs_seen >= 2, "each hop in place drops a log too (%d)" % logs_seen)
 	# from the start, every leap drops one log at a random spot; logs never overlap; where one breaks, a 1-tile spike
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32, "range": [16, 460]}])
 	ape = find.call(E.Ape)[0]
@@ -1622,7 +1707,7 @@ func check_ape() -> void:
 	for k in 120:
 		step()
 	var made: Array = find.call(E.Spikes).filter(func(e): return e.collidable)
-	check(ape.logs.is_empty() and made.size() == 1 and made[0].dir == "up" and int(made[0].d.x) == 312 and int(made[0].d.y) == floor_y - 8,
+	check(ape.logs.is_empty() and made.size() == 1 and made[0].dir == "up" and int(made[0].d.x) == 304 and int(made[0].d.y) == floor_y - 8,
 		"a log breaking on the ground leaves a 1-tile spike under its middle (%s)" % [made.map(func(e): return [e.d.x, e.d.y])])
 	# enraged stones split in two when they reach the ground
 	make_world([{"t": "boss_ape", "x": 300, "y": floor_y - 32}])
@@ -1762,6 +1847,8 @@ func check_energy() -> void:
 	step(4)
 	check(absf(after_jump - 47.5) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 2.5 energy; with less there's no jump (%s)" % after_jump)
 	check(w.energy_log.size() > 0 and w.energy_log[-1][1] == "jump" and is_equal_approx(w.energy_log[-1][2], -2.5), "energy changes are logged with their cause (%s)" % [w.energy_log])
+	check(w.energy_totals.has("jump") and w.energy_totals.jump[0] >= 1 and is_equal_approx(w.energy_totals.jump[1], -2.5 * w.energy_totals.jump[0]) and w.energy_totals.has("regen"),
+		"F3 recap: totals per cause (%s)" % [w.energy_totals])
 	var EP = load("res://scripts/energy_panel.gd")
 	var ep = EP.new()
 	ep.world = w
@@ -2409,6 +2496,7 @@ func _ready() -> void:
 	check_bestiary()
 	check_ape_hitbox_shapes()
 	check_ape()
+	check_guardian()
 	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)

@@ -49,5 +49,20 @@ func _initialize() -> void:
 	check(art.build("run", 0).get_data() == art.build("run", 4).get_data(), "Run animation loops every 4 frames")
 	check(art.build("run", 0).get_data() != art.build("run", 1).get_data(), "Run frames differ within the loop")
 	check(art.texture("idle", 5) == art.texture("idle", 0), "Still poses share one texture")
+	# Airborne poses must change silhouette, not just shading or a clock-based loop.
+	var jump_shapes := {}
+	for pose in ["launch", "rise", "apex", "fall"]:
+		var jump: Image = art.build(pose, 0)
+		var mask := PackedByteArray()
+		for y in 32:
+			for x in 32:
+				mask.append(1 if jump.get_pixel(x, y).a > 0 else 0)
+		jump_shapes[mask] = true
+	check(jump_shapes.size() == 4, "Takeoff, rise, apex and descent have different outlines")
+	check(art.has_method("jump_pose"), "Jump artwork follows vertical movement")
+	if art.has_method("jump_pose"):
+		check(art.jump_pose(-180.0) == "rise", "Upward movement extends the rising pose")
+		check(art.jump_pose(0.0) == "apex", "Jump peak uses the tucked pose")
+		check(art.jump_pose(180.0) == "fall", "Descent prepares the fists for landing")
 	print("APE ART OK" if failures == 0 else "APE ART FAILED")
 	quit(failures)

@@ -32,6 +32,13 @@ class Background extends Node2D:
 	func _draw() -> void:
 		screen._draw_background(self)
 
+# Black mask over everything outside a room smaller than the view (the room sits centred in it). It fades in once
+# the camera has settled and drops as soon as the player enters the next room, so the transition shows both rooms.
+class RoomMask extends Node2D:
+	var screen: Node2D
+	func _draw() -> void:
+		screen._draw_room_mask(self)
+
 # Hitbox overlay (F2) colours, also listed in its legend: [label, colour].
 const HITBOX_KEY := [
 	["Solid, platform", Color(1, 0.9, 0.2, 0.9)],
@@ -144,6 +151,8 @@ class Hud extends Control:
 
 var tile_layer: TileLayer
 var background: Background
+var room_mask: RoomMask
+var mask_a := 0.0  # room mask opacity
 
 var data: Dictionary
 var level_id := ""
@@ -197,6 +206,7 @@ var ui: CanvasLayer
 var spawn_room := ""  # adventure: the room the respawn point (spawn) is in; another room when this one has no safe point
 var kept_spikes := {}  # room -> [[type, x, y]...]: spikes as a boss fight left them, kept for respawns until the room is left
 var energy_log: Array = []  # [time, cause, delta], newest first (F3 panel)
+var energy_totals := {}  # cause -> [times, total delta] since the level started (F3 recap); regen/water: [seconds, total]
 var energy_panel: Control
 var touch: Control  # phone controls, only on touchscreens
 var hud: Hud
@@ -221,6 +231,8 @@ func _redraw() -> void:
 	queue_redraw()
 	if background != null:
 		background.queue_redraw()
+	if room_mask != null:
+		room_mask.queue_redraw()
 
 # Create the background and chunked terrain nodes in the correct back-to-front order.
 func _create_tile_layer() -> void:
@@ -231,6 +243,10 @@ func _create_tile_layer() -> void:
 	tile_layer = TileLayer.new()
 	tile_layer.z_index = -1
 	add_child(tile_layer)
+	room_mask = RoomMask.new()
+	room_mask.screen = self
+	room_mask.z_index = 50
+	add_child(room_mask)
 
 # Read the chosen level, build the playable room and interface, then prepare music and neighboring terrain.
 func _ready() -> void:
@@ -463,6 +479,7 @@ func enter_room(next: String, at = null) -> void:
 	if at == null:
 		in_dir = 1 if player.center().x >= gw * T else (-1 if player.center().x < 0 else 0)
 	room = next
+	mask_a = 0.0  # the mask drops at once: the slide into the next room shows both
 	room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
 	data = Adventure.room_level(Game.adv_world, room, broken)
 	kept_spikes.clear()  # the room is left: a fight's leftovers don't carry over
@@ -628,10 +645,16 @@ func show_note(text: String) -> void:
 func update_energy(dt: float) -> void:
 	if not adventure() or player.dead:
 		return
+	var was: float = Game.adv.energy
+	var why := "regen"
 	if not in_water():
 		Adventure.regen_energy(Game.adv, dt)
-	elif not Adventure.water_energy(Game.adv, dt):
-		player.die(Vector2.UP)
+	else:
+		why = "water"
+		if not Adventure.water_energy(Game.adv, dt):
+			player.die(Vector2.UP)
+	if Game.adv.energy != was:
+		_tally(why, Game.adv.energy - was, dt)
 
 # A respawn point is safe when the player standing there is out of water and acid, clear of spikes and on ground.
 func safe_spawn(p: Vector2) -> bool:
@@ -673,8 +696,14 @@ func drain_energy(amount: float, why := "jump") -> void:
 		Adventure.drain_energy(Game.adv, amount)
 		energy_event(why, Game.adv.energy - was)
 
+# Add to the F3 recap: how often (or how long) a cause changed energy, and by how much in all.
+func _tally(why: String, delta: float, amount: float) -> void:
+	var t: Array = energy_totals.get(why, [0.0, 0.0])
+	energy_totals[why] = [t[0] + amount, t[1] + delta]
+
 # Remember a one-off energy change and its cause, for the F3 energy panel (last few only).
 func energy_event(why: String, delta: float) -> void:
+	_tally(why, delta, 1.0)
 	energy_log.push_front([time, why, delta])
 	if energy_log.size() > 10:
 		energy_log.pop_back()
@@ -946,10 +975,28 @@ func _physics_process(_delta: float) -> void:
 		off = Vector2(randi_range(-1, 1), randi_range(-1, 1))
 	cam_now = cam_pos + off
 	cam.position = cam_now.round()
+	mask_a = move_toward(mask_a, 1.0 if _cam_settled() else 0.0, dt * 4.0)
 	note_t -= dt
 	note_label.visible = note_t > 0 and map_view == null
 	hud.queue_redraw()
 	_redraw()
+
+# The camera has arrived along every axis on which the room is smaller than the view (so it is centred there).
+func _cam_settled() -> bool:
+	var d: Vector2 = (_clamp_cam(player.camera_target()) - cam_pos).abs()
+	return (bounds.size.x >= VIEW.x or d.x < 1.0) and (bounds.size.y >= VIEW.y or d.y < 1.0)
+
+# Black over the parts of the view outside this room (they only show when the room is smaller than the view).
+func _draw_room_mask(ci: CanvasItem) -> void:
+	if mask_a <= 0.0:
+		return
+	var v := Rect2(cam.position - VIEW / 2.0, VIEW).grow(2)
+	var b := Rect2(bounds)
+	var c := Color(0, 0, 0, mask_a)
+	ci.draw_rect(Rect2(v.position.x, v.position.y, v.size.x, b.position.y - v.position.y), c)  # above
+	ci.draw_rect(Rect2(v.position.x, b.end.y, v.size.x, v.end.y - b.end.y), c)  # below
+	ci.draw_rect(Rect2(v.position.x, b.position.y, b.position.x - v.position.x, b.size.y), c)  # left
+	ci.draw_rect(Rect2(b.end.x, b.position.y, v.end.x - b.end.x, b.size.y), c)  # right
 
 # Keep the camera within the room limits while handling rooms smaller than the view.
 func _clamp_cam(t: Vector2) -> Vector2:

@@ -58,7 +58,7 @@ func _ready() -> void:
 	for title in MusicEngine.EnvironmentMusic.TITLES:
 		themes.add_item(title)
 	if engine.title != "Demo":
-		themes.select(MusicEngine.EnvironmentMusic.KEYS.find(engine.environment) + 1)
+		themes.select(MusicEngine.EnvironmentMusic.KEYS.find(MusicEngine.EnvironmentMusic.ALIASES.get(engine.environment, engine.environment)) + 1)
 	themes.item_selected.connect(_select_environment)
 	selection.add_child(themes)
 	page_button = Game.button("", _next_page)
@@ -163,7 +163,7 @@ func _next_page() -> void:
 
 # Copy engine values into the interface without triggering edit callbacks for those display updates.
 func _refresh() -> void:
-	theme_picker.select(0 if engine.title == "Demo" else MusicEngine.EnvironmentMusic.KEYS.find(engine.environment) + 1)
+	theme_picker.select(0 if engine.title == "Demo" else MusicEngine.EnvironmentMusic.KEYS.find(MusicEngine.EnvironmentMusic.ALIASES.get(engine.environment, engine.environment)) + 1)
 	tempo.set_value_no_signal(engine.bpm)
 	page_button.text = "Steps %d–%d / %d  >" % [page * 16 + 1, page * 16 + 16, engine.patterns[0].size()]
 	var path := "res://assets/themes/%s/background.png" % engine.environment

@@ -164,7 +164,6 @@ j1.ent("strawberry", 5, 4)
 mosstrot(j1, 26, 18)
 j1.open(31, G, 38, 22)                       # the ground ends: drop into the falls below
 j1.open(20, G, 22, 20); j1.spikes_up(20, 22, 20)  # thorn pit, 3 tiles past the hollow trunk
-j1.ent("note", 27, 18, text="Mosstrots just wander. Jump over them.")
 
 j2 = Room("j2_jungle_falls", "Jungle Falls", 80, 23, "forest", fill="1")
 j2.open(1, 3, 78, G - 1); j2.open(31, 0, 38, 2)   # the drop from Jungle Edge
@@ -181,7 +180,7 @@ j2.solid(64, 17, 68, 18); j2.solid(69, 15, 78, 18)  # hills up to the exit
 j2.open(79, 11, 79, 14)                      # right edge rows 11..14 lead on
 
 j3 = Room("j3_jungle_hills", "Jungle Hills", 80, 23, "forest", fill="1")
-for x0, x1, top in ((1, 15, 15), (16, 22, 17), (23, 57, 19), (58, 64, 17), (65, 78, 15)):
+for x0, x1, top in ((1, 15, 15), (16, 22, 17), (23, 57, 19), (58, 64, 17), (65, 78, 19)):
     j3.open(x0, 2, x1, top - 1)              # the ground's top row per stretch
 j3.open(0, 11, 0, 14)
 j3.solid(32, 6, 46, 18); j3.open(32, 16, 46, 18)  # hill with a tunnel through it
@@ -189,33 +188,35 @@ j3.solid(52, 2, 54, 16)                      # big trunk, hollow at the base
 leaf(j3, 56, 16, 3); leaf(j3, 59, 13, 4); leaf(j3, 56, 10, 3)  # up the trunk's right side
 j3.ent("strawberry", 57, 8)
 j3.open(26, 19, 28, 20); j3.spikes_up(26, 28, 20)  # thorn pit on the long flat stretch
+j3.open(48, G, 51, 22)                       # the way down to the left branch (Jungle Depths), before the arena
 mosstrot(j3, 39, 5)  # on the tunnel hill's top, off the walking path
-j3.open(79, 11, 79, 14)                      # right edge rows 11..14 lead into the Ape's arena
-j3.ent("note", 75, 14, text="A deep roar ahead: the Ape's arena")
+j3.open(79, 15, 79, 18)                      # right edge at floor level: into the Ape's arena, and back out of it
 
 # 6. The Ape's arena (section 1.6, the boss is not built yet) and the fork (1.7)
 # Place a doorway rectangle with its ID and destination link.
 def door(r, x, y, did, to): r.ents.append({"t": "door", "x": x * T, "y": y * T, "w": 2 * T, "h": 3 * T, "id": did, "to": to})
-AW = 39  # arena width: 30% narrower than the first 56 (2026-10-25); the right branch moved left with it
+AW = 31  # arena width: 56, then 39, then 31 (2026-10-25); the right branch moved left with it
 a1 = Room("a1_ape_arena", "Ape Arena", AW, 23, "forest", fill="1")
-a1.open(1, 2, AW - 2, G - 1); a1.open(0, 11, 0, 14); a1.open(AW - 1, 12, AW - 1, 15)
+a1.open(1, 2, AW - 2, G - 1); a1.open(0, 15, 0, 18); a1.open(AW - 1, 12, AW - 1, 15)  # left opening at floor level
 # As edited in the World Editor (2026-10-25): an empty arena, no ledges, stairs, platforms or starting spikes, no
 # walk-in. Both doorways drop into it (tools/check_entrances.py DROP_IN): the way back left is out of jump reach.
-a1.open(12, G, 15, 22)                       # left branch (lines up with Jungle Depths), gated during the fight
-a1.ents.append({"t": "boss_gate", "x": 0, "y": 11 * T, "w": T, "h": 4 * T, "closes_behind": True})
+a1.ents.append({"t": "boss_gate", "x": 0, "y": 15 * T, "w": T, "h": 4 * T, "closes_behind": True})
 for y in range(5, 9): a1.ent("spikes_right", 1, y)    # wall spikes, out of the Ape's range: they stay all fight
 for y in range(4, 9): a1.ent("spikes_left", AW - 2, y)
 # every leap drops a log that leaves a 1-tile spike where it breaks; landing on spikes hurts the Ape and breaks them
-a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T, "range": [1 * T, (AW - 1) * T], "orb": [31 * T, 16 * T]})
+a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T, "range": [1 * T, (AW - 1) * T], "orb": [(AW - 8) * T, 16 * T]})
 a1.ents.append({"t": "boss_gate", "x": (AW - 1) * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
-a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
 # After the Ape (world.json "variants"): the same terrain and spawns, with no boss or gates, the wall spikes and the orb.
 APE_ID = "a1_ape_arena:ape_%d_%d" % (18 * T, 15 * T)
+# Jungle Hills after the fight: the roots over the hole down to Jungle Depths give way, and leaving the arena on the
+# left, the Ape follows you (right to left) until the big trunk's low hollow stops it, just short of the hole.
+j3.ents.append({"t": "boss_gate", "x": 48 * T, "y": G * T, "w": 4 * T, "h": T, "until": APE_ID})
+j3.ents.append({"t": "ape_chase", "x": 77 * T, "y": G * T - 32, "dir": -1, "trigger": 70 * T, "end": 58 * T, "after": APE_ID})
 a1b = Room("a1_ape_arena_after", "Ape Arena", AW, 23, "forest", fill="1")
 a1b.g = [row[:] for row in a1.g]  # ponytail: ignored at runtime (the base room's tiles are used), kept valid
 for y in range(5, 9): a1b.ent("spikes_right", 1, y)
 for y in range(4, 9): a1b.ent("spikes_left", AW - 2, y)
-a1b.ent("energy_orb", 31, 16)
+a1b.ent("energy_orb", AW - 8, 16)
 
 # Right branch: a long sand cave climbing at about 14 degrees (30 rows over 120 columns), then the shore and the
 # lighthouse. Jump-only challenges (no abilities yet), with the beaten Ape chasing the player up it.
@@ -255,17 +256,15 @@ s2 = Room("s2_shore", "Shore", 80, 23, "sea")
 s2.solid(0, 9, 14, 22); s2.solid(0, 0, 0, 0)  # the cliff we come out on, the mountain's foot
 s2.solid(8, 2, 12, 2)                        # mountain ledge, out of reach for now
 s2.ent("strawberry", 10, 1)
-s2.ent("note", 4, 8, text="The mountain: clearly climbable, but not yet")
 s2.solid(15, G, 79, 22); s2.solid(79, 0, 79, 22)
 s2.open(56, G, 78, 21); s2.water(56, G, 78, 21)  # the sea
 s2.solid(20, 17, 21, 18); s2.solid(36, 17, 37, 18)  # rocks on the beach
 s2.open(27, G, 29, 20); s2.spikes_up(27, 29, 20)    # urchins in a tide pool
-for x, y in ((60, 17), (66, 16), (72, 17)):          # stepping stones out over the sea
-    s2.solid(x, y, x + 1, y)
-s2.ent("note", 60, 18, text="Raft to the next island (not built): needs the lighthouse quest")
+# stepping stones and notes removed in the World Editor (2026-10-25). The raft (a house door: interact to sail)
+# to the eastern island (tools/story/gen_island.py); the lighthouse quest gate isn't built yet.
+s2.ents.append({"t": "house_door", "x": 53 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "raft", "to": "i01_west_shore:raft"})
 s2.building(44, 0, 9, 19, "tower")  # the lighthouse: a backdrop with its door at the foot
 s2.ents.append({"t": "house_door", "x": 44 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "lh", "to": "lh1_lighthouse_stairs:bottom"})
-s2.ent("note", 41, 18, text="The lighthouse: press interact (S / B) at its door to go in")
 
 s3 = Room("s3_lighthouse_top", "Lighthouse Top", 40, 23, "sky")
 s3.building(4, 13, 9, 10, "tower")           # the tower's top, continued from the shore
@@ -337,8 +336,8 @@ rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23 + D), (j1, 280, 23 + D), (j2, 280, 46 + D), (j3, 360, 46 + D),
-    (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 601, -14), (s1, 479, 23 + D), (s2, 599, 23 + D),
-    (s3, 639, 0 + D), (l1, 440, 69 + D), (l2, 360, 69 + D), (l3, 360, -2 + D)]
+    (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 593, -14), (s1, 471, 23 + D), (s2, 591, 23 + D),
+    (s3, 631, 0 + D), (l1, 396, 69 + D), (l2, 316, 69 + D), (l3, 360, -2 + D)]
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))
@@ -347,7 +346,7 @@ for r in written:
     r.save()
 if a1 in written:
     a1b.save()
-if "all" in ONLY:
+if "all" in ONLY:  # rewrites world.json without the island: run tools/story/gen_island.py again after
     json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms},
                "variants": {"a1_ape_arena": [{"when": APE_ID, "room": "a1_ape_arena_after"}]}},
               open(os.path.join(OUT, "world.json"), "w"), indent="\t")

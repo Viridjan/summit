@@ -87,9 +87,9 @@ Arena and collision:
   the arena (`range: [72, 568]`); there is no tree-dependent `range2` stage.
 - Lure the Ape's overshooting leaps onto spikes. Three spike hits beat it;
   subsequent hits introduce more spike patches. Gates and the energy reward remain.
-- Arena 39 tiles wide and empty (2026-10-25, user's World Editor edit: no ledges, platforms, starting spikes or
+- Arena 31 tiles wide and empty (2026-10-25, user's World Editor edit: no ledges, platforms, starting spikes or
   walk-in; both doorways drop into it). Idle waits are 15% shorter; the landing shockwave is 60 px wide.
-- Spikes come only from logs: every leap (not the hops) shakes one log loose at a random spot (never overlapping
+- Spikes come only from logs: every leap, the hops in place too, shakes one log loose at a random spot (never overlapping
   another); where it breaks on the ground it leaves a 1-tile spike. Landing on spikes hurts the Ape and breaks
   exactly those. No spikes are generated on hits.
 - Enraged after 2 hits: stones split in two on the ground, and a scream is followed by 2 hops in place with
@@ -164,7 +164,7 @@ Water:
 Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
-Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, four spike hits, gated exits), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
+Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, four spike hits, gated exits), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in Jungle Hills' floor → Jungle Depths; roots cover it until the Ape is beaten. Leaving the arena on the left (floor-level opening), the Ape follows you leftward through Jungle Hills until the big trunk's low hollow stops it, just short of the hole (`ape_chase` with `dir: -1`, `after`) → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
 Roar Tunnel plays a one-shot stereo roar from the left, with cave reflections. NPCs, quests, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
 `tools/story/gen_first_stretch.py` generates these rooms, but only the rooms you name (`... worlds/story a1_ape_arena`, or `all`), since rooms are also edited in-game.
 `tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.
@@ -192,6 +192,22 @@ Roar Tunnel plays a one-shot stereo roar from the left, with cave reflections. N
 
 - 2026-10-24: the Ape's contact hitbox is one rectangle, 24x24 centred (a bit larger than the head-contour bands it replaced).
 - 2026-10-24: Removed the arena tree puzzle and bridge pit, unified the leap range, reduced body-contact bounds to 22×22 with a head contour, and made scream collision circular (40px radius).
+
+## 7b. The eastern island (built 2026-10-25, blockout)
+
+Design: `docs/reviews/eastern-island/`. Generator: `tools/story/gen_island.py` (17 rooms, mostly about one screen).
+- The raft is a house door on the Shore's beach (interact); the lighthouse quest gate isn't built yet.
+- Shores: West (arrival), North (up a ladder; a star on a cliff), South (down through a crust; a star), East.
+- Volcano: Foothills, Volcano Ascent (narrow, two screens tall), Crater (lava pools), East Slope down to the East Shore.
+- Under the volcano: Sea Cave, Junction, Flooded Hall (deep water crossed on stone pillars while rocks fall from the
+  ceiling: `rockfall`), Echo Gallery, Lower Maze, Vent Shaft, Quiet Refuge (energy orb), Guardian Chamber (40x46).
+  Optional: Crystal Pocket (a star).
+- Jump only. Vertical links are shafts of jump-throughs 3 rows apart; a crust (jump-through flush with a floor)
+  drops through with down + jump. `tests/test_island.py`: every room and star reachable, far rooms lead back.
+- The Guardian (`boss_guardian`): marks the ground under the player, then erupts there (24x32 px). Bait three
+  eruptions onto the vent plugs (floor, middle ledge, high ledge); the warning shortens 1.0 / 0.85 / 0.7 s.
+  Beaten: saved, the gate opens, a door home appears; chamber and west shore swap to "after" variants with a
+  door pair (the shortcut). No reward yet.
 
 ## 8. Open questions
 

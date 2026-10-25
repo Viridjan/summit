@@ -1,5 +1,8 @@
 # Eastern island — review
 
+**Status: built as a blockout on 2026-10-25** with the recommended defaults (boss 40×46, door shortcut, raft door,
+no reward). Room IDs: i01..i13 (`tools/story/gen_island.py`).
+
 Reviewed 2026-10-25 against `BRIEF.md`, `MAP_PROPOSAL.md`, `docs/STORY_DESIGN.md`, `worlds/story/world.json`
 and the code. Labels: **[fact]** checked in code or measured; **[proposal]** a recommendation; **[question]** for the user.
 

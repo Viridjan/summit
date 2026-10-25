@@ -61,40 +61,55 @@
 			"to": "lh1_lighthouse_stairs:top"
 		},
 		{
-			"t": "note",
-			"x": 200,
-			"y": 48,
-			"text": "Magic flame, aimed one way by mirrors (not built yet)"
+			"t": "island_prop",
+			"kind": "beacon",
+			"x": 192,
+			"y": 24,
+			"variant": 0,
+			"art_tag": "regions-v1"
 		},
 		{
-			"t": "note",
-			"x": 120,
-			"y": 80,
-			"text": "Silent villager (not built): \"...\""
+			"t": "island_prop",
+			"kind": "mirror",
+			"x": 160,
+			"y": 64,
+			"variant": 0,
+			"art_tag": "regions-v1"
 		},
 		{
-			"t": "note",
-			"x": 152,
-			"y": 80,
-			"text": "Silent villager (not built): \"...\""
+			"t": "village_mage",
+			"x": 112,
+			"y": 64,
+			"variant": 0,
+			"art_tag": "regions-v1"
 		},
 		{
-			"t": "note",
-			"x": 232,
-			"y": 80,
-			"text": "Silent villager (not built): \"...\""
+			"t": "village_mage",
+			"x": 144,
+			"y": 64,
+			"variant": 1,
+			"art_tag": "regions-v1"
 		},
 		{
-			"t": "note",
-			"x": 264,
-			"y": 80,
-			"text": "Silent villager (not built): \"...\""
+			"t": "village_mage",
+			"x": 224,
+			"y": 64,
+			"variant": 2,
+			"art_tag": "regions-v1"
 		},
 		{
-			"t": "note",
-			"x": 296,
-			"y": 80,
-			"text": "Silent villager with a quest (not built): \"...\" Speak to them before the raft works"
+			"t": "village_mage",
+			"x": 256,
+			"y": 64,
+			"variant": 0,
+			"art_tag": "regions-v1"
+		},
+		{
+			"t": "village_mage",
+			"x": 288,
+			"y": 64,
+			"variant": 1,
+			"art_tag": "regions-v1"
 		}
 	]
 }

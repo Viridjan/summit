@@ -12,8 +12,8 @@ var history: Array = []  # [time, energy]
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	position = Vector2(-W - 12, 60)
-	size = Vector2(W, 640)
+	position = Vector2(-W - 12, 40)
+	size = Vector2(W, 670)
 
 func _process(_dt: float) -> void:
 	if world == null or not world.adventure():
@@ -92,5 +92,18 @@ func _draw() -> void:
 	draw_string(font, g.position + Vector2(4, 14), "last %ds" % int(HISTORY), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 1, 1, 0.6))
 	y = g.end.y + 20
 	y = _line(font, y, "RECENT CHANGES", Color("9fe0ff"))
-	for ev in world.energy_log.slice(0, 7):
+	for ev in world.energy_log.slice(0, 4):
 		y = _line(font, y, "  %5.1fs ago  %+6.1f  %s" % [world.time - ev[0], ev[2], ev[1]], Color("7cf0c0") if ev[2] >= 0 else Color("ff8a6a"))
+	y += 6
+	y = _line(font, y, "RECAP (since the level started)", Color("9fe0ff"))
+	var spent := 0.0
+	var gained := 0.0
+	for why in world.energy_totals:
+		var t: Array = world.energy_totals[why]
+		var n := "%5.1fs" % t[0] if why in ["regen", "water"] else "%4dx " % int(t[0])
+		y = _line(font, y, "  %s  %+7.1f  %s" % [n, t[1], why], Color("7cf0c0") if t[1] >= 0 else Color("ff8a6a"))
+		if t[1] < 0:
+			spent -= t[1]
+		else:
+			gained += t[1]
+	y = _line(font, y, "  spent %.1f, gained %.1f" % [spent, gained])

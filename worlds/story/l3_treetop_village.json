@@ -112,12 +112,6 @@
 		},
 		{
 			"t": "note",
-			"x": 400,
-			"y": 152,
-			"text": "Village NPCs (not built)"
-		},
-		{
-			"t": "note",
 			"x": 544,
 			"y": 56,
 			"text": "Reward: wall grab (not built yet)"
@@ -127,6 +121,41 @@
 			"x": 608,
 			"y": 152,
 			"text": "Where the village leads: still open"
+		},
+		{
+			"t": "village_elf",
+			"x": 96,
+			"y": 136,
+			"variant": 0,
+			"art_tag": "regions-v1"
+		},
+		{
+			"t": "village_elf",
+			"x": 248,
+			"y": 136,
+			"variant": 1,
+			"art_tag": "regions-v1"
+		},
+		{
+			"t": "village_elf",
+			"x": 376,
+			"y": 136,
+			"variant": 2,
+			"art_tag": "regions-v1"
+		},
+		{
+			"t": "village_elf",
+			"x": 488,
+			"y": 136,
+			"variant": 0,
+			"art_tag": "regions-v1"
+		},
+		{
+			"t": "village_elf",
+			"x": 584,
+			"y": 136,
+			"variant": 1,
+			"art_tag": "regions-v1"
 		}
 	]
 }

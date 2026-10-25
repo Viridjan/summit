@@ -141,6 +141,8 @@ def explore(W, m, abilities, starts, goal=None, good=None):
                 if W.free(x + dx, y):
                     push((x + dx, y, "G", 0, 1, 0, stam))
             push((x, y, "U", m["jump"], 1, 0, stam))
+            if (x, y + 1) in W.plat and not W.S(x, y + 1):  # down + jump drops through a jump-through
+                push((x, y + 1, "F", 0, dash, 0, stam))
         air = mode in ("U", "H", "F")
         # dash (any state, once per airtime)
         if has_dash and dash:  # Celeste lets you dash out of a climb too

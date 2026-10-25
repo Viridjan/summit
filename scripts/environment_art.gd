@@ -6,7 +6,7 @@ extends RefCounted
 # Reading help: docs/CODE_GUIDE.md.
 
 ## Room-local environment graphics; collision still reads the original tile grid.
-const THEMES := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building", "forest"]
+const THEMES := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building", "forest", "island_shore", "volcano", "volcanic_cave"]
 static var _textures: Dictionary = {}
 # Load each named environment image once and keep it in a reusable cache.
 static func texture(environment: String, asset: String) -> Texture2D:

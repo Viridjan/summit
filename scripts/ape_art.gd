@@ -19,6 +19,12 @@ const SILVER_DARK := Color("776e62")
 static var _textures: Dictionary = {}
 static var _impacts: Dictionary = {}
 
+# Follow the actual jump arc, holding each pose instead of cycling in midair.
+static func jump_pose(vertical_speed: float) -> String:
+	if vertical_speed < -60.0:
+		return "rise"
+	return "apex" if vertical_speed < 60.0 else "fall"
+
 # Four crisp dust/stone frames fill the active damage strip without a solid debug-style rectangle.
 static func impact_texture(width: int, height: int, frame: int) -> Texture2D:
 	frame = clampi(frame, 0, 3)
@@ -74,25 +80,38 @@ static func box(img: Image, x: int, y: int, w: int, h: int, color: Color) -> voi
 static func build(pose: String, frame: int) -> Image:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
 	img.fill(Color.TRANSPARENT)
-	var drop := 5 if pose == "land" else 3 if pose == "crouch" else 1 if pose == "run" and frame % 2 else 0
+	var drop := 5 if pose == "land" else 4 if pose == "launch" else 3 if pose == "crouch" else -1 if pose == "rise" else 1 if pose == "apex" or (pose == "run" and frame % 2) else 0
 	var lift := -3 if pose == "air" else 0
 	# Rear haunch and foot, behind the silverback's sloping trunk.
-	poly(img, [[3,17+drop],[11,17],[14,24],[10,29+lift],[13,30+lift],[13,32+lift],[4,32+lift],[3,28],[5,24]], INK)
-	poly(img, [[5,18+drop],[10,19],[11,24],[7,28+lift],[6,30+lift],[4,30+lift],[5,25]], SHADOW)
+	if pose in ["rise", "apex", "fall"]:
+		var knee := 22 if pose == "apex" else 25
+		poly(img, [[4,17],[11,18],[14,knee],[10,knee+3],[6,knee+2],[3,knee-1]], INK)
+		poly(img, [[5,19],[10,20],[11,knee],[7,knee+1],[5,knee-1]], SHADOW)
+	else:
+		poly(img, [[3,17+drop],[11,17],[14,24],[10,29+lift],[13,30+lift],[13,32+lift],[4,32+lift],[3,28],[5,24]], INK)
+		poly(img, [[5,18+drop],[10,19],[11,24],[7,28+lift],[6,30+lift],[4,30+lift],[5,25]], SHADOW)
 	# Far arm and hand are deliberately darker than the near shoulder.
-	poly(img, [[18,11+drop],[23,13+drop],[24,22],[29,27+lift],[29,30+lift],[23,30+lift],[20,25],[17,18]], INK)
-	poly(img, [[19,14+drop],[22,15],[22,22],[26,27+lift],[24,28+lift],[20,23]], SHADOW)
+	if pose == "rise":
+		poly(img, [[17,12],[22,12],[23,8],[26,3],[30,3],[30,8],[26,13],[23,19],[18,18]], INK)
+		poly(img, [[20,14],[22,10],[26,5],[28,5],[25,11],[22,17]], SHADOW)
+	elif pose == "apex":
+		poly(img, [[19,13],[24,14],[28,20],[27,25],[22,25],[21,21],[17,18]], INK)
+		poly(img, [[21,15],[24,17],[26,21],[24,23],[22,19]], SHADOW)
+	else:
+		poly(img, [[18,11+drop],[23,13+drop],[24,22],[29,27+lift],[29,30+lift],[23,30+lift],[20,25],[17,18]], INK)
+		poly(img, [[19,14+drop],[22,15],[22,22],[26,27+lift],[24,28+lift],[20,23]], SHADOW)
 	# Hunched back, massive shoulders and narrower waist.
 	poly(img, [[2,19+drop],[3,12+drop],[7,7+drop],[13,4+drop],[20,5+drop],[25,10+drop],[24,18+drop],[18,24],[9,26],[4,24]], INK)
 	poly(img, [[3,18+drop],[5,12+drop],[9,8+drop],[15,6+drop],[20,7+drop],[23,11+drop],[22,18+drop],[17,22],[9,24],[5,22]], FUR)
 	poly(img, [[5,13+drop],[10,8+drop],[16,6+drop],[19,8+drop],[13,10+drop],[9,14+drop],[8,19+drop],[5,21+drop]], LIGHT)
 	box(img, 8, 10+drop, 2, 2, RIDGE)
 	box(img, 5, 15+drop, 2, 3, RIDGE)
-	# Silver saddle follows the shoulder plane; clustered edges retain the coarse pixel style.
-	poly(img, [[5,12+drop],[9,8+drop],[14,6+drop],[18,7+drop],[14,9+drop],[11,12+drop],[9,17+drop],[6,19+drop]], SILVER_DARK)
-	poly(img, [[6,12+drop],[10,8+drop],[14,7+drop],[16,7+drop],[12,10+drop],[9,14+drop],[7,17+drop]], SILVER)
-	box(img, 9, 9+drop, 2, 1, Color("c7b497"))
-	poly(img, [[10,20+drop],[15,18+drop],[20,15+drop],[19,20+drop],[15,23],[9,24]], SHADOW)
+	# Preserve the approved landing artwork; other poses return to the flat brown palette.
+	if pose == "land":
+		poly(img, [[5,12+drop],[9,8+drop],[14,6+drop],[18,7+drop],[14,9+drop],[11,12+drop],[9,17+drop],[6,19+drop]], SILVER_DARK)
+		poly(img, [[6,12+drop],[10,8+drop],[14,7+drop],[16,7+drop],[12,10+drop],[9,14+drop],[7,17+drop]], SILVER)
+		box(img, 9, 9+drop, 2, 1, Color("c7b497"))
+		poly(img, [[10,20+drop],[15,18+drop],[20,15+drop],[19,20+drop],[15,23],[9,24]], SHADOW)
 	# Profile: low cranium, brow ridge, a single visible eye and protruding muzzle.
 	poly(img, [[17,2+drop],[23,2+drop],[26,5+drop],[26,8+drop],[30,10+drop],[31,14+drop],[28,17+drop],[22,16+drop],[18,12+drop],[16,7+drop]], INK)
 	poly(img, [[18,3+drop],[22,3+drop],[24,5+drop],[24,9+drop],[21,12+drop],[18,10+drop],[17,6+drop]], FUR)
@@ -105,8 +124,9 @@ static func build(pose: String, frame: int) -> Image:
 	box(img, 23, 7+drop, 4, 2, INK) # heavy brow
 	box(img, 24, 8+drop, 1, 1, Color("edc578"))
 	box(img, 26, 14+drop, 3, 1, INK)
-	box(img, 24, 11+drop, 1, 2, LIGHT)
-	box(img, 28, 12+drop, 2, 1, RIDGE)
+	if pose == "land":
+		box(img, 24, 11+drop, 1, 2, LIGHT)
+		box(img, 28, 12+drop, 2, 1, RIDGE)
 	if pose == "scream":
 		box(img, 25, 12+drop, 6, 5, INK)
 		box(img, 26, 12+drop, 4, 1, Color("e6d4ad"))
@@ -120,6 +140,21 @@ static func build(pose: String, frame: int) -> Image:
 		box(img, 22, 28, 6, 3, SKIN_DARK)
 		for finger in 3:
 			box(img, 23 + finger * 2, 29, 1, 1, SKIN)
+	elif pose == "rise":
+		# Long upswing: arms lifted, legs trailing, a stretched takeoff silhouette.
+		poly(img, [[12,14],[10,10],[11,5],[14,0],[19,0],[19,4],[16,8],[17,14],[15,18]], INK)
+		poly(img, [[13,13],[12,9],[14,4],[17,2],[17,4],[14,8],[15,14]], FUR)
+		box(img, 14, 1, 4, 2, SKIN_DARK)
+	elif pose == "apex":
+		# Compact peak: elbow out, fists tucked against the chest.
+		poly(img, [[12,13],[18,13],[22,18],[21,23],[17,25],[13,22],[10,18]], INK)
+		poly(img, [[13,14],[17,15],[20,18],[19,21],[16,22],[13,19]], FUR)
+		box(img, 16, 21, 4, 2, SKIN_DARK)
+	elif pose == "fall":
+		# Extend both fists downward before the unchanged planted landing.
+		poly(img, [[12,12],[18,12],[21,17],[20,23],[24,26],[25,31],[17,31],[14,26],[14,20],[10,16]], INK)
+		poly(img, [[13,14],[17,14],[19,18],[17,24],[20,28],[18,29],[16,25],[16,19],[12,16]], FUR)
+		box(img, 18, 28, 5, 2, SKIN_DARK)
 	elif pose == "throw":
 		poly(img, [[14,13],[12,9],[15,4],[19,0],[23,0],[23,4],[19,7],[19,14]], INK)
 		poly(img, [[15,12],[14,9],[17,5],[20,2],[22,2],[21,4],[17,8],[18,12]], LIGHT)

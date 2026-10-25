@@ -286,8 +286,21 @@ func save_level(d: Dictionary, dir := LEVEL_DIR, fname := "") -> String:
 	var f := FileAccess.open(dir + fname + ".json", FileAccess.WRITE)
 	if f == null:
 		return ""
-	f.store_string(JSON.stringify(d, "\t"))
+	f.store_string(JSON.stringify(whole_numbers(d), "\t"))
 	return fname
+
+# Level data is in whole units (JSON reads every number as a float): 8.0 is saved as 8, real fractions stay.
+static func whole_numbers(v: Variant) -> Variant:
+	if v is float and is_finite(v) and v == floorf(v):
+		return int(v)
+	if v is Dictionary:
+		var out := {}
+		for k in v:
+			out[k] = whole_numbers(v[k])
+		return out
+	if v is Array:
+		return v.map(whole_numbers)
+	return v
 
 # Read and parse a level file, then reject malformed data before gameplay constructs objects from it.
 func load_level(fname: String, dir := LEVEL_DIR) -> Dictionary:

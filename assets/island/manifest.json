@@ -1,0 +1,202 @@
+{
+	"assets": [
+		{
+			"anchor": "bottom center",
+			"cell": [
+				96,
+				64
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "serpent.png",
+			"name": "serpent",
+			"poses": [
+				"idle",
+				"move",
+				"warn",
+				"attack",
+				"hurt",
+				"defeat"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				16,
+				16
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "rock.png",
+			"name": "rock",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				24,
+				8
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "rock_warning.png",
+			"name": "rock_warning",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				32,
+				16
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "rock_impact.png",
+			"name": "rock_impact",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				24,
+				32
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "eruption.png",
+			"name": "eruption",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				16,
+				8
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "vent.png",
+			"name": "vent",
+			"poses": [
+				"idle",
+				"broken"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				16,
+				24
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "elf.png",
+			"name": "elf",
+			"poses": [
+				"idle",
+				"walk",
+				"talk",
+				"gesture"
+			],
+			"variants": 3
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				16,
+				24
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "mage.png",
+			"name": "mage",
+			"poses": [
+				"idle",
+				"walk",
+				"talk",
+				"gesture"
+			],
+			"variants": 3
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				32,
+				32
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "landmark.png",
+			"name": "landmark",
+			"poses": [
+				"idle"
+			],
+			"variants": 3
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				48,
+				24
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "raft.png",
+			"name": "raft",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				24,
+				24
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "mirror.png",
+			"name": "mirror",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				24,
+				32
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "beacon.png",
+			"name": "beacon",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		},
+		{
+			"anchor": "bottom center",
+			"cell": [
+				32,
+				8
+			],
+			"collision": "Artwork only; gameplay defines collision separately.",
+			"file": "lava.png",
+			"name": "lava",
+			"poses": [
+				"idle"
+			],
+			"variants": 1
+		}
+	],
+	"filter": "nearest",
+	"frames": 4,
+	"provenance": "Original procedural pixel art authored for Summit; no third-party source images.",
+	"source": "scripts/island_art.gd"
+}

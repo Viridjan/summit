@@ -10,6 +10,7 @@ extends RefCounted
 ## No third-party melodies, recordings or samples are used.
 
 const KEYS := ["", "forest", "sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building"]
+const ALIASES := {"island_shore": "sea", "volcano": "sand", "volcanic_cave": "cavern_deep"}
 const TITLES := ["Mountain · First Light", "Forest · Fernway", "Sand · Amber Caravan", "Sea · Lanterns on the Tide", "Cavern · Stone Echoes", "Deep cavern · Below the Lake", "Sky · Cloudward", "Temple · The Quiet Pillars", "Village · Hearthwindows"]
 const MAJOR := [0, 2, 4, 5, 7, 9, 11]
 const DORIAN := [0, 2, 3, 5, 7, 9, 10]
@@ -54,7 +55,8 @@ static func pitch(root: int, mode: Array, degree: int) -> int:
 
 # Expand a score into 64 steps of melody, harmony, bass and percussion for the music engine.
 static func arrange(environment: String) -> Dictionary:
-	var key := environment if SCORES.has(environment) else ""
+	var key: String = ALIASES.get(environment, environment)
+	if not SCORES.has(key): key = ""
 	var score: Dictionary = SCORES[key]
 	var melody: Array = score.a + score.b + score.a + score.b
 	var tracks: Array = [[], [], [], []]
@@ -72,5 +74,5 @@ static func arrange(environment: String) -> Dictionary:
 		tracks[1].append(-1 if quiet and beat % 2 == 1 else pitch(score.root, score.mode, chord + arp))
 		tracks[2].append(pitch(score.root - 12, score.mode, chord if beat < 4 else chord + 4) if beat in [0, 4] else -1)
 		tracks[3].append(36 if (beat == 0 and bar % 2 == 0 if quiet else beat in [2, 6]) else -1)
-	return {"environment": key, "title": TITLES[KEYS.find(key)], "bpm": score.bpm,
+	return {"environment": environment if ALIASES.has(environment) else key, "title": TITLES[KEYS.find(key)], "bpm": score.bpm,
 		"instruments": score.voices.duplicate(), "patterns": tracks, "step_length": 8}

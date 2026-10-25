@@ -17,6 +17,7 @@ const Art := preload("res://scripts/art.gd")
 const EnemyArt := preload("res://scripts/enemy_art.gd")
 const BlockArt := preload("res://scripts/block_art.gd")
 const ButtonArt := preload("res://scripts/button_art.gd")
+const IslandArt := preload("res://scripts/island_art.gd")
 
 # The entity registry: the one place a type is declared.
 # type id (saved in level JSON) -> [editor label, sized (drag a rect in the editor), palette color, class]
@@ -112,6 +113,14 @@ const TYPES := {
 	"boss_gate": ["Boss Gate", true, Color("4a6a3a"), BossGate],
 	# walks the player in d.dir (1 right, -1 left) for d.time seconds on touch; "while_boss": only while an Ape lives
 	"auto_walk": ["Auto Walk", true, Color("a0d0ff"), AutoWalk],
+	# Boss 2, the volcanic guardian (docs/reviews/eastern-island): bait its eruptions onto the vent plugs
+	"boss_guardian": ["Guardian (boss)", true, Color("7a3a2a"), Guardian],
+	"vent_plug": ["Vent Plug", false, Color("ff7a30"), VentPlug],
+	# rocks drop from the ceiling strip it covers, one at a time, at random spots; d.every: seconds between rocks
+	"rockfall": ["Falling Rocks", true, Color("8a8478"), RockFall],
+	"village_elf": ["Treetop Elf", false, Color("648f85"), IslandProp],
+	"village_mage": ["Lighthouse Mage", false, Color("8c687f"), IslandProp],
+	"island_prop": ["Island Landmark", false, Color("969098"), IslandProp],
 }
 
 const DOOR_TYPES := ["door", "house_door"]  # objects that link to another door by "id"/"to"
@@ -252,11 +261,11 @@ class Spikes extends Ent:
 	func setup() -> void:
 		dir = (d.t as String).substr(7)
 		var p := rect.position
-		match dir:
-			"up": rect = Rect2i(p.x, p.y + 5, 8, 3)
-			"down": rect = Rect2i(p.x, p.y, 8, 3)
-			"left": rect = Rect2i(p.x + 5, p.y, 3, 8)
-			"right": rect = Rect2i(p.x, p.y, 3, 8)
+		match dir:  # 7 px along the tile: 10% less than the full 8 (whole pixels; the art stays 8 wide)
+			"up": rect = Rect2i(p.x, p.y + 5, 7, 3)
+			"down": rect = Rect2i(p.x, p.y, 7, 3)
+			"left": rect = Rect2i(p.x + 5, p.y, 3, 7)
+			"right": rect = Rect2i(p.x, p.y, 3, 7)
 	# Apply Spikes interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		match dir:
@@ -1246,6 +1255,14 @@ class Liquid extends Ent:  # water: drains adventure energy (World.update_energy
 		p.die(Vector2.UP)
 	# Draw Liquid at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
+		if d.t == "acid" and d.get("skin", "") == "lava":
+			ci.draw_rect(Rect2(rect), Color("b9533e"))
+			if d.get("top", true):
+				var tex := IslandArt.texture("lava", "idle", int(Time.get_ticks_msec()/150) if w != null else 0)
+				for x in range(0, rect.size.x, 32):
+					var size := Vector2(mini(32, rect.size.x-x), mini(8, rect.size.y))
+					ci.draw_texture_rect_region(tex, Rect2(Vector2(rect.position)+Vector2(x,0),size),Rect2(Vector2.ZERO,size))
+			return
 		var c: Color = TYPES[d.t][2]
 		ci.draw_rect(Rect2(rect), Color(c, 0.35))
 		if d.get("top", true):  # only a pool's surface row draws the line (tools/world_fixups.py settle_liquids)
@@ -1813,6 +1830,9 @@ class BossGate extends Ent:
 		collidable = w == null or not d.get("closes_behind", false)
 	# Advance BossGate timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(_dt: float) -> void:
+		if d.has("until"):  # shut until that boss is beaten (in any room), e.g. a way on that opens after the fight
+			collidable = not w.broken.has(str(d.until))
+			return
 		if d.get("closes_behind", false) and not passed:
 			passed = w.player.hitbox().position.x > rect.end.x + 4
 		collidable = Ape.alive_in(w) and (passed or not d.get("closes_behind", false))
@@ -1826,6 +1846,205 @@ class BossGate extends Ent:
 			ci.draw_rect(Rect2(x, r.position.y, 2, r.size.y), Color("4a6a3a"))
 			for y in range(int(r.position.y) + (x % 8), int(r.end.y), 8):
 				ci.draw_rect(Rect2(x + 2, y, 2, 2), Color("c8d06a"))
+
+
+# Decorative village inhabitants and island landmarks; no dialogue or quest behavior.
+class IslandProp extends Ent:
+	var clock := 0.0
+	var kind := "landmark"
+	func setup() -> void:
+		kind = "elf" if d.t == "village_elf" else "mage" if d.t == "village_mage" else str(d.get("kind", "landmark"))
+		rect.size = IslandArt.build(kind, "idle", 0, int(d.get("variant", 0))).get_size()
+		collidable = false
+	func update(dt: float) -> void:
+		clock += dt
+	func draw(ci: CanvasItem) -> void:
+		ci.draw_texture_rect(IslandArt.texture(kind, str(d.get("pose", "idle")), int(clock*5), int(d.get("variant", 0))), Rect2(rect), false)
+
+
+# A cooled-rock plug over a vent. Broken plugs are rubble on intact ground.
+# A cracked ceiling strip: every d.every seconds a rock (8x8) shakes loose at a random spot along it (dust for
+# WARN seconds first), falls, kills on contact and breaks on the ground. Never two rocks in the same column at once.
+class RockFall extends Ent:
+	const ROCK := 8
+	const WARN := 0.6
+	const G := 300.0
+	const MAX_FALL := 200.0
+	var timer := 0.0
+	var rocks: Array = []  # [top-left, vy, warn]
+	func setup() -> void:
+		timer = float(d.get("every", 1.4))
+	func update(dt: float) -> void:
+		if w == null:
+			return
+		timer -= dt
+		if timer <= 0:
+			timer = float(d.get("every", 1.4))
+			for tries in 10:
+				var x := float(randi_range(rect.position.x, rect.end.x - ROCK))
+				if rocks.all(func(k): return absf(k[0].x - x) >= ROCK):
+					rocks.append([Vector2(x, rect.position.y), 0.0, WARN])
+					break
+		for i in range(rocks.size() - 1, -1, -1):
+			var k: Array = rocks[i]
+			if k[2] > 0:
+				k[2] -= dt
+				continue
+			k[1] = minf(k[1] + G * dt, MAX_FALL)
+			k[0].y += k[1] * dt
+			var box := Rect2i(Vector2i(k[0]), Vector2i(ROCK, ROCK))
+			if not w.player.dead and box.intersects(w.player.damage_rect()):
+				w.player.die(Vector2.DOWN)
+			elif w.collide_solid(box) == null and k[0].y < w.gh * T + 32:
+				continue
+			w.burst(Vector2(box.get_center()), Color("8a8478"), 6)
+			rocks.remove_at(i)
+	func damage_boxes() -> Array:
+		return rocks.filter(func(k): return k[2] <= 0).map(func(k): return Rect2i(Vector2i(k[0]), Vector2i(ROCK, ROCK)))
+	func vis_rect() -> Rect2i:
+		return Rect2i(rect.position, Vector2i(rect.size.x, maxi(rect.size.y, (w.gh * T if w != null else 0) - rect.position.y)))
+	func draw(ci: CanvasItem) -> void:
+		if w == null:  # editor: the strip
+			ci.draw_rect(Rect2(rect), Color(0.54, 0.52, 0.47, 0.4))
+			return
+		for k in rocks:
+			var at: Vector2 = k[0]
+			if k[2] > 0:  # dust and a shaking rock in the crack
+				at.x += sin(k[2] * 70.0)
+				ci.draw_rect(Rect2(at + Vector2(1, -1), Vector2(1, 1)), Color(0.8, 0.75, 0.65, 0.8))
+				ci.draw_rect(Rect2(at + Vector2(6, -2), Vector2(1, 1)), Color(0.8, 0.75, 0.65, 0.8))
+			ci.draw_rect(Rect2(at + Vector2(1, 0), Vector2(6, 8)), Color("8a8478"))
+			ci.draw_rect(Rect2(at + Vector2(0, 1), Vector2(8, 6)), Color("8a8478"))
+			ci.draw_rect(Rect2(at + Vector2(2, 2), Vector2(3, 2)), Color("b0aa9c"))
+
+
+class VentPlug extends Ent:
+	var broken := false
+	func draw(ci: CanvasItem) -> void:
+		ci.draw_texture_rect(IslandArt.texture("vent", "broken" if broken else "idle"), Rect2(rect), false)
+
+
+# The volcanic guardian: a coiled serpent in the chamber's ceiling. It marks the ground under the player (glowing cracks),
+# then erupts there: a column of fire up from that surface (ERUPT_W x ERUPT_H px). An eruption that covers a vent
+# plug breaks it and hurts the guardian; when every plug is broken it is beaten (saved like the Ape, so the
+# boss gates open and the room's "after" variant loads). The warning shortens as plugs break. The body is out of
+# reach: only the eruptions hurt. d.door: a house door spawned on victory (the shortcut home).
+class Guardian extends Ent:
+	const ERUPT_W := 24
+	const ERUPT_H := 32
+	const WARN := [1.0, 0.85, 0.7]  # telegraph per plug broken so far
+	const ERUPT_TIME := 0.35
+	const PAUSE := 1.0
+	var phase := "sleep"  # sleep, idle, warn, erupt, hurt, dying, gone
+	var timer := 0.0
+	var target := Vector2.ZERO  # eruption base: centre x, surface y
+	var flash := 0.0
+	var stage := 0
+	var id := ""
+	# Initialize Guardian dimensions, collision flags and starting data before World uses the object.
+	func setup() -> void:
+		id = "guardian_%d_%d" % [rect.position.x, rect.position.y]
+		if w != null:
+			id = w.star_key(id)
+			if w.broken.has(id):
+				phase = "gone"
+				_spawn_door()
+	func plugs() -> Array:
+		return w.ents.filter(func(e): return e is VentPlug and not e.broken)
+	# The eruption's hitbox: up from the marked surface, plus the surface row itself (where the plugs are).
+	func erupt_rect() -> Rect2i:
+		return Rect2i(int(target.x) - ERUPT_W / 2, int(target.y) - ERUPT_H, ERUPT_W, ERUPT_H + T)
+	# The first tile or jump-through top at or under the player's feet.
+	func _surface_under(p) -> Vector2:
+		var x := int(p.center().x)
+		var y := (int(p.pos.y) / T) * T
+		while y < w.gh * T:
+			var cell := Rect2i(x - 1, y, 2, T)
+			if w.collide_solid(cell) != null or w.collide_jumpthru(cell) != null:
+				return Vector2(x, y)
+			y += T
+		return Vector2(x, w.gh * T)
+	func damage_boxes() -> Array:
+		return [erupt_rect()] if phase == "erupt" else []
+	# Advance the attack cycle: wake when the player is in the chamber, then warn, erupt, pause.
+	func update(dt: float) -> void:
+		flash = maxf(0.0, flash - dt)
+		if phase == "gone":
+			return
+		timer -= dt
+		var p = w.player
+		match phase:
+			"sleep":
+				if p.hitbox().position.x > 2 * T:  # inside, past the entrance gate
+					Game.play_sfx("ape_scream", 0.5)
+					w.shake_dir(Vector2.ZERO, 0.3)
+					_go("idle", PAUSE)
+			"idle":
+				if timer <= 0 and not p.dead:
+					target = _surface_under(p)
+					_go("warn", WARN[mini(stage, WARN.size() - 1)])
+			"warn":
+				if timer <= 0:
+					Game.play_sfx("impact")
+					w.shake_dir(Vector2.UP, 0.15)
+					w.burst(target, Color("ff9a3a"), 12)
+					_go("erupt", ERUPT_TIME)
+					for e in plugs():
+						if e.rect.intersects(erupt_rect()):
+							e.broken = true
+							_hurt()
+							break
+			"erupt":
+				if not p.dead and erupt_rect().intersects(p.damage_rect()):
+					p.die(Vector2.UP)
+				if timer <= 0:
+					if plugs().is_empty():
+						_go("dying", 1.5)
+					else:
+						_go("hurt" if flash > 0 else "idle", 0.5 if flash > 0 else PAUSE)
+			"hurt":
+				if timer <= 0:
+					_go("idle", PAUSE * 0.6)
+			"dying":
+				if timer <= 0:
+					_beaten()
+	func _go(ph: String, t: float) -> void:
+		phase = ph
+		timer = t
+	# A broken plug vents into the guardian; the eruption still finishes, then it reels (or, the last plug, dies).
+	func _hurt() -> void:
+		stage += 1
+		flash = 0.8
+		Game.play_sfx("enemy_hit", 0.6)
+		w.burst(center(), Color("ff6040"), 16)
+	func _beaten() -> void:
+		Game.play_sfx("complete")
+		phase = "gone"
+		w.break_wall(id)
+		w.shake_dir(Vector2.ZERO, 0.4)
+		_spawn_door()
+	func _spawn_door() -> void:
+		if w != null and d.has("door") and not w.ents.any(func(e): return e.d.get("id", "") == d.door.id and e.d.t == "house_door"):
+			w.spawn_entity(d.door)
+	func vis_rect() -> Rect2i:
+		return rect.grow(600)
+	# Draw Guardian at its current pose; this must also work for an editor preview with no World.
+	func draw(ci: CanvasItem) -> void:
+		var r := Rect2(rect)
+		var a := 1.0 if phase != "dying" else clampf(timer / 1.5, 0.2, 1.0)
+		if phase == "gone": a = 0.35
+		var pose := "idle"
+		if phase == "warn": pose = "warn"
+		elif phase == "erupt": pose = "attack"
+		elif phase in ["dying", "gone"]: pose = "defeat"
+		elif phase == "hurt" or flash > 0: pose = "hurt"
+		var frame := int(Time.get_ticks_msec()/150) if w != null else 0
+		ci.draw_texture_rect(IslandArt.texture("serpent",pose,frame),r,false,Color(1,1,1,a))
+		if w == null: return
+		if phase == "warn":
+			ci.draw_texture_rect(IslandArt.texture("rock_warning","idle",frame),Rect2(target-Vector2(12,8),Vector2(24,8)),false)
+		elif phase == "erupt":
+			ci.draw_texture_rect(IslandArt.texture("eruption","idle",frame),Rect2(erupt_rect()),false)
 
 
 # Walks the player in for a moment (the arena's entrance), using Celeste's forced movement. Once per visit.
@@ -1878,7 +2097,9 @@ class Ape extends Ent:
 	const PAUSE := 0.85  # idle waits between attacks are scaled by this
 	const ENRAGED_HP := HP - 2  # from 2 hits on: stones split, screams add 2 hops in place
 	const HOP_SCALE := [1.7, 1.3]  # shockwave width of the 2nd and 1st hop (indexed by hops left)
-	const LOG := Vector2i(24, 8)
+	const LOG := Vector2i(19, 6)  # 20% smaller than the first 24x8
+	const LOG_G := 200.0  # logs fall at half the stones' gravity
+	const LOG_MAX_FALL := 140.0
 	const LOG_WAIT := 0.4  # the log shakes at the top this long before it drops
 	var hp := HP
 	var phase := "sleep"  # sleep, idle, throw, crouch, air, scream, hurt, dying, gone
@@ -1902,7 +2123,7 @@ class Ape extends Ent:
 	# Find whether this room still contains an undefeated arena Ape, excluding the chase version.
 	static func alive_in(world) -> bool:
 		for e in world.ents:
-			if e is Ape and not e is ApeChase and e.phase != "gone":
+			if ((e is Ape and not e is ApeChase) or e is Guardian) and e.phase != "gone":
 				return true
 		return false
 	# Report whether Ape currently participates in lethal contact checks.
@@ -2101,8 +2322,7 @@ class Ape extends Ent:
 			if e is Spikes and e.collidable and e.rect.intersects(feet):
 				_hit()
 				return
-		if slam_scale == 1.0:  # every real leap (not the hops in place) shakes one log loose
-			_drop_log()
+		_drop_log()  # every landing shakes one log loose, the hops in place too
 		if hops > 0:
 			_go("crouch", 0.25)
 		else:
@@ -2195,7 +2415,7 @@ class Ape extends Ent:
 			l[2] -= dt
 			if l[2] > 0:
 				continue
-			l[1] += STONE_G * dt
+			l[1] = minf(l[1] + LOG_G * dt, LOG_MAX_FALL)
 			l[0].y += l[1] * dt
 			var box := Rect2i(Vector2i(l[0]), LOG)
 			if not w.player.dead and box.intersects(w.player.damage_rect()):
@@ -2235,7 +2455,7 @@ class Ape extends Ent:
 		return rect.grow(400)
 	# Draw Ape at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
-		for s in stones:  # stones: exactly their hitbox (16, halves 8)
+		for s in stones:  # preserve the original Ape projectile artwork
 			var k: float = s[2] / 16.0
 			var at: Vector2 = s[0] - Vector2(s[2] / 2.0, s[2] / 2.0)
 			ci.draw_rect(Rect2(at + Vector2(2, 0) * k, Vector2(12, 16) * k), Color("8a8478"))
@@ -2245,7 +2465,7 @@ class Ape extends Ent:
 			var at: Vector2 = l[0] + (Vector2(sin(clock * 60.0), 0) if l[2] > 0 else Vector2.ZERO)
 			ci.draw_rect(Rect2(at, Vector2(LOG)), Color("6b4a2a"))
 			ci.draw_rect(Rect2(at + Vector2(1, 1), Vector2(LOG.x - 2, 2)), Color("8c6a40"))
-			ci.draw_rect(Rect2(at + Vector2(LOG.x - 4, 2), Vector2(3, 4)), Color("c9a46a"))
+			ci.draw_rect(Rect2(at + Vector2(LOG.x - 4, 2), Vector2(3, LOG.y - 3)), Color("c9a46a"))
 		if phase == "gone":
 			return
 		if w != null and Game.settings.hitboxes and not self is ApeChase:
@@ -2256,9 +2476,13 @@ class Ape extends Ent:
 			pose = "run"
 		elif phase == "roar":
 			pose = "scream"
+		elif phase == "crouch" and timer < 0.12:
+			pose = "launch"
 		if slam_t > 0 and phase not in ["hurt", "dying"]:
 			pose = "land"
 		var art = load("res://scripts/ape_art.gd")
+		if phase == "air" and slam_t <= 0:
+			pose = art.jump_pose(vel.y)
 		var o := Vector2(rect.position)
 		var tint := Color(1, 1, 1, a)
 		if flash > 0 and int(flash * 20) % 2 == 0:
@@ -2307,8 +2531,13 @@ class ApeChase extends Ape:
 		super.setup()
 		if phase != "gone":
 			phase = "wait"
+			if w != null and d.has("after") and not w.broken.has(str(d.after)):
+				phase = "off"  # d.after: only once that boss is beaten (the Ape follows you out of its arena)
 		elif w != null:
 			_seal()  # it gave up earlier this run: the cave-in stays
+	# d.dir: 1 chases rightward (default), -1 leftward; trigger and end are then crossed going left.
+	func dir() -> int:
+		return int(d.get("dir", 1))
 	# d.seal = [x, y, w, h] px: the rock that falls in front of the Ape when it reaches d.end, stopping it and blocking the way back for good
 	# (saved with the Ape's own "gone" flag). A resting falling block: solid, same art.
 	# Queue the persistent cave-in block once; World creates it after the current object-update iteration.
@@ -2324,7 +2553,7 @@ class ApeChase extends Ape:
 		pass
 	# The kill line: tunnel-high, at the Ape's centre. Once the Ape is past the player, it caught them.
 	func caught(p) -> bool:
-		return phase == "chase" and p.center().x < center().x
+		return phase == "chase" and (p.center().x - center().x) * dir() < 0
 	# Advance trigger, roar and chase replay. Cache routes by their simulation inputs and end the chase after the exit threshold.
 	func update(dt: float) -> void:
 		clock += dt
@@ -2339,7 +2568,7 @@ class ApeChase extends Ape:
 				w.burst(Vector2(s[0] + s[2] / 2.0, s[1] + s[3]), TYPES.breakwall[2], 24)
 				Game.play_sfx("impact")
 		_update_debris(dt)
-		if phase == "gone":
+		if phase == "gone" or phase == "off":
 			return
 		var p = w.player
 		timer -= dt
@@ -2350,14 +2579,14 @@ class ApeChase extends Ape:
 				if not planner.done and planner.run(PLAN_SLICE_MS):  # a few ms per frame while the player approaches
 					_plans[plan_key] = planner.result
 				path = planner.result
-				if p.center().x > float(d.get("trigger", rect.end.x + 64)):
+				if (p.center().x - float(d.get("trigger", rect.end.x + 64))) * dir() > 0:
 					if not planner.done:  # reached the trigger first: finish now (still within its budget)
 						planner.run(INF)
 						_plans[plan_key] = planner.result
 						path = planner.result
 					Game.play_sfx("ape_scream_cave")
 					w.shake_dir(Vector2.ZERO, 0.3)
-					facing = 1
+					facing = dir()
 					phase = "roar"
 					if path.is_empty():  # no route (edited room): it screams and leaves; not saved, so a fixed room chases again
 						push_warning("ApeChase: no route, the Ape leaves")
@@ -2385,7 +2614,7 @@ class ApeChase extends Ape:
 							flash = 0.4  # the rock hurts it: blink, like a hit in the boss fight
 							Game.play_sfx("enemy_hit", 0.6)
 					if not p.dead and caught(p):
-						p.die(Vector2.RIGHT)
+						p.die(Vector2(dir(), 0))
 					if int(at) == path.size() - 1:  # reached d.end: the ceiling caves in ahead of it and it's done
 						Game.play_sfx("ape_scream_cave", 0.8)
 						w.break_wall(id)  # gone for the rest of the run
@@ -2401,9 +2630,9 @@ class ApeChase extends Ape:
 	# Reuse a cached route, or start a sliced search. Every planner input is in the key: a changed room, world,
 	# endpoint or tuning plans again.
 	func _start_plan() -> void:
-		var end := float(d.get("end", w.bounds.end.x)) + 16.0
-		plan_key = hash([Game.world_path, w.room, w.room_origin, w.data, Game.tuning, rect.position, end])
-		planner = ChasePlan.new(w, rect, end, true, PLAN_BUDGET_MS)
+		var end := float(d.get("end", w.bounds.end.x if dir() > 0 else 0)) + 16.0 * dir()
+		plan_key = hash([Game.world_path, w.room, w.room_origin, w.data, Game.tuning, rect.position, end, dir()])
+		planner = ChasePlan.new(w, rect, end, true, PLAN_BUDGET_MS, dir())
 		if _plans.has(plan_key):
 			planner.done = true
 			planner.result = _plans[plan_key]
@@ -2436,7 +2665,7 @@ class ApeChase extends Ape:
 			var s: Array = d.seal
 			var k := minf(seal_t / SEAL_TIME, 1.0)
 			BlockArt.draw(ci, Rect2i(int(s[0]), int(s[1] - s[3] * (1.0 - k * k)), int(s[2]), int(s[3])), "breakwall", Vector2.ZERO)
-		if phase != "wait":
+		if phase != "wait" and phase != "off":
 			super.draw(ci)
 
 	# Tries take-off distances (px before a wall, px past the edge of a gap) until a simulated run from the Ape's
@@ -2444,8 +2673,8 @@ class ApeChase extends Ape:
 	# body: also keep the Ape's BODY box out of the terrain (off for proving a player-sized route).
 	# Try jump timing combinations until a simulated route reaches the endpoint safely; empty means none succeeded.
 	# budget_ms: stop searching after this long (0 = no limit, for offline proofs). All at once; ChasePlan slices it.
-	static func plan(world, from: Rect2i, end_x: float, body := true, budget_ms := PLAN_BUDGET_MS) -> PackedVector2Array:
-		var cp := ChasePlan.new(world, from, end_x, body, budget_ms)
+	static func plan(world, from: Rect2i, end_x: float, body := true, budget_ms := PLAN_BUDGET_MS, dir_ := 1) -> PackedVector2Array:
+		var cp := ChasePlan.new(world, from, end_x, body, budget_ms, dir_)
 		cp.run(INF)
 		return cp.result
 
@@ -2474,6 +2703,7 @@ class ChasePlan:
 	var end_x := 0.0
 	var body := true
 	var budget_ms := 0
+	var dir := 1  # 1 runs right, -1 left
 	var combos: Array = []  # [wall, gap, brk]
 	var ci := -1
 	var r  # current trial's runner
@@ -2485,12 +2715,13 @@ class ChasePlan:
 	var max_run_ms := 0.0  # longest single run() call: the worst frame it cost
 	var done := false
 	var result := PackedVector2Array()
-	func _init(w_, from_: Rect2i, end_x_: float, body_ := true, budget_ms_ := 0) -> void:
+	func _init(w_, from_: Rect2i, end_x_: float, body_ := true, budget_ms_ := 0, dir_ := 1) -> void:
 		world = w_
 		from = from_
 		end_x = end_x_
 		body = body_
 		budget_ms = budget_ms_
+		dir = dir_
 		for brk in [2, 4, 6, 8, 3, 5]:  # extra take-off margin before a breakable block
 			for wall in [22, 26, 18, 30, 34, 16, 14, 12, 10, 8, 6]:  # long run-ups first: the Ape's 24px body needs them
 				for gap in [1, 2, 4, 6, 8]:
@@ -2507,6 +2738,7 @@ class ChasePlan:
 		r.pos = Vector2(from.position.x + SIZE / 2.0, from.end.y)
 		r.pos.x -= r.hitbox().get_center().x - r.pos.x
 		r.pos.y -= r.bottom() - from.end.y
+		r.dir = dir
 		r.wall_d = combos[ci][0]
 		r.gap_d = combos[ci][1]
 		r.brk_d = combos[ci][1] + combos[ci][2]
@@ -2539,12 +2771,13 @@ class ChasePlan:
 		var box := Rect2i(roundi(hb.get_center().x - BODY / 2.0), hb.end.y - (SIZE + BODY) / 2, BODY, BODY)
 		if world.touching_spikes(r.damage_rect()) or hb.position.y > world.bounds.end.y or ApeChase._on_breakable(world, hb) or (body and r.w.collide_solid(box) != null):
 			_next()
-		elif hb.end.x >= end_x:
+		elif (hb.end.x >= end_x) if dir > 0 else (hb.position.x <= end_x):
 			result = path
 			done = true
 		else:
-			if hb.end.x > best:
-				best = hb.end.x
+			var ahead := float(hb.end.x if dir > 0 else -hb.position.x)
+			if ahead > best:
+				best = ahead
 				still = 0
 			else:
 				still += 1
@@ -2556,6 +2789,7 @@ class ChasePlan:
 # before a wall and when the floor ends within gap_d px.
 # Silent scripted Player used only for route planning, with automated run/jump input.
 class ChaseRunner extends "res://scripts/player.gd":
+	var dir := 1  # running right (1) or left (-1)
 	var wall_d := 12.0
 	var gap_d := 1.0
 	var brk_d := 3.0  # take-off distance when the floor ahead is a breakable block
@@ -2566,7 +2800,7 @@ class ChaseRunner extends "res://scripts/player.gd":
 		quiet = true
 	# Supply automated rightward movement and timed jump presses instead of reading real controls.
 	func _read_input(dt: float) -> void:
-		in_x = 1
+		in_x = dir
 		in_y = 0
 		aim_raw = Vector2(in_x, 0)
 		aim_free = aim_raw
@@ -2576,7 +2810,7 @@ class ChaseRunner extends "res://scripts/player.gd":
 		hold_jump -= dt
 		if not on_ground:
 			jump_buf = 0.0  # a press left over in the air would wall-jump it back off a step
-		elif w.collide_solid(rect_at(pos + Vector2(wall_d, 0))) != null or _gap_within(gap_d) or _breakable_within(brk_d):
+		elif w.collide_solid(rect_at(pos + Vector2(wall_d * dir, 0))) != null or _gap_within(gap_d) or _breakable_within(brk_d):
 			jump_buf = INPUT_BUFFER
 			hold_jump = VAR_JUMP_TIME
 		jump_check = hold_jump > 0
@@ -2585,14 +2819,18 @@ class ChaseRunner extends "res://scripts/player.gd":
 	# Look ahead for temporary support that requires an earlier takeoff.
 	func _breakable_within(d: float) -> bool:
 		var hb := hitbox()
-		var hit = w.real.collide_solid(Rect2i(hb.end.x + int(d) - 1, hb.end.y, 1, 2))
+		var hit = w.real.collide_solid(Rect2i(_ahead(d), hb.end.y, 1, 2))
 		return hit is Crumble or hit is BreakWall
 
 	# No floor under the pixel d px past the leading edge.
 	# Probe support just ahead of the runner to decide when it should jump a gap.
 	func _gap_within(d: float) -> bool:
 		var hb := hitbox()
-		return w.collide_solid(Rect2i(hb.end.x + int(d) - 1, hb.end.y, 1, 2)) == null
+		return w.collide_solid(Rect2i(_ahead(d), hb.end.y, 1, 2)) == null
+	# The pixel column d px past the leading edge, in the running direction.
+	func _ahead(d: float) -> int:
+		var hb := hitbox()
+		return hb.end.x + int(d) - 1 if dir > 0 else hb.position.x - int(d)
 
 
 # What the chasing Ape's runner sees of the world: the same collision, none of the player's side effects

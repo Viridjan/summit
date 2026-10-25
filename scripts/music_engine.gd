@@ -87,7 +87,7 @@ func load_environment(key: String) -> void:
 
 # Keep a matching song playing across room changes; load and start another only when needed.
 func follow_environment(key: String) -> void:
-	var resolved := key if EnvironmentMusic.SCORES.has(key) else ""
+	var resolved := key if EnvironmentMusic.SCORES.has(key) or EnvironmentMusic.ALIASES.has(key) else ""
 	if playing and environment == resolved and title != "Demo":
 		return
 	load_environment(resolved)
@@ -129,6 +129,7 @@ func play() -> void:
 
 # The recording of an environment's song ("" is the mountain).
 static func baked_path(key: String) -> String:
+	key = EnvironmentMusic.ALIASES.get(key, key)
 	return "res://assets/music/%s.wav" % (key if key != "" else "mountain")
 
 # The Options music volume (0..1) on the Music bus; 0 mutes it.
