@@ -1,9 +1,16 @@
 extends Node2D
+# Terrain renderer that divides a large room into reusable 32x32-tile chunks.
+# Each Chunk is a Node2D with its own retained draw commands: Godot can reuse them until invalidated.
+# Editing a cell marks affected chunks dirty; movement and entity rendering remain independent.
+# The tile array is shared with the editor/World so the artwork reads the current terrain.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Retained draw commands, partitioned into non-overlapping 32x32-cell chunks.
 
 const Art := preload("res://scripts/art.gd")
 const CHUNK_SIZE := 32
 
+# One independently redrawn terrain region, sharing its tile data with the owning layer.
 class Chunk extends Node2D:
 	var tiles: Array
 	var level_size: Vector2i
@@ -11,6 +18,7 @@ class Chunk extends Node2D:
 	var draw_count := 0
 	var environment := ""
 
+	# Draw this helper node from its owner data; it is presentation only.
 	func _draw() -> void:
 		draw_count += 1
 		Art.draw_tile_range(self, tiles, level_size.x, level_size.y,
@@ -22,6 +30,7 @@ var level_size := Vector2i.ZERO
 var chunk_grid := Vector2i.ZERO
 var chunks: Array[Chunk] = []
 
+# Replace old chunks and partition the shared terrain array into non-overlapping drawable regions.
 func setup(level_tiles: Array, w: int, h: int, room_environment := "") -> void:
 	environment = room_environment
 	for chunk in chunks:
@@ -45,6 +54,7 @@ func setup(level_tiles: Array, w: int, h: int, room_environment := "") -> void:
 # Only this cell and its cardinal neighbours can change appearance. Decorations
 # belong to their source cell even when drawn one tile above a chunk boundary.
 # Return unique chunk coordinates for deterministic invalidation checks.
+# Invalidate chunks whose edge/corner artwork depends on this edited cell, returning unique chunk indices.
 func mark_cell_dirty(c: Vector2i) -> Array[Vector2i]:
 	var marked: Array[Vector2i] = []
 	if not Rect2i(Vector2i.ZERO, level_size).has_point(c):

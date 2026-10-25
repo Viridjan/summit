@@ -1,4 +1,10 @@
 extends ColorRect
+# Interactive music editor: buttons change notes in the shared engine's patterns.
+# A page shows 16 steps per channel; page*16 converts a visible column to the full pattern index.
+# Changing a playing pattern restarts playback so the synthesized loop includes the edit.
+# The studio reuses Game's single synth rather than creating a competing audio driver.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Standalone music playground, deliberately separate from gameplay.
 
 const MusicEngine := preload("res://scripts/music_engine.gd")
@@ -18,6 +24,7 @@ var instrument_pickers: Array[OptionButton] = []
 var mute_buttons: Array[CheckButton] = []
 var scenery: TextureRect
 
+# Build channel note grids and connect controls to the shared music engine.
 func _ready() -> void:
 	color = Color("141433")
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -128,6 +135,7 @@ func _ready() -> void:
 	_refresh()
 	transport.grab_focus()
 
+# Advance one visible cell through the available notes/rest, then refresh and restart playback if needed.
 func _cycle(channel: int, step: int) -> void:
 	step += page * 16
 	var note: int = engine.patterns[channel][step]
@@ -138,6 +146,7 @@ func _cycle(channel: int, step: int) -> void:
 	_refresh()
 	_changed()
 
+# Load a demo or environment score and return its note view to the first page.
 func _select_environment(index: int) -> void:
 	if index == 0:
 		engine.load_demo()
@@ -147,10 +156,12 @@ func _select_environment(index: int) -> void:
 	_refresh()
 	_changed()
 
+# Advance by 16 pattern steps, wrapping back after the final page.
 func _next_page() -> void:
 	page = (page + 1) % maxi(1, engine.patterns[0].size() / 16)
 	_refresh()
 
+# Copy engine values into the interface without triggering edit callbacks for those display updates.
 func _refresh() -> void:
 	theme_picker.select(0 if engine.title == "Demo" else MusicEngine.EnvironmentMusic.KEYS.find(engine.environment) + 1)
 	tempo.set_value_no_signal(engine.bpm)
@@ -167,10 +178,12 @@ func _refresh() -> void:
 			cell.text = "·" if note < 0 else "%s%d" % [MusicEngine.NOTE_NAMES[note % 12].to_upper().replace("+", "#"), note / 12 - 1]
 			cell.modulate = Color("72728c") if note < 0 else Color("88e8dc")
 
+# Restart an already playing loop so recent edits become audible.
 func _changed() -> void:
 	if engine.playing:
 		engine.play()
 
+# Switch playback on/off and update its button and status text.
 func _toggle_play() -> void:
 	if engine.playing:
 		engine.stop()
@@ -179,14 +192,17 @@ func _toggle_play() -> void:
 	transport.text = "Stop" if engine.playing else "Play"
 	status.text = ("Playing · " if engine.playing else "Stopped · ") + engine.title
 
+# Stop the studio transport and return to the main menu.
 func _back() -> void:
 	engine.stop()
 	Game.goto("menu")
 
+# Stop playback only when this studio still owns the departing screen, avoiding a newly opened screen.
 func _exit_tree() -> void:
 	if not is_instance_valid(Game.main) or Game.main.get_child_count() == 0 or Game.main.get_child(Game.main.get_child_count() - 1) == self:
 		engine.stop()
 
+# Use the cancel action to leave the studio after its controls had a chance to handle input.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()

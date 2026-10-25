@@ -127,3 +127,9 @@ godot --headless --path . --script tests/environment_music.gd
 Original retro sound effects are synthesized and cached at startup in `scripts/sfx.gd`. Movement, combat, enemy warnings/projectiles, the Ape boss, pickups, doors, notes, blocks, and menu buttons trigger effects independently of the music synth. Options → Audio → Sound effects controls their volume (including Off). Playback uses a 16-voice pool and suppresses duplicate bursts. No external sound files or licenses are required.
 
 Run audio checks with `godot --headless --path . --script tests/sfx.gd`.
+
+## Understanding the code
+
+Start with [the beginner code guide](docs/CODE_GUIDE.md) for the file map, execution flow, Godot vocabulary, coordinate conventions and safe editing/testing workflow. First-party scripts, tests, tools and artwork previews include purpose and function comments.
+
+Development-assistant setup and installed skills are documented in [the skills installation report](docs/DEVELOPMENT_SKILLS.md).

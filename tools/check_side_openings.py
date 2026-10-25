@@ -1,9 +1,13 @@
+# Read-only audit of open room boundaries: distinguishes a real passage, a wall in the neighboring room and an opening into empty world space.
+# Reading help: docs/CODE_GUIDE.md.
+
 """Find open left/right terrain edges facing no room or solid neighbouring terrain."""
 import argparse
 import json
 from pathlib import Path
 
 
+# Inspect room boundaries and classify any invalid or disconnected openings.
 def audit(directory):
     directory = Path(directory)
     manifest = json.loads((directory / 'world.json').read_text())
@@ -42,6 +46,7 @@ def audit(directory):
             'findings': findings, 'limits': 'Static terrain edge checks, not spawn reachability. Counts maximal adjacent vertical spans with the same issue/target, not separate tiles. Does not flag sealed solid edges. Valid adjacent empty tiles still need whole-player clearance and movement checks. A no-room opening can be intentionally clamped by player bounds; it is not automatically a playable exit or an out-of-bounds exploit.'}
 
 
+# Parse the world path, run the boundary audit and report invalid openings.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('world', nargs='?', default='worlds/story')

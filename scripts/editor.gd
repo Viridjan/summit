@@ -1,4 +1,11 @@
 extends Node2D
+# Edits one room's tiles and placed objects; it does not run their gameplay behavior.
+# level is the editable JSON-shaped dictionary; preview contains disposable drawable objects.
+# Undo stores deep copies so later edits cannot accidentally alter an older snapshot.
+# The camera turns screen mouse positions into world pixels; editing then snaps them to 8px tiles.
+# Retained tile chunks redraw only when affected cells change; UI and object previews are separate.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Level editor.
 # LMB: paint tiles / place entity (drag to size blocks).  RMB: erase tile / delete entity.
 # MMB or Space+drag: pan.  Wheel: zoom.  Ctrl+Z undo, Ctrl+S save, F5 playtest.
@@ -10,8 +17,10 @@ const T := 8
 const MAX_UNDO := 60
 
 # Background is behind retained terrain; parent draws entities and overlays.
+# Separate drawing node kept behind cached terrain so changing objects do not force terrain redraws.
 class Background extends Node2D:
 	var screen: Node2D
+	# Draw object previews, editing grid and the current placement/selection guides.
 	func _draw() -> void:
 		screen._draw_background(self)
 
@@ -41,11 +50,13 @@ var tool_group := ButtonGroup.new()
 var msg := ""
 var msg_t := 0.0
 
+# Invalidate object and background visuals after edits while terrain chunks redraw independently.
 func _redraw() -> void:
 	queue_redraw()
 	if background != null:
 		background.queue_redraw()
 
+# Create background and chunked-terrain nodes behind object previews.
 func _create_tile_layer() -> void:
 	background = Background.new()
 	background.screen = self
@@ -55,6 +66,7 @@ func _create_tile_layer() -> void:
 	tile_layer.z_index = -1
 	add_child(tile_layer)
 
+# Copy the editable level, centre its camera and build editing tools and preview objects.
 func _ready() -> void:
 	level = Game.editor_level.duplicate(true) if not Game.editor_level.is_empty() else Game.new_level()
 	saved_level = level.duplicate(true)
@@ -69,6 +81,7 @@ func _ready() -> void:
 	_refresh()
 
 # ---------------- UI ----------------
+# Create the name/size controls, load/save actions, object palette and status bar.
 func _build_ui() -> void:
 	ui = CanvasLayer.new()
 	add_child(ui)
@@ -134,16 +147,19 @@ func _build_ui() -> void:
 	status = Label.new()
 	bottom.add_child(status)
 
+# Create a small editor label.
 func _lbl(t: String) -> Label:
 	var l := Label.new()
 	l.text = t
 	return l
 
+# Create an editor action button and connect its callback.
 func _btn(t: String, cb: Callable) -> Button:
 	var b := Game.button(t, cb)
 	b.focus_mode = Control.FOCUS_NONE
 	return b
 
+# Create a numeric field with the supplied limits and initial value.
 func _spin(lo: int, hi: int, v: int) -> SpinBox:
 	var s := SpinBox.new()
 	s.min_value = lo
@@ -151,6 +167,7 @@ func _spin(lo: int, hi: int, v: int) -> SpinBox:
 	s.value = v
 	return s
 
+# Add a palette button that selects a tile/object placement tool.
 func _tool_button(parent: Control, id: String, text: String, col: Color) -> void:
 	var b := Button.new()
 	b.text = text
@@ -167,12 +184,14 @@ func _tool_button(parent: Control, id: String, text: String, col: Color) -> void
 			rect_start = null)
 	parent.add_child(b)
 
+# Refresh the load popup from level files currently available on disk.
 func _fill_load_menu() -> void:
 	var p := load_menu.get_popup()
 	p.clear()
 	for f in Game.list_levels():
 		p.add_item(f)
 
+# Open the custom level corresponding to a selected popup entry.
 func _load_index(i: int) -> void:
 	var d := Game.load_level(load_menu.get_popup().get_item_text(i))
 	if d.is_empty():
@@ -184,26 +203,31 @@ func _load_index(i: int) -> void:
 	Game.editor_file = load_menu.get_popup().get_item_text(i)
 	_status("Loaded " + d.name)
 
+# Show the current level name and dimensions after loading or undoing changes.
 func _sync_fields() -> void:
 	name_edit.text = level.name
 	w_spin.value = level.w
 	h_spin.value = level.h
 
+# Show a short temporary message in the editor status bar.
 func _status(t: String) -> void:
 	msg = t
 	msg_t = 3.0
 
 # ---------------- actions ----------------
+# Save a deep snapshot before an edit and keep the undo history within its maximum size.
 func _push_undo() -> void:
 	undo_stack.append(level.duplicate(true))
 	if undo_stack.size() > MAX_UNDO:
 		undo_stack.pop_front()
 
+# Restore the most recent snapshot and rebuild previews to match it.
 func _undo() -> void:
 	if undo_stack.is_empty():
 		return
 	_set_level(undo_stack.pop_back())
 
+# Replace the editable level with a fresh room.
 func _new() -> void:
 	_push_undo()
 	_set_level(Game.new_level())
@@ -211,6 +235,7 @@ func _new() -> void:
 	Game.editor_file = ""
 
 # Every whole-level replacement goes through here so pending edits never point at stale data.
+# Adopt a level dictionary, reset transient placement state and synchronize terrain and controls.
 func _set_level(d: Dictionary) -> void:
 	level = d
 	zip_pending = null
@@ -219,12 +244,14 @@ func _set_level(d: Dictionary) -> void:
 	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
 
+# Write the room to its correct custom-level or world-room filename, then remember the saved snapshot.
 func _save() -> void:
 	var f := Game.save_level(level, Game.editor_dir, Game.editor_file)
 	_status("Saved as %s.json" % f if f != "" else "Save failed")
 	Game.editor_level = level.duplicate(true)
 	saved_level = level.duplicate(true)
 
+# Ask before discarding unsaved edits, otherwise return directly to the owning menu or world editor.
 func _leave() -> void:
 	if level == saved_level:
 		Game.goto(Game.editor_return)
@@ -239,6 +266,7 @@ func _leave() -> void:
 	add_child(dlg)
 	dlg.popup_centered()
 
+# Resize tile rows, discard objects outside the new bounds and rebuild the affected previews.
 func _resize() -> void:
 	_push_undo()
 	var nw := int(w_spin.value)
@@ -256,6 +284,7 @@ func _resize() -> void:
 	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
 
+# Require a spawn, copy the current edit and start gameplay without losing the editor copy.
 func _playtest() -> void:
 	if level.entities.filter(func(e): return e.t == "spawn").is_empty():
 		_status("Place a Spawn first")
@@ -264,6 +293,7 @@ func _playtest() -> void:
 	Game.play(level.duplicate(true), true)
 
 # Full rebuild: load, undo, new, resize.
+# Recreate all preview objects after a structural edit such as load, resize or undo.
 func _refresh() -> void:
 	preview.clear()
 	for d in level.entities:
@@ -271,6 +301,7 @@ func _refresh() -> void:
 	_redraw()
 
 # Rebuild one preview after level.entities[i] was appended or edited in place.
+# Rebuild only one object preview when the rest of the room has not changed.
 func _refresh_one(i: int) -> void:
 	var e = E.make(null, level.entities[i])
 	if i == preview.size():
@@ -280,13 +311,16 @@ func _refresh_one(i: int) -> void:
 	_redraw()
 
 # ---------------- editing ----------------
+# Convert the camera-adjusted mouse position from pixels to a tile coordinate.
 func _cell_at_mouse() -> Vector2i:
 	var p := get_global_mouse_position()
 	return Vector2i(floori(p.x / T), floori(p.y / T))
 
+# Check that a tile coordinate lies inside the editable room.
 func _in_level(c: Vector2i) -> bool:
 	return c.x >= 0 and c.y >= 0 and c.x < level.w and c.y < level.h
 
+# Change one character in a tile row and invalidate neighboring visual chunks only when it changed.
 func _set_tile(c: Vector2i, v: bool) -> void:
 	if not _in_level(c):
 		return
@@ -296,12 +330,14 @@ func _set_tile(c: Vector2i, v: bool) -> void:
 		level.tiles[c.y] = row.substr(0, c.x) + ch + row.substr(c.x + 1)
 		tile_layer.mark_cell_dirty(c)
 
+# Fill the cells between mouse samples so a fast brush drag does not leave holes.
 func _paint_line(a: Vector2i, b: Vector2i, v: bool) -> void:
 	var n := maxi(absi(b.x - a.x), absi(b.y - a.y))
 	for i in n + 1:
 		var t := 0.0 if n == 0 else float(i) / n
 		_set_tile(Vector2i(roundi(lerpf(a.x, b.x, t)), roundi(lerpf(a.y, b.y, t))), v)
 
+# Find the topmost placed object under a tile-centred click; return -1 when none is found.
 func _entity_at(c: Vector2i) -> int:
 	var p := Vector2i(c.x * T + 4, c.y * T + 4)
 	for i in range(level.entities.size() - 1, -1, -1):
@@ -311,6 +347,7 @@ func _entity_at(c: Vector2i) -> int:
 			return i
 	return -1
 
+# Place a single-cell object, avoid duplicates and handle spawn uniqueness or note editing.
 func _place_point(c: Vector2i) -> void:
 	if not _in_level(c):
 		return
@@ -334,6 +371,7 @@ func _place_point(c: Vector2i) -> void:
 		_refresh_one(level.entities.size() - 1)
 
 # Design note text (e.g. "Needs double jump"). Click a placed note with the Note tool to edit it.
+# Open a text dialog linked to this note dictionary and refresh the preview after confirmation.
 func _ask_note(e: Dictionary) -> void:
 	var dlg := AcceptDialog.new()
 	dlg.title = "Note"
@@ -358,6 +396,7 @@ func _ask_note(e: Dictionary) -> void:
 	edit.grab_focus()
 
 # Door link: its own id, and "room:id" of the door it leads to ("id" alone = a door in this level).
+# Edit the doorway ID and destination, using room:id for a link to another room.
 func _ask_door(e: Dictionary) -> void:
 	var dlg := AcceptDialog.new()
 	dlg.title = "Door"
@@ -391,6 +430,7 @@ func _ask_door(e: Dictionary) -> void:
 	dlg.popup_centered()
 	to_edit.grab_focus()
 
+# Convert a drag range to a sized object and request extra data for doors or moving platforms.
 func _place_rect(a: Vector2i, b: Vector2i) -> void:
 	var lo := Vector2i(mini(a.x, b.x), mini(a.y, b.y)).clamp(Vector2i.ZERO, Vector2i(level.w - 1, level.h - 1))
 	var hi := Vector2i(maxi(a.x, b.x), maxi(a.y, b.y)).clamp(Vector2i.ZERO, Vector2i(level.w - 1, level.h - 1))
@@ -409,6 +449,7 @@ func _place_rect(a: Vector2i, b: Vector2i) -> void:
 		_ask_door(d)
 	_refresh_one(level.entities.size() - 1)
 
+# Translate keyboard/mouse gestures into undo, saving, playtesting, painting, erasing and panning.
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_Z and event.ctrl_pressed:
@@ -452,6 +493,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			last_cell = c
 		_redraw()
 
+# Begin or finish a left-button placement gesture, including sized objects and moving-platform targets.
 func _left(pressed: bool) -> void:
 	var c := _cell_at_mouse()
 	if pressed:
@@ -487,6 +529,7 @@ func _left(pressed: bool) -> void:
 		dragging_paint = 0
 	_redraw()
 
+# Begin or finish an erase gesture, saving the appropriate undo snapshot.
 func _right(pressed: bool) -> void:
 	if pressed:
 		_push_undo()
@@ -503,6 +546,7 @@ func _right(pressed: bool) -> void:
 		dragging_paint = 0
 	_redraw()
 
+# Remove an object and keep the data and preview arrays aligned.
 func _erase_entity(i: int) -> void:
 	if is_same(level.entities[i], zip_pending):
 		zip_pending = null
@@ -510,12 +554,14 @@ func _erase_entity(i: int) -> void:
 	preview.remove_at(i)
 	_redraw()
 
+# Change camera zoom while preserving the world point under the mouse.
 func _zoom(f: float) -> void:
 	var before := get_global_mouse_position()
 	cam.zoom = (cam.zoom * f).clamp(Vector2(0.5, 0.5), Vector2(10, 10))
 	cam.position += before - get_global_mouse_position()
 	_redraw()
 
+# Update temporary messages and editor hover/drag visuals between input events.
 func _process(dt: float) -> void:
 	var v := Vector2(Input.get_axis("ui_left", "ui_right"), Input.get_axis("ui_up", "ui_down"))
 	if v != Vector2.ZERO and not (get_viewport().gui_get_focus_owner() is LineEdit):
@@ -531,6 +577,7 @@ func _process(dt: float) -> void:
 		status.text = "Tile %d, %d   |   LMB place/paint  RMB erase  MMB/Space+drag pan  Wheel zoom  Ctrl+Z undo  Ctrl+S save  F5 playtest" % [c.x, c.y]
 
 # ---------------- drawing ----------------
+# Draw room scenery and editor background beneath the retained terrain.
 func _draw_background(ci: CanvasItem) -> void:
 	var vs := get_viewport_rect().size / cam.zoom
 	var view := Rect2(cam.position - vs / 2.0, vs)
@@ -547,6 +594,7 @@ func _draw_background(ci: CanvasItem) -> void:
 		for y in range(0, level.h + 1):
 			ci.draw_line(Vector2(0, y * T), Vector2(b.size.x, y * T), gc)
 
+# Draw object previews, editing grid and the current placement/selection guides.
 func _draw() -> void:
 	# Also follow redraws requested directly by tools or benchmark subclasses.
 	background.queue_redraw()

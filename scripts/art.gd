@@ -1,4 +1,10 @@
 extends RefCounted
+# Shared drawing helpers for terrain and the original Paper Pixels sprite sheet.
+# An atlas is one image containing many small pictures; a region selects one picture from it.
+# The helpers only draw: the tile grid and entity rectangles still decide physical collisions.
+# Caches reuse textures instead of creating the same image for every frame or object.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Sprite drawing helpers for the Paper Pixels pack (CC0, VEXED) in assets/paper-pixels.
 # Sheet coordinates below are 8x8 cells unless noted as pixel rects.
 
@@ -38,16 +44,20 @@ const HAIR_COLORS := [Color8(118, 118, 118), Color8(145, 145, 145)]
 
 static var _hair_cache := {}
 
+# Draw one 8px tile from the source atlas at a world-pixel position.
 static func cell(ci: CanvasItem, c: Vector2i, at: Vector2, mod := Color.WHITE) -> void:
 	ci.draw_texture_rect_region(TILES, Rect2(at, Vector2(T, T)), Rect2(c * T, Vector2(T, T)), mod)
 
+# Draw a pixel rectangle from the sprite sheet at the supplied world position.
 static func region(ci: CanvasItem, src: Rect2, at: Vector2, mod := Color.WHITE) -> void:
 	ci.draw_texture_rect_region(TILES, Rect2(at, src.size), src, mod)
 
+# Generate a stable coordinate-based variation so terrain details do not flicker between frames.
 static func _h(x: int, y: int) -> int:
 	return absi(hash(Vector2i(x, y)))
 
 # Player sheet with the gray hair pixels recoloured (Celeste-style dash indicator).
+# Recolor the original sheet hair pixels and cache the result, leaving unrelated gray pixels untouched.
 static func player_sheet(hair: Color) -> Texture2D:
 	var key := hair.to_html()
 	if _hair_cache.has(key):
@@ -67,6 +77,7 @@ static func player_sheet(hair: Color) -> Texture2D:
 	_hair_cache[key] = tex
 	return tex
 
+# Cull the terrain to the camera view, then pass its visible tile range to the chunk-compatible renderer.
 static func draw_tiles(ci: CanvasItem, tiles: Array, gw: int, gh: int, view: Rect2) -> void:
 	var x0 := clampi(int(view.position.x / T) - 1, 0, gw)
 	var x1 := clampi(int(view.end.x / T) + 2, 0, gw)
@@ -75,6 +86,7 @@ static func draw_tiles(ci: CanvasItem, tiles: Array, gw: int, gh: int, view: Rec
 	draw_tile_range(ci, tiles, gw, gh, x0, y0, x1, y1)
 
 # Half-open cell range; neighbours are read from the full level, not the chunk.
+# Draw only a rectangular tile subset, choosing themed artwork or the default tile treatment.
 static func draw_tile_range(ci: CanvasItem, tiles: Array, gw: int, gh: int, x0: int, y0: int, x1: int, y1: int, environment := "") -> void:
 	if environment in EnvironmentArt.THEMES:
 		EnvironmentArt.draw_range(ci, tiles, gw, gh, x0, y0, x1, y1, environment)
@@ -119,6 +131,7 @@ static func draw_tile_range(ci: CanvasItem, tiles: Array, gw: int, gh: int, x0: 
 				ci.draw_rect(Rect2(at.x, at.y + T - 1, T, 1), BOTTOM_EDGE)
 
 # Parallax backdrop: moon, drifting clouds, tree line.
+# Draw the default background treatment for a supplied camera view.
 static func draw_background(ci: CanvasItem, view: Rect2, t: float, environment := "", area := Rect2()) -> void:
 	if environment in EnvironmentArt.THEMES:
 		EnvironmentArt.draw_background(ci, view, environment, area)

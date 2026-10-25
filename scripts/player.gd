@@ -1,4 +1,13 @@
 extends RefCounted
+# Player movement and animation, stored as an ordinary object rather than a scene node.
+# World owns this object and calls update(dt) once per physics step, then draw() when needed.
+# Coordinates: +X is right, +Y is down; speed is pixels/second and dt is elapsed seconds.
+# pos is the character's feet (bottom centre), not the top-left of the sprite.
+# Movement checks whole pixels against World; rem saves fractions so slow movement is not lost.
+# The state machine chooses one movement mode at a time; water effects can also layer on top.
+# See docs/CODE_GUIDE.md for a reading order and explanations of the Godot vocabulary.
+# Reading help: docs/CODE_GUIDE.md.
+
 const Art := preload("res://scripts/art.gd")
 const CharacterArt := preload("res://scripts/character_art.gd")
 # Player controller: a GDScript port of Celeste's Player.cs
@@ -7,11 +16,14 @@ const CharacterArt := preload("res://scripts/character_art.gd")
 # Position is the bottom-centre of the hitbox and always holds whole pixels;
 # sub-pixel movement lives in `rem`, like Monocle's Actor.
 
+# State IDs select mutually exclusive movement rules. They are not animation frame numbers.
 enum { ST_NORMAL, ST_CLIMB, ST_DASH, ST_BOOST, ST_RED_DASH, ST_HIT_SQUASH, ST_LAUNCH, ST_DREAM_DASH, ST_STAR_FLY, ST_SWIM }
 const STATE_NAMES := ["Normal", "Climb", "Dash", "Boost", "Red Dash", "Hit Squash", "Launch", "Dream Dash", "Star Fly", "Normal (Underwater)"]
 
 # Movement tuning. These were Celeste's constants; they are vars so they can be tuned
 # in-game (see scripts/tuning.gd). Defaults below are the Celeste values.
+# Basic motion: speed limits are px/s, acceleration/gravity are px/s squared, delays are seconds.
+# Negative vertical speed rises; positive vertical speed falls. See tuning.gd HELP for each adjustable value.
 var MAX_FALL := 160.0
 var GRAVITY := 900.0
 var HALF_GRAV_THRESHOLD := 40.0
@@ -27,6 +39,7 @@ var DUCK_CORRECT_SLIDE := 50.0
 var DODGE_SLIDE_SPEED_MULT := 1.2
 var DUCK_SUPER_JUMP_X_MULT := 1.25
 var DUCK_SUPER_JUMP_Y_MULT := 0.5
+# Jump forgiveness: grace permits a short jump after leaving a ledge; variable hold controls jump height.
 var JUMP_GRACE_TIME := 0.1
 var JUMP_SPEED := -105.0
 var JUMP_H_BOOST := 40.0
@@ -50,6 +63,7 @@ var SUPER_WALL_JUMP_VAR_TIME := 0.25
 var SUPER_WALL_JUMP_H := MAX_RUN + JUMP_H_BOOST * 2
 var SIDE_BOUNCE_SPEED := 240.0
 var SIDE_BOUNCE_FORCE_TIME := 0.3
+# Dash tuning: travel speed, duration, cooldown, refill delay and small collision-correction distances.
 var DASH_SPEED := 240.0
 var END_DASH_SPEED := 160.0
 var END_DASH_UP_MULT := 0.75
@@ -67,6 +81,7 @@ var REBOUND_SPEED_Y := -120.0
 var REBOUND_VAR_JUMP_TIME := 0.15
 var DREAM_DASH_MIN_TIME := 0.1
 var DREAM_DASH_END_WIGGLE := 5
+# Wall climbing: stamina is a separate resource from adventure energy; costs below are stamina per second or action.
 var CLIMB_MAX_STAMINA := 110.0
 var CLIMB_UP_COST := 100.0 / 2.2
 var CLIMB_STILL_COST := 100.0 / 10.0
@@ -116,6 +131,8 @@ var ATTACK_ARC := 120.0
 var DASH_DIRS := 3
 var ATTACK_DIRS := 1
 
+# These boxes are offsets from pos (the feet). HB blocks terrain; HURT activates interactions.
+# damage_rect() shrinks HURT again for forgiving lethal-hazard contact. Art never defines these boxes.
 const HB_NORMAL := Rect2i(-4, -11, 8, 11)
 const HB_DUCK := Rect2i(-4, -6, 8, 6)
 const HB_FLY := Rect2i(-4, -10, 8, 8)
@@ -142,8 +159,10 @@ const HAIR_USED := Color("929292")
 const HAIR_TWO := Color("493022")
 const HAIR_FLY := Color("f2eb6d")
 
+# Ownership and physical state: w supplies collision/services; speed is velocity, not a per-frame displacement.
 var w  # world
 var pos := Vector2.ZERO
+# Fractional motion accumulator: e.g. repeated 0.25px steps become one whole-pixel move after four updates.
 var rem := Vector2.ZERO
 var speed := Vector2.ZERO
 var facing := 1
@@ -156,6 +175,7 @@ var underwater := false  # centre inside water: Normal becomes Normal (Underwate
 var in_waterfall := false  # layer: hurtbox inside a waterfall
 var bubble_t := 0.0
 
+# Short-lived movement memory. Most timers count down to zero; they are measured in simulated seconds.
 var step_sfx_timer := 0.0
 var on_ground := false
 var was_on_ground := false
@@ -186,6 +206,7 @@ var climb_hop_solid = null
 var climb_hop_solid_pos := Vector2i.ZERO
 var climb_no_move_timer := 0.0
 var last_climb_move := 0
+# Dash/launch memory persists across state-entry and collision callbacks until the action ends.
 var dash_dir := Vector2.ZERO
 var before_dash_speed := Vector2.ZERO
 var dash_started_on_ground := false
@@ -208,12 +229,14 @@ var star_fly_timer := 0.0
 var star_fly_transforming := false
 var star_fly_speed_lerp := 0.0
 var star_fly_last_dir := Vector2.ZERO
+# Active sword swing and recovery are separate: a released button cannot bypass the cooldown.
 var attack_timer := 0.0
 var attack_cooldown_timer := 0.0
 var attack_dir := Vector2.RIGHT
 var attack_hit: Array = []  # entities already struck by this swing
 
 # coroutine emulation (Monocle Coroutine: yield null = next frame, yield t = wait t seconds)
+# co_step is the current sequence stage, co_wait the remaining delay. No thread or blocking sleep is involved.
 var co_active := false
 var co_step := 0
 var co_wait := 0.0
@@ -224,6 +247,7 @@ var in_y := 0
 var interact := false  # interact (S / pad B) pressed this tick: go through house doors
 var aim_raw := Vector2.ZERO
 var aim_free := Vector2.ZERO  # analog stick direction (free aim); zero on keyboard-only input
+# Buffered presses remember a recent tap briefly; *_check values below represent buttons still held down.
 var jump_buf := 0.0
 var dash_buf := 0.0
 var attack_buf := 0.0
@@ -237,6 +261,7 @@ var hair_wave := 0.0
 var flash := false
 var flash_t := 0.0
 var anim_t := 0.0
+# Animation clocks are presentation state and must not determine collision or movement.
 var visual_animation := "idle"
 var visual_clock := 0.0
 var landing_visual_timer := 0.0
@@ -248,6 +273,7 @@ var transitions := {}  # Vector2i(from, to) -> count
 var transition_log: Array = []  # last 10 [time, from, to]
 var attack_log: Array = []  # times of the last 10 swings
 
+# Create a player at the spawn feet position, apply movement tuning and initialize the hair chain.
 func _init(world, spawn: Vector2) -> void:
 	w = world
 	if world != null:  # a world-less player is only used to read the default tuning
@@ -262,11 +288,13 @@ func _init(world, spawn: Vector2) -> void:
 
 var quiet := false  # true for a stand-in runner (the chasing Ape): its moves make no player sounds
 
+# Play a player effect unless this is a silent stand-in used by the chase planner.
 func sfx(key: String, pitch := 1.0) -> void:
 	if not quiet:
 		Game.play_sfx(key, pitch)
 
 # Overrides tunable vars by name, then recomputes the derived ones.
+# Apply named movement overrides, then recalculate values derived from run and jump speeds.
 func apply_tuning(values: Dictionary) -> void:
 	for k in values:
 		set(k, values[k])
@@ -275,54 +303,69 @@ func apply_tuning(values: Dictionary) -> void:
 	STAR_FLY_SLOW_SPEED = STAR_FLY_TARGET_SPEED * 0.65
 
 # ---------------- helpers ----------------
+# Return the dash capacity selected by the assist setting; this is not the current remaining count.
 func max_dashes() -> int:
 	return 2 if Game.settings.air_dashes != 0 else 1
 
+# Move the current local collision rectangle to a proposed feet position without moving the player.
 func rect_at(p: Vector2) -> Rect2i:
 	return Rect2i(Vector2i(p) + collider.position, collider.size)
 
+# Return the world-space box used to stop movement against solid terrain.
 func hitbox() -> Rect2i:
 	return rect_at(pos)
 
+# Return the interaction box used for touches such as pickups; it is shorter than the movement box.
 func hurt_rect() -> Rect2i:
 	return Rect2i(Vector2i(pos) + hurtbox.position, hurtbox.size)
 
 # What hazards and enemies test against: the hurtbox 20% smaller each way (pickups keep hurt_rect).
 # Centred sideways; the bottom edge stays put so floor spikes still reach the feet.
+# Return the smaller forgiving target that hazards and enemies must overlap to hurt the player.
 func damage_rect() -> Rect2i:
 	var r := hurt_rect()
 	var s := Vector2i((Vector2(r.size) * DAMAGE_SCALE).round())
 	return Rect2i(r.position.x + (r.size.x - s.x) / 2, r.end.y - s.y, s.x, s.y)
 
+# Return the centre of the current movement box, useful for aim and distance calculations.
 func center() -> Vector2:
 	return pos + Vector2(collider.position) + Vector2(collider.size) / 2.0
 
+# Return the bottom Y coordinate of the movement box (screen Y grows downward).
 func bottom() -> int:
 	return int(pos.y) + collider.end.y
 
+# Check whether the movement box would overlap a solid after applying a pixel offset.
 func solid_at(off := Vector2.ZERO) -> bool:
 	return w.collide_solid(rect_at(pos + off)) != null
 
+# Find the first solid at the proposed offset; the result identifies a tile or movable object.
 func solid_first(off := Vector2.ZERO):
 	return w.collide_solid(rect_at(pos + off))
 
+# Test a single pixel against World collision, for small probes around corners and ledges.
 func point_solid(p: Vector2) -> bool:
 	return w.collide_solid(Rect2i(Vector2i(p.floor()), Vector2i.ONE)) != null
 
+# Find a one-way platform newly crossed at an offset, ignoring platforms already overlapping us.
 func jumpthru_outside(off: Vector2):
 	return w.collide_jumpthru_outside(rect_at(pos + off), hitbox())
 
+# Probe below a proposed feet position; both solid ground and one-way platforms can support the player.
 func on_ground_at(p: Vector2, dist := 1) -> bool:
 	var r := rect_at(p + Vector2(0, dist))
 	return w.collide_solid(r) != null or w.collide_jumpthru_outside(r, rect_at(p)) != null
 
+# Report whether the short crouching collider is currently selected.
 func ducking() -> bool:
 	return collider == HB_DUCK
 
+# Switch movement and interaction boxes together so crouching affects both consistently.
 func set_ducking(v: bool) -> void:
 	collider = HB_DUCK if v else HB_NORMAL
 	hurtbox = HURT_DUCK if v else HURT_NORMAL
 
+# Check that changing from the short box to the standing box would not enter a ceiling.
 func can_unduck() -> bool:
 	if not ducking():
 		return true
@@ -332,6 +375,7 @@ func can_unduck() -> bool:
 	collider = was
 	return ok
 
+# Perform the standing-clearance check at another proposed position.
 func can_unduck_at(p: Vector2) -> bool:
 	var was := pos
 	pos = p
@@ -339,6 +383,7 @@ func can_unduck_at(p: Vector2) -> bool:
 	pos = was
 	return ok
 
+# Test whether the short crouching box fits at a proposed position.
 func duck_free_at(p: Vector2) -> bool:
 	var was := collider
 	collider = HB_DUCK
@@ -346,16 +391,20 @@ func duck_free_at(p: Vector2) -> bool:
 	collider = was
 	return ok
 
+# Compare remaining climbing stamina with the threshold that changes wall-hold behavior and visuals.
 func is_tired() -> bool:
 	return stamina < CLIMB_TIRED_THRESHOLD
 
+# Report the brief dash-attack window, which can last longer than the movement dash itself.
 func dash_attacking() -> bool:
 	return dash_attack_timer > 0 or state == ST_RED_DASH
 
+# Check the buffered request, remaining dashes and cooldowns before entering dash movement.
 func can_dash() -> bool:
 	return dash_buf > 0 and dash_cooldown_timer <= 0 and dashes > 0 and DASH_DIRS != 0
 
 # Layers on top of the current state: a waterfall pulls the player down.
+# Apply the waterfall downward pull on top of the current movement mode.
 func _layers(dt: float) -> void:
 	in_waterfall = w.liquid_at(hurt_rect(), "waterfall")
 	if in_waterfall and speed.y < WATERFALL_PUSH:
@@ -364,6 +413,7 @@ func _layers(dt: float) -> void:
 # ---------------- NORMAL (UNDERWATER) ----------------
 # Replaces Normal in water: no walking on the floor (it moves as mid-water) and no normal jump; Jumping (Underwater) is a weaker
 # stroke that works from the floor or mid-water, every time jump is pressed. Dash still works. Leaving the water returns to Normal.
+# Handle underwater steering, drag and jump strokes; return the movement state to run next.
 func _swim_update(dt: float) -> int:
 	if not underwater:
 		return ST_NORMAL
@@ -391,18 +441,22 @@ func _swim_update(dt: float) -> int:
 		w.parts.append([center() + Vector2(facing * 3, -5), Vector2(0, -18), 0.9, Color(0.85, 0.95, 1.0)])
 	return ST_SWIM
 
+# Report a buffered jump request; a short input buffer makes near-miss button timing more forgiving.
 func jump_pressed() -> bool:
 	return jump_buf > 0
 
+# Return the platform velocity still available through the short lift-memory grace period.
 func lift_speed() -> Vector2:
 	return lift_last if lift_current == Vector2.ZERO else lift_current
 
+# Remember the velocity of a platform carrying or pushing the player.
 func set_lift_speed(v: Vector2) -> void:
 	lift_current = v
 	if v != Vector2.ZERO:
 		lift_last = v
 		lift_timer = LIFT_SPEED_GRACE
 
+# Limit inherited platform momentum so a fast lift cannot create an unintended enormous launch.
 func lift_boost() -> Vector2:
 	var v := lift_speed()
 	if absf(v.x) > LIFT_X_CAP:
@@ -411,18 +465,22 @@ func lift_boost() -> Vector2:
 	return v
 
 # Celeste: no grabbing past the level edge. Past this room's edge lies the next room's rock, which is a real wall.
+# Ensure the wall probe stays inside this room or a valid neighboring room.
 func climb_bounds_check(dir: int) -> bool:
 	var r := hitbox()
 	if r.position.x + dir * CLIMB_CHECK_DIST >= w.bounds.position.x and r.end.x + dir * CLIMB_CHECK_DIST < w.bounds.end.x:
 		return true
 	return w.can_exit(Vector2(r.end.x + CLIMB_CHECK_DIST if dir > 0 else r.position.x - CLIMB_CHECK_DIST, r.get_center().y))
 
+# Probe for a grabbable wall in the requested horizontal direction, optionally shifted vertically.
 func climb_check(dir: int, y_add := 0) -> bool:
 	return climb_bounds_check(dir) and solid_at(Vector2(dir * CLIMB_CHECK_DIST, y_add))
 
+# Probe the slightly different reach used when jumping away from a wall.
 func wall_jump_check(dir: int) -> bool:
 	return climb_bounds_check(dir) and solid_at(Vector2(dir * WALL_JUMP_CHECK_DIST, 0))
 
+# Determine whether the player stands on, clings to, or travels through this moving object.
 func is_riding(s) -> bool:
 	if state == ST_DREAM_DASH:
 		return s.rect.intersects(hitbox())
@@ -432,14 +490,17 @@ func is_riding(s) -> bool:
 		return speed.y >= 0 and s.rect.intersects(rect_at(pos + Vector2.DOWN)) and not s.rect.intersects(hitbox())
 	return s.rect.intersects(rect_at(pos + Vector2.DOWN))
 
+# Move one number toward a target by at most amount, without overshooting it.
 static func approach(v: float, target: float, amount: float) -> float:
 	return minf(v + amount, target) if v <= target else maxf(v - amount, target)
 
+# Vector version of approach: limit the change in direction-and-speed to the given distance.
 static func approach_v(v: Vector2, target: Vector2, amount: float) -> Vector2:
 	var d := target - v
 	return target if d.length() <= amount else v + d.normalized() * amount
 
 # ---------------- movement (Monocle Actor) ----------------
+# Accumulate horizontal fractions, move whole pixels and optionally invoke collision reactions.
 func move_h(amount: float, callback := false) -> bool:
 	rem.x += amount
 	var m := roundi(rem.x)
@@ -448,6 +509,7 @@ func move_h(amount: float, callback := false) -> bool:
 	rem.x -= m
 	return move_h_exact(m, 1 if callback else 0)
 
+# Accumulate vertical fractions, move whole pixels and optionally invoke collision reactions.
 func move_v(amount: float, callback := false) -> bool:
 	rem.y += amount
 	var m := roundi(rem.y)
@@ -457,6 +519,7 @@ func move_v(amount: float, callback := false) -> bool:
 	return move_v_exact(m, 1 if callback else 0)
 
 # cb: 0 = none, 1 = normal collide callback, 2 = squish (pushed by a solid)
+# Walk a requested integer distance one pixel at a time, stopping at the first horizontal obstruction.
 func move_h_exact(m: int, cb := 0) -> bool:
 	var s := signi(m)
 	while m != 0:
@@ -472,6 +535,7 @@ func move_h_exact(m: int, cb := 0) -> bool:
 		m -= s
 	return false
 
+# Walk a requested integer distance one pixel at a time; descending also checks one-way platforms.
 func move_v_exact(m: int, cb := 0) -> bool:
 	var s := signi(m)
 	while m != 0:
@@ -489,18 +553,22 @@ func move_v_exact(m: int, cb := 0) -> bool:
 		m -= s
 	return false
 
+# Move toward an absolute X coordinate while respecting accumulated fractions and collision.
 func move_to_x(x: float) -> void:
 	move_h(x - (pos.x + rem.x))
 
+# Move toward an absolute Y coordinate while respecting accumulated fractions and collision.
 func move_to_y(y: float) -> void:
 	move_v(y - (pos.y + rem.y))
 
+# Apply an offset without collision resolution; callers must already know this relocation is safe.
 func naive_move(v: Vector2) -> void:
 	rem += v
 	var m := Vector2(roundi(rem.x), roundi(rem.y))
 	rem -= m
 	pos += m
 
+# Try the collision escape rules when a moving solid squeezes the player; die if no safe escape exists.
 func _on_squish() -> void:
 	# Monocle TrySquishWiggle: nudge up to 3px out of the solid, else die
 	if not solid_at():
@@ -516,6 +584,7 @@ func _on_squish() -> void:
 	die(Vector2.ZERO)
 
 # ---------------- input ----------------
+# Read keyboard/gamepad actions, record short button buffers and update held movement directions.
 func _read_input(dt: float) -> void:
 	in_x = int(Input.is_action_pressed("right")) - int(Input.is_action_pressed("left"))
 	in_y = int(Input.is_action_pressed("down")) - int(Input.is_action_pressed("up"))
@@ -535,6 +604,7 @@ func _read_input(dt: float) -> void:
 	interact = Input.is_action_just_pressed("interact")
 
 # Held direction limited to a *_DIRS mode (see DASH_DIRS). With no direction held: facing (vertical-only: up).
+# Convert the current aim to the direction set allowed by the chosen movement tuning.
 func dir_for(mode: int) -> Vector2:
 	var v := aim_free if mode == 4 and aim_free != Vector2.ZERO else aim_raw
 	var face := Vector2(facing, 0)
@@ -554,10 +624,12 @@ func dir_for(mode: int) -> Vector2:
 			return Vector2(roundf(cos(a)), roundf(sin(a))).normalized()
 	return v.normalized() if v != Vector2.ZERO else face
 
+# Combine directional buttons and analog input into the aiming vector used by attacks and dashes.
 func aim_vector() -> Vector2:
 	return aim_raw if aim_raw != Vector2.ZERO else Vector2(facing, 0)
 
 # ---------------- main update (Player.Update) ----------------
+# Run one simulation step: input, timers, ground checks, state logic, pixel movement, contacts and visuals.
 func update(dt: float) -> void:
 	step_sfx_timer = maxf(0.0, step_sfx_timer - dt)
 	if not dead and step_sfx_timer <= 0.0:
@@ -720,6 +792,7 @@ func update(dt: float) -> void:
 	_update_visuals(dt)
 	was_on_ground = on_ground
 
+# Resolve room edges after movement, allowing exits only where an adjacent adventure room exists.
 func _enforce_bounds() -> void:
 	var r := hitbox()
 	var b: Rect2i = w.bounds
@@ -738,6 +811,7 @@ func _enforce_bounds() -> void:
 	elif r.position.y > b.end.y and not w.can_exit(Vector2(c.x, r.position.y)):
 		die(Vector2.ZERO)
 
+# React to a horizontal room boundary using the normal wall-collision behavior.
 func _on_bounds_h() -> void:
 	speed.x = 0
 	rem.x = 0
@@ -745,6 +819,7 @@ func _on_bounds_h() -> void:
 		_set_state(ST_NORMAL)
 
 # ---------------- state machine ----------------
+# Run the current movement mode, apply any requested state change and advance its timed sequence.
 func _state_update(dt: float) -> void:
 	var ns := state
 	match state:
@@ -767,6 +842,7 @@ func _state_update(dt: float) -> void:
 		else:
 			_co_resume()
 
+# Leave the old mode, reset its temporary data and enter the new mode exactly once per transition.
 func _set_state(ns: int) -> void:
 	if ns == state or dead:
 		return
@@ -822,6 +898,7 @@ func _set_state(ns: int) -> void:
 			auto_jump = false
 			var_jump_timer = 0
 
+# Advance a timed action sequence without blocking the game; co_wait stores delays between steps.
 func _co_resume() -> void:
 	match state:
 		ST_DASH:
@@ -875,9 +952,11 @@ func _co_resume() -> void:
 
 # ---------------- jumps ----------------
 # Adventure: a jump needs its full cost in energy (wall jumps and swim strokes stay free).
+# Check adventure energy before an ordinary jump; other jumping actions have their own rules.
 func can_jump() -> bool:
 	return not w.adventure() or Game.adv.energy >= JUMP_ENERGY
 
+# Start a normal jump, spend its adventure energy and reset the variable-height jump timer.
 func jump(particles := true) -> void:
 	sfx("jump")
 	w.drain_energy(JUMP_ENERGY)
@@ -896,6 +975,7 @@ func jump(particles := true) -> void:
 	if particles:
 		w.dust(pos, Vector2.UP, 4)
 
+# Jump out of a ground dash, carrying the faster sideways momentum into the air.
 func super_jump() -> void:
 	sfx("jump")
 	jump_buf = 0
@@ -917,6 +997,7 @@ func super_jump() -> void:
 	scale = Vector2(0.6, 1.4)
 	w.dust(pos, Vector2.UP, 4)
 
+# Jump away from a wall and briefly force movement outward so the player clears it.
 func wall_jump(dir: int) -> void:
 	sfx("wall_jump")
 	set_ducking(false)
@@ -941,6 +1022,7 @@ func wall_jump(dir: int) -> void:
 	scale = Vector2(0.6, 1.4)
 	w.dust(center() + Vector2(-dir * 4, 0), Vector2(dir, -1).normalized(), 4)
 
+# Apply the stronger wall-jump variant associated with a vertical dash.
 func super_wall_jump(dir: int) -> void:
 	sfx("wall_jump")
 	set_ducking(false)
@@ -959,6 +1041,7 @@ func super_wall_jump(dir: int) -> void:
 	scale = Vector2(0.6, 1.4)
 	w.dust(center() + Vector2(-dir * 4, 0), Vector2(dir, -1).normalized(), 4)
 
+# Jump while gripping a wall, applying its stamina and momentum rules.
 func climb_jump() -> void:
 	sfx("wall_jump")
 	if not on_ground:
@@ -971,6 +1054,7 @@ func climb_jump() -> void:
 	w.dust(center() + Vector2(facing * 2, 0), Vector2(-facing, -1).normalized(), 4)
 
 # ---------------- bounces (springs, bumpers) ----------------
+# Reset shared dash, stamina and movement timers before an external bounce.
 func _bounce_common() -> void:
 	if state == ST_BOOST and current_booster != null:
 		current_booster.player_released()
@@ -984,6 +1068,7 @@ func _bounce_common() -> void:
 	wall_boost_timer = 0
 	launched = false
 
+# Bounce upward from a given surface Y coordinate with a short automatic jump hold.
 func bounce(from_y: float) -> void:
 	var was := collider
 	collider = HB_NORMAL
@@ -997,6 +1082,7 @@ func bounce(from_y: float) -> void:
 	scale = Vector2(0.6, 1.4)
 	collider = was
 
+# Apply the stronger upward spring bounce and restore the resources a spring is meant to refill.
 func super_bounce(from_y: float) -> void:
 	sfx("spring")
 	var was := collider
@@ -1013,6 +1099,7 @@ func super_bounce(from_y: float) -> void:
 	scale = Vector2(0.5, 1.5)
 	collider = was
 
+# Bounce away from a sideways spring; return false when already travelling too fast in that direction.
 func side_bounce(dir: int, from_x: float, from_y: float) -> bool:
 	if absf(speed.x) > SIDE_BOUNCE_SPEED and signf(speed.x) == dir:
 		return false
@@ -1039,6 +1126,7 @@ func side_bounce(dir: int, from_x: float, from_y: float) -> bool:
 	collider = was
 	return true
 
+# Apply the generic recoil motion, used when an interaction knocks the player back.
 func rebound(direction := 0) -> void:
 	speed.x = direction * REBOUND_SPEED_X
 	speed.y = REBOUND_SPEED_Y
@@ -1053,6 +1141,7 @@ func rebound(direction := 0) -> void:
 	force_move_x_timer = 0
 	_set_state(ST_NORMAL)
 
+# Launch away from a world-space source, as for a bumper; optionally bias the result upward.
 func explode_launch(from: Vector2, snap_up := true) -> void:
 	sfx("spring", 0.7)
 	w.freeze_for(0.1)
@@ -1076,12 +1165,14 @@ func explode_launch(from: Vector2, snap_up := true) -> void:
 		launched = true
 	_set_state(ST_LAUNCH)
 
+# Restore normal dash capacity only when needed; return whether the count changed.
 func refill_dash() -> bool:
 	if dashes < max_dashes():
 		dashes = max_dashes()
 		return true
 	return false
 
+# Consume the effect of a refill crystal only if dash or stamina recovery is useful.
 func use_refill(two: bool) -> bool:
 	var target := 2 if two else max_dashes()
 	if dashes < target or stamina < CLIMB_TIRED_THRESHOLD:
@@ -1091,9 +1182,11 @@ func use_refill(two: bool) -> bool:
 		return true
 	return false
 
+# Restore the full climbing stamina pool.
 func refill_stamina() -> void:
 	stamina = CLIMB_MAX_STAMINA
 
+# Begin death only once and tell World to count it, play effects and arrange the respawn.
 func die(dir: Vector2) -> void:
 	if dead or Game.settings.invincible:
 		return
@@ -1103,6 +1196,7 @@ func die(dir: Vector2) -> void:
 	w.on_player_death(self, dir)
 
 # ---------------- boosters / feathers ----------------
+# Enter a booster bubble, remembering its centre and whether it launches a normal or red dash.
 func boost(b, red: bool) -> void:
 	sfx("boost")
 	_set_state(ST_BOOST)
@@ -1111,6 +1205,7 @@ func boost(b, red: bool) -> void:
 	boost_red = red
 	current_booster = b
 
+# Start or extend feather flight and restore the stamina associated with that pickup.
 func start_star_fly() -> bool:
 	refill_stamina()
 	if state == ST_STAR_FLY:
@@ -1119,6 +1214,7 @@ func start_star_fly() -> bool:
 		_set_state(ST_STAR_FLY)
 	return true
 
+# Notify dash-reactive behavior once per dash rather than once per physics step.
 func _call_dash_events() -> void:
 	if called_dash_events:
 		return
@@ -1128,6 +1224,7 @@ func _call_dash_events() -> void:
 		current_booster = null
 
 # ---------------- collisions ----------------
+# Handle wall contact, including dash correction, retained speed and special movement modes.
 func _on_collide_h(hit) -> void:
 	if state == ST_STAR_FLY:
 		speed.x = 0 if star_fly_timer < STAR_FLY_END_NO_BOUNCE else speed.x * STAR_FLY_WALL_BOUNCE
@@ -1157,6 +1254,7 @@ func _on_collide_h(hit) -> void:
 	if state == ST_RED_DASH:
 		_set_state(ST_HIT_SQUASH)
 
+# Handle floor/ceiling contact, including landing, corner corrections and jump cancellation.
 func _on_collide_v(hit) -> void:
 	if speed.y > 40:
 		sfx("land")
@@ -1217,6 +1315,7 @@ func _on_collide_v(hit) -> void:
 	if state == ST_RED_DASH:
 		_set_state(ST_HIT_SQUASH)
 
+# Test whether contact may enter a dream block instead of stopping at its surface.
 func _dream_dash_check(dir: Vector2) -> bool:
 	if not (dash_attacking() and (dir.x == signf(dash_dir.x) or dir.y == signf(dash_dir.y))):
 		return false
@@ -1250,6 +1349,7 @@ func _dream_dash_check(dir: Vector2) -> bool:
 	return true
 
 # ---------------- NORMAL ----------------
+# Compute walking, airborne gravity, jumping, grabbing and dash requests for ordinary movement.
 func _normal_update(dt: float) -> int:
 	if underwater:
 		return ST_SWIM
@@ -1359,6 +1459,7 @@ func _normal_update(dt: float) -> int:
 	return ST_NORMAL
 
 # ---------------- CLIMB ----------------
+# Initialize a wall grab and reduce vertical momentum before wall-climbing begins.
 func _climb_begin() -> void:
 	sfx("climb")
 	auto_jump = false
@@ -1374,6 +1475,7 @@ func _climb_begin() -> void:
 		else:
 			break
 
+# Probe near the hands to determine whether the wall still supports a stationary hold.
 func _slip_check(add_y := 0.0) -> bool:
 	var r := hitbox()
 	var at: Vector2
@@ -1383,6 +1485,7 @@ func _slip_check(add_y := 0.0) -> bool:
 		at = Vector2(r.position.x - 1, r.position.y + 4 + add_y)
 	return not point_solid(at) and not point_solid(at + Vector2(0, -4 + add_y))
 
+# Hop over the top of a wall, retaining motion from a moving surface when appropriate.
 func _climb_hop() -> void:
 	var hit = solid_first(Vector2(facing, 0))
 	if hit != null:
@@ -1398,6 +1501,7 @@ func _climb_hop() -> void:
 	force_move_x = 0
 	force_move_x_timer = CLIMB_HOP_FORCE_TIME
 
+# Update wall climbing and stamina, and decide when to jump, slip or release the wall.
 func _climb_update(dt: float) -> int:
 	climb_no_move_timer -= dt
 	if on_ground:
@@ -1468,12 +1572,14 @@ func _climb_update(dt: float) -> int:
 	return ST_CLIMB
 
 # ---------------- DASH ----------------
+# Request the dash state and its initial freeze timing; the state-entry method performs setup.
 func _start_dash() -> int:
 	was_dash_b = dashes == 2
 	dashes = maxi(0, dashes - 1)
 	dash_buf = 0
 	return ST_DASH
 
+# Spend a dash and initialize the attack/cooldown windows before the timed launch starts.
 func _dash_begin() -> void:
 	sfx("dash")
 	called_dash_events = false
@@ -1491,6 +1597,7 @@ func _dash_begin() -> void:
 	if not on_ground and ducking() and can_unduck():
 		set_ducking(false)
 
+# Commit the chosen dash direction and speed after the initial dash sequence delay.
 func _dash_co_start() -> void:
 	var dir := last_dash_aim
 	var new_speed := dir * DASH_SPEED
@@ -1511,15 +1618,18 @@ func _dash_co_start() -> void:
 	trail_timer = 0.08
 
 # dash_dir snapped to 8 ways, so a free-aim dash (DASH_DIRS 4) close to an axis still allows super jumps
+# Snap the dash direction onto eight compass directions for mechanics needing discrete directions.
 func dash_dir8() -> Vector2:
 	var a := snappedf(dash_dir.angle(), PI / 4)
 	return Vector2(roundf(cos(a)), roundf(sin(a)))
 
+# Nudge a nearby sideways dash onto a one-way surface, preserving the intended forgiving feel.
 func _jumpthru_dash_nudge() -> void:
 	var jt = w.collide_jumpthru(hitbox())
 	if jt != null and bottom() - jt.rect.position.y <= DASH_H_JUMPTHRU_NUDGE:
 		move_v_exact(jt.rect.position.y - bottom())
 
+# Check special jump combinations available during a normal or red dash.
 func _dash_jumps(red: bool) -> int:
 	# shared by DASH and RED_DASH: super jump, super wall jump, wall jump out of a dash
 	var d8 := dash_dir8()
@@ -1546,6 +1656,7 @@ func _dash_jumps(red: bool) -> int:
 				return ST_NORMAL
 	return -1
 
+# Update a normal dash and check opportunities to interrupt it with a special jump.
 func _dash_update(dt: float) -> int:
 	if trail_timer > 0:
 		trail_timer -= dt
@@ -1559,6 +1670,7 @@ func _dash_update(dt: float) -> int:
 	return ST_DASH
 
 # ---------------- BOOST / RED DASH / HIT SQUASH ----------------
+# Pull the player into the bubble centre and check for an early player-triggered launch.
 func _boost_update(dt: float) -> int:
 	var target_add := aim_raw * 3
 	var c := Vector2(collider.position) + Vector2(collider.size) / 2.0
@@ -1570,6 +1682,7 @@ func _boost_update(dt: float) -> int:
 		return ST_RED_DASH if boost_red else ST_DASH
 	return ST_BOOST
 
+# Initialize the booster-driven red dash, which follows different resource and stopping rules.
 func _red_dash_begin() -> void:
 	called_dash_events = false
 	dash_started_on_ground = false
@@ -1581,6 +1694,7 @@ func _red_dash_begin() -> void:
 	if not on_ground and ducking() and can_unduck():
 		set_ducking(false)
 
+# Keep the red dash moving and handle its allowed jump interruptions.
 func _red_dash_update(_dt: float) -> int:
 	if can_dash():
 		return _start_dash()
@@ -1591,6 +1705,7 @@ func _red_dash_update(_dt: float) -> int:
 		w.add_trail(self)
 	return ST_RED_DASH
 
+# Apply the brief movement restriction and friction after a dash impact.
 func _hit_squash_update(dt: float) -> int:
 	speed.x = approach(speed.x, 0, HIT_SQUASH_FRICTION * dt)
 	speed.y = approach(speed.y, 0, HIT_SQUASH_FRICTION * dt)
@@ -1614,6 +1729,7 @@ func _hit_squash_update(dt: float) -> int:
 		return ST_NORMAL
 	return ST_HIT_SQUASH
 
+# Update an external launch until normal steering is allowed again.
 func _launch_update(dt: float) -> int:
 	if can_dash():
 		return _start_dash()
@@ -1625,6 +1741,7 @@ func _launch_update(dt: float) -> int:
 	return ST_NORMAL if speed.length() < LAUNCH_CANCEL_THRESHOLD else ST_LAUNCH
 
 # ---------------- DREAM DASH ----------------
+# Initialize travel through dream terrain and the minimum time before a permitted exit.
 func _dream_dash_begin() -> void:
 	sfx("dream")
 	speed = dash_dir * DASH_SPEED
@@ -1632,6 +1749,7 @@ func _dream_dash_begin() -> void:
 	stamina = CLIMB_MAX_STAMINA
 	dream_jump = false
 
+# Clean up dream movement and restore the resources granted when leaving it.
 func _dream_dash_end() -> void:
 	if not dream_jump:
 		auto_jump = true
@@ -1646,6 +1764,7 @@ func _dream_dash_end() -> void:
 			jump_grace_timer = 0
 		dream_block = null
 
+# Check the exit box so leaving a dream block cannot place the player inside ordinary rock.
 func _dream_dashed_into_solid() -> bool:
 	if not solid_at():
 		return false
@@ -1659,6 +1778,7 @@ func _dream_dashed_into_solid() -> bool:
 						return false
 	return true
 
+# Travel through dream blocks and resolve exiting into free space or forbidden solids.
 func _dream_dash_update(dt: float) -> int:
 	var old_pos := pos
 	naive_move(speed * dt)
@@ -1689,6 +1809,7 @@ func _dream_dash_update(dt: float) -> int:
 	return ST_DREAM_DASH
 
 # ---------------- STAR FLY (feather) ----------------
+# Start the feather transformation before fully steerable flight begins.
 func _star_fly_begin() -> void:
 	sfx("feather")
 	star_fly_transforming = true
@@ -1698,6 +1819,7 @@ func _star_fly_begin() -> void:
 	collider = HB_FLY
 	hurtbox = HURT_FLY
 
+# Restore the ordinary collision shape and limit momentum when feather flight finishes.
 func _star_fly_end() -> void:
 	collider = HB_NORMAL
 	hurtbox = HURT_NORMAL
@@ -1713,6 +1835,7 @@ func _star_fly_end() -> void:
 			return
 		pos = start
 
+# Steer feather flight with acceleration and turning limits, then handle its expiration.
 func _star_fly_update(dt: float) -> int:
 	if star_fly_transforming:
 		speed = approach_v(speed, Vector2.ZERO, STAR_FLY_TRANSFORM_DECCEL * dt)
@@ -1784,9 +1907,11 @@ func _star_fly_update(dt: float) -> int:
 # Not inside bubbles or dream blocks. Movement is never changed by it.
 const NO_ATTACK_STATES := [ST_BOOST, ST_RED_DASH, ST_DREAM_DASH]
 
+# Report whether the current sword swing still has an active hit window.
 func attacking() -> bool:
 	return attack_timer > 0
 
+# Start buffered sword swings, track their active/cooldown timers and test for hits.
 func _attack_update(dt: float) -> void:
 	if attack_timer > 0:
 		attack_timer -= dt
@@ -1806,6 +1931,7 @@ func _attack_update(dt: float) -> void:
 		_attack_hits()
 
 # Entities with a hit() method inside the swing's sector (radius ATTACK_RANGE from the centre) get struck once.
+# Strike eligible objects inside the sword sector once each per swing.
 func _attack_hits() -> void:
 	if w == null:
 		return
@@ -1820,6 +1946,7 @@ func _attack_hits() -> void:
 			attack_hit.append(e)
 			e.hit(self)
 
+# Draw the visible sword arc from the same direction and timing used by attack logic.
 func _draw_attack(ci: CanvasItem) -> void:
 	var t := 1.0 - clampf(attack_timer / maxf(ATTACK_TIME, 0.001), 0, 1)
 	var half := deg_to_rad(ATTACK_ARC) / 2.0
@@ -1833,6 +1960,7 @@ func _draw_attack(ci: CanvasItem) -> void:
 	var n := u.orthogonal()
 	ci.draw_colored_polygon(PackedVector2Array([c + u * ATTACK_RANGE, c + u * 4 + n * 2, c + u * 4 - n * 2]), Color("e8eef8"))
 
+# Choose brown when a dash is available, gray when spent, or the special feather-flight cue.
 func hair_color() -> Color:
 	if state == ST_STAR_FLY:
 		return HAIR_FLY if (star_fly_timer > STAR_FLY_END_FLASH or flash) else HAIR_NORMAL
@@ -1844,6 +1972,7 @@ func hair_color() -> Color:
 		return HAIR_NORMAL
 	return HAIR_USED
 
+# Return a camera focus point derived from the player position and current movement.
 func camera_target() -> Vector2:
 	var t := pos + Vector2(0, -6)
 	if state == ST_STAR_FLY:
@@ -1852,6 +1981,7 @@ func camera_target() -> Vector2:
 		t += Vector2(signf(speed.x), signf(speed.y)) * 48
 	return t
 
+# Choose and time the sprite animation independently from physical movement.
 func _update_visuals(dt: float) -> void:
 	scale.x = approach(scale.x, 1.0, 1.75 * dt)
 	scale.y = approach(scale.y, 1.0, 1.75 * dt)
@@ -1882,6 +2012,7 @@ func _update_visuals(dt: float) -> void:
 # Celeste's PlayerHair: each segment moves toward a rest spot below and behind the one before it
 # at a capped speed (slower toward the tip), so the hair trails, swings and settles on its own.
 const HAIR_MAX_DIST := 2.0
+# Move the trailing hair chain toward the head while limiting gaps between its pixel clumps.
 func _update_hair(dt: float) -> void:
 	hair_wave += dt * 4.0
 	# A round root settles into a tapered lock; speed gently lifts the ends.
@@ -1904,6 +2035,7 @@ func _update_hair(dt: float) -> void:
 			hair[i] = hair[i - 1] + (hair[i] - hair[i - 1]).normalized() * HAIR_MAX_DIST
 		target = hair[i] + Vector2(-facing * back, sin(hair_wave + i * 0.8) * sway + down)
 
+# Select the animation name from movement mode, grounded state and velocity.
 func _animation() -> String:
 	if state == ST_STAR_FLY:
 		return "fly"
@@ -1929,9 +2061,11 @@ func _animation() -> String:
 		return "land"
 	return "run" if absf(speed.x) > 1 else "idle"
 
+# Convert the selected animation and its local clock into an atlas column and row.
 func _frame() -> Vector2i:
 	return CharacterArt.frame(visual_animation, visual_clock)
 
+# Draw trailing hair, the body sprite and any sword swing using the current visual state.
 func draw(ci: CanvasItem) -> void:
 	if dead:
 		return

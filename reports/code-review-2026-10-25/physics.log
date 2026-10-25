@@ -1,0 +1,827 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+PASS  every story room has a supported environment
+PASS  story rooms use several environment themes (["sky", "cavern_deep", "sea", "forest", "building", "temple", "sand"])
+PASS  level validation rejects unknown environment paths
+PASS  level validation preserves rural environment
+PASS  terrain chunks preserve their own room theme
+PASS  themed corner edits invalidate diagonal caps
+PASS  room changes replace the cached chunk theme
+PASS  Nori atlas contains thirteen 16px animation rows
+PASS  every authored animation frame is populated and sampling remains in range
+PASS  landing and jump poses hold their last frame
+PASS  Nori shares one cached texture
+PASS  run poses never spread both planted feet along the ground
+PASS  run cycle lifts the recovering foot above the ground
+PASS  run cycle has eight distinct contact and passing poses
+PASS  run includes a short flight pose between each planted step
+PASS  airborne recovery settles instead of cycling the legs while falling
+PASS  jump has distinct authored airborne poses
+PASS  apex has distinct authored airborne poses
+PASS  fall has distinct authored airborne poses
+PASS  airborne arms stay below the face instead of painting over it
+PASS  jump, apex and fall use airborne silhouettes rather than standing poses
+PASS  grounded stationary character selects idle
+PASS  run transition starts on its first frame
+PASS  run animation advances while moving
+PASS  opposing input selects the braking pose
+PASS  upward motion selects jump
+PASS  jump apex has its own pose
+PASS  downward motion selects fall
+PASS  wall contact selects a distinct slide pose
+PASS  stationary climb holds its contact pose
+PASS  dash state 2 overrides airborne poses
+PASS  dash state 4 overrides airborne poses
+PASS  dash state 7 overrides airborne poses
+PASS  feather selects flight pose
+PASS  booster selects tucked pose
+PASS  ducking selects low silhouette
+PASS  ground contact triggers landing recovery
+PASS  landing recovery returns to idle
+PASS  new character art preserves the original physical hitbox
+PASS  special blocks have connected piece artwork
+PASS  breakwall artwork fits whole pieces and partial tiles at (8, 8)
+PASS  breakwall artwork fits whole pieces and partial tiles at (24, 16)
+PASS  breakwall artwork fits whole pieces and partial tiles at (29, 13)
+PASS  breakwall artwork fits whole pieces and partial tiles at (32, 5)
+PASS  breakwall outlines appear at external left/right edges rather than every tile
+PASS  breakwall top/bottom caps remain outside the centre tiles
+PASS  breakwall shares cached artwork between equal pieces
+PASS  crumble artwork fits whole pieces and partial tiles at (8, 8)
+PASS  crumble artwork fits whole pieces and partial tiles at (24, 16)
+PASS  crumble artwork fits whole pieces and partial tiles at (29, 13)
+PASS  crumble artwork fits whole pieces and partial tiles at (32, 5)
+PASS  crumble outlines appear at external left/right edges rather than every tile
+PASS  crumble top/bottom caps remain outside the centre tiles
+PASS  crumble shares cached artwork between equal pieces
+PASS  falling artwork fits whole pieces and partial tiles at (8, 8)
+PASS  falling artwork fits whole pieces and partial tiles at (24, 16)
+PASS  falling artwork fits whole pieces and partial tiles at (29, 13)
+PASS  falling artwork fits whole pieces and partial tiles at (32, 5)
+PASS  falling outlines appear at external left/right edges rather than every tile
+PASS  falling top/bottom caps remain outside the centre tiles
+PASS  falling shares cached artwork between equal pieces
+PASS  zip artwork fits whole pieces and partial tiles at (8, 8)
+PASS  zip artwork fits whole pieces and partial tiles at (24, 16)
+PASS  zip artwork fits whole pieces and partial tiles at (29, 13)
+PASS  zip artwork fits whole pieces and partial tiles at (32, 5)
+PASS  zip outlines appear at external left/right edges rather than every tile
+PASS  zip top/bottom caps remain outside the centre tiles
+PASS  zip shares cached artwork between equal pieces
+PASS  dream artwork fits whole pieces and partial tiles at (8, 8)
+PASS  dream artwork fits whole pieces and partial tiles at (24, 16)
+PASS  dream artwork fits whole pieces and partial tiles at (29, 13)
+PASS  dream artwork fits whole pieces and partial tiles at (32, 5)
+PASS  dream outlines appear at external left/right edges rather than every tile
+PASS  dream top/bottom caps remain outside the centre tiles
+PASS  dream shares cached artwork between equal pieces
+PASS  jumpthru artwork fits whole pieces and partial tiles at (8, 8)
+PASS  jumpthru artwork fits whole pieces and partial tiles at (24, 16)
+PASS  jumpthru artwork fits whole pieces and partial tiles at (29, 13)
+PASS  jumpthru artwork fits whole pieces and partial tiles at (32, 5)
+PASS  jumpthru outlines appear at external left/right edges rather than every tile
+PASS  jumpthru top/bottom caps remain outside the centre tiles
+PASS  jumpthru shares cached artwork between equal pieces
+PASS  struck breakable walls show additional connected cracks
+PASS  special block materials have distinct colours
+PASS  enemy_mosstrot has four distinct animation poses
+PASS  enemy_mosstrot animation stays inside its cell with a transparent margin
+PASS  enemy_cragjaw has four distinct animation poses
+PASS  enemy_cragjaw animation stays inside its cell with a transparent margin
+PASS  enemy_murkspore has four distinct animation poses
+PASS  enemy_murkspore animation stays inside its cell with a transparent margin
+PASS  enemy_thornmite facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_bat facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_bat facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_cragjaw facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_cragjaw facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_mosstrot facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_mosstrot facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_swift facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_swift facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_venom facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_venom facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_brood facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_brood facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_giant facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_thornmite_giant facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree_swift facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree_swift facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree_armored facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree_armored facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree_venom facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skree_venom facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_bat_swift facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_bat_swift facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_bat_brood facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_bat_brood facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton_armored facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton_armored facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton_shielded facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton_shielded facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton_giant facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_skeleton_giant facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback_shielded facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback_shielded facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback_swift facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback_swift facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback_giant facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_hornback_giant facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob_brood facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob_brood facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob_venom facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob_venom facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob_giant facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_fuzzbob_giant facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_cragjaw_armored facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_cragjaw_armored facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_cragjaw_shielded facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_cragjaw_shielded facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore_swift facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore_swift facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore_venom facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore_venom facing 1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore_brood facing -1 stays centred on its spawn hitbox before moving
+PASS  enemy_murkspore_brood facing 1 stays centred on its spawn hitbox before moving
+PASS  100x70 tiles produce 12 chunks
+PASS  chunk ranges cover each cell exactly once, including partial edges
+PASS  interior edit marks one chunk
+PASS  edge edit also marks adjacent chunk
+PASS  corner edit marks owner and two cardinal chunks, not diagonal
+PASS  opposite corner edit marks right and bottom neighbours
+PASS  level boundaries reject invalid chunks
+PASS  chunks read live tile array
+PASS  parent redraw retains cached chunk commands
+PASS  only marked chunks record draw commands again
+PASS  world.gd compiles
+PASS  editor.gd compiles
+PASS  menu.gd compiles
+PASS  options.gd compiles
+PASS  debug_panel.gd compiles
+PASS  map_view.gd compiles
+PASS  player.gd compiles
+PASS  entities.gd compiles
+PASS  tuning.gd compiles
+PASS  spawn constructs in world and editor
+PASS  spawn draw bounds cover its rect
+PASS  spawn registry row is [label, sized, color, class]
+PASS  spikes_up constructs in world and editor
+PASS  spikes_up draw bounds cover its rect
+PASS  spikes_up registry row is [label, sized, color, class]
+PASS  spikes_down constructs in world and editor
+PASS  spikes_down draw bounds cover its rect
+PASS  spikes_down registry row is [label, sized, color, class]
+PASS  spikes_left constructs in world and editor
+PASS  spikes_left draw bounds cover its rect
+PASS  spikes_left registry row is [label, sized, color, class]
+PASS  spikes_right constructs in world and editor
+PASS  spikes_right draw bounds cover its rect
+PASS  spikes_right registry row is [label, sized, color, class]
+PASS  spring_up constructs in world and editor
+PASS  spring_up draw bounds cover its rect
+PASS  spring_up registry row is [label, sized, color, class]
+PASS  spring_left constructs in world and editor
+PASS  spring_left draw bounds cover its rect
+PASS  spring_left registry row is [label, sized, color, class]
+PASS  spring_right constructs in world and editor
+PASS  spring_right draw bounds cover its rect
+PASS  spring_right registry row is [label, sized, color, class]
+PASS  refill constructs in world and editor
+PASS  refill draw bounds cover its rect
+PASS  refill registry row is [label, sized, color, class]
+PASS  refill_two constructs in world and editor
+PASS  refill_two draw bounds cover its rect
+PASS  refill_two registry row is [label, sized, color, class]
+PASS  strawberry constructs in world and editor
+PASS  strawberry draw bounds cover its rect
+PASS  strawberry registry row is [label, sized, color, class]
+PASS  jumpthru constructs in world and editor
+PASS  jumpthru draw bounds cover its rect
+PASS  jumpthru registry row is [label, sized, color, class]
+PASS  crumble constructs in world and editor
+PASS  crumble draw bounds cover its rect
+PASS  crumble registry row is [label, sized, color, class]
+PASS  falling constructs in world and editor
+PASS  falling draw bounds cover its rect
+PASS  falling registry row is [label, sized, color, class]
+PASS  zip constructs in world and editor
+PASS  zip draw bounds cover its rect
+PASS  zip registry row is [label, sized, color, class]
+PASS  dream constructs in world and editor
+PASS  dream draw bounds cover its rect
+PASS  dream registry row is [label, sized, color, class]
+PASS  booster constructs in world and editor
+PASS  booster draw bounds cover its rect
+PASS  booster registry row is [label, sized, color, class]
+PASS  booster_red constructs in world and editor
+PASS  booster_red draw bounds cover its rect
+PASS  booster_red registry row is [label, sized, color, class]
+PASS  bumper constructs in world and editor
+PASS  bumper draw bounds cover its rect
+PASS  bumper registry row is [label, sized, color, class]
+PASS  feather constructs in world and editor
+PASS  feather draw bounds cover its rect
+PASS  feather registry row is [label, sized, color, class]
+PASS  goal constructs in world and editor
+PASS  goal draw bounds cover its rect
+PASS  goal registry row is [label, sized, color, class]
+PASS  ability_dash constructs in world and editor
+PASS  ability_dash draw bounds cover its rect
+PASS  ability_dash registry row is [label, sized, color, class]
+PASS  ability_climb constructs in world and editor
+PASS  ability_climb draw bounds cover its rect
+PASS  ability_climb registry row is [label, sized, color, class]
+PASS  ability_attack constructs in world and editor
+PASS  ability_attack draw bounds cover its rect
+PASS  ability_attack registry row is [label, sized, color, class]
+PASS  energy_block constructs in world and editor
+PASS  energy_block draw bounds cover its rect
+PASS  energy_block registry row is [label, sized, color, class]
+PASS  energy_orb constructs in world and editor
+PASS  energy_orb draw bounds cover its rect
+PASS  energy_orb registry row is [label, sized, color, class]
+PASS  door constructs in world and editor
+PASS  door draw bounds cover its rect
+PASS  door registry row is [label, sized, color, class]
+PASS  house_door constructs in world and editor
+PASS  house_door draw bounds cover its rect
+PASS  house_door registry row is [label, sized, color, class]
+PASS  building constructs in world and editor
+PASS  building draw bounds cover its rect
+PASS  building registry row is [label, sized, color, class]
+PASS  enemy constructs in world and editor
+PASS  enemy draw bounds cover its rect
+PASS  enemy registry row is [label, sized, color, class]
+PASS  enemy_thornmite constructs in world and editor
+PASS  enemy_thornmite draw bounds cover its rect
+PASS  enemy_thornmite registry row is [label, sized, color, class]
+PASS  enemy_skree constructs in world and editor
+PASS  enemy_skree draw bounds cover its rect
+PASS  enemy_skree registry row is [label, sized, color, class]
+PASS  enemy_bat constructs in world and editor
+PASS  enemy_bat draw bounds cover its rect
+PASS  enemy_bat registry row is [label, sized, color, class]
+PASS  enemy_skeleton constructs in world and editor
+PASS  enemy_skeleton draw bounds cover its rect
+PASS  enemy_skeleton registry row is [label, sized, color, class]
+PASS  enemy_hornback constructs in world and editor
+PASS  enemy_hornback draw bounds cover its rect
+PASS  enemy_hornback registry row is [label, sized, color, class]
+PASS  enemy_fuzzbob constructs in world and editor
+PASS  enemy_fuzzbob draw bounds cover its rect
+PASS  enemy_fuzzbob registry row is [label, sized, color, class]
+PASS  enemy_cragjaw constructs in world and editor
+PASS  enemy_cragjaw draw bounds cover its rect
+PASS  enemy_cragjaw registry row is [label, sized, color, class]
+PASS  enemy_murkspore constructs in world and editor
+PASS  enemy_murkspore draw bounds cover its rect
+PASS  enemy_murkspore registry row is [label, sized, color, class]
+PASS  enemy_mosstrot constructs in world and editor
+PASS  enemy_mosstrot draw bounds cover its rect
+PASS  enemy_mosstrot registry row is [label, sized, color, class]
+PASS  enemy_thornmite_swift constructs in world and editor
+PASS  enemy_thornmite_swift draw bounds cover its rect
+PASS  enemy_thornmite_swift registry row is [label, sized, color, class]
+PASS  enemy_thornmite_venom constructs in world and editor
+PASS  enemy_thornmite_venom draw bounds cover its rect
+PASS  enemy_thornmite_venom registry row is [label, sized, color, class]
+PASS  enemy_thornmite_brood constructs in world and editor
+PASS  enemy_thornmite_brood draw bounds cover its rect
+PASS  enemy_thornmite_brood registry row is [label, sized, color, class]
+PASS  enemy_thornmite_giant constructs in world and editor
+PASS  enemy_thornmite_giant draw bounds cover its rect
+PASS  enemy_thornmite_giant registry row is [label, sized, color, class]
+PASS  enemy_skree_swift constructs in world and editor
+PASS  enemy_skree_swift draw bounds cover its rect
+PASS  enemy_skree_swift registry row is [label, sized, color, class]
+PASS  enemy_skree_armored constructs in world and editor
+PASS  enemy_skree_armored draw bounds cover its rect
+PASS  enemy_skree_armored registry row is [label, sized, color, class]
+PASS  enemy_skree_venom constructs in world and editor
+PASS  enemy_skree_venom draw bounds cover its rect
+PASS  enemy_skree_venom registry row is [label, sized, color, class]
+PASS  enemy_bat_swift constructs in world and editor
+PASS  enemy_bat_swift draw bounds cover its rect
+PASS  enemy_bat_swift registry row is [label, sized, color, class]
+PASS  enemy_bat_brood constructs in world and editor
+PASS  enemy_bat_brood draw bounds cover its rect
+PASS  enemy_bat_brood registry row is [label, sized, color, class]
+PASS  enemy_skeleton_armored constructs in world and editor
+PASS  enemy_skeleton_armored draw bounds cover its rect
+PASS  enemy_skeleton_armored registry row is [label, sized, color, class]
+PASS  enemy_skeleton_shielded constructs in world and editor
+PASS  enemy_skeleton_shielded draw bounds cover its rect
+PASS  enemy_skeleton_shielded registry row is [label, sized, color, class]
+PASS  enemy_skeleton_giant constructs in world and editor
+PASS  enemy_skeleton_giant draw bounds cover its rect
+PASS  enemy_skeleton_giant registry row is [label, sized, color, class]
+PASS  enemy_hornback_shielded constructs in world and editor
+PASS  enemy_hornback_shielded draw bounds cover its rect
+PASS  enemy_hornback_shielded registry row is [label, sized, color, class]
+PASS  enemy_hornback_swift constructs in world and editor
+PASS  enemy_hornback_swift draw bounds cover its rect
+PASS  enemy_hornback_swift registry row is [label, sized, color, class]
+PASS  enemy_hornback_giant constructs in world and editor
+PASS  enemy_hornback_giant draw bounds cover its rect
+PASS  enemy_hornback_giant registry row is [label, sized, color, class]
+PASS  enemy_fuzzbob_brood constructs in world and editor
+PASS  enemy_fuzzbob_brood draw bounds cover its rect
+PASS  enemy_fuzzbob_brood registry row is [label, sized, color, class]
+PASS  enemy_fuzzbob_venom constructs in world and editor
+PASS  enemy_fuzzbob_venom draw bounds cover its rect
+PASS  enemy_fuzzbob_venom registry row is [label, sized, color, class]
+PASS  enemy_fuzzbob_giant constructs in world and editor
+PASS  enemy_fuzzbob_giant draw bounds cover its rect
+PASS  enemy_fuzzbob_giant registry row is [label, sized, color, class]
+PASS  enemy_cragjaw_armored constructs in world and editor
+PASS  enemy_cragjaw_armored draw bounds cover its rect
+PASS  enemy_cragjaw_armored registry row is [label, sized, color, class]
+PASS  enemy_cragjaw_shielded constructs in world and editor
+PASS  enemy_cragjaw_shielded draw bounds cover its rect
+PASS  enemy_cragjaw_shielded registry row is [label, sized, color, class]
+PASS  enemy_murkspore_swift constructs in world and editor
+PASS  enemy_murkspore_swift draw bounds cover its rect
+PASS  enemy_murkspore_swift registry row is [label, sized, color, class]
+PASS  enemy_murkspore_venom constructs in world and editor
+PASS  enemy_murkspore_venom draw bounds cover its rect
+PASS  enemy_murkspore_venom registry row is [label, sized, color, class]
+PASS  enemy_murkspore_brood constructs in world and editor
+PASS  enemy_murkspore_brood draw bounds cover its rect
+PASS  enemy_murkspore_brood registry row is [label, sized, color, class]
+PASS  breakable constructs in world and editor
+PASS  breakable draw bounds cover its rect
+PASS  breakable registry row is [label, sized, color, class]
+PASS  breakwall constructs in world and editor
+PASS  breakwall draw bounds cover its rect
+PASS  breakwall registry row is [label, sized, color, class]
+PASS  water constructs in world and editor
+PASS  water draw bounds cover its rect
+PASS  water registry row is [label, sized, color, class]
+PASS  leaf constructs in world and editor
+PASS  leaf draw bounds cover its rect
+PASS  leaf registry row is [label, sized, color, class]
+PASS  waterfall constructs in world and editor
+PASS  waterfall draw bounds cover its rect
+PASS  waterfall registry row is [label, sized, color, class]
+PASS  acid constructs in world and editor
+PASS  acid draw bounds cover its rect
+PASS  acid registry row is [label, sized, color, class]
+PASS  note constructs in world and editor
+PASS  note draw bounds cover its rect
+PASS  note registry row is [label, sized, color, class]
+PASS  boss_ape constructs in world and editor
+PASS  boss_ape draw bounds cover its rect
+PASS  boss_ape registry row is [label, sized, color, class]
+PASS  ape_chase constructs in world and editor
+PASS  ape_chase draw bounds cover its rect
+PASS  ape_chase registry row is [label, sized, color, class]
+PASS  ape_trunk constructs in world and editor
+PASS  ape_trunk draw bounds cover its rect
+PASS  ape_trunk registry row is [label, sized, color, class]
+PASS  boss_gate constructs in world and editor
+PASS  boss_gate draw bounds cover its rect
+PASS  boss_gate registry row is [label, sized, color, class]
+PASS  auto_walk constructs in world and editor
+PASS  auto_walk draw bounds cover its rect
+PASS  auto_walk registry row is [label, sized, color, class]
+PASS  level with every type survives save/load
+PASS  tuning defaults match the original constants
+PASS  99 tunables, all grouped (99)
+PASS  every tunable has mouse-over help
+PASS  every state has mouse-over help
+PASS  the state machine view lists the attack and waterfall layers and lights the active ones
+PASS  MAX_RUN override applies and derived values follow (120.0)
+PASS  preset saves
+PASS  preset loads typed values
+PASS  preset deletes
+PASS  clearing overrides restores defaults
+PASS  state transitions are recorded
+PASS  strawberry id loads as a star
+PASS  respawn retains tile chunks and tile array
+PASS  world layering keeps background below terrain below actors
+PASS  spawn lands on floor (y=224)
+PASS  max run speed 90 (got 90.00)
+PASS  friction stops the player
+PASS  full jump height ~3 tiles (got 29 px)
+PASS  releasing jump early gives a lower jump (7 < 29)
+PASS  dash starts and uses the dash
+PASS  dash ends after ~0.15s
+PASS  dash travels ~40px (got 47)
+PASS  dash refills on ground
+PASS  still dashing before the jump
+PASS  super jump speed 260 (got 260.0)
+PASS  walk into wall stops at it
+PASS  wall jump pushes away at 130 (got -130.0)
+PASS  grab wall enters climb
+PASS  climbing up moves up and drains stamina
+PASS  running out of stamina drops the player
+PASS  infinite stamina keeps the player on the wall (held 1200 frames, min stamina 109.8)
+PASS  in water the state is Normal (Underwater), sinking slowly (40.0)
+PASS  Jumping (Underwater) works mid-water (-100.0)
+PASS  underwater, jump works every time it's pressed (-100.0)
+PASS  along the floor underwater the player moves as mid-water, not walking (moved 24.0 px, pose apex)
+PASS  Jumping (Underwater) rises less than a jump (15.0 px vs 29.0 px); out of water it's Normal again
+PASS  near the surface, jump leaps out of the water (feet up to 199.0, surface 208)
+PASS  a waterfall layer pulls down: a jump inside it still rises, but less (20.0 px vs 29.0 px)
+PASS  down + jump drops through a jump-through (y 211.0)
+PASS  jump alone on a jump-through still jumps
+PASS  walking into spikes kills
+PASS  hazards hit a box 20% smaller than the hurtbox ([P: (115, 215), S: (6, 7)] in [P: (114, 213), S: (8, 9)])
+PASS  spring launches upward
+PASS  dash crystal refills dash
+PASS  dash passes through dream block (x=225)
+PASS  standing on crumble block
+PASS  crumble block crumbles
+PASS  feather starts flying
+PASS  zip mover carries rider (moved 80)
+PASS  bubble captures player
+PASS  menu builds its UI
+PASS  editor builds its UI
+PASS  tile chunk grid follows editor initialization
+PASS  tile layer shares current editor tiles after initialization
+PASS  editor layering keeps grid below terrain below previews
+PASS  tile chunk grid follows editor undo
+PASS  tile layer shares current editor tiles after undo
+PASS  zip_pending cleared after undo
+PASS  no phantom 'Zip mover placed' after undo
+PASS  tile chunk grid follows editor new
+PASS  tile layer shares current editor tiles after new
+PASS  zip_pending cleared after new
+PASS  no phantom 'Zip mover placed' after new
+PASS  tile chunk grid follows editor resize
+PASS  tile layer shares current editor tiles after resize
+PASS  zip_pending cleared after resize
+PASS  no phantom 'Zip mover placed' after resize
+PASS  tile chunk grid follows editor erase
+PASS  tile layer shares current editor tiles after erase
+PASS  zip_pending cleared after erase
+PASS  no phantom 'Zip mover placed' after erase
+PASS  incremental editor previews match a full rebuild ["spawn", "refill", "zip", "strawberry"]
+PASS  zip preview picks up its target click
+PASS  tile chunk grid follows editor load
+PASS  tile layer shares current editor tiles after load
+PASS  tile chunk grid follows editor new default map
+PASS  tile layer shares current editor tiles after new default map
+PASS  tile chunk grid follows editor undo to large map
+PASS  tile layer shares current editor tiles after undo to large map
+PASS  painting updates chunk source across boundary
+PASS  tile chunk grid follows editor resize to partial chunks
+PASS  tile layer shares current editor tiles after resize to partial chunks
+PASS  editor background draws initially and follows direct parent redraws
+PASS  load_level rejects not json
+PASS  load_level rejects array root
+PASS  load_level rejects tiles only
+PASS  load_level rejects w string
+PASS  load_level rejects w zero
+PASS  load_level rejects h huge
+PASS  load_level rejects w fractional
+PASS  load_level rejects tiles not array
+PASS  load_level rejects too few rows
+PASS  load_level rejects short row
+PASS  load_level rejects bad tile char
+PASS  load_level rejects row not string
+PASS  load_level rejects entities missing
+PASS  load_level rejects entities not array
+PASS  load_level rejects entity not dict
+PASS  load_level rejects entity unknown type
+PASS  load_level rejects entity missing x
+PASS  load_level rejects entity x string
+PASS  load_level rejects entity w zero
+PASS  load_level rejects entity w huge
+PASS  load_level rejects entity w under 1
+PASS  load_level rejects entity x huge
+PASS  load_level rejects entity tx string
+PASS  load_level rejects name not string
+PASS  load_level accepts valid level with optional entity fields
+PASS  shipped world loads every room file (14/14)
+PASS  shipped rooms don't overlap
+PASS  every shipped room is connected to the start (14/14)
+PASS  note in v1_ashen_village has text
+PASS  note in v1_ashen_village has text
+PASS  note in v1_ashen_village has text
+PASS  note in v1_ashen_village has text
+PASS  note in c1_old_well has text
+PASS  note in c2_crossroads_hall has text
+PASS  note in c2_crossroads_hall has text
+PASS  note in c2_crossroads_hall has text
+PASS  note in c3_forgotten_arena has text
+PASS  note in b1_root_shaft has text
+PASS  note in b2_climb_vault has text
+PASS  note in b4_sunken_pit has text
+PASS  note in k1_grand_corridor has text
+PASS  note in k1_grand_corridor has text
+PASS  note in k2_clock_tower has text
+PASS  note in k3_battlements has text
+PASS  note in k4_save_room has text
+PASS  note in s1_citadel_spire has text
+PASS  note in s2_crown has text
+PASS  shipped world has one dash orb, one climb orb, one goal
+PASS  story: 41 entrance spawns, all standing on ground (bad: [])
+PASS  story: water/acid rows run wall to wall (bad: [])
+PASS  adventure: 26 entrance spawns, all standing on ground (bad: [])
+PASS  adventure: water/acid rows run wall to wall (bad: [])
+PASS  door l2_net_trap:net leads into room l3_treetop_village (now in l3_treetop_village)
+PASS  menu lists the story world first, then Summit (2)
+PASS  story world loads, starts in the meadow with jump only (22 rooms)
+PASS  story has the town's energy block, and its only enemies are calm Mosstrots
+PASS  story bot reaches the end of the jungle with jump only (["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"], deaths 0, at tile (72.0, 12.0))
+PASS  entering a room keeps drawing the old room's objects, in place, during the transition
+PASS  m1_meadow: a spike-free path across with plain jumps
+PASS  c2_cave_teeth: a spike-free path across with plain jumps
+PASS  c3_cove_tunnel: a spike-free path across with plain jumps
+PASS  j1_jungle_edge: a spike-free path across with plain jumps
+PASS  j3_jungle_hills: a spike-free path across with plain jumps
+PASS  s2_shore: a spike-free path across with plain jumps
+PASS  entering a room sideways walks 1 unit in and respawns there (at 15.0, spawn 12.0)
+PASS  house door: up does nothing, interact goes inside, a new press comes back out (h1_villager_house, h1_villager_house, t1_cove_town)
+PASS  lighthouse: shore door into the stairs, top door out to the lamp (lh1_lighthouse_stairs, s3_lighthouse_top)
+PASS  sand cave Ape: waits, screams past the trigger, catches a player who stands still (chase)
+PASS  sand cave Ape: its path never stands on or touches a breakable block
+PASS  sand cave Ape: replays a planned run up the whole cave, by the player's rules, never on spikes (638 frames to x 916)
+PASS  sand cave Ape: gives up for the run once the player reaches the end
+PASS  a door moves the player to the linked door and keeps speed (at (404.0, 140.0))
+PASS  arriving on a door doesn't bounce straight back
+PASS  the linked door leads back
+PASS  a door to nowhere leaves the player in place and says so
+PASS  enemy / water / breakable placeholders are harmless
+PASS  acid kills on touch
+PASS  bottom-edge opening is marked as a pit ([[40, 56, false]])
+PASS  the next room's rock blocks at the edge: no falling into it (room a, at (24.0, 48.0))
+PASS  an open seam still leads into the next room (room b)
+PASS  breakable wall is solid (96)
+PASS  attack is a layer: state stays Normal while swinging, wall hit once
+PASS  one swing hits a thing only once; attack cooldown holds a quick re-press
+PASS  the swing ends after ATTACK_TIME
+PASS  third hit breaks the wall
+PASS  player walks through the broken wall
+PASS  swing points where the player pushes
+PASS  dash attack: the swing goes on during a dash (state 2)
+PASS  a broken wall stays broken after respawn
+PASS  sprite atlas rows match the enemy registry, in order
+PASS  every enemy type has a four-frame row in the atlas
+PASS  enemy sprite row 0 contains visible artwork
+PASS  enemy sprite row 1 contains visible artwork
+PASS  enemy sprite row 2 contains visible artwork
+PASS  enemy sprite row 3 contains visible artwork
+PASS  enemy sprite row 4 contains visible artwork
+PASS  enemy sprite row 5 contains visible artwork
+PASS  enemy sprite row 6 contains visible artwork
+PASS  enemy sprite row 7 contains visible artwork
+PASS  enemy sprite row 8 contains visible artwork
+PASS  enemy sprite row 9 contains visible artwork
+PASS  enemy sprite row 10 contains visible artwork
+PASS  enemy sprite row 11 contains visible artwork
+PASS  enemy sprite row 12 contains visible artwork
+PASS  enemy sprite row 13 contains visible artwork
+PASS  enemy sprite row 14 contains visible artwork
+PASS  enemy sprite row 15 contains visible artwork
+PASS  enemy sprite row 16 contains visible artwork
+PASS  enemy sprite row 17 contains visible artwork
+PASS  enemy sprite row 18 contains visible artwork
+PASS  enemy sprite row 19 contains visible artwork
+PASS  enemy sprite row 20 contains visible artwork
+PASS  enemy sprite row 21 contains visible artwork
+PASS  enemy sprite row 22 contains visible artwork
+PASS  enemy sprite row 23 contains visible artwork
+PASS  enemy sprite row 24 contains visible artwork
+PASS  enemy sprite row 25 contains visible artwork
+PASS  enemy sprite row 26 contains visible artwork
+PASS  enemy sprite row 27 contains visible artwork
+PASS  enemy sprite row 28 contains visible artwork
+PASS  enemy sprite row 29 contains visible artwork
+PASS  enemy sprite row 30 contains visible artwork
+PASS  enemy sprite row 31 contains visible artwork
+PASS  Thornmite crawls over a block and back down to the floor (at (368, 216))
+PASS  Thornmite placed in the air drops to the floor and clings to it (y 216)
+PASS  Hornback warns before charging a player at its height
+PASS  Hornback holds still during its warning
+PASS  then it charges
+PASS  Hornback's charge stops at a wall without tunnelling
+PASS  Hornback charges a player across the gap
+PASS  Hornback's charge stops at a ledge instead of running off it
+PASS  Fuzzbob bounces off walls and floors without entering rock
+PASS  Dropwing notices a player below and telegraphs the dive
+PASS  Dropwing stays on the ceiling during its warning
+PASS  Dropwing lands, rests, and returns to its ceiling perch
+PASS  Duskflit cannot acquire a target through solid terrain
+PASS  Duskflit warns before swooping at a visible target
+PASS  Duskflit commits to its swoop instead of homing unfairly
+PASS  Ossling winds up, then throws a timed ballistic bone toward the player
+PASS  Melee swings can swat an incoming bone
+PASS  Ossling projectiles are removed at room bounds
+PASS  Bones collide with intervening terrain instead of passing through it
+PASS  Existing melee sector damages a real enemy once per swing
+PASS  A second melee swing defeats the two-hit crawler
+PASS  Defeated enemies no longer deal contact damage
+PASS  Live enemy contact uses the existing player death system
+PASS  Ossling patrol turns at ledges rather than walking into a pit
+PASS  Mosstrot walks until its box is flush with each end of its floor ([164, 163, 162, 161, 160])
+PASS  enemy_thornmite_swift looks different from enemy_thornmite
+PASS  enemy_thornmite_swift: swift stats and size fit the variant (hp 1 vs 2, (8, 8))
+PASS  enemy_thornmite_venom looks different from enemy_thornmite
+PASS  enemy_thornmite_venom: venom stats and size fit the variant (hp 2 vs 2, (8, 8))
+PASS  enemy_thornmite_brood looks different from enemy_thornmite
+PASS  enemy_thornmite_brood: brood stats and size fit the variant (hp 2 vs 2, (8, 8))
+PASS  enemy_thornmite_giant looks different from enemy_thornmite
+PASS  enemy_thornmite_giant: giant stats and size fit the variant (hp 4 vs 2, (16, 16))
+PASS  enemy_skree_swift looks different from enemy_skree
+PASS  enemy_skree_swift: swift stats and size fit the variant (hp 1 vs 1, (8, 12))
+PASS  enemy_skree_armored looks different from enemy_skree
+PASS  enemy_skree_armored: armored stats and size fit the variant (hp 3 vs 1, (8, 12))
+PASS  enemy_skree_venom looks different from enemy_skree
+PASS  enemy_skree_venom: venom stats and size fit the variant (hp 1 vs 1, (8, 12))
+PASS  enemy_bat_swift looks different from enemy_bat
+PASS  enemy_bat_swift: swift stats and size fit the variant (hp 1 vs 1, (10, 8))
+PASS  enemy_bat_brood looks different from enemy_bat
+PASS  enemy_bat_brood: brood stats and size fit the variant (hp 1 vs 1, (10, 8))
+PASS  enemy_skeleton_armored looks different from enemy_skeleton
+PASS  enemy_skeleton_armored: armored stats and size fit the variant (hp 5 vs 3, (8, 12))
+PASS  enemy_skeleton_shielded looks different from enemy_skeleton
+PASS  enemy_skeleton_shielded: shielded stats and size fit the variant (hp 4 vs 3, (8, 12))
+PASS  enemy_skeleton_giant looks different from enemy_skeleton
+PASS  enemy_skeleton_giant: giant stats and size fit the variant (hp 6 vs 3, (16, 24))
+PASS  enemy_hornback_shielded looks different from enemy_hornback
+PASS  enemy_hornback_shielded: shielded stats and size fit the variant (hp 4 vs 3, (12, 10))
+PASS  enemy_hornback_swift looks different from enemy_hornback
+PASS  enemy_hornback_swift: swift stats and size fit the variant (hp 2 vs 3, (12, 10))
+PASS  enemy_hornback_giant looks different from enemy_hornback
+PASS  enemy_hornback_giant: giant stats and size fit the variant (hp 6 vs 3, (24, 20))
+PASS  enemy_fuzzbob_brood looks different from enemy_fuzzbob
+PASS  enemy_fuzzbob_brood: brood stats and size fit the variant (hp 2 vs 2, (10, 10))
+PASS  enemy_fuzzbob_venom looks different from enemy_fuzzbob
+PASS  enemy_fuzzbob_venom: venom stats and size fit the variant (hp 2 vs 2, (10, 10))
+PASS  enemy_fuzzbob_giant looks different from enemy_fuzzbob
+PASS  enemy_fuzzbob_giant: giant stats and size fit the variant (hp 4 vs 2, (20, 20))
+PASS  enemy_cragjaw_armored looks different from enemy_cragjaw
+PASS  enemy_cragjaw_armored: armored stats and size fit the variant (hp 8 vs 6, (20, 20))
+PASS  enemy_cragjaw_shielded looks different from enemy_cragjaw
+PASS  enemy_cragjaw_shielded: shielded stats and size fit the variant (hp 7 vs 6, (20, 20))
+PASS  enemy_murkspore_swift looks different from enemy_murkspore
+PASS  enemy_murkspore_swift: swift stats and size fit the variant (hp 4 vs 5, (16, 14))
+PASS  enemy_murkspore_venom looks different from enemy_murkspore
+PASS  enemy_murkspore_venom: venom stats and size fit the variant (hp 5 vs 5, (16, 14))
+PASS  enemy_murkspore_brood looks different from enemy_murkspore
+PASS  enemy_murkspore_brood: brood stats and size fit the variant (hp 5 vs 5, (16, 14))
+PASS  nine enemy families
+PASS  Swift crawler moves faster; Giant crawls slower
+PASS  Armored Ossling throws a two-arc volley
+PASS  Armored Ossling respects the three-projectile cap
+PASS  Shielded Hornback blocks a hit from the front
+PASS  Shielded Hornback takes a hit from behind
+PASS  Shielded Hornback takes a hit from above
+PASS  Brood splits into two small copies (2)
+PASS  Venom Thornmite leaves a puddle on the surface it crawls on
+PASS  touching a venom puddle kills
+PASS  venom puddles dry up after a few seconds
+PASS  Giant enemies draw at twice the size
+PASS  Cragjaw is a big enemy ((20, 20))
+PASS  Cragjaw warns before leaping
+PASS  Cragjaw leaps toward the player and slams down without entering rock
+PASS  Murkspore spits a three-orb spread (3)
+PASS  Melee swings can swat an incoming orb
+PASS  a Murkspore orb kills on touch
+PASS  dirs mode 1 with up-right held -> (1.0, 0.0) (got (1.0, 0.0))
+PASS  dirs mode -1 with up-right held -> (0.0, -1.0) (got (0.0, -1.0))
+PASS  dirs mode 2 with up-right held -> (0.0, -1.0) (got (0.0, -1.0))
+PASS  dirs mode 3 with up-right held -> (0.707107, -0.707107) (got (0.707107, -0.707107))
+PASS  dirs mode 4 with up-right held -> (0.707107, -0.707107) (got (0.707107, -0.707107))
+PASS  no direction held: facing (vertical-only: up)
+PASS  free aim follows the stick; 8-way ignores it
+PASS  mode 0 disables dash and attack
+PASS  horizontal-only dash ignores up ((1.0, 0.0), state 2)
+PASS  world.json loads the shipped rooms
+PASS  shipped rooms don't overlap
+PASS  neighbouring rooms have passages between them
+PASS  room_at finds the room under a world point
+PASS  walking off an edge enters the next room (["a1_first_steps", "a2_little_gap", "a3_stairs"])
+PASS  speed carries over a room change
+PASS  bot finishes the adventure
+PASS  visited rooms and ability pickups recorded
+PASS  adventure star ids carry their room
+PASS  no dash before the dash ability
+PASS  dash works after picking it up
+PASS  no adventure save on a fresh file
+PASS  adventure run saves and loads
+PASS  each world keeps its own save (main world keeps the old key)
+PASS  new room goes right of the selected room, past rooms in the way (got (120, 0))
+PASS  world editor moves and adds rooms and saves them
+PASS  a run starts with the base: 25 energy
+PASS  spending takes energy
+PASS  energy regenerates 6 per second (21.0)
+PASS  regeneration stops at the top of the base
+PASS  the base always regenerates, even from 0 (12.0)
+PASS  can't spend more than you have
+PASS  a new block adds a full 20
+PASS  a fully spent block doesn't refill
+PASS  the base refills, but not the spent block above it
+PASS  a partly spent block refills to its top
+PASS  energy block pickup adds a full block (20)
+PASS  an energy block is taken once per run
+PASS  a hit (100) with energy to spare costs it, and counts as a death (a respawn)
+PASS  a hit with too little left is a death and refills energy
+PASS  a jump costs 5 energy; with less than 5 there's no jump (45.0)
+PASS  HUD energy bars: the base, then block by block ([1.0, 0.5, 0.0])
+PASS  hair turns grey below 20% energy
+PASS  touch controls hug the screen edges on a wide phone
+PASS  touch controls hug the bottom on a tall screen
+PASS  HUD energy bar colour: red empty, yellow half, mint full ((1.0, 0.2902, 0.2275, 1.0) (1.0, 0.8471, 0.2902, 1.0) (0.4863, 0.9412, 0.7529, 1.0))
+PASS  a second in water costs 20.8 energy, no regeneration (20.7999999999998)
+PASS  out of energy in water: the player dies
+PASS  no attack before the attack ability
+PASS  attack works after picking it up
+PASS  free-aim near-horizontal dash allows a super jump (speed.x 255)
+PASS  red bubble follows DASH_DIRS (dash (1.0, 0.0))
+PASS  Restart Level un-breaks walls and drops a pending door
+PASS  a dead player isn't moved by a door (at (204.0, 220.0))
+PASS  Dropwing blocked on its way home stops returning (phase idle)
+PASS  level with { "facing": [1] } is rejected
+PASS  level with { "patrol": {  } } is rejected
+PASS  level with { "top": "false" } is rejected
+PASS  valid facing/patrol/top still load
+PASS  partial save gets defaults ({ "room": "a2_little_gap", "spawn": <null>, "visited": ["a2_little_gap"], "abilities": [], "stars": [], "deaths": 0, "time": 0.0, "done": false, "blocks": 1, "energy": 25.0, "taken": [] })
+PASS  unusable save starts a fresh run
+PASS  world starts from a restored partial save
+PASS  door to a far room snaps the camera (room b, cam (80.0, 40.0))
+PASS  grab a wall on the shared room edge (state 1, at (76.0, 31.0))
+PASS  an untouched level counts as saved (no leave prompt)
+PASS  editor New saves as a custom level, not over the world room
+PASS  mouse moving with no button held ends a drag
+PASS  monsters page lists each enemy family once (["enemy_thornmite", "enemy_skree", "enemy_bat", "enemy_skeleton", "enemy_hornback", "enemy_fuzzbob", "enemy_cragjaw", "enemy_murkspore", "enemy_mosstrot"])
+PASS  monsters page shows each family's own variants
+PASS  monsters page shows enemy HP
+PASS  enemy_thornmite has an original name (Thornmite · wall crawler)
+PASS  enemy_skree has an original name (Dropwing · ceiling dive)
+PASS  enemy_bat has an original name (Duskflit · swoop)
+PASS  enemy_skeleton has an original name (Ossling · bone throw)
+PASS  enemy_hornback has an original name (Hornback · charge)
+PASS  enemy_fuzzbob has an original name (Fuzzbob · bouncing flight)
+PASS  enemy_cragjaw has an original name (Cragjaw · leaping brute)
+PASS  enemy_murkspore has an original name (Murkspore · spore spitter)
+PASS  enemy_mosstrot has an original name (Mosstrot · calm wanderer)
+PASS  enemy_thornmite_swift has an original name (Thornmite · Swift)
+PASS  enemy_thornmite_venom has an original name (Thornmite · Venom)
+PASS  enemy_thornmite_brood has an original name (Thornmite · Brood)
+PASS  enemy_thornmite_giant has an original name (Thornmite · Giant)
+PASS  enemy_skree_swift has an original name (Dropwing · Swift)
+PASS  enemy_skree_armored has an original name (Dropwing · Armored)
+PASS  enemy_skree_venom has an original name (Dropwing · Venom)
+PASS  enemy_bat_swift has an original name (Duskflit · Swift)
+PASS  enemy_bat_brood has an original name (Duskflit · Brood)
+PASS  enemy_skeleton_armored has an original name (Ossling · Armored)
+PASS  enemy_skeleton_shielded has an original name (Ossling · Shielded)
+PASS  enemy_skeleton_giant has an original name (Ossling · Giant)
+PASS  enemy_hornback_shielded has an original name (Hornback · Shielded)
+PASS  enemy_hornback_swift has an original name (Hornback · Swift)
+PASS  enemy_hornback_giant has an original name (Hornback · Giant)
+PASS  enemy_fuzzbob_brood has an original name (Fuzzbob · Brood)
+PASS  enemy_fuzzbob_venom has an original name (Fuzzbob · Venom)
+PASS  enemy_fuzzbob_giant has an original name (Fuzzbob · Giant)
+PASS  enemy_cragjaw_armored has an original name (Cragjaw · Armored)
+PASS  enemy_cragjaw_shielded has an original name (Cragjaw · Shielded)
+PASS  enemy_murkspore_swift has an original name (Murkspore · Swift)
+PASS  enemy_murkspore_venom has an original name (Murkspore · Venom)
+PASS  enemy_murkspore_brood has an original name (Murkspore · Brood)
+PASS  the map screen opens on the Map tab
+PASS  R1 switches to the Monsters tab
+PASS  L1 switches back to the Map tab
+PASS  E switches tabs on the keyboard
+PASS  Ape contact is one centred 24px square ([[P: (204, 196), S: (24, 24)]])
+PASS  round scream reaches the cardinal edge
+PASS  round scream excludes the old square corners
+PASS  scream overlay exposes the actual circular damage shape
+PASS  scream detects an overlapping player edge even when their centre is outside
+PASS  Ape arena removes the tree obstacle
+PASS  Ape arena (70%% wide) uses one unrestricted fighting range
+PASS  former tree bridge pit is safe solid ground
+PASS  the Ape throws a stone in an arc at a far player
+PASS  the hitbox overlay sees the flying stone ([[P: (298, 184), S: (16, 16)]])
+PASS  a stone fells the trunk into a bridge as long as it was tall, and it stays down ([P: (200, 224), S: (112, 8)])
+PASS  entering the arena walks the player in (46.0 px) and the gate behind shuts
+PASS  the entrance gate opens again once the Ape is beaten
+PASS  no Ape, no auto walk
+PASS  the Ape wakes when the player comes near, and the fight opens with its scream
+PASS  the Ape has a scream, and an echoing cave version that rings on longer
+PASS  the Ape's leap crashes into the standing trunk and fells it
+PASS  with the trunk down the Ape leaps across into its second range (at 424.0)
+PASS  the Ape's leap lands past the player (at 296.0, player 320.0)
+PASS  landing on spikes hurts the Ape, and the next spike patch appears (hp 2)
+PASS  boss gates stay shut while the Ape lives
+PASS  three hits beat the Ape: gates open, it stays beaten, an energy orb appears
+PASS  the Ape's landing slam hits beside it along the ground, not beyond its reach
+PASS  close to the Ape, its scream hits (phase scream)
+PASS  background perspective shifts smoothly with vertical camera moves, within the overscan
+
+0 failure(s)
+WARNING: 41 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

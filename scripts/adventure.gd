@@ -1,4 +1,11 @@
 extends RefCounted
+# Data and rules shared by adventure rooms, the map and the world editor.
+# Static functions are called on this script directly; no scene node needs to be created.
+# world describes the layout and room files; run describes one player's saved progress.
+# Layout positions use tiles (8px each); room_rect converts them into world pixels.
+# Energy is a number, distinct from blocks: blocks determine capacity, while actions spend energy.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Adventure world: ordinary level files (rooms) placed on one big tile grid, Metroid style.
 # Walking off a room's edge enters whichever room covers that spot; there are no door objects.
 # world.json: {"start": "room_name", "rooms": {"room_name": [tile_x, tile_y], ...}}
@@ -9,16 +16,16 @@ const T := 8
 const ABILITIES := ["dash", "climb", "attack"]
 
 # Energy is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
-# A run starts with a base of 25 that always regenerates; each energy block picked up adds 20.
+# A run starts with a base of 25 that always regenerates; each energy block picked up adds 10.
 # run.blocks counts the base as the first block (so 1 = just the base).
 const BASE_ENERGY := 25.0
-const ENERGY_PER_BLOCK := 20.0  # what an energy block pickup adds
-const HIT_ENERGY := 100.0  # what a hit costs
+const ENERGY_PER_BLOCK := 10.0  # what an energy block pickup adds
 const ENERGY_REGEN := 6.0  # per second, only inside a partly spent block
 const WATER_DRAIN := 20.8  # per second while in water (2.08 every 0.1 s); no regeneration there
 
 # -> {"start": String, "rooms": {name: {"pos": Vector2i (tiles), "level": Dictionary}}}
 # Rooms whose file is missing or invalid are skipped.
+# Read a world manifest and validated room files, skipping unusable entries before selecting a valid start room.
 static func load_world(path: String) -> Dictionary:
 	var out := {"start": "", "rooms": {}, "abilities": []}  # abilities: what a new run starts with
 	var f := FileAccess.open(path, FileAccess.READ)
@@ -43,6 +50,7 @@ static func load_world(path: String) -> Dictionary:
 	return out
 
 # Writes world.json only; room files are saved separately (Game.save_level).
+# Write the room layout and starting abilities; individual room contents are saved separately.
 static func save_world(path: String, world: Dictionary) -> bool:
 	var rooms := {}
 	for name in world.rooms:
@@ -55,11 +63,13 @@ static func save_world(path: String, world: Dictionary) -> bool:
 	return true
 
 # Room area in world pixels.
+# Convert one room tile offset and dimensions to its rectangle in global world pixels.
 static func room_rect(room: Dictionary) -> Rect2i:
 	return Rect2i(room.pos * T, Vector2i(room.level.w, room.level.h) * T)
 
 # Name of the room covering world-pixel point p ("" if none). Overlaps: first match wins.
 # Room boxes may overlap (irregular rooms): prefer the one that is open at that spot.
+# Find the room covering a world point, preferring open space when irregular room bounds overlap.
 static func room_at(world: Dictionary, p: Vector2, exclude := "") -> String:
 	var fallback := ""
 	for name in world.rooms:
@@ -70,6 +80,7 @@ static func room_at(world: Dictionary, p: Vector2, exclude := "") -> String:
 				fallback = name
 	return fallback
 
+# Convert global tile coordinates to a room-local tile and report whether it is empty.
 static func _open(room: Dictionary, tx: int, ty: int) -> bool:
 	var lvl: Dictionary = room.level
 	tx -= room.pos.x
@@ -78,6 +89,7 @@ static func _open(room: Dictionary, tx: int, ty: int) -> bool:
 
 # Openings between touching rooms, for the world editor: [[a, b], ...] world-pixel segments.
 # A tile on the shared border counts when it is empty on both sides.
+# Find matching empty border tiles between adjacent rooms, for displaying traversable passages.
 static func doorways(world: Dictionary) -> Array:
 	var out := []
 	var names: Array = world.rooms.keys()
@@ -101,6 +113,7 @@ static func doorways(world: Dictionary) -> Array:
 
 # Pairs of room names whose areas overlap (a layout error the world editor shows in red).
 # Only open space counts: boxes of irregular rooms may overlap where one of them is rock.
+# Find pairs of rooms with genuinely overlapping open space, not merely overlapping outer bounds.
 static func overlaps(world: Dictionary) -> Array:
 	var out := []
 	var names: Array = world.rooms.keys()
@@ -113,6 +126,7 @@ static func overlaps(world: Dictionary) -> Array:
 				out.append([names[i], names[j]])
 	return out
 
+# Inspect the intersection of two rooms to see whether any tile is open in both.
 static func _open_overlap(a: Dictionary, b: Dictionary, r: Rect2i) -> bool:
 	for ty in range(r.position.y, r.end.y):
 		var ra: String = a.level.tiles[ty - a.pos.y]
@@ -123,16 +137,19 @@ static func _open_overlap(a: Dictionary, b: Dictionary, r: Rect2i) -> bool:
 	return false
 
 # A fresh run (what the save file stores under [adventure]).
+# Create the initial progress record with start room, starting abilities and base energy.
 static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
 		"stars": [], "deaths": 0, "time": 0.0, "done": false,
 		"blocks": 1, "energy": BASE_ENERGY, "taken": []}  # taken: one-time pickups, "room:x:y"
 
+# Calculate energy capacity from the base allowance plus collected extra blocks.
 static func energy_max(run: Dictionary) -> float:
 	return BASE_ENERGY + (run.blocks - 1) * ENERGY_PER_BLOCK
 
 # The base always regenerates, even from 0. Above it, regeneration stops at the top of the current
 # block: an extra block spent to its bottom stays empty.
+# Regenerate within the permitted current energy block without refilling already spent upper blocks.
 static func regen_energy(run: Dictionary, dt: float) -> void:
 	var top := BASE_ENERGY
 	if run.energy > BASE_ENERGY:
@@ -140,51 +157,63 @@ static func regen_energy(run: Dictionary, dt: float) -> void:
 	run.energy = minf(maxf(top, run.energy), run.energy + ENERGY_REGEN * dt)
 
 # Being in water drains energy. Returns false when it's all gone: the player drowns.
+# Drain energy for the elapsed underwater time and report whether any energy remains.
 static func water_energy(run: Dictionary, dt: float) -> bool:
 	run.energy = maxf(0.0, run.energy - WATER_DRAIN * dt)
 	return run.energy > 0
 
 # Wears energy down by up to amount, never below 0 and never refusing (a jump always happens).
+# Subtract an action cost without going below zero; this function itself never refuses the action.
 static func drain_energy(run: Dictionary, amount: float) -> void:
 	run.energy = maxf(0.0, run.energy - amount)
 
 # Pays for an action; false (nothing spent) when there isn't enough.
+# Pay only when enough energy is available; return whether payment succeeded.
 static func spend_energy(run: Dictionary, amount: float) -> bool:
 	if run.energy < amount:
 		return false
 	run.energy -= amount
 	return true
 
-# A hit costs 100. Returns false when nothing is left (a death): on the base alone, any hit.
-static func hit_energy(run: Dictionary) -> bool:
-	run.energy -= HIT_ENERGY
-	return run.energy > 0
-
+# Set current energy to the full capacity of the collected blocks.
 static func refill_energy(run: Dictionary) -> void:
 	run.energy = energy_max(run)
 
 # A new block, already full.
+# Increase capacity by one block and add the new block energy immediately.
 static func add_energy_block(run: Dictionary) -> void:
 	run.blocks += 1
 	run.energy += ENERGY_PER_BLOCK
 
 # A saved run with missing or wrong-typed fields filled from a fresh one (older or hand-edited saves).
 # Unusable saves (not a run, or its room is gone) start over.
+# Normalize saved data against current world/rule limits before gameplay reads its fields.
 static func restore_run(world: Dictionary, run) -> Dictionary:
 	var fresh := new_run(world)
 	if not run is Dictionary or not world.rooms.has(run.get("room")):
 		return fresh
 	for k in fresh:
-		if run.has(k) and fresh[k] != null and typeof(run[k]) != typeof(fresh[k]):
-			run.erase(k)
+		if run.has(k) and fresh[k] != null and typeof(run[k]) != typeof(fresh[k]) and not (_finite(run[k]) and _finite(fresh[k])):
+			run.erase(k)  # int and float are interchangeable (JSON and older saves mix them)
 	run.merge(fresh)
-	if not (run.spawn is Array and run.spawn.size() == 2):
+	if not (run.spawn is Array and run.spawn.size() == 2 and _finite(run.spawn[0]) and _finite(run.spawn[1])):
 		run.spawn = null
+	run.blocks = maxi(1, int(run.blocks)) if _finite(run.blocks) else 1
+	run.deaths = maxi(0, int(run.deaths)) if _finite(run.deaths) else 0
+	run.time = maxf(0.0, run.time) if _finite(run.time) else 0.0
+	run.energy = clampf(run.energy, 0.0, energy_max(run)) if _finite(run.energy) else energy_max(run)
+	for k in ["abilities", "visited", "stars", "taken"]:
+		run[k] = run[k].filter(func(x): return x is String)
 	if not run.visited.has(run.room):
 		run.visited.append(run.room)  # the map always shows the current room
 	return run
 
+# Accept finite numeric values while rejecting invalid types and non-finite values such as NaN.
+static func _finite(v) -> bool:
+	return (v is int or v is float) and is_finite(float(v))
+
 # Total stars in the world, for the HUD.
+# Count all star objects in the world for the adventure completion display.
 static func star_count(world: Dictionary) -> int:
 	var n := 0
 	for name in world.rooms:

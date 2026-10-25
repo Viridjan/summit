@@ -1,3 +1,6 @@
+# Approximate progression checker using discrete movement states rather than the real Godot physics. Cautious/generous models bracket what plain movement and unlocked abilities can reach.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Tile-level reachability checker for the adventure world.
 # Player = 1 column x 2 rows, (x, y) = feet cell. Two movement models:
 #   cautious : a bit weaker than the real player -> "reachable" claims are safe
@@ -14,6 +17,7 @@ MODELS = {
 
 
 class World:
+    # Build the in-memory room/grid representation used by this tool from its input data.
     def __init__(self, d):
         w = json.load(open(os.path.join(d, "world.json")))
         self.start = w["start"]
@@ -74,19 +78,24 @@ class World:
                         if p not in self.room_of:
                             self.inside.add(p)
 
+    # Probe whether a world tile belongs to solid terrain in the checker model.
     def S(self, x, y):
         return (x, y) in self.solid or (x, y) not in self.inside
 
+    # Check whether the model player body can occupy a position without overlapping solid cells.
     def free(self, x, y):
         return not self.S(x, y) and not self.S(x, y - 1)
 
+    # Check whether the model body overlaps a lethal hazard.
     def dead(self, x, y):
         return (x, y) in self.spike or (x, y - 1) in self.spike
 
+    # Check whether the model feet have terrain or a one-way platform underneath.
     def support(self, x, y):
         return self.S(x, y + 1) or (x, y + 1) in self.plat
 
 
+# Search reachable movement/connectivity states from the supplied starts; the model is an approximation.
 def explore(W, m, abilities, starts, goal=None, good=None):
     """BFS over (x, y, mode, k, dash, lock, stam). Returns visited ground cells and items touched."""
     has_dash, has_climb = "dash" in abilities, "climb" in abilities
@@ -96,6 +105,7 @@ def explore(W, m, abilities, starts, goal=None, good=None):
     ground = set()
     touched = {}
 
+    # Queue a newly discovered search state only if it is valid and has not already been visited.
     def push(s):
         x, y = s[0], s[1]
         if not W.free(x, y) or W.dead(x, y):
@@ -218,6 +228,7 @@ def explore(W, m, abilities, starts, goal=None, good=None):
     return ground, touched
 
 
+# Group visited global tile cells by their owning room for the reachability report.
 def rooms_of(W, cells):
     out = {}
     for c in cells:
@@ -226,6 +237,7 @@ def rooms_of(W, cells):
     return out
 
 
+# Print the reached rooms/objectives from one movement-model exploration.
 def report(W, name, ground, touched):
     rs = rooms_of(W, ground)
     print(f"  [{name}] rooms reached: {len(rs)}/{len(W.rooms)}  missing: {sorted(set(W.rooms) - set(rs))}")

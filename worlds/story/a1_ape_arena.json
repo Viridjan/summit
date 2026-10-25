@@ -81,6 +81,20 @@
 			"y": 144
 		},
 		{
+			"t": "jumpthru",
+			"x": 144,
+			"y": 128,
+			"w": 32,
+			"h": 8
+		},
+		{
+			"t": "jumpthru",
+			"x": 264,
+			"y": 128,
+			"w": 32,
+			"h": 8
+		},
+		{
 			"t": "boss_ape",
 			"x": 144,
 			"y": 120,
@@ -91,6 +105,13 @@
 			"spikes": [
 				[
 					[
+						160,
+						144,
+						3
+					]
+				],
+				[
+					[
 						368,
 						144,
 						3
@@ -98,12 +119,12 @@
 				],
 				[
 					[
-						312,
+						64,
 						144,
 						2
 					],
 					[
-						384,
+						208,
 						144,
 						2
 					]
@@ -127,24 +148,6 @@
 			"y": 152,
 			"w": 32,
 			"h": 8
-		},
-		{
-			"t": "note",
-			"x": 88,
-			"y": 144,
-			"text": "Left branch, once the Ape is beaten: down here, back through the jungle"
-		},
-		{
-			"t": "note",
-			"x": 136,
-			"y": 144,
-			"text": "The Ape! Move towards it when it leaps: it lands past you"
-		},
-		{
-			"t": "note",
-			"x": 320,
-			"y": 144,
-			"text": "Lure its leaps onto spikes"
 		},
 		{
 			"t": "note",

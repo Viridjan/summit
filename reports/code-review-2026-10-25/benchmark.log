@@ -1,0 +1,6 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: The function signature doesn't match the parent. Parent signature is "_build(bool = <default>) -> void".
+          at: GDScript::reload (res://tests/bench.gd:33)
+ERROR: Failed to load script "res://tests/bench.gd" with error "Parse error".
+   at: load (modules/gdscript/gdscript_resource_format.cpp:46)

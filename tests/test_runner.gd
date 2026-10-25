@@ -1,4 +1,7 @@
 extends Node
+# Deterministic gameplay regression suite. Bot supplies scripted input and step() advances a known number of 1/60-second updates. Each check describes expected behavior and failures contribute to the exit code.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Headless physics checks. Run:  godot --headless --path . res://tests/test.tscn
 # Exit code = number of failures.
 
@@ -7,12 +10,15 @@ const E := preload("res://scripts/entities.gd")
 const Tuning := preload("res://scripts/tuning.gd")
 const DT := 1.0 / 60.0
 
+# Scripted player input for repeatable tests; it uses the real movement implementation.
 class Bot extends "res://scripts/player.gd":
 	# scripted input instead of the keyboard
 	var hold := {}  # action -> true
 	var tap := {}
+	# Initialize this test helper with the same production dependencies as its parent.
 	func _init(world, spawn: Vector2) -> void:
 		super(world, spawn)
+	# Supply scripted actions instead of physical keyboard/gamepad events for deterministic movement.
 	func _read_input(dt: float) -> void:
 		in_x = int(hold.has("right")) - int(hold.has("left"))
 		in_y = int(hold.has("down")) - int(hold.has("up"))
@@ -29,20 +35,28 @@ class Bot extends "res://scripts/player.gd":
 		grab_check = hold.has("grab")
 
 # Capture the real draw request at the texture boundary, without needing a display.
+# Test texture boundary that records drawing requests without depending on GPU output.
 class EnemyDrawTexture extends Texture2D:
 	var destinations: Array[Rect2] = []
+	# Report the stub texture width used to capture draw requests in tests.
 	func _get_width() -> int: return 64
+	# Report the stub texture height used to capture draw requests in tests.
 	func _get_height() -> int: return 240
+	# Capture the requested destination rectangle so tests can check drawing alignment without a rendered display.
 	func _draw_rect_region(_canvas: RID, destination: Rect2, _source: Rect2, _modulate: Color, _transpose: bool, _clip: bool) -> void:
 		destinations.append(destination)
 
+# Canvas node that invokes real enemy drawing so test textures can capture the requested rectangles.
 class EnemyDrawProbe extends Node2D:
 	var enemy
+	# Record the real draw request or its timing for this test helper.
 	func _draw() -> void:
 		enemy.draw(self)
 
+# Editor test helper that records how often its background is redrawn.
 class TrackedEditor extends "res://scripts/editor.gd":
 	var background_draw_count := 0
+	# Count background drawing before delegating to the production editor implementation.
 	func _draw_background(ci: CanvasItem) -> void:
 		background_draw_count += 1
 		super(ci)
@@ -50,11 +64,13 @@ class TrackedEditor extends "res://scripts/editor.gd":
 var fails := 0
 var w
 
+# Record a failed expectation with its explanation so the runner can report failures and return an appropriate exit code.
 func check(cond: bool, what: String) -> void:
 	print(("PASS  " if cond else "FAIL  ") + what)
 	if not cond:
 		fails += 1
 
+# Build a disposable level and scripted player so each test starts from a known terrain/object state.
 func make_world(ents: Array, extra_tiles := []) -> void:
 	if w:
 		w.queue_free()
@@ -69,6 +85,7 @@ func make_world(ents: Array, extra_tiles := []) -> void:
 	w.set_physics_process(false)
 	w.player = Bot.new(w, w.spawn)
 
+# Advance a specified number of fixed physics steps with scripted input, making the test reproducible.
 func step(n := 1) -> void:
 	for i in n:
 		if w.freeze > 0:
@@ -81,8 +98,11 @@ func step(n := 1) -> void:
 		for e in w.ents:
 			e.update(DT)
 
+# Return the active scripted player in the current disposable test World.
 func p():
 	return w.player
+
+# Make a deep fixture copy with one field replaced or removed, leaving the original test data intact.
 
 func _with(d: Dictionary, key: String, v) -> Dictionary:
 	var c := d.duplicate(true)
@@ -92,17 +112,20 @@ func _with(d: Dictionary, key: String, v) -> Dictionary:
 		c[key] = v
 	return c
 
+# Write fixture text to the requested scratch file for file-loading regression tests.
 func _write(path: String, text: String) -> void:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_string(text)
 	f.close()
 
+# Verify terrain chunks still share the editable tile data after an editor operation.
 func check_editor_tiles(ed, action: String) -> void:
 	var expected := Vector2i(ceili(ed.level.w / 32.0), ceili(ed.level.h / 32.0))
 	check(ed.tile_layer.chunk_grid == expected and ed.tile_layer.chunks.size() == expected.x * expected.y,
 		"tile chunk grid follows editor %s" % action)
 	check(is_same(ed.tile_layer.tiles, ed.level.tiles), "tile layer shares current editor tiles after %s" % action)
 
+# Regression coverage for tile layer. The assertions below state the expected behavior of this case.
 func check_tile_layer() -> void:
 	var layer = load("res://scripts/tile_layer.gd").new()
 	var d := Game.new_level("chunks", 100, 70)
@@ -149,6 +172,7 @@ func check_tile_layer() -> void:
 	check(invalidated, "only marked chunks record draw commands again")
 	layer.free()
 
+# Regression coverage for environment themes. The assertions below state the expected behavior of this case.
 func check_environment_themes() -> void:
 	var world := Game.Adventure.load_world("res://worlds/story/world.json")
 	var counts := {}
@@ -172,6 +196,7 @@ func check_environment_themes() -> void:
 	check(layer.chunks[0].environment == "building", "room changes replace the cached chunk theme")
 	layer.free()
 
+# Regression coverage for character animation. The assertions below state the expected behavior of this case.
 func check_character_animation() -> void:
 	var art = load("res://scripts/character_art.gd")
 	var atlas: Image = art.build_atlas()
@@ -275,11 +300,15 @@ func check_character_animation() -> void:
 
 const FIXTURE_WORLD := "res://tests/fixtures/adventure/"  # 3 tiny rooms the adventure tests rely on
 
+# Copy fixture world files into scratch storage so editing tests do not modify shipped rooms.
+
 func _copy_world(dir: String) -> void:
 	DirAccess.make_dir_recursive_absolute(dir)
 	for f in DirAccess.get_files_at(FIXTURE_WORLD):
 		if f.ends_with(".json"):
 			_write(dir + f, FileAccess.get_file_as_string(FIXTURE_WORLD + f))
+
+# Remove the temporary fixture files and their scratch directory after the test.
 
 func _remove_dir(dir: String) -> void:
 	for f in DirAccess.get_files_at(dir):
@@ -288,6 +317,7 @@ func _remove_dir(dir: String) -> void:
 
 # The shipped world: every room loads, nothing overlaps, every room is reachable through passages.
 # (Movement reachability and ability gates were checked with the world generator's tools.)
+# Regression coverage for shipped world. The assertions below state the expected behavior of this case.
 func check_shipped_world() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(Game.ADVENTURE_DIR + "world.json")
@@ -318,7 +348,7 @@ func check_shipped_world() -> void:
 				check(str(e.get("text", "")) != "", "note in %s has text" % n)
 	check(counts.get("ability_dash", 0) == 1 and counts.get("ability_climb", 0) == 1 and counts.get("goal", 0) == 1, "shipped world has one dash orb, one climb orb, one goal")
 	# entrance spawns (tools/world_fixups.py): on ground with 2 tiles of headroom, in every world
-	for wp in [Game.ADVENTURE_DIR + "world.json"] + Game.world_list().slice(1).map(func(x): return x[1]):
+	for wp in Game.world_list().map(func(x): return x[1]):
 		var wd := Adventure.load_world(wp)
 		var bad_spawns := []
 		var n_spawns := 0
@@ -376,7 +406,7 @@ func check_shipped_world() -> void:
 	Game.adv = {}
 	# worlds in the menu: the main world and the story world
 	var listed: Array = Game.world_list()
-	check(listed.size() == 2 and listed[0][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the main world and the story world (%d)" % listed.size())
+	check(listed.size() == 2 and listed[0][1] == Game.STORY_WORLD and listed[1][1] == Game.ADVENTURE_DIR + "world.json", "menu lists the story world first, then Summit (%d)" % listed.size())
 	# story world (docs/STORY_DESIGN.md): jump only at the start, the first stretch of rooms
 	var story := Adventure.load_world(Game.WORLDS_DIR + "story/world.json")
 	check(story.start == "m1_meadow" and story.rooms.size() >= 4 and Adventure.overlaps(story).is_empty() and Adventure.new_run(story).abilities.is_empty(), "story world loads, starts in the meadow with jump only (%d rooms)" % story.rooms.size())
@@ -390,6 +420,7 @@ func check_shipped_world() -> void:
 	Game.adv.blocks = 30  # a big energy budget: this checks the route, not the energy tuning (jumps and water drain it)
 	Game.adv.energy = 3000.0
 	Game.adv_temp = true
+	Game.settings.invincible = true  # the route only: past The Hole there are hazards a hold-right bot can't dodge
 	Game.level = story.rooms[story.start].level
 	var sw = load("res://scripts/world.gd").new()
 	var keep_w = w
@@ -424,8 +455,25 @@ func check_shipped_world() -> void:
 			story_seen.append(sw.room)
 			if sw.room == "j2_jungle_falls":  # dropped in from Jungle Edge, one screen above
 				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == Rect2(0, -23 * 8, 40 * 8, 23 * 8)
-	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	Game.settings.invincible = false
+	check(story_seen == ["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
+	# the hazards past The Hole can be crossed with plain jumps: the Ape's planner finds a spike-free run across
+	# each room that is crossed left to right
+	for rn in ["m1_meadow", "c2_cave_teeth", "c3_cove_tunnel", "j1_jungle_edge", "j3_jungle_hills", "s2_shore"]:
+		Game.level = story.rooms[rn].level
+		var pw = load("res://scripts/world.gd").new()
+		add_child(pw)
+		pw.set_physics_process(false)
+		var lv: Dictionary = story.rooms[rn].level
+		var starts: Array = lv.entities.filter(func(e): return e.t == "spawn")
+		starts.sort_custom(func(a, b): return a.x < b.x)
+		var sx: int = int(starts[0].x)
+		var sy: int = int(starts[0].y) + 8
+		var to_x: float = {"j1_jungle_edge": 30 * 8.0, "j3_jungle_hills": 31 * 8.0, "s2_shore": 54 * 8.0}.get(rn, lv.w * 8 - 24.0)  # up to the drop / the trunk / the lighthouse
+		var run: PackedVector2Array = E.ApeChase.plan(pw, Rect2i(sx - 16, sy - 32, 32, 32), to_x, false, 0)
+		check(not run.is_empty(), "%s: a spike-free path across with plain jumps" % rn)
+		pw.free()
 	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
 	Game.adv = Adventure.new_run(story)
 	Game.adv.room = "c2_cave_teeth"
@@ -469,6 +517,24 @@ func check_shipped_world() -> void:
 	p().tap = {"interact": true}
 	step(3)
 	check(stayed and inside == "h1_villager_house" and held_inside == inside and hw.room == "t1_cove_town", "house door: up does nothing, interact goes inside, a new press comes back out (%s, %s, %s)" % [inside, held_inside, hw.room])
+	# door prompt: the interact button as a keycap, or the pad button once a pad is used
+	var BA = load("res://scripts/button_art.gd")
+	var key_ev := InputEventKey.new()
+	Game._input(key_ev)
+	var kt: Texture2D = BA.prompt("interact")
+	var pad_ev := InputEventJoypadButton.new()
+	pad_ev.pressed = true
+	Game._input(pad_ev)
+	var pt: Texture2D = BA.prompt("interact")
+	var b_red: bool = Game.settings.pad.interact != JOY_BUTTON_B or pt.get_image().get_pixel(5, 2).r > 0.7
+	Game.pad_ps = true
+	var ps_t: Texture2D = BA.prompt("interact")
+	Game.pad_ps = false
+	check(ps_t != pt and ps_t.get_size() == Vector2(11, 11) and Game.is_ps_pad("PS5 Controller") and Game.is_ps_pad("Sony DualSense") and not Game.is_ps_pad("Xbox Series X Controller"),
+		"PlayStation pads get their own symbols in prompts")
+	Game._input(key_ev)
+	check(kt.get_size() == Vector2(7, 10) and pt.get_size() == Vector2(11, 11) and b_red and BA.prompt("interact") == kt,
+		"door prompt shows the interact key, or the pad button after pad input (%s, %s)" % [kt.get_size(), pt.get_size()])
 	# the lighthouse: the shore door leads into the stairs, the stairs' top door out onto the lamp's gallery
 	hw.player.pos = Vector2(0, 0)
 	hw.enter_room("s2_shore", Vector2(45 * 8, 19 * 8))
@@ -483,25 +549,55 @@ func check_shipped_world() -> void:
 	check(in_stairs == "lh1_lighthouse_stairs" and hw.room == "s3_lighthouse_top", "lighthouse: shore door into the stairs, top door out to the lamp (%s, %s)" % [in_stairs, hw.room])
 	# the sand cave: the Ape waits, wakes once the player passes its trigger, and chases by the player's own
 	# movement rules; standing still gets the player caught, reaching the end makes it give up for the run
+	E.ApeChase._plans.clear()
 	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
 	step(5)
 	var ape = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	for k in 60:
+		if ape.planner.done:
+			break
+		step()
+	check(ape.planner.done and not ape.path.is_empty() and ape.planner.max_run_ms < E.ApeChase.PLAN_SLICE_MS + 4,
+		"sand cave Ape: plans its route a slice per frame while waiting (worst frame %.1f ms, total %.1f ms)" % [ape.planner.max_run_ms, ape.planner.spent_ms])
 	var waited: bool = ape.phase == "wait" and not ape.hurts()
 	p().pos = Vector2(15 * 8, 35 * 8)
 	step(2)
 	var woke: bool = ape.phase == "roar"
 	step(400)
 	check(waited and woke and p().dead, "sand cave Ape: waits, screams past the trigger, catches a player who stands still (%s)" % ape.phase)
-	# it can climb the whole cave on its own: run at a player waiting at the top (it would give up there, so not yet)
+	# corners don't save you: a tunnel-high kill line moves with the Ape; once it's past the player, they die
 	p().dead = false
 	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
 	step(2)
 	ape = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
-	ape.d["end"] = 1e9
+	p().pos = Vector2(15 * 8, 35 * 8)
+	step(2)
+	ape.phase = "chase"
+	var past := 0
+	while past < ape.path.size() - 1 and ape.path[past].x <= p().center().x + 1:
+		past += 1
+	ape.at = past  # its next replayed frame is just past the player, whatever their height
+	step()
+	check(p().dead, "sand cave Ape: once it's past the player (at any height) it's game over")
+	# the whole run, at a player waiting past its end: it smashes every hanging rock (blinking, hurt), then
+	# stops at its end as the ceiling caves in ahead of it, sealing the way back for good
+	p().dead = false
+	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
+	step(2)
+	ape = hw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	var rocks: Array = hw.solids.filter(func(e): return e is E.BreakWall)
+	check(rocks.size() >= 6 and rocks.all(func(e): return e.collidable and hw.collide_solid(e.rect) == e), "sand cave: hanging rocks and the low ceiling are solid for the player (%d)" % rocks.size())
 	Game.settings.invincible = true
 	p().pos = Vector2(117 * 8, 9 * 8)
+	var blinks := 0
+	var was_flash := false
+	var landed := false
 	for i in 60 * 30:
 		step()
+		if ape.flash > 0 and not was_flash:
+			blinks += 1
+		was_flash = ape.flash > 0
+		landed = landed or not ape.debris.is_empty()
 	Game.settings.invincible = false
 	var touched := false
 	var on_breakable := false
@@ -509,23 +605,81 @@ func check_shipped_world() -> void:
 		var feet := Rect2i(int(f.x) - 3, int(f.y) - 8, 6, 8)
 		touched = touched or hw.touching_spikes(feet)
 		for e in hw.solids:
-			if (e is E.Crumble or e is E.BreakWall) and e.rect.intersects(Rect2i(int(f.x) - 4, int(f.y) - 11, 8, 12)):
+			if (e is E.Crumble and e.rect.intersects(Rect2i(int(f.x) - 4, int(f.y) - 11, 8, 12))) or (e is E.BreakWall and e.rect.intersects(Rect2i(int(f.x) - 4, int(f.y), 8, 1))):
 				on_breakable = true
-	check(not on_breakable, "sand cave Ape: its path never stands on or touches a breakable block")
-	check(ape.path.size() > 60 and ape.path[-1].x >= 112 * 8 and not touched and ape.rect.end.y == int(ape.path[-1].y) and absf(ape.center().x - ape.path[-1].x) <= 1,
-		"sand cave Ape: replays a planned run up the whole cave, by the player's rules, never on spikes (%d frames to x %d)" % [ape.path.size(), ape.path[-1].x if not ape.path.is_empty() else -1])
-	ape.d["end"] = 113 * 8
-	p().pos = Vector2(115 * 8, 9 * 8)
+	check(not on_breakable, "sand cave Ape: its path never touches crumble nor stands on breakable rock")
+	check(rocks.all(func(e): return not e.collidable) and blinks == rocks.size(), "sand cave Ape: smashes every rock on its way, hurt (blinks) by each (%d blinks, %d rocks)" % [blinks, rocks.size()])
+	check(landed, "sand cave Ape: its landings shake debris off the ceiling")
+	var clipped := 0
+	var ape_last: Vector2 = ape.path[-1] if not ape.path.is_empty() else Vector2.ZERO
+	var keep_pos: Vector2i = ape.rect.position
+	for f in ape.path:
+		ape.rect.position = Vector2i(roundi(f.x - ape.SIZE / 2.0), roundi(f.y) - ape.SIZE)
+		var c = hw.collide_solid(ape.touch_rect(), ape)
+		if c != null and not c is E.BreakWall and not c is E.FallingBlock:
+			clipped += 1
+	ape.rect.position = keep_pos
+	check(clipped == 0, "sand cave Ape: its whole body stays out of the terrain along the path (%d frames clip)" % clipped)
+	check(ape.path.size() > 60 and ape_last.x >= 98 * 8 and not touched and ape.rect.end.y == int(ape_last.y),
+		"sand cave Ape: replays a planned run up the cave to its end, by the player's rules, never on spikes (%d frames to x %d)" % [ape.path.size(), ape_last.x])
+	var seal := Rect2i(ape.d.seal[0], ape.d.seal[1], ape.d.seal[2], ape.d.seal[3])
+	check(ape.phase == "gone" and hw.broken.has(ape.id) and hw.collide_solid(seal) is E.FallingBlock and seal.position.x > ape_last.x,
+		"sand cave Ape: reaching its end, the ceiling caves in just ahead of it and it's done (%s)" % ape.phase)
+	hw.enter_room("s1_sand_cave", Vector2(2 * 8, 39 * 8))
 	step(2)
-	var gave_up: bool = ape.phase == "dying"
-	step(90)
-	check(gave_up and ape.phase == "gone" and hw.broken.has(ape.id), "sand cave Ape: gives up for the run once the player reaches the end")
+	check(hw.collide_solid(seal) is E.FallingBlock, "sand cave: the cave-in stays for the rest of the run")
+	check(hw.solids.filter(func(e): return e is E.BreakWall).all(func(e): return e.collidable), "sand cave: smashed rocks are back when the room is entered again")
 	hw.queue_free()
 	sw.queue_free()
 	w = keep_w
 	Game.adv = {}
 	Game.adv_temp = false
-	for w in listed.slice(1).filter(func(x): return not x[1].contains("/story/")):
+	# The chase plan cache keys on every planner input: endpoint, terrain, tuning; identical inputs reuse it.
+	E.ApeChase._plans.clear()
+	var chase_end := func(end_x: int, wall := false) -> float:
+		var lv := Game.new_level("cache_probe", 60, 30)
+		if wall:
+			for y in range(20, 27):
+				lv.tiles[y] = lv.tiles[y].substr(0, 30) + "1" + lv.tiles[y].substr(31)
+		lv.entities = [{"t": "spawn", "x": 100, "y": 216}, {"t": "ape_chase", "x": 64, "y": 192, "trigger": 0, "end": end_x}]
+		Game.level = lv
+		var cw = load("res://scripts/world.gd").new()
+		add_child(cw)
+		cw.set_physics_process(false)
+		var chaser = cw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+		chaser.update(1.0 / 60.0)
+		var last: float = chaser.path[-1].x if not chaser.path.is_empty() else -1.0
+		cw.free()
+		return last
+	var near: float = chase_end.call(200)
+	var far: float = chase_end.call(350)
+	check(far > near + 100, "chase plans differ for different endpoints (%.0f vs %.0f)" % [near, far])
+	var cached: int = E.ApeChase._plans.size()
+	chase_end.call(350)
+	check(E.ApeChase._plans.size() == cached, "identical chase inputs reuse the cached plan")
+	chase_end.call(350, true)
+	check(E.ApeChase._plans.size() == cached + 1, "changed terrain plans the chase again")
+	Game.tuning = {"MAX_RUN": 120.0}
+	chase_end.call(350)
+	Game.tuning = {}
+	check(E.ApeChase._plans.size() == cached + 2, "changed tuning plans the chase again")
+	# no route at all (a wall it can't climb): planning gives up within its budget and the Ape leaves on its trigger
+	var nl := Game.new_level("no_route", 60, 30)
+	for y in range(5, 27):
+		nl.tiles[y] = nl.tiles[y].substr(0, 30) + "1" + nl.tiles[y].substr(31)
+	nl.entities = [{"t": "spawn", "x": 100, "y": 216}, {"t": "ape_chase", "x": 64, "y": 192, "trigger": 0, "end": 400}]
+	Game.level = nl
+	var nw = load("res://scripts/world.gd").new()
+	add_child(nw)
+	nw.set_physics_process(false)
+	var lost = nw.ents.filter(func(e): return e.d.t == "ape_chase")[0]
+	var t_plan := Time.get_ticks_msec()
+	lost.update(1.0 / 60.0)
+	var plan_ms := Time.get_ticks_msec() - t_plan
+	check(lost.path.is_empty() and plan_ms < E.ApeChase.PLAN_BUDGET_MS * 3 and lost.phase == "dying", "no route: planning stops in budget (%d ms) and the Ape leaves (%s)" % [plan_ms, lost.phase])
+	nw.free()
+	E.ApeChase._plans.clear()
+	for w in listed.slice(2).filter(func(x): return not x[1].contains("/story/")):
 		var rw := Adventure.load_world(w[1])
 		var has_spawn: bool = rw.rooms.has(rw.start) and rw.rooms[rw.start].level.entities.any(func(e): return e.t == "spawn")
 		check(rw.rooms.size() > 10 and has_spawn and Adventure.overlaps(rw).is_empty() and Adventure.new_run(rw).abilities == ["dash", "climb", "attack"], "%s loads: %d rooms, spawn, no overlaps, starts with dash+climb+attack" % [w[0], rw.rooms.size()])
@@ -579,6 +733,7 @@ func check_shipped_world() -> void:
 					queue.append(n)
 		check(reach.size() == rw.rooms.size(), "%s: every room is reachable from the start (%d/%d)" % [w[0], reach.size(), rw.rooms.size()])
 
+# Regression coverage for doors. The assertions below state the expected behavior of this case.
 func check_doors() -> void:
 	# same level: door a -> b keeps speed and height in the doorway, no bounce back, and works the other way
 	make_world([{"t": "door", "x": 200, "y": 200, "w": 8, "h": 24, "id": "a", "to": "b"},
@@ -599,6 +754,7 @@ func check_doors() -> void:
 	step()
 	check(p().pos.distance_to(Vector2(204, 220)) < 4 and w.note_label.text.contains("missing"), "a door to nowhere leaves the player in place and says so")
 
+# Regression coverage for placeholders. The assertions below state the expected behavior of this case.
 func check_placeholders() -> void:
 	make_world([{"t": "acid", "x": 160, "y": 200, "w": 64, "h": 24}, {"t": "enemy", "x": 320, "y": 200, "w": 16, "h": 16, "text": "Crawlid"},
 		{"t": "water", "x": 400, "y": 200, "w": 64, "h": 24}, {"t": "breakable", "x": 480, "y": 200, "w": 8, "h": 8, "text": "grub jar"}])
@@ -613,6 +769,7 @@ func check_placeholders() -> void:
 	step()
 	check(p().dead, "acid kills on touch")
 
+# Regression coverage for dirs. The assertions below state the expected behavior of this case.
 func check_dirs() -> void:
 	make_world([])
 	var pl = p()
@@ -640,6 +797,7 @@ func check_dirs() -> void:
 	step(8)
 	check(pl.state == pl.ST_DASH and pl.dash_dir == Vector2.RIGHT, "horizontal-only dash ignores up (%s, state %d)" % [pl.dash_dir, pl.state])
 
+# Regression coverage for floor gaps. The assertions below state the expected behavior of this case.
 func check_floor_gaps() -> void:
 	# an opening in the bottom row of a plain level is a pit (red marker)
 	if w:
@@ -654,6 +812,7 @@ func check_floor_gaps() -> void:
 	w.set_physics_process(false)
 	check(w.floor_gaps == [[40, 56, false]], "bottom-edge opening is marked as a pit (%s)" % [w.floor_gaps])
 
+# Regression coverage for room seams. The assertions below state the expected behavior of this case.
 func check_room_seams() -> void:
 	# two rooms stacked: room a's floor is open at x 2..3 (above rock in b) and at x 6..7 (above open space in b)
 	const Adventure := preload("res://scripts/adventure.gd")
@@ -684,6 +843,7 @@ func check_room_seams() -> void:
 	w = null
 	Game.adv = {}
 
+# Regression coverage for attack. The assertions below state the expected behavior of this case.
 func check_attack() -> void:
 	# wall 2 tiles right of the spawn (player at x 80): three swings break it, it stays broken after a death
 	make_world([{"t": "breakwall", "x": 96, "y": 26 * 8, "w": 8, "h": 16}])
@@ -721,6 +881,7 @@ func check_attack() -> void:
 	w._build()
 	check(w.ents.filter(func(e): return e.d.t == "breakwall")[0].collidable == false, "a broken wall stays broken after respawn")
 
+# Regression coverage for connected block art. The assertions below state the expected behavior of this case.
 func check_connected_block_art() -> void:
 	var script_path := "res://scripts/block_art.gd"
 	check(ResourceLoader.exists(script_path), "special blocks have connected piece artwork")
@@ -744,6 +905,7 @@ func check_connected_block_art() -> void:
 	for color in samples: unique_colors[color] = true
 	check(unique_colors.size() == 6, "special block materials have distinct colours")
 
+# Regression coverage for new enemy sprite animation. The assertions below state the expected behavior of this case.
 func check_new_enemy_sprite_animation() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
@@ -759,6 +921,7 @@ func check_new_enemy_sprite_animation() -> void:
 		check(frames.size() == 4, "%s has four distinct animation poses" % family)
 		check(bounded, "%s animation stays inside its cell with a transparent margin" % family)
 
+# Regression coverage for enemy facing alignment. The assertions below state the expected behavior of this case.
 func check_enemy_facing_alignment() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var previous: Texture2D = art._texture
@@ -789,6 +952,7 @@ func check_enemy_facing_alignment() -> void:
 		probe.free()
 	art._texture = previous
 
+# Regression coverage for combat enemies. The assertions below state the expected behavior of this case.
 func check_combat_enemies() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
@@ -932,6 +1096,7 @@ func check_combat_enemies() -> void:
 		reached[enemy.rect.position.x] = true
 	check(reached.has(160) and reached.has(176 - enemy.rect.size.x) and enemy.rect.position.x >= 160 and enemy.rect.end.x <= 176, "Mosstrot walks until its box is flush with each end of its floor (%s)" % [reached.keys()])
 
+# Regression coverage for enemy variants. The assertions below state the expected behavior of this case.
 func check_enemy_variants() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
@@ -1034,6 +1199,7 @@ func check_enemy_variants() -> void:
 	Game.settings.invincible = false
 
 # Cragjaw (leaping brute) and Murkspore (hovering spitter), the two big families.
+# Regression coverage for big enemies. The assertions below state the expected behavior of this case.
 func check_big_enemies() -> void:
 	Game.settings.invincible = true
 	make_world([{"t": "enemy_cragjaw", "x": 200, "y": 204, "facing": -1}])
@@ -1071,6 +1237,7 @@ func check_big_enemies() -> void:
 	m.update_orbs(DT)
 	check(p().dead, "a Murkspore orb kills on touch")
 
+# Regression coverage for bugfixes. The assertions below state the expected behavior of this case.
 func check_bugfixes() -> void:
 	# free-aim dash (DASH_DIRS 4) slightly above horizontal still counts as horizontal: super jump works
 	make_world([])
@@ -1138,6 +1305,19 @@ func check_bugfixes() -> void:
 	check(run.room == "a2_little_gap" and run.spawn == null and run.deaths == 0 and run.stars == [] and run.abilities is Array
 		and run.visited == ["a2_little_gap"] and run.has("time"), "partial save gets defaults (%s)" % run)
 	check(Adventure.restore_run(aw, "junk").room == aw.start and Adventure.restore_run(aw, {"room": "gone"}).room == aw.start, "unusable save starts a fresh run")
+	var bad := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": ["bad", {}], "blocks": -20, "energy": 99999.0, "deaths": -3, "time": INF, "stars": [1, "s"]})
+	check(bad.spawn == null and bad.blocks == 1 and bad.energy == Adventure.energy_max(bad) and bad.deaths == 0 and bad.time == 0.0 and bad.stars == ["s"], "malformed save values are normalized (%s)" % bad)
+	check(Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": [1.0, NAN]}).spawn == null, "non-finite spawn is dropped")
+	var legacy := Adventure.restore_run(aw, {"room": "a2_little_gap", "spawn": [40, 80], "blocks": 2.0, "energy": 30, "deaths": 4})
+	check(legacy.spawn == [40, 80] and legacy.blocks == 2 and legacy.energy == 30.0 and legacy.deaths == 4, "valid int/float saves keep their values (%s)" % legacy)
+	Game.adv_world = aw
+	Game.adv = bad
+	Game.level = aw.rooms[bad.room].level
+	var bw = load("res://scripts/world.gd").new()
+	add_child(bw)
+	check(bw.player != null and bw.spawn.is_finite(), "a world builds from a normalized malformed save")
+	bw.free()
+	Game.adv = {}
 	Game.adv_world = aw
 	Game.adv = Adventure.restore_run(aw, {"room": "a1_first_steps"})
 	Game.adv_temp = true
@@ -1215,6 +1395,7 @@ func check_bugfixes() -> void:
 	Game.editor_level = {}
 
 # Boss 1, the Ape: distance picks the attack; a stone fells the trunk; spikes hurt it; three hits beat it.
+# Regression coverage for ape hitbox shapes. The assertions below state the expected behavior of this case.
 func check_ape_hitbox_shapes() -> void:
 	make_world([{"t":"boss_ape","x":200,"y":192}])
 	var ape = w.ents.filter(func(e): return e is E.Ape)[0]
@@ -1232,6 +1413,7 @@ func check_ape_hitbox_shapes() -> void:
 	check(not boss.has("range2") and int(boss.range[0]) == 48 and int(boss.range[1]) == 408 and int(arena.w) == 56, "Ape arena (70%% wide) uses one unrestricted fighting range")
 	check(arena.tiles[19].substr(44,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
 
+# Regression coverage for ape. The assertions below state the expected behavior of this case.
 func check_ape() -> void:
 	var floor_y := 28 * 8
 	var keep_inv: bool = Game.settings.invincible
@@ -1328,20 +1510,21 @@ func check_ape() -> void:
 	var gate = find.call(E.BossGate)[0]
 	p().pos = Vector2(320, floor_y)
 	ape.phase = "idle"
-	var spikes_before: int = find.call(E.Spikes).size()
+	var live := func(): return find.call(E.Spikes).filter(func(e): return e.collidable)
 	for k in 200:
 		step()
-		if ape.hp < 3:
+		if ape.hp < E.Ape.HP:
 			break
 	step(2)
-	check(ape.hp == 2 and find.call(E.Spikes).size() == spikes_before + 2, "landing on spikes hurts the Ape, and the next spike patch appears (hp %d)" % ape.hp)
+	check(ape.hp == E.Ape.HP - 1 and live.call().size() == 2 and live.call().all(func(e): return e.rect.position.x < 120),
+		"landing on spikes hurts the Ape; those spikes crumble and the next patch appears on the other side (hp %d, %d live)" % [ape.hp, live.call().size()])
 	step(2)
 	check(gate.collidable, "boss gates stay shut while the Ape lives")
 	ape.hp = 1
-	ape.rect.position = Vector2i(296, floor_y - 32)
+	ape.rect.position = Vector2i(live.call()[0].rect.position.x - 8, floor_y - 32)  # onto the new patch
 	ape._land()
 	step(90)
-	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "three hits beat the Ape: gates open, it stays beaten, an energy orb appears")
+	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "the last hit beats the Ape: gates open, it stays beaten, an energy orb appears")
 	# the landing slams the ground: a shockwave hits beside the body, not just under it
 	Game.settings.invincible = false
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
@@ -1373,6 +1556,7 @@ func check_ape() -> void:
 
 # Monsters page (main menu) and the map screen's Map / Monsters tabs (L1 / R1).
 # Themed backgrounds stay with the camera: the perspective shift is smooth and bounded (no wrap-around jumps).
+# Regression coverage for background parallax. The assertions below state the expected behavior of this case.
 func check_background_parallax() -> void:
 	const EnvArt := preload("res://scripts/environment_art.gd")
 	var area := Rect2(0, 0, 320, 2000)
@@ -1384,6 +1568,7 @@ func check_background_parallax() -> void:
 		last = s
 	check(smooth and is_equal_approx(last.y, -18.0), "background perspective shifts smoothly with vertical camera moves, within the overscan")
 
+# Regression coverage for bestiary. The assertions below state the expected behavior of this case.
 func check_bestiary() -> void:
 	var b = load("res://scripts/bestiary.gd").new()
 	add_child(b)
@@ -1416,6 +1601,7 @@ func check_bestiary() -> void:
 
 # Energy (docs/STORY_DESIGN.md section 3): 100 per block, regen only inside a partly spent block,
 # a hit costs a block, the last block is a death.
+# Regression coverage for energy. The assertions below state the expected behavior of this case.
 func check_energy() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
@@ -1432,7 +1618,7 @@ func check_energy() -> void:
 	Adventure.regen_energy(run, 100.0)
 	check(not Adventure.spend_energy(run, 80) and run.energy == 25.0, "can't spend more than you have")
 	Adventure.add_energy_block(run)
-	check(run.blocks == 2 and run.energy == 45.0 and Adventure.energy_max(run) == 45.0, "a new block adds a full 20")
+	check(run.blocks == 2 and run.energy == 35.0 and Adventure.energy_max(run) == 35.0, "a new block adds a full 10")
 	Adventure.spend_energy(run, 20)
 	Adventure.regen_energy(run, 10.0)
 	check(run.energy == 25.0, "a fully spent block doesn't refill")
@@ -1440,9 +1626,9 @@ func check_energy() -> void:
 	Adventure.regen_energy(run, 100.0)
 	check(run.energy == 25.0, "the base refills, but not the spent block above it")
 	Adventure.refill_energy(run)
-	Adventure.spend_energy(run, 10)
+	Adventure.spend_energy(run, 5)
 	Adventure.regen_energy(run, 100.0)
-	check(run.energy == 45.0, "a partly spent block refills to its top")
+	check(run.energy == 35.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
@@ -1450,16 +1636,17 @@ func check_energy() -> void:
 	Game.adv_temp = true
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.energy == 45.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (20)")
+	check(Game.adv.blocks == 2 and Game.adv.energy == 35.0 and Game.adv.taken.size() == 1, "energy block pickup adds a full block (10)")
 	make_world([{"t": "energy_block", "x": 80, "y": 26 * 8}])
 	step(3)
 	check(Game.adv.blocks == 2, "an energy block is taken once per run")
-	Game.adv.energy = 125.0  # above the 45 max: hits (100) only leave energy to spare from here
+	Game.adv.energy = 12.0
 	p().die(Vector2.ZERO)
-	check(w.deaths == 1 and Game.adv.energy == 25.0, "a hit (100) with energy to spare costs it, and counts as a death (a respawn)")
+	var after_hit: float = Game.adv.energy
 	p().dead = false
+	Game.adv.energy = 0.0
 	p().die(Vector2.ZERO)
-	check(w.deaths == 2 and Game.adv.energy == 45.0, "a hit with too little left is a death and refills energy")
+	check(w.deaths == 2 and after_hit == 12.0 and Game.adv.energy == 0.0, "a hit is always a death, and leaves energy as it was")
 	# each jump costs 5 energy and needs it: with less there's no jump
 	make_world([])
 	step(5)
@@ -1473,10 +1660,19 @@ func check_energy() -> void:
 	p().tap = {"jump": true}
 	step(4)
 	check(absf(after_jump - 45.0) < 0.3 and p().on_ground and p().pos.y == y0, "a jump costs 5 energy; with less than 5 there's no jump (%s)" % after_jump)
+	check(w.energy_log.size() > 0 and w.energy_log[-1][1] == "jump" and is_equal_approx(w.energy_log[-1][2], -5.0), "energy changes are logged with their cause (%s)" % [w.energy_log])
+	var EP = load("res://scripts/energy_panel.gd")
+	var ep = EP.new()
+	ep.world = w
+	add_child(ep)
+	ep._process(0.0)
+	check(EP.regen_top(20.0) == 25.0 and EP.regen_top(30.0) == 35.0 and EP.regen_top(35.0) == 35.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
+		"F3 energy panel: regen top per block, live rate and history")
+	ep.free()
 	Game.adv.energy = 100.0
 
 	# HUD energy bars: one per block, filled by its share of the energy
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(35.0, 3)
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(30.0, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD energy bars: the base, then block by block (%s)" % [fills])
 	Game.adv.energy = 0.19 * Adventure.energy_max(Game.adv)
 	var grey: bool = p().hair_color() == p().HAIR_USED
@@ -1519,6 +1715,7 @@ func check_energy() -> void:
 	w.queue_free()
 	w = null
 
+# Regression coverage for adventure. The assertions below state the expected behavior of this case.
 func check_adventure() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	Game.world_path = FIXTURE_WORLD + "world.json"
@@ -1618,6 +1815,7 @@ func check_adventure() -> void:
 	Game.world_path = Game.ADVENTURE_DIR + "world.json"
 	_remove_dir(dir)
 
+# Start the test/benchmark scene, configure its disposable fixtures and run the checks.
 func _ready() -> void:
 	Game.settings.air_dashes = 0
 	Game.settings.infinite_stamina = false
@@ -1672,8 +1870,9 @@ func _ready() -> void:
 	check(Tuning.save_preset(preset, Game.tuning), "preset saves")
 	var back := Tuning.load_file(Tuning.preset_path(preset))
 	check(back.MAX_RUN == 120.0 and back.DUCK_CORRECT_CHECK is int and back.size() == 99, "preset loads typed values")
+	check(Tuning.list_presets().has(preset), "saved preset is listed")
 	Tuning.delete_preset(preset)
-	check(not FileAccess.file_exists(Tuning.preset_path(preset)), "preset deletes")
+	check(not FileAccess.file_exists(Tuning.preset_path(preset)) and not Tuning.list_presets().has(preset), "preset deletes")
 	Game.tuning = {}
 	make_world([])
 	step(5)
@@ -2112,4 +2311,4 @@ func _ready() -> void:
 	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)
-	get_tree().quit(fails)
+	Game.quit_game(fails)

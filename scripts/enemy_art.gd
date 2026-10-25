@@ -1,4 +1,10 @@
 extends RefCounted
+# Original pixel artwork for enemy families and their variants.
+# A family defines a base shape; a variant changes its palette and optional decorative features.
+# The atlas packs four frames per enemy type into one shared image.
+# Drawing places that frame relative to an enemy's collision body; the two need not have equal sizes.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Original native pixel sprites; enemy behaviour references are documented in docs/ENEMIES.md.
 # One 32x32 cell per frame, four frames per row, one row per enemy type (same order as Entities.TYPES).
 const SIZE := 32
@@ -35,12 +41,14 @@ const SPRITES := {
 }
 static var _texture: Texture2D
 
+# Resolve a variant type ID to its base family so it can share the underlying shape.
 static func family_of(kind: String) -> String:
 	for f in SPRITES:
 		if kind == f or kind.begins_with(f + "_"):
 			return f
 	return kind
 
+# Build all four-frame enemy rows, applying variant colors and pose-specific pixel changes.
 static func atlas() -> Image:
 	var img := Image.create(SIZE * 4, SIZE * KINDS.size(), false, Image.FORMAT_RGBA8)
 	img.fill(Color.TRANSPARENT)
@@ -113,11 +121,13 @@ static func atlas() -> Image:
 				img.set_pixelv(Vector2i(left + width / 2, top + sprite.size() + frame), Color("8fd14f"))
 	return img
 
+# Create the shared enemy atlas texture once and reuse it for subsequent draws.
 static func texture() -> Texture2D:
 	if _texture == null:
 		_texture = ImageTexture.create_from_image(atlas())
 	return _texture
 
+# Choose a family/variant atlas frame and draw it centred on the collision body with facing and scale.
 static func draw(ci: CanvasItem, kind: String, at: Vector2, facing: int, clock: float, flash := false, scale := 1.0) -> void:
 	var frame := int(clock * 8) % 4
 	var source := Rect2(frame * SIZE, KINDS.find(kind) * SIZE, SIZE, SIZE)

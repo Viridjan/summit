@@ -36,7 +36,7 @@ The player faces right from the start, and the route mostly moves right.
 - New content: **leaf platforms**, a **forest** environment theme, **waterfall blocks**.
 
 ### 1.6 Boss 1: the Ape (end of the jungle)
-See Bosses. Reward: a power-up, after which the hero is exhausted (see Energy).
+See Bosses. Reward: a power-up.
 
 ### 1.7 The fork after the Ape
 Past the Ape the path splits. Each side changes the story.
@@ -44,7 +44,10 @@ Past the Ape the path splits. Each side changes the story.
 **Right: sand cave → shore**
 - A cave full of sand and breakable platforms, climbing diagonally at about 30°, with some platforming.
 - Entering triggers the Ape's scream; **the Ape chases the player**.
+- Sounds: the arena fight opens with `ape_scream`; the cave chase uses `ape_scream_cave` (same cry, echoed). Both are synthesized in `scripts/sfx.gd`, 5 tones lower than the first draft.
+- The chase replays one planned run (`ApeChase.plan` in `scripts/entities.gd`): the player's own movement code, off spikes and breakables, with the Ape's whole 24px contact box clear of the terrain. Breakable rock (low ceiling, hanging chunks): the player passes under it, the Ape smashes through (not saved, so it is back after a death).
 - At a small gap the player hears the Ape hit the wall; rocks fall and seal the cave behind them. This starts the second part.
+  Built: six breakable rocks (the low ceiling over the third pit and five hanging chunks) hurt the Ape as it smashes them (it blinks). The player only dies if the Ape gets past them: a tunnel-high line at its centre, so corners don't save you. Each landing shakes debris off the ceiling. The Ape itself triggers the end: reaching its last stretch (`end`), the ceiling caves in just ahead of it (`seal`), stopping it and sealing the way back for good.
 - Reward on this path: **the sword** (see Energy for its costs).
 - The sealed cave can't be re-entered, so the only way is right, to the shore.
 - The shore offers two options:
@@ -97,12 +100,12 @@ Arena and collision:
 
 ## 3. Energy
 
-Flavour: the hero is exhausted. Boss fights drain all their energy. After the Ape the player gets a power-up but is badly tired, and must collect pickups to recover.
+(Dropped: boss fights no longer drain energy.)
 
 Energy is also health:
 - It replaces hearts. The icon is still undecided; it shows as **blocks**.
 - **1 block = 100 energy** in code. Every value below is in code units.
-- The game starts with a **base of 50** that always regenerates. Each energy block picked up adds 75. A hit costs 100, so on the base alone one hit kills during platforming (until a shield is unlocked later).
+- In code now (scripts/adventure.gd; F3 in game shows it all live): the run starts with a **base of 25** that always regenerates (6/s). Each energy block picked up adds **10** (capacity and energy). A jump costs and needs 5. A hit is always a death and doesn't touch energy. Water drains 20.8/s and stops regeneration; 0 in water drowns. An energy orb refills to max (back after 2.5 s). Hair turns grey below 20%.
 - With 1 block the player can use one ability, then has to rest before using another.
 - The 2nd block comes from the first city.
 
@@ -154,7 +157,7 @@ Water:
 Meadow → The Big Jump (fall into the gap) → Lake Cave → Cave Teeth → Cove Tunnel → Cove Town (energy block on a roof).
 Lake Cave has neighbours of its own: Roar Tunnel on the left (dead end, the roar), and Deep Lake below. A hole in the lake floor drops into Deep Lake (flooded, a star in the corner), and a shaft of jump-through platforms climbs back up into Lake Cave.
 Right of Cove Town the jungle (forest theme) runs Jungle Edge → (drop) → Jungle Falls → Jungle Hills, with leaf platforms, a waterfall over a lake, hollow trunks, tunnel hills and calm Mosstrots. A star sits at the top of each leaf climb.
-Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, three spike hits, gated exits, exhaustion after), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
+Past the jungle: the Ape Arena, with the fight built (see section 2: open arena, four spike hits, gated exits), then the fork. Right: Sand Cave (a climb at about 25°, crumble blocks for breakable sand) → Shore (the mountain's foot, the sea, the lighthouse) → (its door) Lighthouse Stairs → Lighthouse Top (the silent village). Left: a hole in the arena floor → Jungle Depths → Net Trap (a door stands in for the net lift) → Treetop Village above the arena.
 Roar Tunnel plays a one-shot stereo roar from the left, with cave reflections. NPCs, quests, the chase, the rock fall, the raft and the rewards (sword, wall grab) are notes in the rooms for now.
 `tools/story/gen_first_stretch.py` generates these rooms, but only the rooms you name (`... worlds/story a1_ape_arena`, or `all`), since rooms are also edited in-game.
 `tests/test_runner.gd` runs a jump-only bot from the meadow to the end of the jungle.

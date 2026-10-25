@@ -1,4 +1,9 @@
 extends Control
+# Read-only enemy catalogue used by the main menu and map overlay.
+# Builds preview objects with no World to inspect each family's health, size and variants.
+# Only an animation clock advances here; enemies do not attack, move or affect saved progress.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Monsters page: every enemy family in the entity registry, one row each, with the variants that family comes in.
 # Shown from the main menu (Monsters) and as the second tab of the map screen.
 
@@ -15,6 +20,7 @@ var hp := {}  # type id -> hit points
 var body := {}  # type id -> body size in pixels (giants are bigger)
 var clock := 0.0
 
+# Inspect preview enemies to collect family order, variants, health and body dimensions.
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for t in E.TYPES:
@@ -29,10 +35,12 @@ func _ready() -> void:
 			variants[family] = []
 		variants[family].append(t)
 
+# Advance only the presentation clock and request refreshed animated previews.
 func _process(dt: float) -> void:
 	clock += dt
 	queue_redraw()
 
+# Draw each enemy family and variant with labels, scaling large bodies to fit their cells.
 func _draw() -> void:
 	var font := get_theme_default_font()
 	var most := 1

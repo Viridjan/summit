@@ -1,4 +1,11 @@
 extends RefCounted
+# Describes editable movement parameters and how presets are saved or loaded.
+# Player declares the actual default values; groups/ranges/help here describe the editing interface.
+# A tunable is simply a number you can adjust to change the feel of movement.
+# Startup combines built-in defaults, the project tuning file, and then the chosen user preset.
+# Derived values depend on other values and are recomputed by Player.apply_tuning().
+# Reading help: docs/CODE_GUIDE.md.
+
 # Player movement tuning: which Player variables are editable, their groups/ranges,
 # and named presets on disk (ConfigFile, section "player", one key per variable).
 # Startup: code defaults -> res://config/tuning.cfg (project) -> active user preset.
@@ -137,6 +144,7 @@ const GROUPS := [
 static var _defaults := {}
 
 # name -> default value, in declaration order (includes derived)
+# Read the declared Player defaults and cache them as the reference values for editing.
 static func defaults() -> Dictionary:
 	if _defaults.is_empty():
 		var p = PlayerScript.new(null, Vector2.ZERO)
@@ -146,9 +154,11 @@ static func defaults() -> Dictionary:
 				_defaults[n] = p.get(n)
 	return _defaults
 
+# Return the movement variable names exposed by the tuning groups.
 static func names() -> Array:
 	return defaults().keys().filter(func(n): return not n in DERIVED)
 
+# Find the display group containing this tuning variable.
 static func group_of(n: String) -> String:
 	for g in GROUPS:
 		for pre in g[1]:
@@ -157,6 +167,7 @@ static func group_of(n: String) -> String:
 	return "Other"
 
 # [min, max, step] for the editor spin box
+# Return the minimum, maximum and step size used by this variable numeric control.
 static func range_of(n: String) -> Array:
 	var d = defaults()[n]
 	if n.ends_with("_DIRS"):
@@ -165,10 +176,12 @@ static func range_of(n: String) -> Array:
 	var step := 1.0 if d is int else (0.001 if absf(d) < 1.0 else 0.1)
 	return [-hi, hi, step]
 
+# Convert a proposed value to the default type and allowed editor range.
 static func coerce(n: String, v):
 	return int(v) if defaults()[n] is int else float(v)
 
 # Current value of every tunable: defaults with overrides applied.
+# Combine known defaults with supplied overrides into a complete tuning dictionary.
 static func current(overrides: Dictionary) -> Dictionary:
 	var out := {}
 	for n in names():
@@ -176,6 +189,7 @@ static func current(overrides: Dictionary) -> Dictionary:
 	return out
 
 # Only the known tunables from a file, typed like their defaults. {} if unreadable.
+# Read only known numeric movement settings from a configuration file; ignore missing or unusable files.
 static func load_file(path: String) -> Dictionary:
 	var cf := ConfigFile.new()
 	if cf.load(path) != OK:
@@ -187,39 +201,49 @@ static func load_file(path: String) -> Dictionary:
 			out[n] = coerce(n, v)
 	return out
 
+# Serialize known movement values into the player section of a configuration file.
 static func save_file(path: String, values: Dictionary) -> bool:
 	var cf := ConfigFile.new()
 	for n in names():
 		cf.set_value("player", n, values.get(n, defaults()[n]))
 	return cf.save(path) == OK
 
+# Construct a user preset filename from a sanitized display name.
 static func preset_path(preset: String) -> String:
 	return PRESET_DIR + Game.file_safe(preset) + ".cfg"
 
+# List saved presets, treating a fresh installation with no preset directory as an empty list.
 static func list_presets() -> PackedStringArray:
 	var out := PackedStringArray()
+	if not DirAccess.dir_exists_absolute(PRESET_DIR):
+		return out  # fresh install: nothing saved yet
 	for f in DirAccess.get_files_at(PRESET_DIR):
 		if f.ends_with(".cfg"):
 			out.append(f.get_basename())
 	out.sort()
 	return out
 
+# Create the user preset directory if needed and write a complete preset.
 static func save_preset(preset: String, overrides: Dictionary) -> bool:
 	DirAccess.make_dir_recursive_absolute(PRESET_DIR)
 	return save_file(preset_path(preset), current(overrides))
 
+# Remove one named preset from user storage.
 static func delete_preset(preset: String) -> void:
 	DirAccess.remove_absolute(preset_path(preset))
 
 # res:// is only writable when running from the Godot editor / a source checkout.
+# Check whether this is a source/editor build where exporting project tuning is supported.
 static func can_export() -> bool:
 	return OS.has_feature("editor")
 
+# Write tuning to the project defaults file for future runs.
 static func export_project(overrides: Dictionary) -> bool:
 	DirAccess.make_dir_recursive_absolute(PROJECT_FILE.get_base_dir())
 	return save_file(PROJECT_FILE, current(overrides))
 
 # Overrides used at startup: project file, then the active user preset on top.
+# Load project overrides first, then let the selected user preset override those values.
 static func startup(active_preset: String) -> Dictionary:
 	var out := load_file(PROJECT_FILE)
 	if active_preset != "":

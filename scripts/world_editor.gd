@@ -1,4 +1,11 @@
 extends Control
+# Arranges room files on the larger adventure map, rather than editing individual tiles.
+# world.json stores room names and tile offsets; each room has its own level JSON file.
+# Screen pixels are converted to map tiles for dragging; room origins always snap to whole tiles.
+# Expensive overlap and passage checks are cached after edits instead of repeated during drawing.
+# Changing this layout writes project files; room editing itself is delegated to editor.gd.
+# Reading help: docs/CODE_GUIDE.md.
+
 # World editor (main menu > World Editor, only when run from source): places adventure rooms on the world grid.
 # Rooms are ordinary level files in res://adventure/; world.json stores where each one sits.
 # Drag a room to move it (snaps to tiles); where two rooms touch, matching open tiles become passages (green).
@@ -27,6 +34,7 @@ var cache_bad := {}  # room -> true when its open space overlaps another room
 var cache_ways := []  # Adventure.doorways(world)
 var cache_links := []  # [from, to] world-pixel centres of linked doors
 
+# Load the world layout, create room thumbnails and build the room-management controls.
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	theme = Game.theme.duplicate()
@@ -71,6 +79,7 @@ func _ready() -> void:
 	_fit.call_deferred()  # needs the laid-out size
 
 # Zoom and pan so every room fits the canvas (left of the side panel).
+# Choose zoom and pan so all rooms fit beside the side panel.
 func _fit() -> void:
 	if world.rooms.is_empty():
 		return
@@ -85,6 +94,7 @@ func _fit() -> void:
 	queue_redraw()
 
 # Overlaps, passages and door links are slow on big worlds: computed after changes, not every frame.
+# Recompute overlap warnings, connecting passages and explicit door links after layout changes.
 func _recalc() -> void:
 	cache_bad = {}
 	for pair in Adventure.overlaps(world):
@@ -107,16 +117,20 @@ func _recalc() -> void:
 				if doors.has(tk):
 					cache_links.append([doors[key][1], doors[tk][1]])
 
+# Write world.json and show whether the project location accepted the save.
 func _save() -> void:
 	status.text = "Saved" if Adventure.save_world(Game.world_path, world) else "Save failed (res:// is read-only here)"
 
 # world tiles <-> screen
+# Convert world-map tile coordinates into screen pixels using zoom and pan.
 func to_screen(tile: Vector2) -> Vector2:
 	return tile * zoom + pan
 
+# Undo the map view transform so a screen click becomes a world-map tile position.
 func to_tile(screen: Vector2) -> Vector2:
 	return (screen - pan) / zoom
 
+# Draw the grid, room thumbnails, passages, door links and selection/overlap outlines.
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("10102a"))
 	# grid every 8 tiles
@@ -143,6 +157,7 @@ func _draw() -> void:
 	for l in cache_links:  # doors: cyan line from each door to where it leads
 		draw_line(to_screen(l[0] / T), to_screen(l[1] / T), Color(0.25, 0.88, 1.0, 0.7), 1.5)
 
+# Select/drag rooms or pan/zoom the map, committing layout changes at the relevant gesture boundary.
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		var before := to_tile(event.position)
@@ -173,10 +188,12 @@ func _gui_input(event: InputEvent) -> void:
 		elif drag_room != "":
 			move_room(drag_room, drag_pos0 + Vector2i((to_tile(event.position) - drag_from).round()))
 
+# Change a room tile offset and request a visual update.
 func move_room(name: String, pos: Vector2i) -> void:
 	world.rooms[name].pos = pos
 	queue_redraw()
 
+# Update the selected room details and enable only actions that have a valid selection.
 func _update_info() -> void:
 	for b in room_buttons:
 		b.disabled = selected == ""
@@ -191,6 +208,7 @@ func _update_info() -> void:
 	info.text = "%s\n\"%s\"  %dx%d tiles\nat %d, %d\npassage tiles: %d%s" % [selected, r.level.name, r.level.w, r.level.h, r.pos.x, r.pos.y, links, "\nstart room" if selected == world.start else ""]
 
 # ---- add / remove ----
+# List custom levels that can be copied into this world.
 func _fill_add_menu() -> void:
 	var p := add_menu.get_popup()
 	p.clear()
@@ -200,6 +218,7 @@ func _fill_add_menu() -> void:
 	for f in Game.list_levels():
 		p.add_item("Copy of my level: " + f)
 
+# Create an empty room or copy a selected custom level, then fit the view to the expanded layout.
 func _add_index(i: int) -> void:
 	var lvl: Dictionary
 	var base := "room"
@@ -215,6 +234,7 @@ func _add_index(i: int) -> void:
 	_fit()
 
 # Right of the selected room (so it connects), sliding right past any room in the way.
+# Search to the right of the selected room for a placement that avoids existing room bounds.
 func _free_spot(lvl: Dictionary) -> Vector2i:
 	if not world.rooms.has(selected):
 		return Vector2i.ZERO
@@ -231,6 +251,7 @@ func _free_spot(lvl: Dictionary) -> Vector2i:
 	return pos
 
 # Copies the level into the adventure folder under a free name and places it.
+# Choose a unique room filename, save its contents and add its tile position to the manifest.
 func add_room(base: String, lvl: Dictionary, pos: Vector2i) -> String:
 	var name := Game.file_safe(base)
 	var n := 2
@@ -251,6 +272,7 @@ func add_room(base: String, lvl: Dictionary, pos: Vector2i) -> String:
 	queue_redraw()
 	return name
 
+# Remove a room from the layout while deliberately retaining its JSON file on disk.
 func _remove() -> void:
 	world.rooms.erase(selected)  # the room file stays in the folder
 	thumbs.erase(selected)
@@ -262,12 +284,14 @@ func _remove() -> void:
 	_update_info()
 	queue_redraw()
 
+# Make the selected room the spawn room for new runs and save that manifest change.
 func _set_start() -> void:
 	world.start = selected
 	_save()
 	_update_info()
 	queue_redraw()
 
+# Pass a copy of the selected room and its fixed filename to the single-room editor.
 func _edit() -> void:
 	Game.editor_level = world.rooms[selected].level.duplicate(true)
 	Game.editor_dir = Game.world_path.get_base_dir() + "/"
@@ -275,9 +299,11 @@ func _edit() -> void:
 	Game.editor_return = "world_editor"
 	Game.goto("editor")
 
+# Start a temporary run from the selected room without changing normal adventure saves.
 func _playtest() -> void:
 	Game.playtest_adventure(world, selected)
 
+# Return to the main menu when the cancel action was not consumed by a control.
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		Game.goto("menu")

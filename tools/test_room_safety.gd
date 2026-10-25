@@ -1,14 +1,19 @@
 extends Node
+# Automated room-entry safety probe using actual Player/World movement. Disposable driven players test doors, edges and bounds, then report arrivals that remain embedded or cannot escape.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Actual collision/transition methods, with rendering and save writes disabled.
 # godot --headless --path . res://tools/room_safety.tscn -- --world res://worlds/story/world.json
 const Adventure := preload("res://scripts/adventure.gd")
 const Player := preload("res://scripts/player.gd")
 const Entities := preload("res://scripts/entities.gd")
 
+# Diagnostic player with controlled input for reproducing room-entry situations.
 class DrivenPlayer extends "res://scripts/player.gd":
 	var intent := Vector2i.ZERO
 	var frame_number := 0
 	var press_dash := true
+	# Supply the requested direction and initial dash to reproduce an arrival deterministically.
 	func _read_input(dt: float) -> void:
 		in_x = intent.x
 		in_y = intent.y
@@ -23,28 +28,37 @@ class DrivenPlayer extends "res://scripts/player.gd":
 		grab_check = false
 		frame_number += 1
 
+# Tile-layer stand-in that avoids expensive rendering during a physics-focused diagnostic.
 class QuietTiles extends "res://scripts/tile_layer.gd":
+	# Share terrain data without creating draw chunks, since this diagnostic measures collision behavior.
 	func setup(level_tiles: Array, w: int, h: int, _room_environment := "") -> void:
 		tiles = level_tiles
 		level_size = Vector2i(w, h)
 
+# Diagnostic World that suppresses unrelated presentation while exercising actual collision behavior.
 class ProbeWorld extends "res://scripts/world.gd":
 	var cache := {}
+	# Intentionally avoid save writes while trying disposable diagnostic arrivals.
 	func _save_run() -> void:
 		pass
 	var near_cache := {}
+	# Cache neighboring collision data without retaining unnecessary visual tile layers.
 	func _load_near() -> void:  # neighbour collision data as in the game, without tile layers; cached per room
 		if not near_cache.has(room):
 			super._load_near()
 			near_queue.clear()
 			near_cache[room] = near_rooms
 		near_rooms = near_cache[room]
+	# Skip decorative floor-gap scanning in this collision-only diagnostic.
 	func _scan_floor_gaps() -> void:
 		pass
+	# Ignore note display during automated arrival probes.
 	func show_note(text: String) -> void:
 		pass
+	# Suppress normal respawn effects; the diagnostic records the outcome instead.
 	func on_player_death(p, dir: Vector2) -> void:
 		pass
+	# Cache room grids/object lists for repeated probes while preserving the diagnostic player.
 	func _build(keep_player := false) -> void:
 		if not cache.has(room):
 			grid = PackedByteArray()
@@ -74,9 +88,11 @@ var phase := "all"
 var step_sizes := [1, 4, 8]
 var directions := [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]
 
+# Begin the standalone diagnostic scene once its nodes are available.
 func _ready() -> void:
 	call_deferred("run")
 
+# Switch the diagnostic World to a chosen room without changing the real player save.
 func select_room(room: String) -> void:
 	world.room = room
 	world.room_origin = Vector2(Game.adv_world.rooms[room].pos * 8)
@@ -88,6 +104,7 @@ func select_room(room: String) -> void:
 	world.door_block = Rect2i()
 	world.done = false
 
+# Restore a fresh diagnostic player at a specified arrival position and crouching state.
 func reset(room: String, at: Vector2, duck: bool) -> void:
 	select_room(room)
 	world.player.pos = at
@@ -97,6 +114,7 @@ func reset(room: String, at: Vector2, duck: bool) -> void:
 	world.player.state = Player.ST_NORMAL
 	world.player.set_ducking(duck)
 
+# Store a classified failure with its room, source and coordinates for later reporting.
 func record(kind: String, source: String, at: Vector2, duck: bool, details: Dictionary) -> void:
 	var target := world.room
 	var key := "%s:%s:%s:%s" % [kind, source, target, details.get("edge", details.get("door", ""))]
@@ -109,9 +127,11 @@ func record(kind: String, source: String, at: Vector2, duck: bool, details: Dict
 		sample.merge(details)
 		group.samples.append(sample)
 
+# Check whether the diagnostic player movement box still overlaps solid terrain.
 func embedded() -> bool:
 	return world.collide_solid(world.player.hitbox()) != null
 
+# Probe nearby escape directions to distinguish a temporary overlap from a trapped arrival.
 func escape_directions() -> Array:
 	var result := []
 	for direction in directions:
@@ -119,10 +139,12 @@ func escape_directions() -> Array:
 			result.append([direction.x, direction.y])
 	return result
 
+# Check whether the current player position belongs to any playable room.
 func outside_world() -> bool:
 	var global: Vector2 = world.room_origin + world.player.center()
 	return Adventure.room_at(Game.adv_world, global) == ""
 
+# Evaluate one arrival and record collision/escape problems with the supplied context.
 func inspect_arrival(source: String, at: Vector2, duck: bool, details: Dictionary) -> void:
 	if embedded():
 		var extra := details.duplicate()
@@ -131,6 +153,7 @@ func inspect_arrival(source: String, at: Vector2, duck: bool, details: Dictionar
 	if outside_world():
 		record("arrival_outside_all_rooms", source, at, duck, details)
 
+# Step across a room boundary from a controlled starting point and inspect the arrival.
 func edge_probe(source: String, at: Vector2, duck: bool, direction: Vector2i, step_size: int = 1) -> void:
 	counts.edge_candidates += 1
 	reset(source, at, duck)
@@ -156,6 +179,7 @@ func edge_probe(source: String, at: Vector2, duck: bool, direction: Vector2i, st
 		if world.player.pos == before:
 			return
 
+# Enumerate candidate neighboring-room passages and probe crossing behavior.
 func check_edges() -> void:
 	var rooms: Dictionary = Game.adv_world.rooms
 	for source in rooms:
@@ -184,6 +208,7 @@ func check_edges() -> void:
 							edge_probe(source, Vector2(x - r.position.x, r.size.y if dir.y > 0 else 6 if duck else 11), duck, dir, step_size)
 		print("Edges: ", source)
 
+# Resolve placed door links and probe their destination clearances.
 func check_doors() -> void:
 	for source in Game.adv_world.rooms:
 		var level: Dictionary = Game.adv_world.rooms[source].level
@@ -209,6 +234,7 @@ func check_doors() -> void:
 						counts.door_crossings += 1
 						inspect_arrival(source, at, duck, {"door": door.get("id", ""), "to": door.get("to", "")})
 
+# Drive toward an outer boundary and verify that movement does not escape into void.
 func bounds_probe(source: String, at: Vector2, duck: bool, direction: Vector2i) -> void:
 	reset(source, at, duck)
 	if embedded() or not Rect2(world.bounds).encloses(Rect2(world.player.hitbox())):
@@ -239,6 +265,7 @@ func bounds_probe(source: String, at: Vector2, duck: bool, direction: Vector2i) 
 			record("survived_bottom_void", source, at, duck, {"pixel_steps": tick + 1})
 			return
 
+# Enumerate exposed room edges and run the boundary escape probes.
 func check_bounds() -> void:
 	for source in Game.adv_world.rooms:
 		var level: Dictionary = Game.adv_world.rooms[source].level
@@ -250,6 +277,7 @@ func check_bounds() -> void:
 				bounds_probe(source, Vector2(x, 6 if duck else 11), duck, Vector2i.UP)
 				bounds_probe(source, Vector2(x, int(level.h) * 8), duck, Vector2i.DOWN)
 
+# Provide targeted known-risk arrivals alongside the systematic edge and door checks.
 func replay_cases() -> Array:
 	var cases := [
 		{"room": "c3_cove_tunnel", "at": [308, 152], "dir": [1, 0], "duck": false, "label": "Cove Tunnel into Cove Town"},
@@ -292,6 +320,7 @@ func replay_cases() -> Array:
 	world.player = null
 	return results
 
+# Run the complete diagnostic workload and emit its structured result report.
 func run() -> void:
 	var args := OS.get_cmdline_user_args()
 	for i in args.size():

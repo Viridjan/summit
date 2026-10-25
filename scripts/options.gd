@@ -1,4 +1,10 @@
 extends ColorRect
+# Settings screen, also embedded over a paused game for options or assist controls.
+# Widgets show values from Game.settings; changes apply immediately and are saved to user data.
+# Rebinding temporarily captures the next suitable input event instead of treating it as gameplay.
+# The closed signal lets the owning menu or World decide what should happen after this panel closes.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Options screen: video and key remapping. Used by the main menu and the pause menu.
 # With pad_page set it is the controller button page instead (opened from "Controller Buttons").
 # With assist_page set it is the Assist Mode page instead (opened in game with the assist key, F12).
@@ -10,6 +16,7 @@ var key_buttons := {}
 var pad_page := false
 var assist_page := false
 
+# Build the requested options/assist/controller page and give its initial control keyboard focus.
 func _ready() -> void:
 	color = Color(0.05, 0.05, 0.12, 1.0 if pad_page else 0.95)
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -62,12 +69,14 @@ func _ready() -> void:
 	box.add_child(Game.button("Back", _close))
 	first.grab_focus()
 
+# Open the controller-binding page and remember the originating button for focus restoration.
 func _open_pad(from: Button) -> void:
 	var o: Control = (get_script() as GDScript).new()
 	o.pad_page = true
 	add_child(o)
 	o.closed.connect(from.grab_focus)
 
+# Build optional difficulty/movement aids from the shared settings dictionary.
 func _build_assist(box: VBoxContainer) -> void:
 	box.add_child(Game.label("Assist Mode", 44))
 	var first := _choice(box, "Game Speed", "game_speed", ["50%", "60%", "70%", "80%", "90%", "100%"], [0.5, 0.6, 0.7, 0.8, 0.9, 1.0])
@@ -78,6 +87,7 @@ func _build_assist(box: VBoxContainer) -> void:
 	box.add_child(Game.button("Back", _close))
 	first.grab_focus()
 
+# List each configurable action with its currently assigned gamepad button or trigger.
 func _build_pad(box: VBoxContainer) -> void:
 	box.add_child(Game.label("Controller Buttons", 44))
 	box.add_child(Game.label("Pick an action, then press a button or trigger. The left stick always moves.", 16))
@@ -99,6 +109,7 @@ func _build_pad(box: VBoxContainer) -> void:
 	box.add_child(Game.button("Back", _close))
 	first.grab_focus()
 
+# Create an on/off setting control with a readable text state as well as an icon.
 func _toggle(box: VBoxContainer, text: String, key: String) -> CheckButton:
 	var c := CheckButton.new()
 	c.button_pressed = Game.settings[key]
@@ -114,6 +125,7 @@ func _toggle(box: VBoxContainer, text: String, key: String) -> CheckButton:
 	box.add_child(c)
 	return c
 
+# Create a labelled picker whose display labels map to stored setting values.
 func _choice(box: VBoxContainer, text: String, key: String, labels: Array, values: Array) -> OptionButton:
 	var row := HBoxContainer.new()
 	var l := Label.new()
@@ -130,6 +142,7 @@ func _choice(box: VBoxContainer, text: String, key: String, labels: Array, value
 	return o
 
 # 0..100% in steps of 5; the setting stores 0..1.
+# Display a 0-100 percent control while storing a normalized 0-1 audio volume.
 func _slider(box: VBoxContainer, text: String, key: String) -> HSlider:
 	var row := HBoxContainer.new()
 	var l := Label.new()
@@ -149,15 +162,18 @@ func _slider(box: VBoxContainer, text: String, key: String) -> HSlider:
 	box.add_child(row)
 	return s
 
+# Update one option, apply the new settings immediately and persist them.
 func _apply(key: String, v) -> void:
 	Game.settings[key] = v
 	Game.apply_settings()
 	Game.save_settings()
 
+# Mark the action awaiting a replacement input and display the appropriate prompt.
 func _rebind(action: String) -> void:
 	waiting_for = action
 	key_buttons[action].text = "Press a button..." if pad_page else "Press a key..."
 
+# Capture the next suitable key/button/trigger during rebinding and prevent that event reaching gameplay.
 func _input(event: InputEvent) -> void:
 	if waiting_for == "":
 		return
@@ -187,6 +203,7 @@ func _input(event: InputEvent) -> void:
 	Game.apply_settings()
 	Game.save_settings()
 
+# Restore default bindings for the page being edited and refresh the action labels.
 func _reset_keys() -> void:
 	if pad_page:
 		Game.settings.pad = Game.DEFAULT_PAD.duplicate()
@@ -197,11 +214,13 @@ func _reset_keys() -> void:
 	Game.apply_settings()
 	Game.save_settings()
 
+# Close on cancel unless a rebinding operation still owns the next input.
 func _unhandled_input(event: InputEvent) -> void:
 	if waiting_for == "" and (event.is_action_pressed("ui_cancel") or (assist_page and event.is_action_pressed("assist"))):
 		get_viewport().set_input_as_handled()
 		_close()
 
+# Notify the owning screen that this panel closed, then schedule this node for deletion.
 func _close() -> void:
 	closed.emit()
 	queue_free()

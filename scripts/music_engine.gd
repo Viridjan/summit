@@ -1,5 +1,14 @@
 extends Node
+# One persistent SiON synthesizer shared by the game and music studio.
+# Patterns contain note numbers and -1 rests; build_mml() translates them into a compact music language.
+# The synthesizer schedules notes on the audio clock instead of relying on frame timing.
+# A separate Music audio bus provides volume and a low-pass effect (muffled sound while paused).
+# Written score tempo/pitch and playback tempo/transposition are deliberately separate.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Four-channel step sequencer. SiON schedules notes on its audio clock.
+
+const Audio := preload("res://scripts/audio.gd")
 
 const EnvironmentMusic := preload("res://scripts/environment_music.gd")
 
@@ -27,6 +36,7 @@ const TRANSPOSE := -4  # every song two whole tones lower (semitones)
 const BUS := "Music"
 const MUFFLE_HZ := 600.0  # low-pass cutoff while muffled (pause menu, map)
 
+# Create the single SiON driver, prepare its voices and Music bus, then load the initial demo.
 func _ready() -> void:
 	presets = SiONVoicePresetUtil.generate_voices()
 	driver = SiONDriver.create()
@@ -44,6 +54,7 @@ func _ready() -> void:
 	set_level(float(Game.settings.music_volume))
 	load_demo()
 
+# Replace the editable patterns with the original four-channel demo.
 func load_demo() -> void:
 	title = "Demo"
 	step_length = 16
@@ -54,6 +65,7 @@ func load_demo() -> void:
 		[-1, -1, -1, -1, 48, -1, -1, -1, -1, -1, -1, -1, 48, -1, 48, -1],
 	]
 
+# Convert the chosen environment score into channel patterns, instrument choices and written tempo.
 func load_environment(key: String) -> void:
 	var score := EnvironmentMusic.arrange(key)
 	environment = score.environment
@@ -64,6 +76,7 @@ func load_environment(key: String) -> void:
 	instruments.assign(score.instruments)
 	muted.assign([false, false, false, false])
 
+# Keep a matching song playing across room changes; load and start another only when needed.
 func follow_environment(key: String) -> void:
 	var resolved := key if EnvironmentMusic.SCORES.has(key) else ""
 	if playing and environment == resolved and title != "Demo":
@@ -71,6 +84,8 @@ func follow_environment(key: String) -> void:
 	load_environment(resolved)
 	play()
 
+# Translate channel patterns to SiON Music Macro Language, applying playback tempo and note transposition.
+# MML examples: t sets tempo, o selects octave, note names select pitch, r means rest and ; ends a channel.
 func build_mml(loop: bool = true) -> String:
 	var headers := ""
 	var tracks := ""
@@ -87,26 +102,29 @@ func build_mml(loop: bool = true) -> String:
 		tracks += ";"
 	return headers + tracks
 
+# Start/restart synthesis using the current pattern data and driver volume.
 func play() -> void:
 	driver.volume = volume
 	driver.play(build_mml())
 	playing = true
 
 # The Options music volume (0..1) on the Music bus; 0 mutes it.
+# Apply the user music volume on its dedicated audio bus without changing effect volume.
 func set_level(value: float) -> void:
-	var bus := AudioServer.get_bus_index(BUS)
-	AudioServer.set_bus_mute(bus, value <= 0.0)
-	AudioServer.set_bus_volume_db(bus, linear_to_db(clampf(value, 0.001, 1.0)))
+	Audio.set_bus_volume(BUS, value)
 
+# Toggle the Music bus low-pass filter only when pause/map state actually changes.
 func set_muffled(on: bool) -> void:
 	if on != muffled:
 		muffled = on
 		AudioServer.set_bus_effect_enabled(AudioServer.get_bus_index(BUS), 0, on)
 
+# Stop synthesis and clear the transport flag used by gameplay and studio controls.
 func stop() -> void:
 	driver.stop()
 	playing = false
 
+# Stop the driver and release the manually owned preset utility during shutdown.
 func _exit_tree() -> void:
 	stop()
 	presets.free()

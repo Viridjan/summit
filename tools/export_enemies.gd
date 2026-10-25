@@ -1,5 +1,9 @@
 extends SceneTree
+# Offline export of all enemy-family/variant atlas rows and enlarged review images.
+# Reading help: docs/CODE_GUIDE.md.
+
 const EnemyArt := preload("res://scripts/enemy_art.gd")
+# Run this offline image export and quit; output images are regenerated from the authored source.
 func _initialize() -> void:
 	var img := EnemyArt.atlas()
 	img.save_png("res://assets/enemies/enemies.png")

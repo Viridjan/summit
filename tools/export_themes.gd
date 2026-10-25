@@ -1,4 +1,7 @@
 extends SceneTree
+# Offline procedural authoring of environment terrain, paintings and decorative sprites. Running it rewrites generated theme assets, so normal gameplay only loads its outputs.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Original 8px environment art, matching Summit's native terrain scale.
 const THEMES := {
 	"sand": ["d7af6c", "a67749", "f6d990", "6b7791", "343952", "efbe78"],
@@ -10,11 +13,14 @@ const THEMES := {
 	"building": ["b4a58b", "6b5a50", "e0cda5", "71858a", "354b50", "e9bb75"],
 	"forest": ["5e4a36", "3a2c22", "7fae4e", "2f5a3c", "17301f", "a8d86a"],
 }
+# Fill a clipped rectangle in the generated image; coordinates are image pixels.
 func box(img: Image, x: int, y: int, w: int, h: int, col: Color) -> void:
 	var r := Rect2i(x, y, w, h).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
 	if r.has_area(): img.fill_rect(r, col)
+# Create a transparent image of the requested pixel dimensions.
 func canvas(w: int, h: int) -> Image:
 	return Image.create(w, h, false, Image.FORMAT_RGBA8)
+# Draw one terrain tile using its exposed-edge bit mask and stable visual variant.
 func tile(theme: String, mask: int, variant := 0) -> Image:
 	var p: Array = THEMES[theme]
 	var body := Color(p[0]); var shade := Color(p[1]); var light := Color(p[2])
@@ -71,6 +77,7 @@ func tile(theme: String, mask: int, variant := 0) -> Image:
 	if mask & 4: box(img, 0, 7, 8, 1, shade.darkened(0.12))
 	if mask & 8: box(img, 0, 0, 1, 8, light.darkened(0.1))
 	return img
+# Create a layered theme painting for background or foreground use.
 func background(theme: String, foreground: bool) -> Image:
 	var p: Array = THEMES[theme]
 	var img := canvas(320, 180)
@@ -145,12 +152,14 @@ func background(theme: String, foreground: bool) -> Image:
 	background_details(img, theme, foreground, col, accent)
 	return img
 # Broad rectangular masses with two clear steps; never approximate an ellipse.
+# Add a group of pixel rectangles forming one background silhouette.
 func block_cluster(img: Image, x: int, y: int, w: int, h: int, col: Color) -> void:
 	var tier := maxi(1, h / 3)
 	var inset := maxi(1, w / 5)
 	box(img, x, y + tier, w, h - tier, col)
 	box(img, x + inset, y, w - inset * 2, tier, col)
 	box(img, x + w - inset * 2, y + tier / 2, inset, tier, col)
+# Compose a forest scenery layer with the supplied depth and palette.
 func forest_layer(img: Image, foreground: bool, col: Color, accent: Color) -> void:
 	var bark := col.lightened(0.045)
 	var leaf := col.lerp(accent,0.075)
@@ -182,6 +191,7 @@ func forest_layer(img: Image, foreground: bool, col: Color, accent: Color) -> vo
 	for i in 12:
 		block_cluster(img,i*29-10,154+i%3*3,38,24,col)
 		if foreground: box(img,i*29+2,156+i%3*3,6,1,leaf)
+# Add theme-specific scenery details without adding gameplay collision.
 func background_details(img: Image, theme: String, foreground: bool, col: Color, accent: Color) -> void:
 	var soft := col.lightened(0.055)
 	match theme:
@@ -257,6 +267,7 @@ func background_details(img: Image, theme: String, foreground: bool, col: Color,
 				if not foreground:
 					block_cluster(img,x+27,y-31,7,5,soft)
 					block_cluster(img,x+29,y-37,10,4,soft)
+# Build the theme prop sheet used for small visual accents above terrain.
 func decorations(theme: String) -> Image:
 	var img := canvas(128,16)
 	var p: Array = THEMES[theme]
@@ -343,6 +354,7 @@ func decorations(theme: String) -> Image:
 						box(img,x+7,5,2,11,shadow); box(img,x+2,4-shift,12,5,shadow)
 						box(img,x+3,5-shift,10,2,mid); box(img,x+4,5-shift,4,1,accent)
 	return img
+# Run this offline image export and quit; output images are regenerated from the authored source.
 func _initialize() -> void:
 	var contact := canvas(640,720)
 	var theme_index := 0

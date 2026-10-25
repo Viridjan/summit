@@ -1,5 +1,9 @@
 extends SceneTree
+# Offline export of special-block artwork for inspecting connected edges and different piece sizes.
+# Reading help: docs/CODE_GUIDE.md.
+
 const BlockArt := preload("res://scripts/block_art.gd")
+# Run this offline image export and quit; output images are regenerated from the authored source.
 func _initialize() -> void:
 	var sheet := Image.create(224, 288, false, Image.FORMAT_RGBA8)
 	sheet.fill(Color("1b2036"))

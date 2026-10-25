@@ -1,15 +1,21 @@
 extends SceneTree
+# Exercises the real shared SiON synth, instruments, note conversion and music-studio transport. Rendering samples checks actual sound output instead of merely checking a play flag.
+# Reading help: docs/CODE_GUIDE.md.
+
 
 var failures := 0
 
+# Record a failed expectation with its explanation so the runner can report failures and return an appropriate exit code.
 func check(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
 
+# Godot calls this SceneTree entry point at startup; begin or schedule the standalone runner workload.
 func _initialize() -> void:
 	call_deferred("run")
 
+# Execute this standalone regression workload and quit with its accumulated failure count.
 func run() -> void:
 	# Catches missing music screen and broken conversion from edited steps to audible notes.
 	if not ResourceLoader.exists("res://scripts/music_engine.gd"):
@@ -82,4 +88,4 @@ func run() -> void:
 	game.main.queue_free()
 	await process_frame
 	print("MUSIC OK" if failures == 0 else "MUSIC FAILED: %d" % failures)
-	quit(failures)
+	root.get_node("Game").quit_game(failures)

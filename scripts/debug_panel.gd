@@ -1,4 +1,11 @@
 extends Control
+# Developer panel for inspecting movement states and trying tuning values while the game runs.
+# Controls edit the active player's variables; Game.tuning remembers overrides for future players.
+# A preset is a named set of movement values stored under user://tuning/.
+# UI refreshes use no-signal setters when needed, so displaying a value does not trigger another edit.
+# The state graph is a diagnostic picture of transitions, not the code that controls movement.
+# Reading help: docs/CODE_GUIDE.md.
+
 # In-game debug panel (F1): live player state machine + variables, and movement tuning
 # with named presets. Works in normal play and in editor playtests. Owned by world.gd.
 
@@ -54,9 +61,11 @@ var filter: LineEdit
 var pause_box: Button
 var status: Label
 
+# Remember the live World whose player this panel will inspect and tune.
 func _init(w) -> void:
 	world = w
 
+# Build movement controls, preset actions and live state diagnostics, then synchronize displayed values.
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -158,6 +167,7 @@ func _ready() -> void:
 	_fill_presets()
 	_sync_spins()
 
+# Create one styled panel container for a group of debug controls.
 func _panel(at: Vector2, size_px: Vector2) -> PanelContainer:
 	var p := PanelContainer.new()
 	p.position = at
@@ -170,17 +180,20 @@ func _panel(at: Vector2, size_px: Vector2) -> PanelContainer:
 	add_child(p)
 	return p
 
+# Create a debug label with consistent size and optional wrapping.
 func _label(t: String, c: Color) -> Label:
 	var l := Label.new()
 	l.text = t
 	l.add_theme_color_override("font_color", c)
 	return l
 
+# Create an action button and connect it to the supplied function.
 func _button(t: String, cb: Callable) -> Button:
 	var b := Game.button(t, cb)
 	b.focus_mode = Control.FOCUS_NONE  # keep jump/space from pressing it
 	return b
 
+# Build grouped numeric controls from the tuning metadata instead of duplicating Player defaults.
 func _build_tunables(list: VBoxContainer) -> void:
 	var by_group := {}
 	for n in Tuning.names():
@@ -246,6 +259,7 @@ func _build_tunables(list: VBoxContainer) -> void:
 		grid.add_child(v)
 	sections.append([head, grid, Tuning.DERIVED, ""])
 
+# Show only movement settings matching the search text, preserving relevant groups.
 func _apply_filter() -> void:
 	var f := filter.text.to_lower()
 	for s in sections:
@@ -262,6 +276,7 @@ func _apply_filter() -> void:
 			s[0].text = ("- " if grid.visible else "+ ") + s[3]
 
 # ---------------- tuning ----------------
+# Record one edited tuning value and apply it to the active player.
 func _on_value(v: float, n: String) -> void:
 	var val = Tuning.coerce(n, v)
 	if val == Tuning.defaults()[n]:
@@ -271,25 +286,30 @@ func _on_value(v: float, n: String) -> void:
 	world.player.apply_tuning({n: val})
 	_mark(n)
 
+# Visually mark whether a tuning field differs from its default value.
 func _mark(n: String) -> void:
 	var changed := Game.tuning.has(n)
 	name_labels[n].add_theme_color_override("font_color", Color("ffb347") if changed else Color.WHITE)
 
+# Refresh numeric controls without emitting edit signals back into the tuning logic.
 func _sync_spins() -> void:
 	var cur := Tuning.current(Game.tuning)
 	for n in spins:
 		spins[n].set_value_no_signal(cur[n])
 		_mark(n)
 
+# Apply the current override dictionary and recompute dependent movement values.
 func _apply_all() -> void:
 	world.player.apply_tuning(Tuning.current(Game.tuning))
 	_sync_spins()
 
+# Remove tuning overrides and restore the default movement configuration.
 func _reset_all() -> void:
 	Game.tuning.clear()
 	_apply_all()
 	status.text = "Reset to code defaults (not saved)"
 
+# Refresh the preset picker from saved per-user configuration files.
 func _fill_presets() -> void:
 	preset_menu.clear()
 	for p in Tuning.list_presets():
@@ -297,6 +317,7 @@ func _fill_presets() -> void:
 		if p == Game.settings.tuning_preset:
 			preset_menu.select(preset_menu.item_count - 1)
 
+# Save the current tuning under a safe preset name and select it for future startup.
 func _save_preset() -> void:
 	var n := Game.file_safe(preset_name.text if preset_name.text.strip_edges() != "" else "default")
 	if Tuning.save_preset(n, Game.tuning):
@@ -308,6 +329,7 @@ func _save_preset() -> void:
 	preset_name.release_focus()
 	_fill_presets()
 
+# Load the selected preset, update the player and refresh the displayed fields.
 func _load_preset() -> void:
 	if preset_menu.selected < 0:
 		return
@@ -322,6 +344,7 @@ func _load_preset() -> void:
 	_apply_all()
 	status.text = "Loaded preset '%s' (active at startup)" % n
 
+# Delete the chosen user preset and update the preset selection.
 func _delete_preset() -> void:
 	if preset_menu.selected < 0:
 		return
@@ -333,15 +356,18 @@ func _delete_preset() -> void:
 	status.text = "Deleted preset '%s'" % n
 	_fill_presets()
 
+# Write current tuning as project defaults when running from a writable source checkout.
 func _export() -> void:
 	status.text = ("Exported to " + Tuning.PROJECT_FILE) if Tuning.export_project(Game.tuning) else "Export failed"
 
 # ---------------- live view ----------------
 # True while a text field here has keyboard focus, so typing doesn't move the player.
+# Report whether a text/numeric edit owns keyboard focus so World can avoid consuming movement shortcuts.
 func typing() -> bool:
 	var f := get_viewport().gui_get_focus_owner()
 	return f is LineEdit and is_ancestor_of(f)
 
+# Refresh live state, velocities, resource bars and the diagnostic transition graph.
 func _process(_dt: float) -> void:
 	var p = world.player
 	graph.player = p
@@ -360,6 +386,7 @@ func _process(_dt: float) -> void:
 		if l:
 			l.text = _fmt(p.get(n))
 
+# Format numbers and vectors compactly for the live diagnostic labels.
 static func _fmt(v) -> String:
 	if v is float:
 		return "%.2f" % v
@@ -369,6 +396,7 @@ static func _fmt(v) -> String:
 
 
 # States on a circle; edges = transitions seen this life, thicker when more frequent.
+# Read-only diagram of observed movement transitions, separate from the movement state machine.
 class StateGraph extends Control:
 	# States stacked top to bottom. Each transition is an angled arrow:
 	# downward ones run on the right, upward ones on the left, wider for longer jumps.
@@ -392,15 +420,18 @@ class StateGraph extends Control:
 		["Attack", "Attack (layer): a swing in the held direction (attack key). It runs on top of the current state: while running, dashing (a dash attack), climbing or flying. Not inside bubbles or dream blocks. Lit while swinging."],
 		["Waterfall", "Waterfall (layer): inside falling water. Pulls the player down: jumps inside it rise much less. Runs on top of the current state."],
 	]
+	# Report whether a diagnostic movement layer is active for highlighting in the state graph.
 	static func layer_on(p, layer: String) -> bool:
 		match layer:
 			"Attack": return p.attacking()
 			"Waterfall": return p.in_waterfall
 		return false
 
+	# Remember the live World whose player this panel will inspect and tune.
 	func _init() -> void:
 		tooltip_text = " "  # non-empty, so Godot asks _get_tooltip
 
+	# Explain the diagnostic element under the mouse in readable text.
 	func _get_tooltip(at: Vector2) -> String:
 		var n: int = PlayerScript.STATE_NAMES.size()
 		var i := clampi(int(at.y / (size.y / (n + LAYERS.size()))), 0, n + LAYERS.size() - 1)
@@ -416,6 +447,7 @@ class StateGraph extends Control:
 				into += player.transitions[key] if key.y == i else 0
 				out += player.transitions[key] if key.x == i else 0
 		return "%s\nEntered %d times, left %d times (this life)." % [HELP[i], into, out]
+	# Draw this helper node from its owner data; it is presentation only.
 	func _draw() -> void:
 		if player == null:
 			return

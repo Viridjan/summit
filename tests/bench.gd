@@ -1,4 +1,7 @@
 extends Node
+# Repeatable performance measurements, not a correctness test. Seeded disposable levels and scripted input make timing runs comparable; separate physics, drawing and rendering costs are reported.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Reproducible performance benchmarks on disposable in-memory levels (nothing is saved).
 #   godot --headless --path . res://tests/bench.tscn   # CPU: physics tick + _draw recording
 #   godot --path . res://tests/bench.tscn              # rendered: also whole-frame + render times
@@ -9,11 +12,14 @@ const E := preload("res://scripts/entities.gd")
 const WARM := 60
 const SEED := 12345
 
+# Scripted player input for repeatable tests; it uses the real movement implementation.
 class Bot extends "res://scripts/player.gd":
 	var hold := {}
 	var tap := {}
+	# Initialize this test helper with the same production dependencies as its parent.
 	func _init(world, spawn: Vector2) -> void:
 		super(world, spawn)
+	# Supply scripted actions instead of physical keyboard/gamepad events for deterministic movement.
 	func _read_input(dt: float) -> void:
 		in_x = int(hold.has("right")) - int(hold.has("left"))
 		in_y = int(hold.has("down")) - int(hold.has("up"))
@@ -26,42 +32,55 @@ class Bot extends "res://scripts/player.gd":
 		jump_check = hold.has("jump")
 		grab_check = hold.has("grab")
 
+# World subclass that records timing/query counters while preserving production behavior.
 class BenchWorld extends "res://scripts/world.gd":
 	var draw_us: Array = []
 	var counting := false
 	var counts := {}
-	func _build() -> void:
-		super()
-		player = Bot.new(self, spawn)
+	# Forward the keep_player transition flag to World, creating the scripted benchmark actor only on a fresh build.
+	func _build(keep_player := false) -> void:
+		super(keep_player)
+		if not keep_player:
+			player = Bot.new(self, spawn)
+	# Record the real draw request or its timing for this test helper.
 	func _draw() -> void:
 		var t := Time.get_ticks_usec()
 		super()
 		draw_us.append(Time.get_ticks_usec() - t)
+	# Accumulate query/scan counters only during a timed benchmark measurement.
 	func _count(k: String, scanned: int) -> void:
 		if counting:
 			counts[k] = counts.get(k, 0) + 1
 			counts[k + "_scan"] = counts.get(k + "_scan", 0) + scanned
+	# Count this collision/contact query before delegating to the production World implementation.
 	func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
 		_count("solid", solids.size())
 		return super(r, ignore, skip_dream)
+	# Count this collision/contact query before delegating to the production World implementation.
 	func collide_jumpthru_outside(r_at: Rect2i, r_now: Rect2i):
 		_count("jumpthru_outside", jumpthrus.size())
 		return super(r_at, r_now)
+	# Count this collision/contact query before delegating to the production World implementation.
 	func collide_jumpthru(r: Rect2i):
 		_count("jumpthru", jumpthrus.size())
 		return super(r)
+	# Count this collision/contact query before delegating to the production World implementation.
 	func collide_dream(r: Rect2i):
 		_count("dream", dreams.size())
 		return super(r)
+	# Count this collision/contact query before delegating to the production World implementation.
 	func touching_spikes(r: Rect2i) -> bool:
 		_count("spikes", spikes.size())
 		return super(r)
+	# Count this collision/contact query before delegating to the production World implementation.
 	func player_touch(p) -> void:
 		_count("touch", touchables.size())
 		super(p)
 
+# Editor subclass that measures draw cost for repeatable editing scenarios.
 class BenchEditor extends "res://scripts/editor.gd":
 	var draw_us: Array = []
+	# Record the real draw request or its timing for this test helper.
 	func _draw() -> void:
 		var t := Time.get_ticks_usec()
 		super()
@@ -75,6 +94,7 @@ var render_gpu: Array = []
 var last_frame := 0
 var vp_rid: RID
 
+# Start the test/benchmark scene, configure its disposable fixtures and run the checks.
 func _ready() -> void:
 	rendered = DisplayServer.get_name() != "headless"
 	Game.main = self
@@ -108,9 +128,10 @@ func _ready() -> void:
 		var f := FileAccess.open(out, FileAccess.WRITE)
 		f.store_string(JSON.stringify(results, "\t"))
 	print(JSON.stringify(results, "\t"))
-	get_tree().quit()
+	Game.quit_game()
 
 # ---------------- stats ----------------
+# Sort a copy of timing samples and report median, 95th percentile, maximum and sample count.
 static func stats(a: Array) -> Dictionary:
 	if a.is_empty():
 		return {}
@@ -120,6 +141,7 @@ static func stats(a: Array) -> Dictionary:
 	var med: float = s[n / 2] if n % 2 == 1 else (s[n / 2 - 1] + s[n / 2]) / 2.0
 	return {"median": med, "p95": s[clampi(ceili(0.95 * n) - 1, 0, n - 1)], "max": s[n - 1], "n": n}
 
+# Collect per-frame benchmark data while the measured scene is running.
 func _process(_dt: float) -> void:
 	var now := Time.get_ticks_usec()
 	if last_frame > 0:
@@ -129,15 +151,20 @@ func _process(_dt: float) -> void:
 		render_cpu.append(RenderingServer.viewport_get_measured_render_time_cpu(vp_rid) * 1000.0)
 		render_gpu.append(RenderingServer.viewport_get_measured_render_time_gpu(vp_rid) * 1000.0)
 
+# Clear frame/render timing samples before starting a measured interval.
+
 func _reset_frames() -> void:
 	frame_us.clear(); render_cpu.clear(); render_gpu.clear()
 	last_frame = 0
 
 # ---------------- levels ----------------
+# Fill an inclusive terrain rectangle in a disposable benchmark level.
 static func _fill(d: Dictionary, x0: int, y0: int, x1: int, y1: int) -> void:
 	for y in range(y0, y1 + 1):
 		var row: String = d.tiles[y]
 		d.tiles[y] = row.substr(0, x0) + "1".repeat(x1 - x0 + 1) + row.substr(x1 + 1)
+
+# Build a seeded benchmark scenario so repeated runs receive the same terrain and objects.
 
 static func level(sc: String) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
@@ -201,6 +228,8 @@ static func level(sc: String) -> Dictionary:
 				d.entities.append(e)
 	return d
 
+# Choose deterministic player input for this benchmark tick.
+
 static func input_for(b, tick: int) -> void:
 	b.hold = {"right": true} if tick % 240 < 120 else {"left": true}
 	if tick % 50 < 15:
@@ -212,6 +241,7 @@ static func input_for(b, tick: int) -> void:
 		b.hold.up = true
 
 # ---------------- world scenarios ----------------
+# Warm up and time a gameplay scenario, with a separate counting pass to avoid counter overhead in timings.
 func _world_bench(sc: String, runs: int, ticks: int) -> void:
 	var r := {"runs": []}
 	var pooled := {"physics_us": [], "draw_us": [], "frame_us": [], "render_cpu_us": [], "render_gpu_us": []}
@@ -282,6 +312,7 @@ func _world_bench(sc: String, runs: int, ticks: int) -> void:
 	print("%s physics med %s p95 %s | draw med %s p95 %s" % [sc, r.physics_us.median, r.physics_us.p95, r.draw_us.get("median"), r.draw_us.get("p95")])
 
 # ---------------- editor ----------------
+# Record elapsed microseconds around a benchmark operation.
 func _time(f: Callable, n: int) -> Dictionary:
 	var a: Array = []
 	for i in n:
@@ -289,6 +320,8 @@ func _time(f: Callable, n: int) -> Dictionary:
 		f.call(i)
 		a.append(Time.get_ticks_usec() - t0)
 	return stats(a)
+
+# Time a repeatable large-room editor workload independently of gameplay.
 
 func _editor_bench() -> void:
 	seed(SEED)

@@ -1,4 +1,7 @@
 extends Node
+# Rendered diagnostic scene for inspecting body/contact rectangles beside their artwork; it does not define production collision behavior.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Pickups and platforms touch exactly what they draw: renders each type alone and compares the drawn
 # pixels with touch_rect(). Needs a renderer (not --headless):
 #   godot --path . res://tools/check_hitboxes.tscn   (exit code = mismatches)
@@ -9,9 +12,11 @@ const TYPES := ["refill", "refill_two", "ability_dash", "ability_climb", "abilit
 
 class Canvas extends Node2D:
 	var e
+	# Draw the diagnostic World hitbox overlay on this canvas.
 	func _draw() -> void:
 		e.draw(self)
 
+# Begin the standalone diagnostic scene once its nodes are available.
 func _ready() -> void:
 	var bad := 0
 	for t in TYPES:

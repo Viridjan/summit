@@ -1,4 +1,13 @@
 extends Node2D
+# A playable room: joins together terrain, the player, objects, camera, sound and menus.
+# Game.level supplies the room data; Game.adv adds persistent progress in an adventure run.
+# Physics changes the simulation at 60 steps/second. Drawing only displays its current state.
+# Terrain is an 8px tile grid; entity rectangles and player positions are in world pixels.
+# Room-local coordinates start at (0,0); room_origin translates them onto the adventure map.
+# The separate entity lists speed up queries: solids block movement; touchables react to overlap.
+# See docs/CODE_GUIDE.md for the complete path from a button press to a rendered frame.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Gameplay screen: runs one level (Game.level), owns collision queries for the player.
 
 const E := preload("res://scripts/entities.gd")
@@ -16,8 +25,10 @@ const ZOOM := 4.8  # screen pixels per game pixel (4 = the original 320x180 view
 const VIEW := Vector2(1280, 720) / ZOOM
 
 # Background is behind retained terrain; parent draws entities and overlays.
+# Separate drawing node kept behind cached terrain so changing objects do not force terrain redraws.
 class Background extends Node2D:
 	var screen: Node2D
+	# Draw active and leaving-room objects, movement trails and particles over retained terrain.
 	func _draw() -> void:
 		screen._draw_background(self)
 
@@ -32,11 +43,14 @@ const HITBOX_KEY := [
 ]
 
 # On-screen HUD: energy (top left), area name (top centre), timer and deaths (top right).
+# Draws black bars around the fixed game view when the window has extra screen space.
 class Letterbox extends Control:
+	# Read the chosen level, build the playable room and interface, then prepare music and neighboring terrain.
 	func _ready() -> void:
 		set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		resized.connect(queue_redraw)
+	# Draw active and leaving-room objects, movement trails and particles over retained terrain.
 	func _draw() -> void:
 		var inner := Rect2((size - Vector2(1280, 720)) / 2.0, Vector2(1280, 720))
 		var black := Color.BLACK
@@ -46,6 +60,7 @@ class Letterbox extends Control:
 		draw_rect(Rect2(inner.end.x, inner.position.y, size.x - inner.end.x, 720), black)
 
 
+# Screen-space heads-up display: draws counters/resources without moving with the world camera.
 class Hud extends Control:
 	const M := 16.0  # margin from the screen edges
 	const BOLT := [Vector2(10, 0), Vector2(1, 16), Vector2(8, 16), Vector2(4, 28), Vector2(18, 10), Vector2(11, 10), Vector2(16, 0)]
@@ -53,6 +68,7 @@ class Hud extends Control:
 	var world
 
 	# Energy bar colour by how full the whole bar is: red when empty, yellow at half, mint when full.
+	# Choose the HUD energy-bar color from its remaining percentage.
 	static func bar_color(pct: float) -> Color:
 		pct = clampf(pct, 0.0, 1.0)
 		if pct < 0.5:
@@ -60,16 +76,19 @@ class Hud extends Control:
 		return Color("ffd84a").lerp(Color("7cf0c0"), pct * 2.0 - 1.0)
 
 	# Fill of each bar, 0..1: the base first, then one per extra block.
+	# Convert current energy into the per-block fill values used by the HUD.
 	static func block_fills(energy: float, blocks: int) -> Array:
 		var out := [clampf(energy / Adventure.BASE_ENERGY, 0.0, 1.0)]
 		for i in blocks - 1:
 			out.append(clampf((energy - Adventure.BASE_ENERGY - i * Adventure.ENERGY_PER_BLOCK) / Adventure.ENERGY_PER_BLOCK, 0.0, 1.0))
 		return out
 
+	# Draw a small HUD text item with consistent font/position settings.
 	func _text(font: Font, at: Vector2, s: String, fs: int, col := Color.WHITE) -> void:
 		draw_string_outline(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color.BLACK)
 		draw_string(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
 
+	# Draw active and leaving-room objects, movement trails and particles over retained terrain.
 	func _draw() -> void:
 		var font := get_theme_font("font", "Label")
 		var w = world
@@ -135,6 +154,11 @@ var grid := PackedByteArray()
 var bounds: Rect2i
 var ents: Array = []
 var solids: Array = []
+var solid_cols: Array = []  # fixed solids by COL-px column of the room, for collide_solid; moving ones in loose_solids
+var loose_solids: Array = []
+var jumpthru_cols: Array = []  # jump-throughs (they never move), by column
+var touch_by_type := {}  # touchables by type id ("water"...), for liquid_at
+const COL := 64
 var jumpthrus: Array = []
 var dreams: Array = []
 var spikes: Array = []
@@ -166,6 +190,8 @@ var paused := false
 var done := false
 
 var ui: CanvasLayer
+var energy_log: Array = []  # [time, cause, delta], newest first (F3 panel)
+var energy_panel: Control
 var touch: Control  # phone controls, only on touchscreens
 var hud: Hud
 var note_label: Label  # design note under the player (entities.gd Note)
@@ -184,11 +210,13 @@ var overlay: Control
 var debug_panel: Control  # F1: state machine + tuning
 var map_view: Control  # M: full-screen map (pauses)
 
+# Request fresh object and background drawing; retained terrain chunks manage their own redraws.
 func _redraw() -> void:
 	queue_redraw()
 	if background != null:
 		background.queue_redraw()
 
+# Create the background and chunked terrain nodes in the correct back-to-front order.
 func _create_tile_layer() -> void:
 	background = Background.new()
 	background.screen = self
@@ -198,6 +226,7 @@ func _create_tile_layer() -> void:
 	tile_layer.z_index = -1
 	add_child(tile_layer)
 
+# Read the chosen level, build the playable room and interface, then prepare music and neighboring terrain.
 func _ready() -> void:
 	data = Game.level
 	level_id = Game.file_safe(data.get("name", "untitled"))
@@ -253,6 +282,7 @@ func _ready() -> void:
 	_scan_floor_gaps()
 	cam_pos = _clamp_cam(player.camera_target())
 
+# Recreate the collision grid and entity objects; keep_player preserves the actor during a room transition.
 func _build(keep_player := false) -> void:
 	if tiles.is_empty():
 		tiles = data.tiles.duplicate()
@@ -266,6 +296,10 @@ func _build(keep_player := false) -> void:
 	bounds = Rect2i(0, 0, gw * T, gh * T)
 	leaving_ents = []
 	ents.clear(); solids.clear(); jumpthrus.clear(); dreams.clear(); spikes.clear(); touchables.clear(); spawn_queue.clear()
+	loose_solids.clear()
+	solid_cols.clear()
+	jumpthru_cols.clear()
+	touch_by_type.clear()
 	total_berries = 0
 	spawn = Vector2(gw * T / 2.0, 16)
 	for d in data.entities:
@@ -275,17 +309,7 @@ func _build(keep_player := false) -> void:
 		var e = E.make(self, d)
 		if e == null:
 			continue
-		ents.append(e)
-		if e.solid:
-			solids.append(e)
-			if e.dream:
-				dreams.append(e)
-		elif e.jumpthru:
-			jumpthrus.append(e)
-		else:
-			touchables.append(e)
-			if e is E.Spikes:
-				spikes.append(e)
+		_register(e)
 		if e is E.Star:
 			total_berries += 1
 	if adventure():
@@ -298,18 +322,22 @@ func _build(keep_player := false) -> void:
 		player = PlayerScript.new(self, spawn)
 
 # ---------------- adventure rooms ----------------
+# Distinguish a connected adventure run from a standalone custom level.
 func adventure() -> bool:
 	return not Game.adv.is_empty()
 
 # Star ids are per room in the adventure so equal coordinates in two rooms don't clash.
+# Prefix a persistent object ID with its room name so equal coordinates in different rooms do not collide.
 func star_key(id: String) -> String:
 	return room + ":" + id if adventure() else id
 
 # True when local point p (just outside this room) lies inside another room: the player may walk there.
+# Check whether a point beyond this room belongs to another adventure room.
 func can_exit(p: Vector2) -> bool:
 	return adventure() and Adventure.room_at(Game.adv_world, room_origin + p, room) != ""
 
 # Called after the player moves: once their centre leaves the room, switch to the room it is in.
+# After movement, enter the neighboring room containing the player centre outside these bounds.
 func _check_room_exit() -> void:
 	if not adventure() or player.dead or Rect2(bounds).has_point(player.center()):
 		return
@@ -318,12 +346,48 @@ func _check_room_exit() -> void:
 	if next != "":
 		enter_room(next)
 
-# Room changes after the player moved: walking off an edge, or a door touched this tick.
-func after_player_move() -> void:
-	for d in spawn_queue:  # entities born this tick (a Brood enemy splitting), added once nothing is iterating ents
-		var e = E.make(self, d)
-		ents.append(e)
+# File an entity in the lists collision and contact checks walk.
+# Register a placed or dynamically spawned object in the collision lists matching its flags.
+func _register(e) -> void:
+	ents.append(e)
+	if e.solid:
+		solids.append(e)
+		if e.fixed:
+			_col_add(solid_cols, e)
+		else:
+			loose_solids.append(e)
+		if e.dream:
+			dreams.append(e)
+	elif e.jumpthru:
+		jumpthrus.append(e)
+		_col_add(jumpthru_cols, e)
+	else:
 		touchables.append(e)
+		if not touch_by_type.has(e.d.t):
+			touch_by_type[e.d.t] = []
+		touch_by_type[e.d.t].append(e)
+		if e is E.Spikes:
+			spikes.append(e)
+
+# Column index: cols[i] lists the entities overlapping x in [i * COL, (i + 1) * COL); edges clamp.
+func _col_add(cols: Array, e) -> void:
+	if cols.is_empty():
+		cols.resize(gw * T / COL + 1)
+		for i in cols.size():
+			cols[i] = []
+	for c in _col_span(cols, e.rect):
+		cols[c].append(e)
+
+func _col_span(cols: Array, r: Rect2i) -> Array:
+	if cols.is_empty():
+		return []
+	return range(clampi(r.position.x / COL, 0, cols.size() - 1), clampi((r.end.x - 1) / COL, 0, cols.size() - 1) + 1)
+
+# Room changes after the player moved: walking off an edge, or a door touched this tick.
+# Apply deferred spawns and transitions after contact iteration is finished, avoiding mid-loop list changes.
+func after_player_move() -> void:
+	for d in spawn_queue:  # entities born this tick (a Brood enemy splitting, a cave-in), added once nothing is iterating ents
+		_register(E.make(self, d))
 	spawn_queue.clear()
 	_check_room_exit()
 	if pending_door != null and not player.dead:
@@ -339,14 +403,17 @@ func after_player_move() -> void:
 			player.force_move_x_timer = 0.0
 		walk_dir = 0
 
+# Queue an object dictionary for creation after the current update/contact work is safe to finish.
 func spawn_entity(d: Dictionary) -> void:
 	spawn_queue.append(d)
 
+# Remember a touched automatic door unless its arrival lock is still preventing a return trip.
 func door_hit(door) -> void:
 	if not door_block.intersects(door.rect):
 		pending_door = door
 
 # "room:id" or "id" (same level). The player keeps speed and their offset inside the doorway.
+# Resolve the linked doorway, transfer the player with a safe offset and prevent immediate teleporting back.
 func _go_door(door) -> void:
 	Game.play_sfx("door")
 	pending_door = null
@@ -376,6 +443,8 @@ func _go_door(door) -> void:
 		cam_pos = _clamp_cam(player.camera_target())  # a door can lead anywhere: don't sweep the view across the world
 	door_block = Rect2i(dr)
 
+# Swap room data while retaining player motion, update respawn/progress and reposition cached terrain.
+# One player object crosses rooms. Its velocity stays intact while local coordinates and object lists change.
 func enter_room(next: String, at = null) -> void:
 	var global: Vector2 = room_origin + player.pos
 	var old_origin := room_origin
@@ -435,6 +504,7 @@ func enter_room(next: String, at = null) -> void:
 
 # Terrain of the rooms around this one, so crossing into one shows no pop-in; entities load only on entry.
 # Built one room per frame so entering a room doesn't hitch.
+# Find neighboring room tiles needed for collision and queue their visual layers for gradual loading.
 func _load_near() -> void:
 	if not adventure():
 		return
@@ -458,6 +528,7 @@ func _load_near() -> void:
 	for n in near_layers:
 		near_layers[n].position = Vector2(rooms[n].pos * T) - room_origin
 
+# Refresh non-physics presentation and load queued neighboring artwork without building it all in one frame.
 func _process(_delta: float) -> void:
 	if is_instance_valid(Game.music_engine):
 		Game.music_engine.set_muffled(paused or map_view != null)
@@ -476,12 +547,14 @@ func _process(_delta: float) -> void:
 	l.setup(r.level.tiles, int(r.level.w), int(r.level.h), r.level.get("environment", ""))
 	near_layers[n] = l
 
+# Remember a destroyed wall or persistent boss object in the current run.
 func break_wall(id: String) -> void:
 	Game.play_sfx("crumble")
 	broken[id] = true
 	_save_run()
 
 # Falling out of the bottom edge kills unless another room is below: mark each opening as pit (red) or hole (cyan).
+# Collect exposed floor gaps once after building a room so visual warnings need not rescan every frame.
 func _scan_floor_gaps() -> void:
 	floor_gaps.clear()
 	var row: String = tiles[gh - 1]
@@ -496,6 +569,7 @@ func _scan_floor_gaps() -> void:
 			x += 1
 		floor_gaps.append([x0 * T, x * T, hole])
 
+# Display the precomputed floor-gap markers without changing their collision or danger rules.
 func _draw_floor_gaps() -> void:
 	var y := float(gh * T)
 	for g in floor_gaps:
@@ -511,6 +585,7 @@ func _draw_floor_gaps() -> void:
 			for x in range(int(g[0]), int(g[1]), 4):
 				draw_colored_polygon(PackedVector2Array([Vector2(x, y), Vector2(x + 4, y), Vector2(x + 2, y - 3)]), Color(col, 0.85))
 
+# Display a short room-design message and avoid replaying its sound on every contact step.
 func show_note(text: String) -> void:
 	if note_t <= 0 or note_label.text != "Note: " + text:
 		Game.play_sfx("note")
@@ -518,6 +593,7 @@ func show_note(text: String) -> void:
 	note_t = 0.1
 
 # Adventure energy: regenerates out of water; in water it drains, and running out there drowns the player.
+# Regenerate adventure energy outside water or drain it underwater, triggering drowning at zero.
 func update_energy(dt: float) -> void:
 	if not adventure() or player.dead:
 		return
@@ -526,41 +602,60 @@ func update_energy(dt: float) -> void:
 	elif not Adventure.water_energy(Game.adv, dt):
 		player.die(Vector2.UP)
 
+# Check whether the player centre is inside a water entity.
 func in_water() -> bool:
 	return liquid_at(player.hurt_rect(), "water")
 
 # True when r overlaps an entity of type t (water, waterfall...).
+# Test a rectangle against liquid objects of one named type, including non-collidable water.
 func liquid_at(r: Rect2i, t: String) -> bool:
-	for e in touchables:
-		if e.d.t == t and e.rect.intersects(r):
+	for e in touch_by_type.get(t, []):
+		if e.rect.intersects(r):
 			return true
 	return false
 
+# Check the persistent pickup list before showing a one-time energy-capacity upgrade.
 func energy_block_taken(key: String) -> bool:
 	return Game.adv.get("taken", []).has(key)
 
+# Increase energy capacity, record this pickup and save the updated run.
 func add_energy_block(key: String) -> void:
 	Game.play_sfx("unlock")
 	if adventure() and not energy_block_taken(key):
 		Game.adv.taken.append(key)
 		Adventure.add_energy_block(Game.adv)
+		energy_event("energy block (+capacity)", Adventure.ENERGY_PER_BLOCK)
 		_save_run()
 
-func drain_energy(amount: float) -> void:
+# Spend adventure energy for an action; standalone levels have no adventure energy cost.
+func drain_energy(amount: float, why := "jump") -> void:
 	if adventure():
+		var was: float = Game.adv.energy
 		Adventure.drain_energy(Game.adv, amount)
+		energy_event(why, Game.adv.energy - was)
 
+# Remember a one-off energy change and its cause, for the F3 energy panel (last few only).
+func energy_event(why: String, delta: float) -> void:
+	energy_log.push_front([time, why, delta])
+	if energy_log.size() > 10:
+		energy_log.pop_back()
+
+# Restore adventure energy to the capacity determined by the current block count.
 func refill_energy() -> void:
 	Game.play_sfx("refill")
 	if adventure():
+		var was: float = Game.adv.energy
 		Adventure.refill_energy(Game.adv)
+		energy_event("energy orb (refill)", Game.adv.energy - was)
 
+# Unlock an adventure move once and save progress so it remains available after a room change.
 func grant_ability(a: String) -> void:
 	Game.play_sfx("unlock")
 	if adventure() and not Game.adv.abilities.has(a):
 		Game.adv.abilities.append(a)
 		_save_run()
 
+# Copy room-owned counters and persistent object IDs into Game.adv before writing the save file.
 func _save_run() -> void:
 	if not adventure():
 		return
@@ -571,6 +666,8 @@ func _save_run() -> void:
 	Game.save_adventure()
 
 # ---------------- collision queries (used by player + entities) ----------------
+# Find a tile or solid object overlapping a pixel rectangle; outside-room cells also consult neighbors.
+# Collision reads numeric grid cells and entity rectangles, never the decorative background pixels.
 func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
 	var x0 := floori(r.position.x / float(T))
 	var x1 := floori((r.end.x - 1) / float(T))
@@ -583,12 +680,17 @@ func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
 					return "tile"
 			elif _near_solid(x, y):  # past this room's edge: the next room's rock blocks too
 				return "tile"
-	for s in solids:
+	for c in _col_span(solid_cols, r):
+		for s in solid_cols[c]:
+			if s.collidable and s != ignore and not (skip_dream and s.dream) and s.rect.intersects(r):
+				return s
+	for s in loose_solids:
 		if s.collidable and s != ignore and not (skip_dream and s.dream) and s.rect.intersects(r):
 			return s
 	return null
 
 # Tile (x, y) in this room's coordinates, outside it: rock in a neighbouring room? No room there = open.
+# Check neighboring room tiles outside local bounds, accounting for overlapping irregular room layouts.
 func _near_solid(x: int, y: int) -> bool:
 	for nr in near_rooms:
 		var rr: Rect2i = nr[0]
@@ -599,6 +701,7 @@ func _near_solid(x: int, y: int) -> bool:
 # After a room change or door arrival: if the body overlaps rock, move it to the nearest free spot (16px at most)
 # whose centre is inside a room. Back across the edge is allowed: an object the player couldn't see from there
 # (a breakable wall) then simply blocks the way.
+# Search a short distance for free space after arrival so a room or door transition cannot embed the player in rock.
 func _unstick() -> void:
 	if collide_solid(player.hitbox()) == null:
 		return
@@ -610,76 +713,89 @@ func _unstick() -> void:
 				player.pos += off
 				return
 
+# Find one-way platforms entered by a proposed movement, excluding those already overlapping the body.
 func collide_jumpthru_outside(r_at: Rect2i, r_now: Rect2i):
-	for j in jumpthrus:
-		if j.collidable and j.rect.intersects(r_at) and not j.rect.intersects(r_now):
-			return j
+	for c in _col_span(jumpthru_cols, r_at):
+		for j in jumpthru_cols[c]:
+			if j.collidable and j.rect.intersects(r_at) and not j.rect.intersects(r_now):
+				return j
 	return null
 
+# Find any enabled one-way platform overlapping the supplied pixel rectangle.
 func collide_jumpthru(r: Rect2i):
-	for j in jumpthrus:
-		if j.collidable and j.rect.intersects(r):
-			return j
+	for c in _col_span(jumpthru_cols, r):
+		for j in jumpthru_cols[c]:
+			if j.collidable and j.rect.intersects(r):
+				return j
 	return null
 
+# Find an enabled dream block overlapping the supplied rectangle.
 func collide_dream(r: Rect2i):
 	for d in dreams:
 		if d.collidable and d.rect.intersects(r):
 			return d
 	return null
 
+# Check lethal spike surfaces against the supplied damage box.
 func touching_spikes(r: Rect2i) -> bool:
 	for s in spikes:
-		if s.rect.intersects(r):
+		if s.collidable and s.rect.intersects(r):
 			return true
 	return false
 
+# Check object contacts using the appropriate interaction/damage shapes, then call each object reaction.
 func player_touch(p) -> void:
 	door_near = null
 	var hr: Rect2i = p.hurt_rect()
 	var dr: Rect2i = p.damage_rect()
+	var near := hr.merge(dr).grow(16)  # cheap reject first: no touch_rect reaches more than 8 px past its entity
 	for e in touchables:
 		if p.dead or done:
 			return
-		if e.collidable and e.touch_rect().intersects(dr if e.hurts() else hr):
+		if e.collidable and e.rect.intersects(near) and e.touch_rect().intersects(dr if e.hurts() else hr):
 			e.touch(p)
 
 # ---------------- events ----------------
+# Request brief hit-stop: physics waits while the scene can still display the impact.
 func freeze_for(t: float) -> void:
 	freeze = maxf(freeze, t)
 
+# Request camera shake if the player has enabled that visual effect.
 func shake_dir(_dir: Vector2, t: float) -> void:
 	if Game.settings.shake:
 		shake_t = maxf(shake_t, t)
 
+# Create short-lived particles leaving a surface in a given direction.
 func dust(at: Vector2, dir: Vector2, n: int, col := Color(1, 1, 1, 0.7)) -> void:
 	for i in n:
 		var v := dir.rotated(randf_range(-0.6, 0.6)) * randf_range(10, 40)
 		parts.append([at + Vector2(randf_range(-2, 2), randf_range(-2, 2)), v, randf_range(0.2, 0.4), col])
 
+# Create a radial group of colored particles for pickups and impacts.
 func burst(at: Vector2, col: Color, n: int) -> void:
 	for i in n:
 		parts.append([at, Vector2.RIGHT.rotated(TAU * i / n) * 60, 0.4, col])
 
+# Record a fading player silhouette at the current pose for fast-movement effects.
 func add_trail(p) -> void:
 	trails.append([Rect2(p.hitbox()), p.hair_color(), 0.35])
 
-# Every respawn counts as a death. In the adventure a hit also costs an energy block; losing the
-# last one refills energy (a spare block is simply spent, like Hollow Knight's hazard respawn).
+# Every hit is a death (a respawn); energy has nothing to do with it and stays as it was.
+# Count the death and start the short respawn delay.
 func on_player_death(p, _dir: Vector2) -> void:
 	deaths += 1
-	if adventure() and not Adventure.hit_energy(Game.adv):
-		Adventure.refill_energy(Game.adv)
 	respawn_timer = 0.6
 	burst(p.center(), p.hair_color(), 12)
 	shake_t = 0.3 if Game.settings.shake else 0.0
 
+# Bank a following star, persist its ID and show its collection burst.
 func collect_berry(b) -> void:
 	Game.play_sfx("pickup")
 	collected[b.id] = true
 	_save_run()
 	burst(b.pos, Color("e03c3c"), 10)
 
+# Finish the run once, store its result and open the completion panel.
 func complete() -> void:
 	if done:
 		return
@@ -693,6 +809,7 @@ func complete() -> void:
 	_show_complete()
 
 # ---------------- loop ----------------
+# Handle gameplay shortcuts only after interface controls had a chance to consume the event.
 func _unhandled_input(event: InputEvent) -> void:
 	if done or paused:
 		pass
@@ -703,6 +820,16 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif map_view == null and (event.is_action_pressed("debug") or (debug_panel != null and event.is_action_pressed("pause"))):
 		get_viewport().set_input_as_handled()
 		_toggle_debug()
+		return
+	elif event.is_action_pressed("energy_debug"):
+		get_viewport().set_input_as_handled()
+		if energy_panel != null:
+			energy_panel.queue_free()
+			energy_panel = null
+		else:
+			energy_panel = load("res://scripts/energy_panel.gd").new()
+			energy_panel.world = self
+			ui.add_child(energy_panel)
 		return
 	elif event.is_action_pressed("hitboxes"):
 		get_viewport().set_input_as_handled()
@@ -720,6 +847,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_set_paused(not paused)
 
+# Advance a fixed simulation tick unless paused; update player before entities, then particles and camera.
+# Order matters: player movement produces contacts/transitions before entities react to the new position.
+# A fixed DT preserves the original movement feel; the assist speed scales simulated time deliberately.
 func _physics_process(_delta: float) -> void:
 	if paused or done or map_view != null:
 		return
@@ -770,6 +900,7 @@ func _physics_process(_delta: float) -> void:
 	hud.queue_redraw()
 	_redraw()
 
+# Keep the camera within the room limits while handling rooms smaller than the view.
 func _clamp_cam(t: Vector2) -> Vector2:
 	var half := VIEW / 2.0
 	var b := Rect2(bounds)
@@ -778,11 +909,13 @@ func _clamp_cam(t: Vector2) -> Vector2:
 	return Vector2(x, y)
 
 # Where the view would settle with the camera in room area (as _clamp_cam does for this room).
+# Compute a stable room-relative view for drawing backgrounds during camera transitions.
 func _rest_view(view: Rect2, area: Rect2) -> Rect2:
 	var x := area.get_center().x - VIEW.x / 2 if area.size.x <= VIEW.x else clampf(view.position.x, area.position.x, area.end.x - VIEW.x)
 	var y := area.get_center().y - VIEW.y / 2 if area.size.y <= VIEW.y else clampf(view.position.y, area.position.y, area.end.y - VIEW.y)
 	return Rect2(x, y, VIEW.x, VIEW.y)
 
+# Paint room scenery, including visible portions of adjacent rooms during a transition.
 func _draw_background(ci: CanvasItem) -> void:
 	var view := Rect2(cam.position - VIEW / 2.0, VIEW)
 	Art.draw_background(ci, view, time, data.get("environment", ""), Rect2(0, 0, data.w * T, data.h * T))
@@ -796,13 +929,19 @@ func _draw_background(ci: CanvasItem) -> void:
 	for s in (snow if data.get("environment", "") == "" else []):
 		ci.draw_rect(Rect2((view.position + s).floor(), Vector2.ONE), Color(1, 1, 1, 0.35))
 
+# Draw active and leaving-room objects, movement trails and particles over retained terrain.
 func _draw() -> void:
 	# Also follow redraws requested directly by tools or benchmark subclasses.
 	background.queue_redraw()
 	var view := Rect2(cam.position - VIEW / 2.0, VIEW)
 	var cull := Rect2i(view.position.floor(), view.size.ceil()).grow(1)
 	var over: Array = []  # water and waterfalls draw over the player
+	for e in ents:  # buildings first: they are backdrops, whatever their order in the level file
+		if e is E.Building and e.vis_rect().intersects(cull):
+			e.draw(self)
 	for e in ents:
+		if e is E.Building:
+			continue
 		if e.vis_rect().intersects(cull):  # offscreen entities still update, just don't draw
 			if e.d.t == "water" or e.d.t == "waterfall":
 				over.append(e)
@@ -830,6 +969,7 @@ func _draw() -> void:
 
 # Debug overlay (Options / F1 "Hitboxes"): the rects collision and touches actually use.
 # Thin lines (-1: one screen pixel at any zoom), colours from HITBOX_KEY.
+# Overlay the actual collision and damage geometry for diagnosing gameplay contacts.
 func _draw_hitboxes(cull: Rect2i) -> void:
 	for e in ents:
 		if not e.vis_rect().intersects(cull):
@@ -859,11 +999,13 @@ func _draw_hitboxes(cull: Rect2i) -> void:
 		draw_polyline(pts, HITBOX_KEY[5][1], -1.0)
 
 # ---------------- menus ----------------
+# Schedule the existing menu overlay for deletion and drop the reference to it.
 func _clear_overlay() -> void:
 	if overlay:
 		overlay.queue_free()
 		overlay = null
 
+# Build the common darkened overlay and centred vertical container used by in-game menus.
 func _panel(title: String) -> VBoxContainer:
 	_clear_overlay()
 	overlay = ColorRect.new()
@@ -881,6 +1023,7 @@ func _panel(title: String) -> VBoxContainer:
 	box.add_child(Game.label(title, 44))
 	return box
 
+# Toggle simulation pause and construct or remove the pause menu.
 func _set_paused(v: bool) -> void:
 	Game.play_sfx("ui")
 	paused = v
@@ -905,6 +1048,7 @@ func _set_paused(v: bool) -> void:
 	box.add_child(Game.button(_exit_label(), _exit))
 	resume.grab_focus()
 
+# Create or close the movement-tuning developer panel.
 func _toggle_debug() -> void:
 	if debug_panel != null:
 		debug_panel.queue_free()
@@ -913,6 +1057,7 @@ func _toggle_debug() -> void:
 		debug_panel = DebugPanel.new(self)
 		ui.add_child(debug_panel)
 
+# Create or close the paused map overlay and hide the normal HUD while viewing it.
 func _toggle_map() -> void:
 	if map_view != null:
 		map_view.queue_free()
@@ -922,6 +1067,7 @@ func _toggle_map() -> void:
 		ui.add_child(map_view)
 	hud.visible = map_view == null
 
+# Replace the pause overlay with settings, reconnecting its close signal to the owning screen.
 func _open_options() -> void:
 	_clear_overlay()
 	overlay = OptionsPanel.new()
@@ -929,6 +1075,7 @@ func _open_options() -> void:
 	overlay.closed.connect(func(): _set_paused(true))
 
 # Assist Mode (F12): pauses the game behind its own page; closing it resumes.
+# Open the assist settings overlay while preserving the World beneath it.
 func _open_assist() -> void:
 	paused = true
 	_clear_overlay()
@@ -939,6 +1086,7 @@ func _open_assist() -> void:
 		overlay = null
 		paused = false)
 
+# Reset standalone level progress and rebuild its starting state.
 func _restart() -> void:
 	paused = false
 	done = false
@@ -952,9 +1100,11 @@ func _restart() -> void:
 	_build()
 	cam_pos = _clamp_cam(player.camera_target())
 
+# Choose a return-button label appropriate to adventure or editor playtesting.
 func _exit_label() -> String:
 	return "Back to Editor" if Game.playtest else ("Back to World Editor" if Game.adv_temp and adventure() else "Exit to Menu")
 
+# Leave gameplay through the correct menu/editor route, saving adventure progress when appropriate.
 func _exit() -> void:
 	_save_run()
 	if Game.playtest:
@@ -964,6 +1114,7 @@ func _exit() -> void:
 	else:
 		Game.goto("menu")
 
+# Build the result panel, star count and available restart/return actions.
 func _show_complete() -> void:
 	var box := _panel("Adventure Complete!" if adventure() else "Level Complete!")
 	box.add_child(Game.label("Time  %s" % Game.fmt_time(time)))
@@ -972,15 +1123,13 @@ func _show_complete() -> void:
 	if not Game.playtest and not adventure():
 		var rec := Game.get_record(level_id)
 		box.add_child(Game.label("Best  %s" % Game.fmt_time(rec.get("best_time", time)), 20))
-	var first := Game.button(_exit_label(), _exit)
+	var first: Button = Game.button("Play Again", _restart) if not adventure() else Game.button(_exit_label(), _exit)
+	box.add_child(first)
 	if not adventure():
-		first = Game.button("Play Again", _restart)
-		box.add_child(first)
 		box.add_child(Game.button(_exit_label(), _exit))
-	else:
-		box.add_child(first)
 	first.grab_focus()
 
+# Release presentation state and stop this World music when it is actually leaving the screen.
 func _exit_tree() -> void:
 	if is_instance_valid(Game.music_engine) and (not is_instance_valid(Game.main) or Game.main.get_child_count() == 0 or Game.main.get_child(Game.main.get_child_count() - 1) == self):
 		Game.music_engine.set_muffled(false)

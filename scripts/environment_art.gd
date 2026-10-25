@@ -1,14 +1,23 @@
 extends RefCounted
+# Draws themed terrain, decorations and background paintings for each room.
+# Neighboring solid tiles choose which edges and inner corners should be visible (autotiling).
+# Decorations and parallax are visual only: they never change which cells block the player.
+# Parallax means the background shifts more slowly than the camera to suggest depth.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Room-local environment graphics; collision still reads the original tile grid.
 const THEMES := ["sand", "sea", "cavern", "cavern_deep", "sky", "temple", "building", "forest"]
 static var _textures: Dictionary = {}
+# Load each named environment image once and keep it in a reusable cache.
 static func texture(environment: String, asset: String) -> Texture2D:
 	var key := environment + "/" + asset
 	if not _textures.has(key):
 		_textures[key] = load("res://assets/themes/%s/%s.png" % [environment, asset])
 	return _textures[key]
+# Probe terrain adjacency for artwork, treating outside bounds as solid for edge selection.
 static func solid(tiles: Array, w: int, h: int, x: int, y: int) -> bool:
 	return x < 0 or y < 0 or x >= w or y >= h or tiles[y].unicode_at(x) == 49
+# Choose terrain edge variants from neighboring tiles and add decorative corners/props.
 static func draw_range(ci: CanvasItem, tiles: Array, w: int, h: int, x0: int, y0: int, x1: int, y1: int, environment: String) -> void:
 	var atlas := texture(environment, "terrain")
 	var corners := texture(environment, "inner_corners")
@@ -20,6 +29,7 @@ static func draw_range(ci: CanvasItem, tiles: Array, w: int, h: int, x0: int, y0
 			var right := solid(tiles,w,h,x+1,y)
 			var down := solid(tiles,w,h,x,y+1)
 			var left := solid(tiles,w,h,x-1,y)
+			# Four bits encode exposed edges: up=1, right=2, down=4, left=8; the sum selects an atlas column.
 			var mask := (0 if up else 1) + (0 if right else 2) + (0 if down else 4) + (0 if left else 8)
 			var code := absi(hash(Vector2i(x,y)))
 			var dest := Rect2(x*8,y*8,8,8)
@@ -34,6 +44,7 @@ static func draw_range(ci: CanvasItem, tiles: Array, w: int, h: int, x0: int, y0
 				ci.draw_texture_rect_region(props,Rect2(x*8,y*8-16,16,16),Rect2((code/11%8)*16,0,16,16))
 # Where the camera is in the room (area) sets the perspective: a smooth shift, at most the 10% overscan
 # (slack) each way, so the picture never jumps. 0 when the room fits the view.
+# Derive a smooth bounded background offset from the camera position within the room.
 static func parallax_shift(view: Rect2, area: Rect2) -> Vector2:
 	var slack := view.size * 0.1
 	var t := Vector2(0.5, 0.5)
@@ -41,6 +52,7 @@ static func parallax_shift(view: Rect2, area: Rect2) -> Vector2:
 	if area.size.y > view.size.y: t.y = clampf((view.position.y - area.position.y) / (area.size.y - view.size.y), 0, 1)
 	return (Vector2(0.5, 0.5) - t) * 2 * slack
 # clip (optional): draw only inside it, e.g. one room's part of the screen during a room transition.
+# Paint background and foreground layers at different parallax speeds, optionally clipped to a room.
 static func draw_background(ci: CanvasItem, view: Rect2, environment: String, area := Rect2(), clip := Rect2()) -> void:
 	# Room-sized paintings that stay with the camera; only the perspective shifts (parallax_shift).
 	var extent := view.size * 1.2
@@ -48,6 +60,7 @@ static func draw_background(ci: CanvasItem, view: Rect2, environment: String, ar
 	var shift := parallax_shift(view, area)
 	_painting(ci, texture(environment, "background"), Rect2(view.position + (shift * 0.4 - slack).floor(), extent), clip)
 	_painting(ci, texture(environment, "foreground"), Rect2(view.position + (shift - slack).floor(), extent), clip)
+# Draw all or only the visible part of a scaled painting, mapping clipping back into source-image pixels.
 static func _painting(ci: CanvasItem, tex: Texture2D, dest: Rect2, clip: Rect2) -> void:
 	if not clip.has_area():
 		ci.draw_texture_rect(tex, dest, false)

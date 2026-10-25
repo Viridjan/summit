@@ -1,4 +1,12 @@
 extends Node
+# Application-wide service, registered as the Game autoload in project.godot.
+# An autoload is created before the main scene and remains available while screens are replaced.
+# Owns shared settings, input bindings, audio services, level files and adventure progress.
+# The actual player movement and room simulation belong to player.gd and world.gd.
+# res:// means this project; user:// means Godot's per-user save-data directory.
+# Dictionaries are named groups of values (like a small record); JSON stores portable room data.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Autoload "Game": settings, controls, level files, save progress, screen switching.
 
 const Entities := preload("res://scripts/entities.gd")
@@ -6,7 +14,8 @@ const Tuning := preload("res://scripts/tuning.gd")
 const Adventure := preload("res://scripts/adventure.gd")
 const LEVEL_DIR := "user://levels/"
 const ADVENTURE_DIR := "res://adventure/"
-const WORLDS_DIR := "res://worlds/"  # extra worlds: one folder each with world.json + rooms (docs/WORLD_DESIGN.md)
+const WORLDS_DIR := "res://worlds/"  # worlds: one folder each with world.json + rooms (docs/WORLD_DESIGN.md)
+const STORY_WORLD := WORLDS_DIR + "story/world.json"  # the default world
 const SETTINGS_PATH := "user://settings.cfg"
 const SAVE_PATH := "user://save.cfg"
 var save_path := SAVE_PATH  # tests point this at a scratch file
@@ -14,12 +23,44 @@ var save_path := SAVE_PATH  # tests point this at a scratch file
 # Art caches live in static vars, which outlive the scene tree: drop them on quit so Godot
 # doesn't report the cached textures as leaked at exit.
 # They're loaded at runtime here: a const preload in this autoload would itself keep a script alive at exit.
+# Clear generated art caches during shutdown so textures do not remain referenced after the scene tree exits.
+# Quit cleanly: stop every sound first and give the audio thread a few frames to release the playbacks,
+# otherwise they are still alive at exit (and reported as leaked).
+func quit_game(code := 0) -> void:
+	await get_tree().create_timer(0.1, true, false, true).timeout  # a just-started sound isn't registered by the audio thread yet: stopping it now would be ignored
+	if is_instance_valid(sfx):
+		for v in sfx.voices:
+			v.stop()
+	if is_instance_valid(music_engine):
+		music_engine.stop()
+		music_engine.queue_free()  # the synth's stream lives as long as its driver node
+	await get_tree().create_timer(0.25, true, false, true).timeout  # real time: the audio thread runs on its own clock
+	get_tree().quit(code)
+
+# Closing the window goes through quit_game too (auto_accept_quit is off, see _ready).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		quit_game()
+
+static func is_ps_pad(name: String) -> bool:
+	var n := name.to_lower()
+	return n.contains("playstation") or n.contains("dualshock") or n.contains("dualsense") or n.contains("sony") or n.contains("ps4") or n.contains("ps5")
+
+# Track the device in use, for button prompts.
+func _input(event: InputEvent) -> void:
+	if event is InputEventJoypadButton or (event is InputEventJoypadMotion and absf(event.axis_value) > 0.5):
+		using_pad = true
+		pad_ps = is_ps_pad(Input.get_joy_name(event.device))
+	elif event is InputEventKey or event is InputEventScreenTouch:
+		using_pad = false
+
 func _exit_tree() -> void:
 	load("res://scripts/ape_art.gd")._textures.clear()
 	load("res://scripts/environment_art.gd")._textures.clear()
 	load("res://scripts/block_art.gd")._textures.clear()
 	load("res://scripts/character_art.gd")._textures.clear()
 	load("res://scripts/art.gd")._hair_cache.clear()
+	load("res://scripts/button_art.gd")._cache.clear()
 	load("res://scripts/enemy_art.gd")._texture = null
 
 # Default controls (Celeste keyboard layout + gamepad).
@@ -27,7 +68,7 @@ const DEFAULT_KEYS := {
 	"left": KEY_LEFT, "right": KEY_RIGHT, "up": KEY_UP, "down": KEY_DOWN,
 	"jump": KEY_C, "dash": KEY_X, "grab": KEY_Z, "pause": KEY_ESCAPE,
 	"map": KEY_M, "debug": KEY_F1, "attack": KEY_A, "hitboxes": KEY_F2,
-	"assist": KEY_F12, "interact": KEY_S,
+	"assist": KEY_F12, "interact": KEY_S, "energy_debug": KEY_F3,
 }
 const ALT_KEYS := {"jump": KEY_SPACE, "dash": KEY_SHIFT, "grab": KEY_V}
 # Gamepad: one button per action (JOY_BUTTON_*), PAD_AXIS + axis for a trigger, -1 = none.
@@ -37,7 +78,7 @@ const DEFAULT_PAD := {
 	"up": JOY_BUTTON_DPAD_UP, "down": JOY_BUTTON_DPAD_DOWN,
 	"jump": JOY_BUTTON_A, "attack": JOY_BUTTON_X, "dash": JOY_BUTTON_RIGHT_SHOULDER,
 	"grab": PAD_AXIS + JOY_AXIS_TRIGGER_RIGHT, "pause": JOY_BUTTON_START,
-	"map": JOY_BUTTON_BACK, "debug": -1, "hitboxes": -1, "assist": -1, "interact": JOY_BUTTON_B,
+	"map": JOY_BUTTON_BACK, "debug": -1, "hitboxes": -1, "assist": -1, "energy_debug": -1, "interact": JOY_BUTTON_B,
 }
 const PAD_NAMES := {
 	JOY_BUTTON_A: "A / Cross", JOY_BUTTON_B: "B / Circle", JOY_BUTTON_X: "X / Square", JOY_BUTTON_Y: "Y / Triangle",
@@ -48,12 +89,13 @@ const PAD_NAMES := {
 	JOY_BUTTON_DPAD_UP: "D-pad Up", JOY_BUTTON_DPAD_DOWN: "D-pad Down",
 	JOY_BUTTON_DPAD_LEFT: "D-pad Left", JOY_BUTTON_DPAD_RIGHT: "D-pad Right", -1: "-",
 }
-const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "interact", "pause", "map", "debug", "hitboxes", "assist"]
+const ACTION_NAMES := ["left", "right", "up", "down", "jump", "dash", "grab", "attack", "interact", "pause", "map", "debug", "hitboxes", "assist", "energy_debug"]
 
 var main: Node
 var sfx: Node
 var music_engine: Node
 var theme: Theme
+# Settings affect the application; adv below is different data: progress belonging to one adventure run.
 var settings := {
 	"sfx_volume": 1.0, "music_volume": 1.0,
 	"fullscreen": false, "vsync": true, "shake": true, "hitboxes": false,
@@ -62,7 +104,7 @@ var settings := {
 	"pad": DEFAULT_PAD.duplicate(),
 	"tuning_preset": "",  # active movement preset in user://tuning/ ("" = project defaults)
 	"tuning_open_groups": [],  # debug panel variable groups left open (all collapsed by default)
-	"world": "",  # adventure world picked in the menu ("" = the main one in ADVENTURE_DIR)
+	"world": "",  # adventure world picked in the menu ("" = the story world)
 }
 # Player tuning overrides (var name -> value), applied to every new Player. See tuning.gd.
 var tuning: Dictionary = {}
@@ -75,29 +117,37 @@ var editor_file := ""  # fixed file name when editing a world room (renaming mus
 var editor_return := "menu"  # screen the editor's Menu button goes back to
 var adv: Dictionary = {}  # active adventure run (see start_adventure); empty outside it
 var adv_world: Dictionary = {}  # Adventure.load_world() result for that run
+var using_pad := false  # last input came from a gamepad: button prompts show pad buttons, else keys
+var pad_ps := false  # that pad is a PlayStation one: prompts show its symbols
 var adv_temp := false  # world-editor playtest: never saved, exits back to the world editor
-var world_path := ADVENTURE_DIR + "world.json"  # tests point this at a scratch file
+var world_path := STORY_WORLD  # tests point this at a scratch file
 
+# Prepare user storage, shared interface styling, saved options, tuning and the chosen adventure world.
 func _ready() -> void:
+	get_tree().auto_accept_quit = false  # the window's close button calls quit_game()
 	DirAccess.make_dir_recursive_absolute(LEVEL_DIR)
 	theme = Theme.new()
 	theme.default_font_size = 26
 	_load_settings()
 	apply_settings()
 	tuning = Tuning.startup(settings.tuning_preset)
+	get_sfx()  # synthesizes every effect (~190 ms) during the boot splash, not on the first click or scream
 	if settings.world != "" and FileAccess.file_exists(settings.world):
 		world_path = settings.world
 
 
+# Return the shared effects service, creating it if needed; all callers then reuse the same voice pool.
 func get_sfx() -> Node:
 	if not is_instance_valid(sfx):
 		sfx = load("res://scripts/sfx.gd").new()
 		add_child(sfx)
 	return sfx
 
+# Forward a named effect and pitch to the shared sound service.
 func play_sfx(key: String, pitch: float = 1.0) -> void:
 	get_sfx().play(key, pitch)
 
+# Return the single shared synth; SiON uses global state and must not have competing drivers.
 func get_music_engine() -> Node:
 	# SiON has global synthesis state. Keep one driver for the application lifetime.
 	if not is_instance_valid(music_engine):
@@ -106,6 +156,8 @@ func get_music_engine() -> Node:
 	return music_engine
 
 # ---------- screens ----------
+# Schedule the old screen for deletion and create the requested screen under the main root.
+# queue_free() deletes at the end of the frame; a newly added screen can briefly coexist with the old one.
 func goto(screen: String) -> void:
 	if is_instance_valid(music_engine):
 		music_engine.stop()
@@ -113,6 +165,7 @@ func goto(screen: String) -> void:
 		c.queue_free()
 	main.add_child(load("res://scripts/%s.gd" % screen).new())
 
+# Start a standalone level, recording whether it came from the editor so returning goes to the right place.
 func play(level_data: Dictionary, from_editor: bool) -> void:
 	adv = {}
 	level = level_data
@@ -120,6 +173,7 @@ func play(level_data: Dictionary, from_editor: bool) -> void:
 	goto("world")
 
 # ---------- settings ----------
+# Merge saved options with defaults, including defaults for actions added after the file was written.
 func _load_settings() -> void:
 	var cf := ConfigFile.new()
 	if cf.load(SETTINGS_PATH) != OK:
@@ -134,12 +188,14 @@ func _load_settings() -> void:
 		if not settings.pad.has(a):
 			settings.pad[a] = DEFAULT_PAD[a]
 
+# Write options and input bindings to the per-user configuration file.
 func save_settings() -> void:
 	var cf := ConfigFile.new()
 	for k in settings:
 		cf.set_value("s", k, settings[k])
 	cf.save(SETTINGS_PATH)
 
+# Apply volume, window mode, synchronization and input bindings from the current settings dictionary.
 func apply_settings() -> void:
 	if is_instance_valid(sfx):
 		sfx.set_volume(float(settings.sfx_volume))
@@ -151,6 +207,7 @@ func apply_settings() -> void:
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if settings.vsync else DisplayServer.VSYNC_DISABLED)
 	_apply_input()
 
+# Rebuild Godot actions from saved keys/pad bindings, with analog movement and menu navigation fallbacks.
 func _apply_input() -> void:
 	for a in ACTION_NAMES:
 		if InputMap.has_action(a):
@@ -190,13 +247,16 @@ func _apply_input() -> void:
 		jb.button_index = m[3]
 		InputMap.action_add_event(m[0], jb)
 
+# Convert a saved keyboard code into a label readable in menus.
 func key_name(action: String) -> String:
 	return OS.get_keycode_string(settings.keys[action])
 
+# Convert a saved gamepad button/trigger code into a label readable in menus.
 func pad_name(action: String) -> String:
 	return PAD_NAMES.get(settings.pad[action], "Button %d" % settings.pad[action])
 
 # ---------- levels ----------
+# Create an editable blank room dictionary with solid edges/floor and a starting spawn marker.
 static func new_level(level_name := "untitled", w := 40, h := 23) -> Dictionary:
 	var rows := []
 	for y in h:
@@ -207,6 +267,7 @@ static func new_level(level_name := "untitled", w := 40, h := 23) -> Dictionary:
 	return {"name": level_name, "w": w, "h": h, "tiles": rows,
 		"entities": [{"t": "spawn", "x": 16, "y": (h - 3) * 8}]}
 
+# List user-created level names in sorted order without their JSON file extension.
 func list_levels() -> PackedStringArray:
 	var out := PackedStringArray()
 	for f in DirAccess.get_files_at(LEVEL_DIR):
@@ -215,12 +276,14 @@ func list_levels() -> PackedStringArray:
 	out.sort()
 	return out
 
+# Replace unsuitable filename characters and provide a fallback for an empty name.
 static func file_safe(s: String) -> String:
 	var out := ""
 	for ch in s.strip_edges():
 		out += ch if (ch.is_valid_identifier() or ch.is_valid_int() or ch == "-") else "_"
 	return out if out != "" else "untitled"
 
+# Write a level dictionary as JSON and return its filename, or an empty string when writing fails.
 func save_level(d: Dictionary, dir := LEVEL_DIR, fname := "") -> String:
 	if fname == "":
 		fname = file_safe(d.name)
@@ -230,6 +293,7 @@ func save_level(d: Dictionary, dir := LEVEL_DIR, fname := "") -> String:
 	f.store_string(JSON.stringify(d, "\t"))
 	return fname
 
+# Read and parse a level file, then reject malformed data before gameplay constructs objects from it.
 func load_level(fname: String, dir := LEVEL_DIR) -> Dictionary:
 	var f := FileAccess.open(dir + fname + ".json", FileAccess.READ)
 	if f == null:
@@ -243,6 +307,7 @@ const MAX_LEVEL_SIZE := 400  # tiles; matches the editor's size spinners
 const MAX_COORD := 1 << 20  # pixels; far beyond any level, keeps int() conversion sane
 
 # Normalizes a parsed level in place and returns it, or {} if anything is malformed.
+# Validate room dimensions, tile rows and object fields; return an empty dictionary on invalid input.
 static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 	if not d is Dictionary:
 		return {}
@@ -292,35 +357,42 @@ static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 	return d
 
 # NaN fails both comparisons, so this also rejects non-finite values.
+# Check that a value is a finite number inside the supplied bounds before converting it.
 static func _is_num(v, lo: float, hi: float) -> bool:
 	return (v is float or v is int) and v >= lo and v <= hi
 
+# Check that a dimension is a valid whole tile count within the editor limits.
 static func _is_whole(v) -> bool:
 	return _is_num(v, 1, MAX_LEVEL_SIZE) and v == floor(v)
 
+# Delete the named custom level file from user storage.
 func delete_level(fname: String) -> void:
 	DirAccess.remove_absolute(LEVEL_DIR + fname + ".json")
 
 # ---------- adventure ----------
 # One run per world; saved under [adventure] in the save file. Empty adv = not in the adventure.
+# Check whether the selected world has stored adventure progress.
 func has_adventure_save() -> bool:
 	var cf := ConfigFile.new()
 	cf.load(save_path)
 	return cf.has_section_key("adventure", _run_key())
 
 # "run" for the main world (older saves keep working), "run_<folder>" for the others.
+# Build the configuration key used to keep progress for different worlds separate.
 func _run_key() -> String:
 	return "run" if world_path == ADVENTURE_DIR + "world.json" else "run_" + world_path.get_base_dir().get_file()
 
-# [[title, world.json path]]: the main world first, then every folder in WORLDS_DIR.
+# [[title, world.json path]]: the story world first, then Summit, then the other folders in WORLDS_DIR.
+# Discover playable world manifests for the menu selection list.
 func world_list() -> Array:
-	var out := [["Summit", ADVENTURE_DIR + "world.json"]]
+	var out := [["Story", STORY_WORLD], ["Summit", ADVENTURE_DIR + "world.json"]]
 	for d in DirAccess.get_directories_at(WORLDS_DIR):
 		var p := WORLDS_DIR + d + "/world.json"
-		if FileAccess.file_exists(p):
+		if p != STORY_WORLD and FileAccess.file_exists(p):
 			out.append([d.capitalize(), p])
 	return out
 
+# Load the selected world and either create fresh progress or restore its saved run.
 func start_adventure(fresh: bool) -> void:
 	adv_world = Adventure.load_world(world_path)
 	if adv_world.rooms.is_empty():
@@ -333,6 +405,7 @@ func start_adventure(fresh: bool) -> void:
 	_enter_adventure()
 
 # World-editor playtest: a throwaway run from any room that is never saved.
+# Start a temporary adventure from a chosen room without overwriting normal player progress.
 func playtest_adventure(world: Dictionary, room: String) -> void:
 	adv_world = world
 	adv = Adventure.new_run(world)
@@ -341,11 +414,13 @@ func playtest_adventure(world: Dictionary, room: String) -> void:
 	adv_temp = true
 	_enter_adventure()
 
+# Select the restored room level and open the World screen.
 func _enter_adventure() -> void:
 	level = adv_world.rooms[adv.room].level
 	playtest = false
 	goto("world")
 
+# Write current adventure progress, except for temporary world-editor playtests.
 func save_adventure() -> void:
 	if adv.is_empty() or adv_temp:
 		return
@@ -355,15 +430,18 @@ func save_adventure() -> void:
 	cf.save(save_path)
 
 # Outside the adventure every move is available.
+# Check adventure unlocks; standalone levels allow the normal moves without pickups.
 func has_ability(a: String) -> bool:
 	return adv.is_empty() or adv.abilities.has(a)
 
 # ---------- progress ----------
+# Read the stored best result for one custom level.
 func get_record(fname: String) -> Dictionary:
 	var cf := ConfigFile.new()
 	cf.load(save_path)
 	return cf.get_value("levels", fname, {})
 
+# Merge a completed level result with previous best time, deaths and collectible counts.
 func submit_record(fname: String, time: float, deaths: int, berries: int, total: int) -> void:
 	var cf := ConfigFile.new()
 	cf.load(save_path)
@@ -376,11 +454,13 @@ func submit_record(fname: String, time: float, deaths: int, berries: int, total:
 	cf.set_value("levels", fname, r)
 	cf.save(save_path)
 
+# Format elapsed seconds as a compact result display.
 static func fmt_time(t: float) -> String:
 	var m := int(t) / 60
 	return "%d:%02d.%03d" % [m, int(t) % 60, int(t * 1000) % 1000]
 
 # ---------- small UI helpers shared by menus ----------
+# Create a consistently styled button and connect its sound and activation callback.
 func button(text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
@@ -388,6 +468,7 @@ func button(text: String, cb: Callable) -> Button:
 	b.pressed.connect(cb)
 	return b
 
+# Create a consistently styled text label with the requested font size.
 func label(text: String, size := 26) -> Label:
 	var l := Label.new()
 	l.text = text

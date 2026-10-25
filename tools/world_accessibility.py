@@ -1,3 +1,6 @@
+# Read-only tile connectivity analysis for a world folder. Its flood-fill approximates body clearance and hazards; it does not simulate the complete Godot movement controller. Reports regions, door links and inaccessible areas.
+# Reading help: docs/CODE_GUIDE.md.
+
 """Repeatable static accessibility audit; no Godot or third-party packages required.
 
 This is a tile-connectivity test, NOT a physics solver. Movement has no gravity,
@@ -22,6 +25,7 @@ MODELS = (
 )
 
 
+# Convert an entity pixel rectangle into the set of terrain cells it covers.
 def entity_cells(entity):
     """Tile footprint, rounded outward (deliberately conservative for hazards)."""
     for y in range(math.floor(entity["y"] / TILE), math.ceil((entity["y"] + entity.get("h", TILE)) / TILE)):
@@ -30,6 +34,7 @@ def entity_cells(entity):
 
 
 class Audit:
+    # Build the in-memory room/grid representation used by this tool from its input data.
     def __init__(self, directory):
         self.directory = Path(directory)
         manifest = json.loads((self.directory / "world.json").read_text())
@@ -106,14 +111,17 @@ class Audit:
                 self.doors.setdefault(cell, set()).update(destination)
         self.masks = {}
 
+    # Convert two-dimensional tile coordinates into the index of a flat grid array.
     def index(self, x, y):
         return (y - self.top) * self.width + x - self.left
 
+    # Convert a doorway rectangle to cells in the combined world grid.
     def _door_cells(self, name, entity):
         pos, level = self.rooms[name]
         return [self.index(pos[0] + x, pos[1] + y) for x, y in entity_cells(entity)
                 if 0 <= x < level["w"] and 0 <= y < level["h"]]
 
+    # Search reachable movement/connectivity states from the supplied starts; the model is an approximation.
     def explore(self, name, body_rows, exclusions):
         blocked = (1 if "acid" in exclusions else 0) | (2 if "spikes" in exclusions else 0)
         free = bytearray(bool(t and not (h & blocked)) for t, h in zip(self.terrain, self.hazard))
@@ -176,6 +184,7 @@ class Audit:
             "rooms": rooms,
         }
 
+    # Run the configured analysis and assemble its structured results.
     def run(self):
         return {
             "world": str(self.directory), "start_room": self.start, "spawn_tile": self.spawn,
@@ -184,6 +193,7 @@ class Audit:
             "models": {name: self.explore(name, rows, hazards) for name, rows, hazards in MODELS},
         }
 
+    # Export a visual map of the computed regions and hazards for manual inspection.
     def write_map(self, path):
         """Dependency-free PNG. Green: standing; blue: crouch-only; amber: hazard flag; red: disconnected."""
         raw = bytearray()
@@ -197,11 +207,13 @@ class Audit:
                              (94, 159, 224) if self.masks["hazards"][i] else
                              (236, 174, 64) if self.masks["topology"][i] else (227, 83, 100))
                 raw.extend(color)
+        # Write one binary image-format chunk with its length and checksum for the generated map artifact.
         def chunk(kind, data):
             return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
         path.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", self.width, self.height, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
 
 
+# Convert the structured accessibility report into readable Markdown.
 def markdown(report):
     lines = ["# World accessibility audit", "", f"World: `{report['world']}`. Start: `{report['start_room']}`. "
              f"{report['room_count']} rooms; {report['door_count']} door entities.", "",
@@ -227,6 +239,7 @@ def markdown(report):
     return "\n".join(lines) + "\n"
 
 
+# Parse command-line options, compute accessibility and write the requested report/map artifacts.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("world", nargs="?", default="worlds/story", type=Path)

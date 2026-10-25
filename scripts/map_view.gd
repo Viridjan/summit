@@ -1,4 +1,10 @@
 extends Control
+# Paused map overlay, with a second tab showing the enemy catalogue.
+# Each room becomes a tiny texture with one image pixel per terrain tile.
+# The map combines room-local terrain with each room's world offset, then fits it onto the screen.
+# zoom and pan affect the map view only; they do not move the player or rearrange rooms.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Full-screen map (M). The world pauses while it is open. Owned by world.gd.
 # One level: that level. Adventure: every visited room on the world grid (unvisited rooms stay hidden).
 # Wheel zooms, drag pans, M / Esc closes. Tabs: Map (always first) and Monsters; L1 / R1 or Q / E switch.
@@ -19,6 +25,7 @@ var tab := 0
 var tab_buttons: Array[Button] = []
 var bestiary: Control
 
+# Remember the World being viewed; the map reads it without advancing gameplay.
 func _init(w) -> void:
 	world = w
 
@@ -26,6 +33,7 @@ const OPEN := Color("3a5494")  # the player fits here (inside an open 2x2)
 const NARROW := Color(0.23, 0.33, 0.58, 0.4)  # open but too tight to enter
 const EDGE := Color("8d97d6")  # rock bordering open space
 
+# Build a one-pixel-per-tile thumbnail showing open space, narrow passages and bordering rock.
 static func terrain(lvl: Dictionary) -> ImageTexture:
 	# 1 pixel per tile, built once per opening (nothing changes while paused). Rock stays transparent (room colour).
 	var w: int = lvl.w
@@ -55,6 +63,7 @@ static func terrain(lvl: Dictionary) -> ImageTexture:
 				img.set_pixel(x, y, EDGE)
 	return ImageTexture.create_from_image(img)
 
+# Prepare visited-room thumbnails and create the Map/Monsters tab controls.
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if world.adventure():
@@ -90,6 +99,7 @@ func _ready() -> void:
 		tab_buttons.append(b)
 	_set_tab(0)
 
+# Select a tab and synchronize buttons, content visibility and drawing.
 func _set_tab(i: int) -> void:
 	tab = i
 	for j in tab_buttons.size():
@@ -98,6 +108,7 @@ func _set_tab(i: int) -> void:
 	bestiary.visible = i == 1
 	queue_redraw()
 
+# Switch tabs with keyboard or gamepad shoulder buttons and consume the handled event.
 func _input(event: InputEvent) -> void:
 	var step := 0
 	if event is InputEventJoypadButton and event.pressed:
@@ -109,12 +120,14 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 # world pixels -> screen
+# Build the transform from world pixels to fitted, zoomed and panned map-screen coordinates.
 func _xform() -> Transform2D:
 	var avail := size - Vector2(80, 120)
 	var s := minf(avail.x / area.size.x, avail.y / area.size.y) * zoom
 	var origin := (size - area.size * s) / 2.0 + Vector2(0, 20) + pan - area.position * s
 	return Transform2D(0, Vector2(s, s), 0, origin)
 
+# Draw the current tab background and, for Map, terrain, objects, player and camera markers.
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color(0.02, 0.02, 0.06, 0.92))
 	var font := get_theme_default_font()
@@ -158,6 +171,7 @@ func _draw() -> void:
 	draw_string(font, Vector2(24, 36), title, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, Color.WHITE)
 	draw_string(font, Vector2(24, size.y - 18), "Wheel zoom · drag pan · " + hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.7, 0.7, 0.8))
 
+# Zoom around the mouse position or drag to pan the map without moving the game camera.
 func _gui_input(event: InputEvent) -> void:
 	if tab != 0:
 		return

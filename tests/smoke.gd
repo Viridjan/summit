@@ -1,13 +1,19 @@
 extends Node
+# Integration smoke run: opens real screens and exercises UI/editor workflows for a few frames each. Optional screenshots require a rendered display; headless mode still checks behavior.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Smoke test: open each screen for a few frames, all entity types placed.
 # Run: godot --headless --path . res://tests/smoke.tscn
 
 const E := preload("res://scripts/entities.gd")
 
+# Scripted player input for repeatable tests; it uses the real movement implementation.
 class Bot extends "res://scripts/player.gd":  # scripted input, for the character close-ups
 	var hold := {}
+	# Initialize this test helper with the same production dependencies as its parent.
 	func _init(world, spawn: Vector2) -> void:
 		super(world, spawn)
+	# Supply scripted actions instead of physical keyboard/gamepad events for deterministic movement.
 	func _read_input(dt: float) -> void:
 		in_x = int(hold.has("right")) - int(hold.has("left"))
 		in_y = int(hold.has("down")) - int(hold.has("up"))
@@ -17,6 +23,7 @@ class Bot extends "res://scripts/player.gd":  # scripted input, for the characte
 		jump_check = false
 		grab_check = hold.has("grab")
 
+# Start the test/benchmark scene, configure its disposable fixtures and run the checks.
 func _ready() -> void:
 	Game.main = self
 	var d := Game.new_level("smoke", 60, 30)
@@ -243,14 +250,20 @@ func _ready() -> void:
 	Game.settings.invincible = previous_invincible
 	Game.adv = {}
 	Game.adv_world = {}
+	for oid in Node.get_orphan_node_ids():  # a node built but never added to the tree leaks (with its text and art)
+		var o = instance_from_id(oid)
+		_fail("orphan node left behind: %s %s" % [o, o.text if o is Button else ""])
 	print("SMOKE OK" if failures == 0 else "SMOKE FAILED: %d" % failures)
-	get_tree().quit(failures)
+	Game.quit_game(failures)
 
 var failures := 0
 
+# Count and report an integration failure rather than silently continuing as if it passed.
 func _fail(msg: String) -> void:
 	failures += 1
 	push_error(msg)
+
+# Inject a press/release pair and wait for the scene to process it, like a real button action.
 
 func _press(action: String) -> void:
 	var ev := InputEventAction.new()
@@ -263,10 +276,12 @@ func _press(action: String) -> void:
 	Input.parse_input_event(ev)
 	await _frames(2)
 
+# Wait for a known number of physics frames so real scene callbacks can run before the next assertion.
 func _frames(n: int) -> void:
 	for i in n:
 		await get_tree().physics_frame
 
+# Save a close-up around the player for visual review, clipping the image region to viewport bounds.
 func _shot_player(name: String, world) -> void:
 	var dir := OS.get_environment("SHOT_DIR")
 	if dir != "" and DisplayServer.get_name() != "headless":
@@ -275,6 +290,7 @@ func _shot_player(name: String, world) -> void:
 		var c := Vector2i((world.player.pos - world.cam.position) * world.ZOOM + Vector2(img.get_size()) / 2)
 		img.get_region(Rect2i(c - Vector2i(100, 110), Vector2i(200, 140)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))).save_png(dir.path_join(name + ".png"))
 
+# Optionally save a viewport screenshot when a rendered display and screenshot output directory are available.
 func _shot(name: String) -> void:
 	var dir := OS.get_environment("SHOT_DIR")
 	if dir != "" and DisplayServer.get_name() != "headless":

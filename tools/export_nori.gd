@@ -1,9 +1,13 @@
 extends SceneTree
+# Offline artwork export: reads the same procedural character source used at runtime and writes reference atlas/stride PNGs. Running it updates assets; it does not change movement or collision.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Rebuild the reference atlas after editing the code-authored character art:
 # godot --headless --path . --script res://tools/export_nori.gd
 
 const CharacterArt := preload("res://scripts/character_art.gd")
 
+# Run this offline image export and quit; output images are regenerated from the authored source.
 func _initialize() -> void:
 	var image := CharacterArt.build_atlas()
 	var result := image.save_png("res://assets/nori/nori.png")

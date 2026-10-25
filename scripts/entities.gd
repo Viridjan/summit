@@ -1,4 +1,14 @@
 extends RefCounted
+# Registry and behavior of the objects placed in level JSON: hazards, pickups, platforms and enemies.
+# TYPES connects each saved type ID to an editor label, sizing flag, color and implementation class.
+# Each object is a small RefCounted object. World calls its setup/update/touch/draw methods explicitly;
+# these are project conventions, unlike Godot's automatic _ready/_process callbacks.
+# A class inherits common behavior with 'extends'; super.method() calls the parent's implementation.
+# Editor previews pass w=null: setup and drawing must work without a running player or room.
+# Positions and rectangles use pixels; timer values and update(dt) use seconds.
+# The image may extend outside rect: movement, damage, interaction and visibility use separate boxes.
+# Reading help: docs/CODE_GUIDE.md.
+
 # All level objects. Each is a small class; TYPES drives the editor palette.
 # Behaviour follows Celeste's entities, simplified where noted.
 
@@ -6,10 +16,13 @@ const T := 8
 const Art := preload("res://scripts/art.gd")
 const EnemyArt := preload("res://scripts/enemy_art.gd")
 const BlockArt := preload("res://scripts/block_art.gd")
+const ButtonArt := preload("res://scripts/button_art.gd")
 
 # The entity registry: the one place a type is declared.
 # type id (saved in level JSON) -> [editor label, sized (drag a rect in the editor), palette color, class]
 # See docs/ADDING_ENTITIES.md before adding a type.
+# Registry row layout: [editor label, can drag to size, representative color, implementation class].
+# JSON uses the string key (for example refill), not the class name.
 const TYPES := {
 	"spawn": ["Spawn", false, Color("ffffff"), SpawnMarker],
 	"spikes_up": ["Spikes ^", false, Color("dddddd"), Spikes],
@@ -103,6 +116,7 @@ const TYPES := {
 
 const DOOR_TYPES := ["door", "house_door"]  # objects that link to another door by "id"/"to"
 
+# Construct the implementation class for a saved type ID; unknown types return no object.
 static func make(w, d: Dictionary):
 	var entry = TYPES.get(d.t)
 	return entry[3].new(w, d) if entry != null else null
@@ -119,11 +133,14 @@ static func make(w, d: Dictionary):
 #   Player hooks entities may call: die, bounce, super_bounce, side_bounce, explode_launch,
 #   use_refill, refill_dash, refill_stamina, boost, start_star_fly, set_lift_speed.
 #   World hooks: freeze_for, shake_dir, burst, dust, collect_berry, complete.
+# Base contract shared by all placed objects. Flags choose which World collision lists contain it.
+# These objects are not Nodes: World must call update(), touch() and draw() itself.
 class Ent extends RefCounted:
 	var w
 	var d: Dictionary
 	var rect: Rect2i
 	var solid := false
+	var fixed := false  # a solid whose rect never changes after setup: World files it by column for fast collision
 	var jumpthru := false
 	var dream := false
 	var collidable := true
@@ -133,31 +150,45 @@ class Ent extends RefCounted:
 	var shake := Vector2.ZERO
 	var respawn := 0.0
 
+	# Attach the owner/data and initial pixel rectangle, then call the subclass setup hook.
 	func _init(world, data: Dictionary) -> void:
 		w = world
 		d = data
 		rect = Rect2i(int(data.x), int(data.y), int(data.get("w", T)), int(data.get("h", T)))
 		setup()
 
+	# Optional construction hook; subclasses set dimensions, flags and their own starting state here.
 	func setup() -> void: pass
+	# Report whether Ent currently participates in lethal contact checks.
 	func hurts() -> bool: return false  # true: touching it is damage, checked against the player's smaller damage_rect()
+	# Expose active circular hazards; an empty list means no circular damage is active.
 	func damage_circles() -> Array: return []  # [centre, radius] for exact round hazards
+	# Expose active rectangular damage regions to the hitbox overlay and shared inspection tools.
 	func damage_boxes() -> Array: return []  # extra boxes that hurt (projectiles, waves), for the hitbox overlay
+	# Optional per-physics-step hook. The base object has no timed behavior.
 	func update(_dt: float) -> void: pass
+	# Optional drawing hook. The base object has no artwork of its own.
 	func draw(_ci: CanvasItem) -> void: pass
+	# Optional contact hook. The base object does nothing; interactive subclasses override it.
 	func touch(_p) -> void: pass  # player hurtbox overlaps touch_rect()
+	# Return the pixel rectangle that activates Ent contact, separate from artwork bounds.
 	func touch_rect() -> Rect2i: return rect
 	# Conservative draw bounds, used only to skip offscreen drawing (sprites overhang
 	# rect by up to 8px: jump-through rails, spring pads, shake, bobbing).
+	# Return conservative visible bounds including Ent effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i: return rect.grow(8)
 
+	# Return this object rectangle centre in room-local pixels.
 	func center() -> Vector2:
 		return Vector2(rect.position) + Vector2(rect.size) / 2.0
 
+	# Ask Player whether it is supported by or clinging to this solid before the solid moves.
 	func player_riding() -> bool:
-		return w != null and w.player != null and not w.player.dead and w.player.is_riding(self)
+		# cheap reject first: riding means touching within a pixel
+		return w != null and w.player != null and not w.player.dead and rect.grow(2).intersects(w.player.hitbox()) and w.player.is_riding(self)
 
 	# Monocle Solid.Move: push or carry the player
+	# Move a solid while carrying riders and pushing the player clear of its path.
 	func move_by(amount: Vector2, dt: float) -> void:
 		rem += amount
 		var mx := roundi(rem.x)
@@ -171,6 +202,7 @@ class Ent extends RefCounted:
 		if my != 0:
 			_move_axis(false, my, p, riding)
 
+	# Resolve one axis of a moving solid in whole pixels so pushing and squashing stay deterministic.
 	func _move_axis(h: bool, m: int, p, riding: bool) -> void:
 		if h:
 			rect.position.x += m
@@ -194,22 +226,29 @@ class Ent extends RefCounted:
 				p.move_v_exact(m)
 		collidable = true
 
+	# Advance the visual shaking offset while active, otherwise restore its resting offset.
 	func shaken(dt: float, active: bool) -> void:
 		shake = Vector2(randi_range(-1, 1), randi_range(-1, 1)) if active and dt > 0 else Vector2.ZERO
 
 
+# Editor marker for the player feet position; World extracts it instead of spawning a gameplay object.
 class SpawnMarker extends Ent:
+	# Initialize SpawnMarker dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		collidable = false
+	# Draw SpawnMarker at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if w == null:  # editor only
 			ci.draw_rect(Rect2(rect.position.x, rect.position.y - 3, 8, 11), Color(1, 1, 1, 0.6), false, 1.0)
 			ci.draw_rect(Rect2(rect.position.x + 2, rect.position.y - 1, 4, 3), Color("ac3232"))
 
 
+# Directional lethal surface. The contact rules consider approach direction instead of killing through its back.
 class Spikes extends Ent:
 	var dir := "up"
+	# Report whether Spikes currently participates in lethal contact checks.
 	func hurts() -> bool: return true
+	# Initialize Spikes dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		dir = (d.t as String).substr(7)
 		var p := rect.position
@@ -218,6 +257,7 @@ class Spikes extends Ent:
 			"down": rect = Rect2i(p.x, p.y, 8, 3)
 			"left": rect = Rect2i(p.x + 5, p.y, 3, 8)
 			"right": rect = Rect2i(p.x, p.y, 3, 8)
+	# Apply Spikes interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		match dir:
 			"up":
@@ -232,7 +272,10 @@ class Spikes extends Ent:
 			"right":
 				if p.speed.x <= 0:
 					p.die(Vector2.RIGHT)
+	# Draw Spikes at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
+		if not collidable:
+			return
 		var c := Color("e8e8f0")
 		var r := Rect2(rect)
 		var pts: PackedVector2Array
@@ -259,9 +302,11 @@ class Spikes extends Ent:
 					ci.draw_colored_polygon(pts, c)
 
 
+# Reusable launcher. Its orientation chooses an upward or sideways bounce and a short pressed animation.
 class Spring extends Ent:
 	var dir := "up"
 	var anim := 0.0
+	# Initialize Spring dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		dir = (d.t as String).substr(7)
 		var p := rect.position
@@ -269,8 +314,10 @@ class Spring extends Ent:
 			"up": rect = Rect2i(p.x, p.y + 4, 8, 4)
 			"left": rect = Rect2i(p.x + 4, p.y, 4, 8)
 			"right": rect = Rect2i(p.x, p.y, 4, 8)
+	# Advance Spring timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		anim = maxf(0, anim - dt)
+	# Apply Spring interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if p.state == p.ST_DREAM_DASH:
 			return
@@ -285,6 +332,7 @@ class Spring extends Ent:
 			"right":
 				if p.side_bounce(1, rect.end.x, center().y):
 					anim = 0.2
+	# Draw Spring at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		var ext := 3.0 if anim > 0 else 0.0
@@ -302,21 +350,26 @@ class Spring extends Ent:
 				ci.draw_rect(Rect2(r.end.x - 2 + ext, r.position.y, 2, 8), pad)
 
 
+# Dash/stamina crystal. It disappears temporarily only when the player actually benefits from using it.
 class Refill extends Ent:
 	var two := false
 	var t := 0.0
+	# Initialize Refill dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		two = d.t == "refill_two"
 		rect = Rect2i(rect.position.x, rect.position.y, 8, 8)  # exactly the sprite
+	# Advance Refill timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
 			respawn -= dt
+	# Apply Refill interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if respawn <= 0 and p.use_refill(two):
 			w.freeze_for(0.05)
 			w.burst(center(), Color("ff6def") if two else Color("4ee05a"), 8)
 			respawn = 2.5
+	# Draw Refill at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c := center() + Vector2(0, round(sin(t * 3) * 1.0))
 		if respawn > 0:
@@ -327,20 +380,25 @@ class Refill extends Ent:
 		ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -3), c + Vector2(1.5, 0), c + Vector2(0, 1), c + Vector2(-1.5, 0)]), col.lightened(0.6))
 
 
+# Adventure pickup that unlocks one movement ability for the rest of the run.
 class AbilityOrb extends Ent:  # adventure pickup that unlocks a move for the rest of the run
 	var ability := ""
 	var t := 0.0
+	# Initialize AbilityOrb dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		ability = d.t.trim_prefix("ability_")
 		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 		collidable = w == null or not Game.has_ability(ability)  # already owned (or not in the adventure): gone
+	# Advance AbilityOrb timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
+	# Apply AbilityOrb interaction when World reports an overlapping player.
 	func touch(_p) -> void:
 		collidable = false
 		w.grant_ability(ability)
 		w.freeze_for(0.1)
 		w.burst(center(), TYPES[d.t][2], 14)
+	# Draw AbilityOrb at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -352,21 +410,26 @@ class AbilityOrb extends Ent:  # adventure pickup that unlocks a move for the re
 		ci.draw_rect(Rect2(c + Vector2(-1, -2), Vector2(2, 2)), Color.WHITE)
 
 
+# One-time adventure upgrade that increases energy capacity and records its room-specific pickup ID.
 class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
 	var key := ""
 	var t := 0.0
+	# Initialize EnergyBlock dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 		if w != null:
 			key = "%s:%d:%d" % [w.room, int(d.x), int(d.y)]
 		collidable = w == null or (w.adventure() and not w.energy_block_taken(key))
+	# Advance EnergyBlock timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
+	# Apply EnergyBlock interaction when World reports an overlapping player.
 	func touch(_p) -> void:
 		collidable = false
 		w.add_energy_block(key)
 		w.freeze_for(0.1)
 		w.burst(center(), TYPES[d.t][2], 14)
+	# Draw EnergyBlock at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -378,19 +441,24 @@ class EnergyBlock extends Ent:  # adventure: +1 energy block, once per run
 
 
 # ponytail: refills all energy; collectibles that restore part of it come with the energy design
+# Reusable adventure energy refill with a delay before it becomes available again.
 class EnergyOrb extends Ent:  # adventure: refills energy, back after 2.5 s
 	var t := 0.0
+	# Initialize EnergyOrb dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 1, rect.position.y - 1, 10, 10)  # exactly the sprite
+	# Advance EnergyOrb timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
 			respawn -= dt
+	# Apply EnergyOrb interaction when World reports an overlapping player.
 	func touch(_p) -> void:
 		if respawn <= 0 and w.adventure() and Game.adv.energy < Game.Adventure.energy_max(Game.adv):
 			w.refill_energy()
 			respawn = 2.5
 			w.burst(center(), TYPES[d.t][2], 8)
+	# Draw EnergyOrb at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var col: Color = TYPES[d.t][2] if respawn <= 0 else Color(0.3, 0.3, 0.4)
 		var c := center() + Vector2(0, round(sin(t * 3)))
@@ -398,11 +466,15 @@ class EnergyOrb extends Ent:  # adventure: refills energy, back after 2.5 s
 		ci.draw_arc(c, 5, 0, TAU, 12, Color(col, 0.6), 1.0)
 
 
+# Automatic linked doorway. It queues travel for World to resolve after contact iteration.
 class Door extends Ent:  # touching it moves the player to the linked door (World.door_hit)
+	# Queue doorway travel for after the current player-contact loop.
 	func touch(_p) -> void:
 		w.door_hit(self)
+	# Return conservative visible bounds including Door effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return rect.grow(8) if w != null else Rect2i(rect.position - Vector2i(160, 24), rect.size + Vector2i(320, 32))
+	# Draw Door at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c := Color("40e0ff")
 		ci.draw_rect(Rect2(rect), Color(c, 0.12 if w != null else 0.25))
@@ -415,15 +487,20 @@ class Door extends Ent:  # touching it moves the player to the linked door (Worl
 
 # A visible wooden door. Standing at it shows a prompt; pressing interact takes the player through
 # (World.after_player_move), to the door its "to" names, like the Door object.
+# Visible building entrance. Nearby contact shows a prompt; World requires the Interact action to travel.
 class HouseDoor extends Door:
 	var near := 0.0  # > 0 while the player stands at it (drawn prompt)
+	# Mark this entrance as nearby; World waits for grounded Interact input before using it.
 	func touch(_p) -> void:
 		w.door_near = self
 		near = 0.1
+	# Advance HouseDoor timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		near = maxf(0.0, near - dt)
+	# Return conservative visible bounds including HouseDoor effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return rect.grow(12) if w != null else super.vis_rect()
+	# Draw HouseDoor at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		var frame := Color("4e3422")
@@ -434,16 +511,19 @@ class HouseDoor extends Door:
 			ci.draw_rect(Rect2(x, inner.position.y, 1, inner.size.y), Color("6e4628"))
 		ci.draw_rect(Rect2(inner.position.x, inner.position.y + 2, inner.size.x, 1), Color("6e4628"))
 		ci.draw_rect(Rect2(inner.end.x - 3, inner.position.y + inner.size.y / 2.0, 2, 2), Color("e0c060"))
-		if near > 0:  # prompt: an arrow above the door
-			var c := Vector2(r.position.x + r.size.x / 2.0, r.position.y - 6 + roundf(sin(Time.get_ticks_msec() / 150.0)))
-			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-3, 2), c + Vector2(3, 2), c + Vector2(0, -2)]), Color.WHITE)
+		if near > 0:  # prompt: the interact button (key or pad, whichever was used last), bobbing above the door
+			var tex: Texture2D = ButtonArt.prompt("interact")
+			ci.draw_texture(tex, Vector2(roundf(r.position.x + (r.size.x - tex.get_width()) / 2.0), r.position.y - tex.get_height() - 2 + roundf(sin(Time.get_ticks_msec() / 150.0))))
 		if w == null and d.has("to"):
 			super.draw(ci)  # editor: the link label
 
 
+# Non-solid backdrop scenery; it is drawn behind the separately placed doorway.
 class Building extends Ent:  # backdrop only: never collides; put it before its door so the door draws on top
+	# Initialize Building dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		collidable = false
+	# Draw Building at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		if d.get("style", "house") == "tower":
@@ -465,11 +545,15 @@ class Building extends Ent:  # backdrop only: never collides; put it before its 
 			ci.draw_rect(Rect2(r.position.x, y, r.size.x, 1), Color("7a2a1e"))
 
 
+# Harmless labelled stand-in used to plan objects that do not yet have a full implementation.
 class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, harmless
+	# Initialize Placeholder dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		collidable = false
+	# Return conservative visible bounds including Placeholder effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return rect.grow(2) if w != null else Rect2i(rect.position - Vector2i(80, 12), rect.size + Vector2i(160, 14))
+	# Draw Placeholder at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c: Color = TYPES[d.t][2]
 		ci.draw_rect(Rect2(rect), Color(c, 0.3))
@@ -480,7 +564,10 @@ class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, ha
 
 # Small, deterministic enemies: hit() integrates with the existing melee sector.
 # A type id is "enemy_<family>" or "enemy_<family>_<variant>"; each family registers only the variants that suit it.
+# Common enemy health, variants, safe movement, detection, contact damage and projectile handling.
+# Variants adjust this shared behavior so each family does not reimplement shields, venom and health.
 class CombatEnemy extends Ent:
+	# Report whether CombatEnemy currently participates in lethal contact checks.
 	func hurts() -> bool: return true
 	# variant -> [speed, warning, recovery multipliers, body scale]
 	const VARIANTS := {
@@ -507,10 +594,13 @@ class CombatEnemy extends Ent:
 	var puddles: Array = []  # venom: [Rect2i, seconds left]
 	var drip := 0.5
 
+	# Extract the known variant suffix from an enemy type ID, or return empty for the base family.
+
 	static func variant_of(t: String) -> String:
 		var v := t.get_slice("_", t.get_slice_count("_") - 1)
 		return v if v != "" and VARIANTS.has(v) and t.count("_") >= 2 else ""
 
+	# Read variant modifiers before setup so subclass health/speed calculations use the selected variant.
 	func _init(world, data: Dictionary) -> void:
 		super(world, data)
 		if d.get("brood_child", false):
@@ -521,6 +611,7 @@ class CombatEnemy extends Ent:
 			rect.size = Vector2i((Vector2(rect.size) * scale).round()).max(Vector2i(4, 4))
 			home = Vector2(rect.position)
 
+	# Initialize CombatEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect.size = Vector2i(8, 12)
 		variant = variant_of(d.t)
@@ -533,6 +624,7 @@ class CombatEnemy extends Ent:
 		facing = -1 if int(d.get("facing", -1)) < 0 else 1
 		home = Vector2(rect.position)
 
+	# Adjust a family baseline health value using the selected enemy variant.
 	func variant_hp(base: int) -> int:
 		match variant:
 			"swift": return maxi(1, base - 1)
@@ -541,9 +633,11 @@ class CombatEnemy extends Ent:
 			"shielded": return base + 1
 		return base
 
+	# Return the base family ID so variants can share art and common metadata.
 	func family() -> String:
 		return d.t.trim_suffix("_" + variant) if variant != "" else d.t
 
+	# Advance shared enemy timing and determine whether this living enemy should run its behavior.
 	func active(dt: float) -> bool:
 		clock += dt
 		flash = maxf(0, flash - dt)
@@ -552,9 +646,11 @@ class CombatEnemy extends Ent:
 			update_venom(dt)
 		return on
 
+	# Check whether a proposed enemy rectangle overlaps terrain or a solid object.
 	func blocked(at: Rect2i) -> bool:
 		return w != null and (not w.bounds.encloses(at) or w.collide_solid(at) != null)
 
+	# Accumulate fractional motion and move whole pixels, checking obstructions and player contact along the way.
 	func move_enemy(delta: Vector2) -> bool:
 		rem += delta
 		var amount := Vector2i(roundi(rem.x), roundi(rem.y))
@@ -576,6 +672,7 @@ class CombatEnemy extends Ent:
 
 	# Floor walkers: the next pixel ahead has floor under it and no acid or spikes, so a walker stops with
 	# its box's leading edge exactly over the edge of the ground.
+	# Check that the leading foot has support and will not step into nearby spikes or acid.
 	func safe_step() -> bool:
 		var foot := Rect2i(rect.end.x if facing > 0 else rect.position.x - 1, rect.end.y, 1, 2)
 		if w.collide_solid(foot) == null:
@@ -587,6 +684,7 @@ class CombatEnemy extends Ent:
 
 	# Walks px forward one pixel at a time; true when a wall or the edge of the floor stops it.
 	var walk_rem := 0.0
+	# Advance the floor patrol one pixel at a time, stopping before a wall or unsafe ledge.
 	func walk(px: float) -> bool:
 		walk_rem += px
 		var n := int(walk_rem)
@@ -600,10 +698,12 @@ class CombatEnemy extends Ent:
 			contact()
 		return false
 
+	# Test player contact immediately after enemy movement so a fast step cannot skip the damage check.
 	func contact() -> void:
 		if w != null and w.player != null and not w.player.dead and rect.intersects(w.player.damage_rect()):
 			touch(w.player)
 
+	# Check player distance and probe the line of sight for intervening solid terrain.
 	func sees_player(distance: float) -> bool:
 		if w == null or w.player == null or w.player.dead:
 			return false
@@ -619,13 +719,16 @@ class CombatEnemy extends Ent:
 		return true
 
 	# Shielded: the side it faces. A hit from there (and not from above) is blocked.
+	# Return the facing direction used to distinguish the shielded front from an exposed rear.
 	func front() -> Vector2:
 		return Vector2(facing, 0)
 
+	# Check whether the incoming attack reaches the protected shield side rather than an exposed angle.
 	func blocks(p) -> bool:
 		var to: Vector2 = p.center() - center()
 		return variant == "shielded" and to.dot(front()) > 0 and to.y > -rect.size.y * 0.5
 
+	# Apply one sword hit, respecting shield/flash protection and triggering death or variant reactions.
 	func hit(p) -> void:
 		if not collidable or flash > 0:
 			return
@@ -646,6 +749,7 @@ class CombatEnemy extends Ent:
 				if variant == "brood":
 					brood()
 
+	# Queue smaller child enemies after a brood-variant parent is defeated.
 	func brood() -> void:
 		var kid_t: String = family() + "_swift" if TYPES.has(family() + "_swift") else family()
 		for side in [-1, 1]:
@@ -654,6 +758,7 @@ class CombatEnemy extends Ent:
 			w.spawn_entity({"t": kid_t, "x": at.x, "y": at.y, "facing": side, "brood_child": true})
 
 	# Venom: every so often a puddle on the surface below; the player dies on touching one.
+	# Compute the small surface region where this venom variant leaves a harmful trail.
 	func venom_spot() -> Rect2i:
 		var below := Rect2i(rect.position.x, rect.end.y, rect.size.x, 1)
 		for i in 96:
@@ -662,6 +767,7 @@ class CombatEnemy extends Ent:
 			below.position.y += 1
 		return Rect2i()
 
+	# Update venom puddle lifetime/spawning and check their damage contacts.
 	func update_venom(dt: float) -> void:
 		drip -= dt
 		if drip <= 0:
@@ -676,19 +782,23 @@ class CombatEnemy extends Ent:
 			elif puddles[i][0].intersects(w.player.damage_rect()):
 				w.player.die(Vector2.UP)
 
+	# Apply CombatEnemy interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if collidable:
 			p.die((p.center() - center()).normalized())
 
+	# Return conservative visible bounds including CombatEnemy effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return body_rect()
 
+	# Return the drawn body bounds separately from surrounding venom or projectile effects.
 	func body_rect() -> Rect2i:  # the sprite overhangs the body; venom puddles lie around it
 		var area := rect.grow(8 + int(rect.size.x * 0.5))
 		for pd in puddles:
 			area = area.merge(pd[0])
 		return area
 
+	# Draw CombatEnemy at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		for pd in puddles:
 			ci.draw_rect(Rect2(pd[0]), Color(0.55, 0.85, 0.3, minf(1.0, pd[1]) * 0.45))  # fades as it dries
@@ -703,6 +813,7 @@ class CombatEnemy extends Ent:
 			ci.draw_rect(Rect2(center().x - 1, rect.position.y - 4, 2, 2), Color("f8d89b"))
 
 	# Projectiles owned by an enemy: [position, velocity, seconds left]. They stop at rock, can be swatted by the attack.
+	# Advance owned projectiles with gravity/lifetime limits and resolve wall/player impacts.
 	func update_shots(shots: Array, dt: float, gravity: float) -> void:
 		for i in range(shots.size() - 1, -1, -1):
 			var shot: Array = shots[i]
@@ -728,6 +839,7 @@ class CombatEnemy extends Ent:
 					break
 			if remove: shots.remove_at(i)
 
+	# Expose active rectangular damage regions to the hitbox overlay and shared inspection tools.
 	func damage_boxes() -> Array:  # projectiles (as update_shots tests them) and venom puddles
 		var out := []
 		for shots in [get("bones"), get("orbs")]:
@@ -738,6 +850,7 @@ class CombatEnemy extends Ent:
 			out.append(pd[0])
 		return out
 
+	# Combine projectile bounds with the body so off-screen culling does not hide visible shots.
 	func shots_rect(shots: Array) -> Rect2i:
 		var area := body_rect()
 		for shot in shots:
@@ -745,8 +858,10 @@ class CombatEnemy extends Ent:
 		return area
 
 
+# Ceiling ambusher: warn, dive, rest on impact and return toward its starting height.
 class SkreeEnemy extends CombatEnemy:
 	var vertical_speed := 0.0
+	# Advance SkreeEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		match phase:
@@ -779,11 +894,14 @@ class SkreeEnemy extends CombatEnemy:
 					phase = "idle"  # something solid above: wait here instead of pushing forever
 
 
+# Flying ambusher: aim one swoop toward the detected player, then fly back to its perch.
 class BatEnemy extends CombatEnemy:
 	var velocity := Vector2.ZERO
+	# Initialize BatEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(10, 8)
+	# Advance BatEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		if phase == "idle":
@@ -813,13 +931,16 @@ class BatEnemy extends CombatEnemy:
 				phase = "idle"
 
 
+# Ground patrol that warns and throws bone projectiles toward a visible player.
 class SkeletonEnemy extends CombatEnemy:
 	var gravity_speed := 0.0
 	var bones: Array = []  # owned projectiles (see update_shots)
+	# Initialize SkeletonEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		hp = variant_hp(3)
 		timer = 1.0 * recovery_multiplier
+	# Advance SkeletonEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		update_bones(dt)
@@ -849,13 +970,17 @@ class SkeletonEnemy extends CombatEnemy:
 			facing *= -1
 		elif walk(14 * speed_multiplier * dt):
 			facing *= -1
+	# Apply one sword hit, respecting shield/flash protection and triggering death or variant reactions.
 	func hit(p) -> void:
 		super.hit(p)
 		if not collidable: bones.clear()
+	# Advance the skeleton bone projectiles through the common projectile update helper.
 	func update_bones(dt: float) -> void:
 		update_shots(bones, dt, 150)
+	# Return conservative visible bounds including SkeletonEnemy effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return shots_rect(bones)
+	# Draw SkeletonEnemy at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		super.draw(ci)
 		for bone in bones:
@@ -865,27 +990,33 @@ class SkeletonEnemy extends CombatEnemy:
 			ci.draw_rect(Rect2(at + Vector2(1, -1), Vector2(1, 3)), Color("d8d8bd"))
 
 
+# Surface-following crawler; its travel direction and support probes rotate around corners.
 class ThornmiteEnemy extends CombatEnemy:
 	# Crawls around terrain like a mite on a rock: floors, walls and ceilings, turning at every corner.
 	var dir := Vector2i.RIGHT  # crawl direction
 	var down := Vector2i.DOWN  # the surface it clings to
 	var crawl := 0.0  # sub-pixel movement owed
 	var fall := 0.0
+	# Initialize ThornmiteEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(8, 8)
 		hp = variant_hp(2)
 		dir = Vector2i(facing, 0)
+	# Determine whether this crawler has a supporting surface to continue following.
 	func clings() -> bool:
 		return blocked(Rect2i(rect.position + down, rect.size))
+	# Return the facing direction used to distinguish the shielded front from an exposed rear.
 	func front() -> Vector2:
 		return Vector2(dir)
+	# Compute the small surface region where this venom variant leaves a harmful trail.
 	func venom_spot() -> Rect2i:  # a trail on whatever surface it clings to
 		match down:
 			Vector2i.UP: return Rect2i(rect.position.x, rect.position.y, rect.size.x, 4)
 			Vector2i.LEFT: return Rect2i(rect.position.x, rect.position.y, 4, rect.size.y)
 			Vector2i.RIGHT: return Rect2i(rect.end.x - 4, rect.position.y, 4, rect.size.y)
 		return Rect2i(rect.position.x, rect.end.y - 4, rect.size.x, 4)
+	# Advance ThornmiteEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		if not clings():
@@ -916,6 +1047,7 @@ class ThornmiteEnemy extends CombatEnemy:
 					rect = around
 					contact()
 		facing = 1 if down.x * dir.y - down.y * dir.x < 0 else -1
+	# Draw ThornmiteEnemy at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if down == Vector2i.DOWN or not collidable:
 			super.draw(ci)
@@ -927,13 +1059,16 @@ class ThornmiteEnemy extends CombatEnemy:
 		ci.draw_set_transform(Vector2.ZERO)
 
 
+# Ground charger: face the player, warn, charge and pause before the next attack.
 class HornbackEnemy extends CombatEnemy:
 	# Walks its floor. A player at its height in sight gets a warning, then a fast charge that stops at walls and ledges.
 	var gravity_speed := 0.0
+	# Initialize HornbackEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(12, 10)
 		hp = variant_hp(3)
+	# Advance HornbackEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		gravity_speed = minf(140, gravity_speed + 400 * dt)
@@ -964,13 +1099,16 @@ class HornbackEnemy extends CombatEnemy:
 					facing *= -1
 
 
+# Ground walker that turns at walls and unsafe floor edges instead of wandering into hazards.
 class MosstrotEnemy extends CombatEnemy:
 	# Jungle wanderer: walks back and forth on its floor, turning at walls and ledges. Never chases; touching it still hurts.
 	var gravity_speed := 0.0
+	# Initialize MosstrotEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(12, 8)
 		hp = variant_hp(2)
+	# Advance MosstrotEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		gravity_speed = minf(140, gravity_speed + 400 * dt)
@@ -979,14 +1117,17 @@ class MosstrotEnemy extends CombatEnemy:
 			facing *= -1
 
 
+# Floating enemy with a repeating motion around its home position.
 class FuzzbobEnemy extends CombatEnemy:
 	# Drifts diagonally and bounces off anything solid; it never chases, its path is the threat.
 	var velocity := Vector2.ZERO
+	# Initialize FuzzbobEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(10, 10)
 		hp = variant_hp(2)
 		velocity = Vector2(facing, 1).normalized() * 30 * speed_multiplier
+	# Advance FuzzbobEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		if move_enemy(Vector2(velocity.x * dt, 0)): velocity.x = -velocity.x
@@ -994,13 +1135,16 @@ class FuzzbobEnemy extends CombatEnemy:
 		facing = 1 if velocity.x > 0 else -1
 
 
+# Heavy ground enemy that telegraphs a leap, lands and recovers before attacking again.
 class CragjawEnemy extends CombatEnemy:
 	# Big brute: plods along its floor; a player in reach gets a warning, then a leap that slams down near them.
 	var velocity := Vector2.ZERO
+	# Initialize CragjawEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(20, 20)
 		hp = variant_hp(6)
+	# Advance CragjawEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		velocity.y = minf(220, velocity.y + 400 * dt)
@@ -1036,15 +1180,18 @@ class CragjawEnemy extends CombatEnemy:
 					facing *= -1
 
 
+# Floating ranged enemy that launches orb projectiles after a visible warning.
 class MurksporeEnemy extends CombatEnemy:
 	# Big hovering spore: keeps its distance, bobs, and spits a three-orb spread at a visible player.
 	var orbs: Array = []  # owned projectiles (see update_shots)
 	var bob := 0.0
+	# Initialize MurksporeEnemy dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		rect.size = Vector2i(16, 14)
 		hp = variant_hp(5)
 		timer = 1.0
+	# Advance MurksporeEnemy timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if not active(dt): return
 		update_orbs(dt)
@@ -1069,13 +1216,17 @@ class MurksporeEnemy extends CombatEnemy:
 			Game.play_sfx("enemy_alert")
 			phase = "windup"
 			timer = 0.5 * warning_multiplier
+	# Advance this enemy orb projectiles through the shared projectile update helper.
 	func update_orbs(dt: float) -> void:
 		update_shots(orbs, dt, 0)
+	# Apply one sword hit, respecting shield/flash protection and triggering death or variant reactions.
 	func hit(p) -> void:
 		super.hit(p)
 		if not collidable: orbs.clear()
+	# Return conservative visible bounds including MurksporeEnemy effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return shots_rect(orbs)
+	# Draw MurksporeEnemy at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		super.draw(ci)
 		for orb in orbs:
@@ -1083,12 +1234,17 @@ class MurksporeEnemy extends CombatEnemy:
 			ci.draw_circle(orb[0].round(), 1.2, Color("f0d8ff"))
 
 
+# Water/acid region. Water drains adventure energy; acid is a lethal contact surface.
 class Liquid extends Ent:  # water: drains adventure energy (World.update_energy); acid: kills on touch (like spikes)
+	# Report whether Liquid currently participates in lethal contact checks.
 	func hurts() -> bool: return d.t == "acid"
+	# Initialize Liquid dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		collidable = d.t == "acid"
+	# Kill the player on an enabled acid contact; ordinary water is handled by separate immersion checks.
 	func touch(p) -> void:
 		p.die(Vector2.UP)
+	# Draw Liquid at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c: Color = TYPES[d.t][2]
 		ci.draw_rect(Rect2(rect), Color(c, 0.35))
@@ -1096,17 +1252,21 @@ class Liquid extends Ent:  # water: drains adventure energy (World.update_energy
 			ci.draw_line(Vector2(rect.position), Vector2(rect.end.x, rect.position.y), Color(c.lightened(0.4), 0.9), 1.0)
 
 
+# Attackable solid wall. Destroying it records a persistent ID so it stays gone in the adventure.
 class BreakWall extends Ent:
 	var id := ""
 	var hp := 3
 	var flash := 0.0
+	# Initialize BreakWall dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
+		fixed = true
 		hp = int(d.get("hp", 3))
 		id = "%d_%d" % [rect.position.x, rect.position.y]
 		if w != null:
 			id = w.star_key(id)
 			collidable = not w.broken.has(id)
+	# Apply one sword hit, respecting shield/flash protection and triggering death or variant reactions.
 	func hit(_p) -> void:
 		Game.play_sfx("impact")
 		hp -= 1
@@ -1117,9 +1277,11 @@ class BreakWall extends Ent:
 			w.break_wall(id)
 			w.burst(center(), TYPES.breakwall[2], 20)
 			w.shake_dir(Vector2.ZERO, 0.15)
+	# Advance BreakWall timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		flash = maxf(flash - dt, 0)
 		shaken(dt, flash > 0)
+	# Draw BreakWall at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -1130,10 +1292,13 @@ class BreakWall extends Ent:
 			ci.draw_rect(r, Color(1, 1, 1, 0.5))
 
 
+# Editor reminder or authored one-shot sound trigger; sound triggers stay invisible during gameplay.
 class Note extends Ent:  # design reminder or a one-shot authored sound trigger
 	var sound_played := false
+	# Return the pixel rectangle that activates Note contact, separate from artwork bounds.
 	func touch_rect() -> Rect2i:
 		return rect.grow(8)
+	# Play an authored sound once per object lifetime, or renew the visible note message while nearby.
 	func touch(_p) -> void:
 		if d.has("sound"):
 			if not sound_played:
@@ -1141,8 +1306,10 @@ class Note extends Ent:  # design reminder or a one-shot authored sound trigger
 				Game.play_sfx(str(d.sound))
 			return
 		w.show_note(str(d.get("text", "")))
+	# Return conservative visible bounds including Note effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return rect.grow(8) if w != null else Rect2i(rect.position - Vector2i(160, 24), Vector2i(328, 40))
+	# Draw Note at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if w != null and d.has("sound"):
 			return
@@ -1159,6 +1326,7 @@ class Note extends Ent:  # design reminder or a one-shot authored sound trigger
 			ci.draw_string(f, p + Vector2(4 - tw / 2, -3), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 6, Color("ffe08a"))
 
 
+# Collectible that follows the player, then banks after a short stay on safe ground.
 class Star extends Ent:  # the collectible (type id "strawberry")
 	const STAR_PTS := [Vector2(0, -4.5), Vector2(1.2, -1.6), Vector2(4.3, -1.4), Vector2(1.9, 0.6), Vector2(2.6, 3.6), Vector2(0, 2), Vector2(-2.6, 3.6), Vector2(-1.9, 0.6), Vector2(-4.3, -1.4), Vector2(-1.2, -1.6)]  # 5-point star around (0, 0)
 	var id := ""
@@ -1166,6 +1334,7 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 	var collect_timer := 0.0
 	var pos := Vector2.ZERO
 	var t := 0.0
+	# Initialize Star dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		id = "%d_%d" % [rect.position.x, rect.position.y]
 		if w != null:
@@ -1173,6 +1342,7 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 		rect = Rect2i(rect.position.x - 1, rect.position.y - 1, 10, 10)
 		pos = center()
 		collidable = w == null or not w.collected.has(id)
+	# Move an unbanked star behind the player and bank it after the player rests on safe ground.
 	func update(dt: float) -> void:
 		t += dt
 		if not collidable:
@@ -1190,15 +1360,19 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 					p.followers.erase(self)
 			else:
 				collect_timer = 0
+	# Apply Star interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if collidable and not following:
 			Game.play_sfx("pickup", 0.8)
 			following = true
 			p.followers.append(self)
+	# Return the pixel rectangle that activates Star contact, separate from artwork bounds.
 	func touch_rect() -> Rect2i:  # exactly the sprite at rest
 		return Rect2i(rect.position + Vector2i(2, 2), Vector2i(6, 7)) if not following else Rect2i()
+	# Return conservative visible bounds including Star effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:  # drawn at pos, which trails the player
 		return Rect2i(Vector2i(pos) - Vector2i(8, 8), Vector2i(16, 16))
+	# Draw Star at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -1207,15 +1381,20 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 		ci.draw_rect(Rect2(c.x - 1, c.y - 1, 1, 1), Color("fff6c0"))
 
 
+# One-way platform: supports downward landings but permits upward travel through it.
 class JumpThru extends Ent:
+	# Initialize JumpThru dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		jumpthru = true
 		rect.size.y = 5
+	# Draw JumpThru at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		BlockArt.draw(ci, rect, "jumpthru")
 
 
+# Leaf-themed artwork for the same one-way-platform collision behavior.
 class Leaf extends JumpThru:  # a jump-through drawn as leaves on a stem, filling its box exactly
+	# Draw Leaf at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		ci.draw_rect(Rect2(r.position + Vector2(0, r.size.y - 1), Vector2(r.size.x, 1)), Color("41673a"))  # stem
@@ -1225,10 +1404,13 @@ class Leaf extends JumpThru:  # a jump-through drawn as leaves on a stem, fillin
 			ci.draw_rect(Rect2(r.position + Vector2(x + 1, 0), Vector2(maxf(0, lw - 2), 1)), Color("b6e080"))
 
 
+# Falling-water artwork; Player separately applies its downward force as a movement layer.
 class Waterfall extends Ent:  # falling water; the push is the player's waterfall layer (Player._layers)
 	var t := 0.0
+	# Advance Waterfall timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
+	# Draw Waterfall at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		ci.draw_rect(r, Color(0.54, 0.78, 0.94, 0.45))
@@ -1239,12 +1421,16 @@ class Waterfall extends Ent:  # falling water; the push is the player's waterfal
 				y += 12.0
 
 
+# Temporary support that shakes under a rider, disappears and reforms when the space is clear.
 class Crumble extends Ent:
 	var st := 0  # 0 idle, 1 shaking, 2 gone
 	var timer := 0.0
+	# Initialize Crumble dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
+		fixed = true
 		safe = false
+	# Advance Crumble timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		match st:
 			0:
@@ -1267,6 +1453,7 @@ class Crumble extends Ent:
 				if timer <= 0 and (w.player == null or w.player.dead or not rect.intersects(w.player.hitbox())):
 					st = 0
 					collidable = true
+	# Draw Crumble at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			ci.draw_rect(Rect2(rect), Color(1, 1, 1, 0.08), false, 1.0)
@@ -1274,13 +1461,16 @@ class Crumble extends Ent:
 		BlockArt.draw(ci, rect, "crumble", shake, 1 if st == 1 else 0)
 
 
+# Heavy support that shakes when ridden, falls pixel by pixel and stops when it reaches solid terrain.
 class FallingBlock extends Ent:
 	var st := 0  # 0 wait, 1 shake, 2 fall, 3 landed
 	var timer := 0.0
 	var vy := 0.0
+	# Initialize FallingBlock dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
 		safe = false
+	# Advance FallingBlock timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		match st:
 			0:
@@ -1310,29 +1500,37 @@ class FallingBlock extends Ent:
 						break
 					move_by(Vector2(0, 1), dt)
 					lift = Vector2(0, vy)
+	# Move a value toward its target by a limited amount; used here for falling-block acceleration.
 	static func Player_approach(v: float, t: float, a: float) -> float:
 		return minf(v + a, t) if v <= t else maxf(v - a, t)
+	# Draw FallingBlock at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
-		BlockArt.draw(ci, rect, "falling", shake)
+		BlockArt.draw(ci, rect, str(d.get("art", "falling")), shake)
 
 
+# Rail platform that travels to a configured target, waits and returns to its starting point.
 class ZipMover extends Ent:
 	var start := Vector2.ZERO
 	var target := Vector2.ZERO
 	var st := 0
 	var timer := 0.0
 	var at := 0.0
+	# Initialize ZipMover dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
 		start = Vector2(rect.position)
 		target = Vector2(float(d.get("tx", rect.position.x)), float(d.get("ty", rect.position.y - 32)))
+	# Return conservative visible bounds including ZipMover effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:  # block plus the whole rail
 		var r := rect.merge(Rect2i(Vector2i(start), rect.size)).merge(Rect2i(Vector2i(target), rect.size))
 		return r.grow(8)
+	# Ease progress from slow to fast with a sine curve, giving the rail platform a less abrupt departure.
 	static func sine_in(x: float) -> float:
 		return 1.0 - cos(x * PI / 2.0)
+	# Move this rail platform toward an interpolated position while preserving rider/pushing behavior.
 	func _goto(p: Vector2, dt: float) -> void:
 		move_by(p - (Vector2(rect.position) + rem), dt)
+	# Advance ZipMover timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		match st:
 			0:
@@ -1371,6 +1569,7 @@ class ZipMover extends Ent:
 				timer -= dt
 				if timer <= 0:
 					st = 0
+	# Draw ZipMover at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var half := Vector2(rect.size) / 2.0
 		var a := start + half
@@ -1384,18 +1583,23 @@ class ZipMover extends Ent:
 		ci.draw_rect(Rect2(r.get_center() - Vector2(1.5, 1.5), Vector2(3, 3)), lit)
 
 
+# Solid special block for normal movement, traversable only during dream-dash behavior.
 class DreamBlock extends Ent:
 	var stars: Array = []
 	var t := 0.0
+	# Initialize DreamBlock dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
+		fixed = true
 		dream = true
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(rect)
 		for i in maxi(2, rect.get_area() / 40):
 			stars.append([Vector2(rng.randf() * rect.size.x, rng.randf() * rect.size.y), [Color("ffef70"), Color("70ffef"), Color("ff70d0"), Color.WHITE][rng.randi() % 4]])
+	# Advance DreamBlock timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
+	# Draw DreamBlock at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		ci.draw_rect(r, Color("101018"))
@@ -1406,26 +1610,33 @@ class DreamBlock extends Ent:
 		ci.draw_rect(r, Color.WHITE, false)
 
 
+# Bubble that captures the player and launches a normal or red dash before recharging.
 class Booster extends Ent:
 	var red := false
 	var cannot_use := 0.0
 	var t := 0.0
+	# Initialize Booster dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		red = d.t == "booster_red"
 		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
+	# Advance Booster timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
 		cannot_use = maxf(0, cannot_use - dt)
 		if respawn > 0:
 			respawn -= dt
+	# Apply Booster interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if respawn <= 0 and cannot_use <= 0 and p.state != p.ST_BOOST:
 			cannot_use = 0.45
 			p.boost(self, red)
+	# Start the booster recharge timer after it successfully launches the player.
 	func player_boosted() -> void:
 		respawn = 1.0
+	# Start the recharge timer when the player leaves this booster.
 	func player_released() -> void:
 		respawn = 1.0
+	# Draw Booster at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c := center()
 		var col := Color("d03a3a") if red else Color("2ea04f")
@@ -1438,19 +1649,24 @@ class Booster extends Ent:
 		ci.draw_circle(c + Vector2(-2, -3), 1.2, Color(1, 1, 1, 0.7))
 
 
+# Reusable radial launcher that pushes the player away from its centre.
 class Bumper extends Ent:
 	var t := 0.0
+	# Initialize Bumper dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 5, rect.position.y - 5, 18, 18)  # exactly the sprite
+	# Advance Bumper timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
 			respawn -= dt
+	# Apply Bumper interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if respawn <= 0:
 			p.explode_launch(center(), false)
 			respawn = 0.6
 			w.burst(center(), Color("80a0ff"), 10)
+	# Draw Bumper at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c := center() + Vector2(0, round(sin(t * 2) * 1.0))
 		var col := Color("4060d0") if respawn <= 0 else Color("303050")
@@ -1459,20 +1675,26 @@ class Bumper extends Ent:
 		ci.draw_circle(c, 3, col.lightened(0.5))
 
 
+# Temporary flight pickup that starts or extends the player flight mode.
 class Feather extends Ent:
+	# Return the pixel rectangle that activates Feather contact, separate from artwork bounds.
 	func touch_rect() -> Rect2i:  # exactly the sprite
 		return Rect2i(rect.position + Vector2i(1, 2), Vector2i(9, 9))
 	var t := 0.0
+	# Initialize Feather dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 2, rect.position.y - 2, 12, 12)
+	# Advance Feather timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
 		if respawn > 0:
 			respawn -= dt
+	# Apply Feather interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if respawn <= 0 and p.start_star_fly():
 			respawn = 3.0
 			w.burst(center(), Color("ffd65c"), 8)
+	# Draw Feather at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c := center() + Vector2(0, round(sin(t * 3) * 1.5))
 		if respawn > 0:
@@ -1482,16 +1704,22 @@ class Feather extends Ent:
 		ci.draw_line(c + Vector2(-5, 5), c + Vector2(3, -3), Color("fff3c0"), 1.0)
 
 
+# End-of-level marker that asks World to record completion once.
 class Goal extends Ent:
+	# Return the pixel rectangle that activates Goal contact, separate from artwork bounds.
 	func touch_rect() -> Rect2i:  # exactly the sprite
 		return Rect2i(rect.position + Vector2i(2, 4), Vector2i(11, 9))
 	var t := 0.0
+	# Initialize Goal dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 4, rect.position.y - 4, 16, 16)
+	# Advance Goal timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		t += dt
+	# Apply Goal interaction when World reports an overlapping player.
 	func touch(_p) -> void:
 		w.complete()
+	# Draw Goal at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var c := center() + Vector2(0, round(sin(t * 2) * 1.5))
 		var col := Color("50b0ff")
@@ -1504,12 +1732,14 @@ class Goal extends Ent:
 # ---------------- Boss 1: the Ape (docs/STORY_DESIGN.md section 2) ----------------
 # A tall trunk in the arena. Standing it's scenery (no collision); a thrown stone fells it to the right,
 # where it lies at its base's height as a bridge as long as it was tall. Stays down for the run.
+# Arena tree obstacle; a boss impact fells it into a persistent horizontal bridge.
 class ApeTrunk extends Ent:
 	const FALL_TIME := 0.6
 	var id := ""
 	var standing := Rect2i()
 	var fall := 0.0  # 0 standing .. 1 down
 	var falling := false
+	# Initialize ApeTrunk dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
 		collidable = false
@@ -1519,19 +1749,23 @@ class ApeTrunk extends Ent:
 			id = w.star_key(id)
 			if w.broken.has(id):
 				_lay()
+	# Report whether the arena trunk has finished becoming a horizontal bridge.
 	func down() -> bool:
 		return fall >= 1.0
+	# Start the trunk falling sequence once, in response to an arena impact.
 	func fell() -> void:
 		if falling or down():
 			return
 		falling = true
 		if w != null:
 			w.burst(Vector2(standing.position.x + standing.size.x / 2.0, standing.position.y + 8), Color("c8a070"), 10)
+	# Replace the upright trunk collision rectangle with the final bridge rectangle.
 	func _lay() -> void:
 		fall = 1.0
 		falling = false
 		collidable = true
 		rect = Rect2i(standing.position.x, standing.end.y, standing.size.y, 8)
+	# Advance ApeTrunk timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
 		if falling:
 			fall = minf(1.0, fall + dt / FALL_TIME)
@@ -1540,9 +1774,11 @@ class ApeTrunk extends Ent:
 				w.break_wall(id)
 				w.shake_dir(Vector2.DOWN, 0.25)
 				w.dust(Vector2(rect.position.x + rect.size.x / 2.0, rect.position.y), Vector2.UP, 12)
+	# Return conservative visible bounds including ApeTrunk effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		var h := standing.size.y
 		return Rect2i(standing.position.x - 8, standing.position.y - 8, h + 24, h + 24)
+	# Draw ApeTrunk at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var bark := Color("7a5638")
 		var dark := Color("4e3422")
@@ -1567,15 +1803,20 @@ class ApeTrunk extends Ent:
 
 # Seals an exit while the room's Ape is alive (solid); open once it's beaten. "closes_behind": stays open
 # until the player has passed it (left to right), then shuts behind them.
+# Arena barrier that follows the living boss state and can close behind the entering player.
 class BossGate extends Ent:
 	var passed := false
+	# Initialize BossGate dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		solid = true
+		fixed = true
 		collidable = w == null or not d.get("closes_behind", false)
+	# Advance BossGate timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(_dt: float) -> void:
 		if d.get("closes_behind", false) and not passed:
 			passed = w.player.hitbox().position.x > rect.end.x + 4
 		collidable = Ape.alive_in(w) and (passed or not d.get("closes_behind", false))
+	# Draw BossGate at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if not collidable:
 			return
@@ -1588,14 +1829,17 @@ class BossGate extends Ent:
 
 
 # Walks the player in for a moment (the arena's entrance), using Celeste's forced movement. Once per visit.
+# One-use trigger that briefly forces horizontal movement, usually to walk into the boss arena.
 class AutoWalk extends Ent:
 	var used := false
+	# Apply AutoWalk interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if used or (d.get("while_boss", false) and not Ape.alive_in(w)):
 			return
 		used = true
 		p.force_move_x = int(d.get("dir", 1))
 		p.force_move_x_timer = float(d.get("time", 0.6))
+	# Draw AutoWalk at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		if w == null:  # editor only: a dashed arrow
 			var r := Rect2(rect)
@@ -1609,11 +1853,13 @@ class AutoWalk extends Ent:
 # it is safe). Near: a scream around its body. A player beyond its leaps' reach always gets a leap (which
 # stops at the range's edge). Its leaps stay inside d.range ([x0, x1] px); once the arena's
 # trunk is down, inside d.range2, and it leaps there first if it's outside. A stone or a leap that meets
-# the standing trunk fells it. Landing on spikes is a hit: it screams, leaps again, and the next spike patch
-# appears (d.spikes, one list per hit: [x, y, count] in px). Three hits beat it: the exits open, the
-# player is exhausted (energy 5) and an energy orb appears (d.orb).
+# the standing trunk fells it. Landing on spikes is a hit: it screams, leaps again, the spikes in its range
+# crumble and the next patch appears (d.spikes, one list per hit: [x, y, count] in px; author them on the
+# other side). Four hits (HP) beat it: the exits open, the
+# an energy orb appears (d.orb).
+# Arena boss: choose a stone throw, leap/slam or scream according to player distance and fight state.
 class Ape extends Ent:
-	const HP := 3
+	const HP := 4
 	const SIZE := 32
 	const BODY := 24  # contact box: one square, a bit larger than the 22px body bands it replaced
 	const LEAP_G := 600.0
@@ -1643,13 +1889,16 @@ class Ape extends Ent:
 	var x_min := 0.0
 	var x_max := 0.0
 	# True while the room has an Ape that isn't beaten (gates and the entrance walk follow it).
+	# Find whether this room still contains an undefeated arena Ape, excluding the chase version.
 	static func alive_in(world) -> bool:
 		for e in world.ents:
 			if e is Ape and not e is ApeChase and e.phase != "gone":
 				return true
 		return false
+	# Report whether Ape currently participates in lethal contact checks.
 	func hurts() -> bool:
 		return phase != "gone" and phase != "dying"
+	# Initialize Ape dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		rect.size = Vector2i(SIZE, SIZE)
 		var r: Array = d.get("range", [rect.position.x - 200, rect.end.x + 200])
@@ -1662,35 +1911,45 @@ class Ape extends Ent:
 				phase = "gone"
 				collidable = false
 	# [x0, x1] the leaps stay in: d.range, or d.range2 once the arena's trunk is down.
+	# Choose the current permitted landing range, accounting for the arena trunk state.
 	func leap_range() -> Vector2:
 		var t = trunk()
 		var r: Array = d.get("range2", []) if t != null and t.down() and d.has("range2") else [x_min, x_max]
 		return Vector2(float(r[0]), float(r[1]))
+	# Find the arena tree object needed for boss targeting and bridge interactions.
 	func trunk():
 		for e in w.ents:
 			if e is ApeTrunk:
 				return e
 		return null
 	# The movement footprint stays 32px; contact damage uses one centred 24px square.
+	# Return the pixel rectangle that activates Ape contact, separate from artwork bounds.
 	func touch_rect() -> Rect2i:
 		return Rect2i(rect.position + Vector2i((SIZE - BODY) / 2, (SIZE - BODY) / 2), Vector2i(BODY, BODY))
+	# Expose body-contact boxes for both gameplay checks and the hitbox overlay.
 	func body_boxes() -> Array:
 		return [touch_rect()]
+	# Check whether any boss body-contact box overlaps the supplied player damage rectangle.
 	func body_hits(area: Rect2i) -> bool:
 		for box in body_boxes():
 			if box.intersects(area): return true
 		return false
+	# Return the circular range of the boss scream in world pixels.
 	func scream_radius() -> float:
 		return SIZE / 2.0 + SCREAM_REACH
+	# Measure the nearest point of a rectangle against the circular scream, avoiding square-corner false hits.
 	func scream_hits(area: Rect2i) -> bool:
 		var c := center()
 		var nearest := c.clamp(Vector2(area.position),Vector2(area.end))
 		return area.has_area() and c.distance_squared_to(nearest) < scream_radius() * scream_radius()
+	# Expose active circular hazards; an empty list means no circular damage is active.
 	func damage_circles() -> Array:
 		return [[center(),scream_radius()]] if phase == "scream" and timer <= 0.0 and timer > -0.35 else []
+	# Apply Ape interaction when World reports an overlapping player.
 	func touch(p) -> void:
 		if hurts() and body_hits(p.damage_rect()):
 			p.die((p.center() - center()).normalized())
+	# Advance boss timers, stones and phases; select attacks by distance and test circular scream damage only in its active window.
 	func update(dt: float) -> void:
 		clock += dt
 		flash = maxf(0.0, flash - dt)
@@ -1757,6 +2016,7 @@ class Ape extends Ent:
 			"dying":
 				if timer <= 0:
 					_beaten()
+	# Change the boss phase and set its duration, emitting the appropriate one-time attack cue.
 	func _go(ph: String, t: float) -> void:
 		if ph == "scream":
 			Game.play_sfx("ape_scream")
@@ -1764,11 +2024,13 @@ class Ape extends Ent:
 			Game.play_sfx("enemy_hit", 0.6)
 		phase = ph
 		timer = t
+	# Create a ballistic stone velocity aimed toward a target, including gravity over its planned flight time.
 	func _throw(target: Vector2) -> void:
 		Game.play_sfx("projectile", 0.6)
 		var from := Vector2(center().x + facing * 10, rect.position.y)
 		var t := clampf(absf(target.x - from.x) / 220.0, 0.7, 1.3)
 		stones.append([from, Vector2((target.x - from.x) / t, (target.y - from.y) / t - 0.5 * STONE_G * t)])
+	# Resolve boss displacement in whole pixels and trigger the landing reaction on downward impact.
 	func _move(dt: float) -> void:
 		rem += vel * dt  # whole pixels move, the rest carries over (Ent.rem)
 		var step := rem.round()
@@ -1787,6 +2049,7 @@ class Ape extends Ent:
 			_land()
 		else:
 			vel.y = 0
+	# Expose active rectangular damage regions to the hitbox overlay and shared inspection tools.
 	func damage_boxes() -> Array:  # stones, and the scream and the landing shockwave while they're live
 		var out := []
 		for s in stones:
@@ -1795,8 +2058,10 @@ class Ape extends Ent:
 			out.append(slam_box())
 		return out
 	# The landing shockwave along the ground, both sides of the body.
+	# Return the ground-level shockwave rectangle used by both damage and its visual overlay.
 	func slam_box() -> Rect2i:
 		return Rect2i(rect.position.x - SLAM_REACH, rect.end.y - SLAM_HEIGHT, SIZE + 2 * SLAM_REACH, SLAM_HEIGHT)
+	# Stop the leap, create the shockwave and check whether the landing feet overlap an arena spike patch.
 	func _land() -> void:
 		Game.play_sfx("impact")
 		vel = Vector2.ZERO
@@ -1809,6 +2074,7 @@ class Ape extends Ent:
 				_hit()
 				return
 		_go("idle", 0.6)
+	# Remove boss health, select the hurt/dying phase and reveal the next arena hazards when applicable.
 	func _hit() -> void:
 		hp -= 1
 		flash = 0.8
@@ -1817,22 +2083,26 @@ class Ape extends Ent:
 			_go("dying", 1.2)
 			return
 		stage += 1
+		for e in w.touchables:  # the spikes it hit (and any others in its range) break under it
+			if e is Spikes and e.collidable and e.rect.position.x >= x_min and e.rect.position.x <= x_max:
+				e.collidable = false
+				w.burst(Vector2(e.rect.get_center()), Color("e8e8f0"), 3)
 		var patches: Array = d.get("spikes", [])
 		if stage - 1 < patches.size():
 			for patch in patches[stage - 1]:
 				for i in int(patch[2]):
 					w.spawn_entity({"t": "spikes_up", "x": int(patch[0]) + i * T, "y": int(patch[1])})
 		_go("hurt", 0.8)
+	# Record permanent boss defeat, release the arena and spawn the configured reward.
 	func _beaten() -> void:
 		Game.play_sfx("complete")
 		phase = "gone"
 		collidable = false
 		w.break_wall(id)
 		w.shake_dir(Vector2.ZERO, 0.4)
-		if w.adventure():
-			Game.adv.energy = minf(Game.adv.energy, 5.0)  # the fight leaves the hero exhausted
 		if d.has("orb"):
 			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
+	# Move thrown stones, then resolve player, trunk and solid-terrain impacts.
 	func _update_stones(dt: float) -> void:
 		var t = trunk() if w != null else null
 		for i in range(stones.size() - 1, -1, -1):
@@ -1852,8 +2122,10 @@ class Ape extends Ent:
 			if gone:
 				w.burst(s[0], Color("9a9080"), 8)
 				stones.remove_at(i)
+	# Return conservative visible bounds including Ape effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
 		return rect.grow(400)
+	# Draw Ape at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		for s in stones:  # stones: 16x16, exactly their hitbox
 			var at: Vector2 = s[0] - Vector2(STONE / 2.0, STONE / 2.0)
@@ -1896,121 +2168,285 @@ class Ape extends Ent:
 # and searches, jump by jump, for a take-off distance that clears every step and pit without touching spikes.
 # The Ape only ever replays that run, one recorded frame per tick, so it can't miss a jump. Touching it is a death;
 # dying rebuilds the room, which puts it back to waiting. Once the player passes x "end" it gives up for the run.
+# Story chase using a preplanned sequence of feet positions; the route is simulated before replay.
+# Planning is a hypothetical run; replay advances through its recorded positions during the real chase.
+# The cache key must include route inputs, because an edited level can share the same room/spawn name.
 class ApeChase extends Ape:
 	const ROAR_TIME := 1.0  # it screams this long before giving chase
-	static var _plans := {}  # room key -> PackedVector2Array of feet positions, one per tick
+	const SEAL_TIME := 0.4  # the cave-in rock takes this long to drop
+	const PLAN_BUDGET_MS := 150  # give up planning after this much work (an edited room with no route)
+	const PLAN_SLICE_MS := 3.0  # planning work per frame while waiting
+	static var _plans := {}  # hash of planner inputs -> PackedVector2Array of feet positions, one per tick
 	var path := PackedVector2Array()
 	var at := 0.0  # index into path
+	var seal_t := -1.0  # cave-in drop time; < 0 when not dropping
+	var sealed := false
+	var debris: Array = []  # [pos, vy]: cosmetic grit shaken off the ceiling by its landings
+	var planner: ChasePlan
+	var plan_key := 0
+	# Initialize ApeChase dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		super.setup()
 		if phase != "gone":
 			phase = "wait"
+		elif w != null:
+			_seal()  # it gave up earlier this run: the cave-in stays
+	# d.seal = [x, y, w, h] px: the rock that falls in front of the Ape when it reaches d.end, stopping it and blocking the way back for good
+	# (saved with the Ape's own "gone" flag). A resting falling block: solid, same art.
+	# Queue the persistent cave-in block once; World creates it after the current object-update iteration.
+	func _seal() -> void:
+		if d.has("seal") and not sealed:
+			sealed = true
+			var s: Array = d.seal
+			w.spawn_entity({"t": "falling", "x": int(s[0]), "y": int(s[1]), "w": int(s[2]), "h": int(s[3]), "art": "breakwall"})
+	# No body contact: the chase kills through its full-height line instead (update()).
 	func hurts() -> bool:
-		return phase == "chase"
-	func touch(p) -> void:
-		if hurts() and body_hits(p.damage_rect()):
-			p.die((p.center() - center()).normalized())
+		return false
+	func touch(_p) -> void:
+		pass
+	# The kill line: tunnel-high, at the Ape's centre. Once the Ape is past the player, it caught them.
+	func caught(p) -> bool:
+		return phase == "chase" and p.center().x < center().x
+	# Advance trigger, roar and chase replay. Cache routes by their simulation inputs and end the chase after the exit threshold.
 	func update(dt: float) -> void:
 		clock += dt
+		flash = maxf(0.0, flash - dt)
+		if seal_t >= 0:
+			seal_t += dt
+			var s: Array = d.seal
+			if seal_t >= SEAL_TIME and not Rect2i(int(s[0]), int(s[1]), int(s[2]), int(s[3])).intersects(w.player.hitbox()):
+				seal_t = -1.0
+				_seal()
+				w.shake_dir(Vector2.DOWN, 0.35)
+				w.burst(Vector2(s[0] + s[2] / 2.0, s[1] + s[3]), TYPES.breakwall[2], 24)
+				Game.play_sfx("impact")
+		_update_debris(dt)
 		if phase == "gone":
 			return
 		var p = w.player
 		timer -= dt
 		match phase:
 			"wait":
+				if planner == null:
+					_start_plan()
+				if not planner.done and planner.run(PLAN_SLICE_MS):  # a few ms per frame while the player approaches
+					_plans[plan_key] = planner.result
+				path = planner.result
 				if p.center().x > float(d.get("trigger", rect.end.x + 64)):
+					if not planner.done:  # reached the trigger first: finish now (still within its budget)
+						planner.run(INF)
+						_plans[plan_key] = planner.result
+						path = planner.result
 					Game.play_sfx("ape_scream_cave")
 					w.shake_dir(Vector2.ZERO, 0.3)
 					facing = 1
-					var key := "%s:%d:%d" % [w.star_key(""), rect.position.x, rect.position.y]
-					if not _plans.has(key):  # planned once per room, when first needed
-						_plans[key] = plan(w, rect, float(d.get("end", w.bounds.end.x)) + 16.0)
-					path = _plans[key]
 					phase = "roar"
+					if path.is_empty():  # no route (edited room): it screams and leaves; not saved, so a fixed room chases again
+						push_warning("ApeChase: no route, the Ape leaves")
+						phase = "dying"
+						timer = 1.2
 					timer = ROAR_TIME
 			"roar", "chase":
 				if phase == "roar":
 					if timer <= 0:
 						phase = "chase"
 				elif not path.is_empty():
+					var was := int(at)
 					at = minf(at + dt * 60.0, path.size() - 1)
+					for i in range(maxi(was, 1) + 1, int(at) + 1):  # a landing (falling, then level) shakes grit loose
+						if path[i - 1].y > path[i - 2].y and path[i].y == path[i - 1].y:
+							_shake_ceiling()
 					var f: Vector2 = path[int(at)]
 					rect.position = Vector2i(roundi(f.x - SIZE / 2.0), roundi(f.y) - SIZE)
-					if not p.dead and body_hits(p.damage_rect()):
-						touch(p)
-				if p.center().x > float(d.get("end", 1e9)):
-					Game.play_sfx("ape_scream_cave", 0.8)
-					w.break_wall(id)  # gone for the rest of the run
-					phase = "dying"
-					timer = 1.2
+					for e in w.solids:  # rock in its way bursts; not saved, so a retry has it back
+						if e is BreakWall and e.collidable and e.rect.intersects(rect.grow(2)):
+							e.collidable = false
+							w.burst(e.center(), TYPES.breakwall[2], 20)
+							w.shake_dir(Vector2.ZERO, 0.2)
+							Game.play_sfx("crumble")
+							flash = 0.4  # the rock hurts it: blink, like a hit in the boss fight
+							Game.play_sfx("enemy_hit", 0.6)
+					if not p.dead and caught(p):
+						p.die(Vector2.RIGHT)
+					if int(at) == path.size() - 1:  # reached d.end: the ceiling caves in ahead of it and it's done
+						Game.play_sfx("ape_scream_cave", 0.8)
+						w.break_wall(id)  # gone for the rest of the run
+						phase = "dying"
+						timer = 1.2
+						if d.has("seal"):
+							seal_t = 0.0
+							Game.play_sfx("crumble")
 			"dying":
 				if timer <= 0:
 					phase = "gone"
 					collidable = false
+	# Reuse a cached route, or start a sliced search. Every planner input is in the key: a changed room, world,
+	# endpoint or tuning plans again.
+	func _start_plan() -> void:
+		var end := float(d.get("end", w.bounds.end.x)) + 16.0
+		plan_key = hash([Game.world_path, w.room, w.room_origin, w.data, Game.tuning, rect.position, end])
+		planner = ChasePlan.new(w, rect, end, true, PLAN_BUDGET_MS)
+		if _plans.has(plan_key):
+			planner.done = true
+			planner.result = _plans[plan_key]
+		elif _plans.size() >= 16:
+			_plans.clear()  # ponytail: drop all; a story has a handful of chases
+	# A few bits of rock fall from the ceiling around where it landed.
+	func _shake_ceiling() -> void:
+		w.shake_dir(Vector2.DOWN, 0.08)
+		for k in 3:
+			var x := center().x + randf_range(-28.0, 40.0)
+			var y := float(rect.position.y)
+			var up := 0
+			while up < 120 and w.collide_solid(Rect2i(int(x), int(y) - 1, 3, 1)) == null:
+				y -= 1.0
+				up += 1
+			debris.append([Vector2(x, y), randf_range(0.0, 40.0)])
+	func _update_debris(dt: float) -> void:
+		for i in range(debris.size() - 1, -1, -1):
+			var b: Array = debris[i]
+			b[1] += 300.0 * dt
+			b[0].y += b[1] * dt
+			if w.collide_solid(Rect2i(Vector2i(b[0]) + Vector2i(0, 3), Vector2i(3, 1))) != null or b[0].y > w.gh * T:
+				w.burst(b[0], TYPES.breakwall[2], 2)
+				debris.remove_at(i)
+	# Draw ApeChase at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
+		for b in debris:
+			ci.draw_rect(Rect2(Vector2(roundf(b[0].x), roundf(b[0].y)), Vector2(3, 3)), Color("8a6a44"))
+		if seal_t >= 0:  # the cave-in rock dropping from the ceiling into place
+			var s: Array = d.seal
+			var k := minf(seal_t / SEAL_TIME, 1.0)
+			BlockArt.draw(ci, Rect2i(int(s[0]), int(s[1] - s[3] * (1.0 - k * k)), int(s[2]), int(s[3])), "breakwall", Vector2.ZERO)
 		if phase != "wait":
 			super.draw(ci)
 
 	# Tries take-off distances (px before a wall, px past the edge of a gap) until a simulated run from the Ape's
 	# spot reaches end_x without touching spikes. Returns that run's feet positions, or an empty path if none works.
-	static func plan(world, from: Rect2i, end_x: float) -> PackedVector2Array:
-		for brk in [2, 4, 6, 8, 3, 5]:  # extra take-off margin before a breakable block
-			for wall in [12, 8, 16, 10, 14, 6, 18]:
-				for gap in [1, 2, 4, 6, 8]:
-					var run := _simulate(world, from, end_x, wall, gap, brk)
-					if not run.is_empty():
-						return run
-		push_warning("ApeChase: no path found to x %d" % end_x)
-		return PackedVector2Array()
+	# body: also keep the Ape's BODY box out of the terrain (off for proving a player-sized route).
+	# Try jump timing combinations until a simulated route reaches the endpoint safely; empty means none succeeded.
+	# budget_ms: stop searching after this long (0 = no limit, for offline proofs). All at once; ChasePlan slices it.
+	static func plan(world, from: Rect2i, end_x: float, body := true, budget_ms := PLAN_BUDGET_MS) -> PackedVector2Array:
+		var cp := ChasePlan.new(world, from, end_x, body, budget_ms)
+		cp.run(INF)
+		return cp.result
 
-	# The box, or the pixel row under it, overlaps a breakable block.
+	# The box, or the pixel row under it, overlaps crumble; or it stands on a breakable wall.
+	# Passing through a breakable wall is fine: the chasing Ape smashes it (update()).
+	# Reject route positions supported by temporary terrain the chase cannot safely rely on.
 	static func _on_breakable(world, hb: Rect2i) -> bool:
 		var feet := Rect2i(hb.position, hb.size + Vector2i(0, 1))
+		var under := Rect2i(hb.position.x, hb.end.y, hb.size.x, 1)
 		for e in world.solids:
-			if (e is Crumble or e is BreakWall) and e.rect.intersects(feet):
+			if (e is Crumble and e.rect.intersects(feet)) or (e is BreakWall and e.rect.intersects(under)):
 				return true
 		return false
 
-	# One run to the right; empty when it touches spikes or a breakable, falls out or gets stuck.
-	static func _simulate(world, from: Rect2i, end_x: float, wall: float, gap: float, brk: float) -> PackedVector2Array:
-		var r := ChaseRunner.new(ChaseWorld.new(world), Vector2.ZERO)
+
+
+# A resumable chase-route search: run(ms) advances it at most that long, so the Ape can plan a few ms per frame.
+# Tries take-off distances in order; each trial runs the player's movement code (ChaseRunner) rightward and is
+# rejected when it touches spikes or crumble, stands on breakable rock, clips the Ape's body (body), falls out or
+# gets stuck. result holds the first full run's feet positions, one per tick.
+class ChasePlan:
+	const SIZE := 32
+	const BODY := 24
+	var world
+	var from: Rect2i
+	var end_x := 0.0
+	var body := true
+	var budget_ms := 0
+	var combos: Array = []  # [wall, gap, brk]
+	var ci := -1
+	var r  # current trial's runner
+	var path := PackedVector2Array()
+	var best := -1e9
+	var still := 0
+	var tick := 0
+	var spent_ms := 0.0
+	var max_run_ms := 0.0  # longest single run() call: the worst frame it cost
+	var done := false
+	var result := PackedVector2Array()
+	func _init(w_, from_: Rect2i, end_x_: float, body_ := true, budget_ms_ := 0) -> void:
+		world = w_
+		from = from_
+		end_x = end_x_
+		body = body_
+		budget_ms = budget_ms_
+		for brk in [2, 4, 6, 8, 3, 5]:  # extra take-off margin before a breakable block
+			for wall in [22, 26, 18, 30, 34, 16, 14, 12, 10, 8, 6]:  # long run-ups first: the Ape's 24px body needs them
+				for gap in [1, 2, 4, 6, 8]:
+					combos.append([wall, gap, brk])
+		_next()
+	# Start the next trial, or finish empty-handed.
+	func _next() -> void:
+		ci += 1
+		if ci >= combos.size():
+			push_warning("ApeChase: no path found to x %d" % end_x)
+			done = true
+			return
+		r = ChaseRunner.new(ChaseWorld.new(world), Vector2.ZERO)
 		r.pos = Vector2(from.position.x + SIZE / 2.0, from.end.y)
 		r.pos.x -= r.hitbox().get_center().x - r.pos.x
 		r.pos.y -= r.bottom() - from.end.y
-		r.wall_d = wall
-		r.gap_d = gap
-		r.brk_d = gap + brk
-		var path := PackedVector2Array()
-		var best := -1e9
-		var still := 0
-		for tick in 60 * 60:
-			r.update(1.0 / 60.0)
-			var hb: Rect2i = r.hitbox()
-			path.append(Vector2(hb.get_center().x, hb.end.y))
-			if world.touching_spikes(r.damage_rect()) or hb.position.y > world.bounds.end.y or _on_breakable(world, hb):
-				return PackedVector2Array()
-			if hb.end.x >= end_x:
-				return path
+		r.wall_d = combos[ci][0]
+		r.gap_d = combos[ci][1]
+		r.brk_d = combos[ci][1] + combos[ci][2]
+		path = PackedVector2Array()
+		best = -1e9
+		still = 0
+		tick = 0
+	# Advance for up to ms; true once finished (result set, maybe empty).
+	func run(ms: float) -> bool:
+		var t0 := Time.get_ticks_usec()
+		while not done:
+			_tick()
+			var used := (Time.get_ticks_usec() - t0) / 1000.0
+			if budget_ms > 0 and spent_ms + used > budget_ms:  # an impossible room: stop, don't stall the game
+				push_warning("ApeChase: no path found to x %d within %d ms" % [end_x, budget_ms])
+				done = true
+			elif used >= ms:
+				break
+		var took := (Time.get_ticks_usec() - t0) / 1000.0
+		spent_ms += took
+		max_run_ms = maxf(max_run_ms, took)
+		return done
+	# One simulated tick of the current trial.
+	func _tick() -> void:
+		r.update(1.0 / 60.0)
+		tick += 1
+		var hb: Rect2i = r.hitbox()
+		path.append(Vector2(hb.get_center().x, hb.end.y))
+		# the Ape's own contact box (BODY px, inside its SIZE sprite) must stay out of the terrain the small runner squeezes past
+		var box := Rect2i(roundi(hb.get_center().x - BODY / 2.0), hb.end.y - (SIZE + BODY) / 2, BODY, BODY)
+		if world.touching_spikes(r.damage_rect()) or hb.position.y > world.bounds.end.y or ApeChase._on_breakable(world, hb) or (body and r.w.collide_solid(box) != null):
+			_next()
+		elif hb.end.x >= end_x:
+			result = path
+			done = true
+		else:
 			if hb.end.x > best:
 				best = hb.end.x
 				still = 0
 			else:
 				still += 1
-				if still > 90:  # stuck under a step it never cleared
-					return PackedVector2Array()
-		return PackedVector2Array()
+			if still > 90 or tick >= 60 * 60:  # stuck under a step it never cleared
+				_next()
 
 
 # The chasing Ape's body while planning: the player's movement code, always running right, jumping wall_d px
 # before a wall and when the floor ends within gap_d px.
+# Silent scripted Player used only for route planning, with automated run/jump input.
 class ChaseRunner extends "res://scripts/player.gd":
 	var wall_d := 12.0
 	var gap_d := 1.0
 	var brk_d := 3.0  # take-off distance when the floor ahead is a breakable block
 	var hold_jump := 0.0
+	# Initialize ordinary Player movement, then silence effects for the many simulated route attempts.
 	func _init(world, spawn: Vector2) -> void:
 		super(world, spawn)
 		quiet = true
+	# Supply automated rightward movement and timed jump presses instead of reading real controls.
 	func _read_input(dt: float) -> void:
 		in_x = 1
 		in_y = 0
@@ -2028,12 +2464,14 @@ class ChaseRunner extends "res://scripts/player.gd":
 		jump_check = hold_jump > 0
 		grab_check = false
 	# A breakable block under the pixel d px past the leading edge (the planner's world sees it as a gap).
+	# Look ahead for temporary support that requires an earlier takeoff.
 	func _breakable_within(d: float) -> bool:
 		var hb := hitbox()
 		var hit = w.real.collide_solid(Rect2i(hb.end.x + int(d) - 1, hb.end.y, 1, 2))
 		return hit is Crumble or hit is BreakWall
 
 	# No floor under the pixel d px past the leading edge.
+	# Probe support just ahead of the runner to decide when it should jump a gap.
 	func _gap_within(d: float) -> bool:
 		var hb := hitbox()
 		return w.collide_solid(Rect2i(hb.end.x + int(d) - 1, hb.end.y, 1, 2)) == null
@@ -2041,16 +2479,19 @@ class ChaseRunner extends "res://scripts/player.gd":
 
 # What the chasing Ape's runner sees of the world: the same collision, none of the player's side effects
 # (energy, sounds, dust, touches, deaths, room exits).
+# Collision adapter for the planner. It borrows real terrain but disables gameplay side effects.
 class ChaseWorld:
 	var real
 	var bounds: Rect2i
 	var time := 0.0
 	var ents: Array = []
 	var parts: Array = []
+	# Retain real collision access and room bounds for the side-effect-free simulation adapter.
 	func _init(world) -> void:
 		real = world
 		bounds = world.bounds
 	# Breakable blocks (crumble, breakable walls) count as empty: the Ape's path never stands on or leans on them.
+	# Delegate real collision while treating breakable supports as empty for the planned route.
 	func collide_solid(r: Rect2i, ignore = null, skip_dream := false):
 		var hit = real.collide_solid(r, ignore, skip_dream)
 		if hit == null or hit is String or not (hit is Crumble or hit is BreakWall):
@@ -2059,21 +2500,35 @@ class ChaseWorld:
 			if e.collidable and e != ignore and not (skip_dream and e.dream) and not (e is Crumble or e is BreakWall) and e.rect.intersects(r):
 				return e
 		return null
+	# Reuse the real dream-block query without running gameplay interactions.
 	func collide_dream(r: Rect2i):
 		return real.collide_dream(r)
+	# Reuse the real one-way-platform query during the silent route simulation.
 	func collide_jumpthru(r: Rect2i):
 		return real.collide_jumpthru(r)
+	# Reuse the real newly-entered one-way-platform query for simulated movement.
 	func collide_jumpthru_outside(r_at: Rect2i, r_now: Rect2i):
 		return real.collide_jumpthru_outside(r_at, r_now)
+	# Reuse real liquid-region detection so simulated movement applies the correct water physics.
 	func liquid_at(r: Rect2i, t: String) -> bool:
 		return real.liquid_at(r, t)
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func touching_spikes(_r: Rect2i) -> bool: return false
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func can_exit(_p: Vector2) -> bool: return false
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func adventure() -> bool: return false
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func dust(_at: Vector2, _dir: Vector2, _n: int, _col := Color.WHITE) -> void: pass
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func shake_dir(_dir: Vector2, _t: float) -> void: pass
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func add_trail(_p) -> void: pass
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func freeze_for(_t: float) -> void: pass
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func player_touch(_p) -> void: pass
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func on_player_death(_p, _dir: Vector2) -> void: pass
+	# Intentionally do nothing in route planning: simulated movement must not alter real gameplay or emit this effect.
 	func drain_energy(_amount: float) -> void: pass

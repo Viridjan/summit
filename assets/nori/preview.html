@@ -1,3 +1,4 @@
+<!-- Original Nori animation gallery: previews the exported atlas, facing controls and a timed jump arc. Runtime hair physics and gameplay still live in GDScript. -->
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8">
@@ -10,6 +11,8 @@
 <nav><button id="play">Pause</button><label>Speed <input id="speed" aria-label="Animation speed" type="range" min="0.25" max="2" value="1" step="0.25"><output id="rate">1×</output></label><label>Facing <select id="facing"><option value="1">Right</option><option value="-1">Left</option></select></label><label>Hair <select id="hair"><option value="#493022">One dash</option><option value="#929292">No dash</option><option value="#493022">Two dashes</option><option value="#f2eb6d">Feather</option></select></label></nav>
 <section id="motion"><h2>Run and jump in motion</h2><p>Left and right runs, plus takeoff → tuck → apex → fall → landing. Use the speed slider to inspect the poses.</p><canvas id="motionCanvas" width="720" height="220" aria-label="Side-view running in both directions and a complete jump arc"></canvas></section><main id="gallery"></main><footer><p>Running uses a side-view step: alternating planted steps and a brief flight phase; the airborne poses settle instead of cycling the legs. <a style="color:#79d4bb" href="run-poses.png">View all eight run poses</a>.</p>16 × 16 source pixels · nearest-neighbour rendering · original code-authored artwork. In-game squash, stretch and hair inertia are applied by the player controller. This gallery previews the body frames with a stylized hair loop.</footer>
 <script>
+// Preview-only state: animation clocks and controls here do not modify game saves or simulation.
+
 const animations={idle:[0,8,4],run:[1,8,18],jump:[2,2,8],apex:[3,2,6],fall:[4,4,8],climb:[5,4,10],wall_slide:[6,2,5],dash:[7,2,16],duck:[8,2,4],skid:[9,2,10],fly:[10,4,10],boost:[11,2,6],land:[12,3,20]};
 const labels={idle:'Idle / breathe & blink',run:'Run / contact, lift & recovery',jump:'Jump / takeoff & tuck',apex:'Apex / hang',fall:'Fall / brace',climb:'Climb / hand over hand',wall_slide:'Wall slide / contact',dash:'Dash / drive forward',duck:'Duck / low clearance',skid:'Skid / counterbalance',fly:'Feather / spread',boost:'Boost / tuck',land:'Land / recover'};
 const gallery=document.querySelector('#gallery'),speed=document.querySelector('#speed'),facing=document.querySelector('#facing'),hair=document.querySelector('#hair');

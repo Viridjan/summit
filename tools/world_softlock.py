@@ -1,3 +1,6 @@
+# Progression-stage check built on world_check: a softlock is a reachable place from which the next required objective cannot be reached. This is an approximation, not a proof of every real movement input.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Softlock check: at each progression stage, every reachable standing spot must still reach the next pickup.
 # Usage: python3 tools/world_softlock.py adventure
 import sys

@@ -1,3 +1,6 @@
+# Stages selected existing Godot regression helpers into a disposable scene to run enemy checks quickly. The complete suite is still needed before concluding that the whole game passes.
+# Reading help: docs/CODE_GUIDE.md.
+
 """Run the existing enemy regression checks without loading unrelated test groups.
 
 Stages selected test helpers from test_runner.gd in a disposable Godot scene.
@@ -12,6 +15,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 
 
+# Extract a named GDScript declaration and its body for the disposable focused test scene.
 def block(source, kind, name):
     match = re.search(rf'^{kind} {re.escape(name)}\b[^\n]*\n', source, re.M)
     if not match:
@@ -21,6 +25,7 @@ def block(source, kind, name):
     return source[match.start():end].rstrip() + '\n\n'
 
 
+# Extract the chosen regression helpers, run them in a temporary project scene and return the subprocess result.
 def main():
     source = (ROOT / 'tests/test_runner.gd').read_text()
     script = 'extends Node\nconst PlayerScript := preload("res://scripts/player.gd")\nconst E := preload("res://scripts/entities.gd")\nconst DT := 1.0 / 60.0\n\n'

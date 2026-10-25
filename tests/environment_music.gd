@@ -1,11 +1,17 @@
 extends SceneTree
+# Checks each original environment score and its synthesized output, including switching music when room themes change.
+# Reading help: docs/CODE_GUIDE.md.
+
 var failures := 0
+# Record a failed expectation with its explanation so the runner can report failures and return an appropriate exit code.
 func check(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
+# Godot calls this SceneTree entry point at startup; begin or schedule the standalone runner workload.
 func _initialize() -> void:
 	call_deferred("run")
+# Execute this standalone regression workload and quit with its accumulated failure count.
 func run() -> void:
 	var game = root.get_node("Game")
 	var engine = game.get_music_engine()
@@ -52,4 +58,4 @@ func run() -> void:
 	game.main.queue_free()
 	await process_frame
 	print("ENVIRONMENT MUSIC OK" if failures == 0 else "ENVIRONMENT MUSIC FAILED: %d" % failures)
-	quit(failures)
+	root.get_node("Game").quit_game(failures)

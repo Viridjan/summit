@@ -1,4 +1,11 @@
 extends RefCounted
+# Original side-view Ape pixel art, shared by the arena boss and the Sand Cave chase.
+# Coordinates describe a 32x32 image facing right; the entity mirrors it when facing left.
+# Polygons form body parts and small rectangles add brows, fur highlights and knuckle details.
+# Images are CPU-side editable pixels; ImageTexture converts an image into something Godot can draw.
+# The texture cache uses a canonical animation frame so repeated loops reuse identical artwork.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Original 32px side-view gorilla. Faces right; the entity mirrors the whole pose.
 const INK := Color("241f23")
 const SHADOW := Color("3c3030")
@@ -9,12 +16,16 @@ const SKIN := Color("b58d6b")
 const SKIN_DARK := Color("775b4e")
 static var _textures: Dictionary = {}
 
+# Run is a 4-frame loop; other poses are still. Canonical frame feeds both the key and build().
+# Normalize pose/frame cache identity and reuse its generated GPU texture.
 static func texture(pose: String, frame: int) -> Texture2D:
-	var key := "%s:%d" % [pose, frame % 4]
+	frame = posmod(frame, 4) if pose == "run" else 0
+	var key := "%s:%d" % [pose, frame]
 	if not _textures.has(key):
 		_textures[key] = ImageTexture.create_from_image(build(pose, frame))
 	return _textures[key]
 
+# Fill pixels whose centres lie inside a polygon, producing sharp original pixel-art body parts.
 static func poly(img: Image, points: Array, color: Color) -> void:
 	var polygon := PackedVector2Array()
 	for point in points:
@@ -24,11 +35,13 @@ static func poly(img: Image, points: Array, color: Color) -> void:
 			if Geometry2D.is_point_in_polygon(Vector2(x + 0.5, y + 0.5), polygon):
 				img.set_pixel(x, y, color)
 
+# Fill a small detail rectangle clipped to the 32px image bounds.
 static func box(img: Image, x: int, y: int, w: int, h: int, color: Color) -> void:
 	var r := Rect2i(x, y, w, h).intersection(Rect2i(0, 0, 32, 32))
 	if r.has_area():
 		img.fill_rect(r, color)
 
+# Compose one right-facing pose from shaded body polygons and face/hand details.
 static func build(pose: String, frame: int) -> Image:
 	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
 	img.fill(Color.TRANSPARENT)
@@ -72,7 +85,7 @@ static func build(pose: String, frame: int) -> Image:
 		poly(img, [[14,14],[17,14],[19,17],[18,23],[22,25],[20,26],[17,23],[16,18],[13,17]], LIGHT)
 		box(img, 21, 23, 4, 3, SKIN_DARK)
 	else:
-		var swing := (frame % 3 - 1) * 2 if pose == "run" else 0
+		var swing: int = [-2, 0, 2, 0][posmod(frame, 4)] if pose == "run" else 0
 		poly(img, [[12,12+drop],[17,11+drop],[21,14+drop],[21,20],[18+swing,26],[23+swing,28],[23+swing,32],[15+swing,32],[12+swing,29],[14,23],[12,19],[10,16]], INK)
 		poly(img, [[13,13+drop],[17,13+drop],[19,15+drop],[19,20],[16+swing,26],[15+swing,29],[14+swing,28],[16,22],[14,19],[12,16]], FUR)
 		box(img, 14, 14+drop, 3, 2, LIGHT)

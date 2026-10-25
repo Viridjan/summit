@@ -1,4 +1,10 @@
 extends RefCounted
+# Creates connected-looking artwork for platforms and special blocks of different sizes.
+# Drawing one complete piece avoids outlining every tile inside a larger block.
+# Small clipped rectangles keep partial tiles and narrow platforms inside their requested image.
+# Cache keys include the style, dimensions and damage state so equal blocks share a texture.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Original 1:1 pixel artwork. One perimeter per object, never a box around each tile.
 # Textures are shared by material/size/damage; movement and shaking do not rebake them.
 const STYLES := ["breakwall", "crumble", "falling", "zip", "dream", "jumpthru"]
@@ -27,10 +33,12 @@ const CACHE_PIXEL_BUDGET := 1048576
 static var _textures: Dictionary = {}
 static var _cached_pixels := 0
 
+# Fill only the part of a detail rectangle that fits inside the block image.
 static func _fill(img: Image, rect: Rect2i, color: Color) -> void:
 	var area := rect.intersection(Rect2i(Vector2i.ZERO, img.get_size()))
 	if area.has_area(): img.fill_rect(area, color)
 
+# Draw a whole connected platform/block image with style-specific edges and damage markings.
 static func build_piece(style: String, size: Vector2i, damage := 0) -> Image:
 	var img := Image.create(maxi(1, size.x), maxi(1, size.y), false, Image.FORMAT_RGBA8)
 	var colors: Array = PALETTES[style]
@@ -89,6 +97,7 @@ static func build_piece(style: String, size: Vector2i, damage := 0) -> Image:
 				_fill(img, Rect2i(maxi(2, x - 3), y, 4, 1), colors[3])
 	return img
 
+# Reuse complete block artwork for identical style, size and damage settings.
 static func texture(style: String, size: Vector2i, damage := 0) -> Texture2D:
 	var key := "%s:%d:%d:%d" % [style, size.x, size.y, damage]
 	if _textures.has(key):
@@ -107,6 +116,7 @@ static func texture(style: String, size: Vector2i, damage := 0) -> Texture2D:
 	_cached_pixels += area
 	return result
 
+# Place the cached block image at its world rectangle, including any visual shake offset.
 static func draw(ci: CanvasItem, rect: Rect2i, style: String, offset := Vector2.ZERO, damage := 0) -> void:
 	var image := texture(style, rect.size, damage)
 	# Retained canvas commands use texture RIDs: keep every texture from this draw

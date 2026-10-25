@@ -1,3 +1,6 @@
+# Read-only world check for safe, flat entry tiles during the brief automatic walk into neighboring rooms. Coordinates in this checker are tiles unless converted explicitly.
+# Reading help: docs/CODE_GUIDE.md.
+
 """Sideways room entrances must be flat for their first two tiles on both sides, so the walk-in after a room
 change (World.enter_room) lands on solid ground: floor (or a jump-through) at the doorway's floor row,
 2 tiles of headroom, no spikes or acid. Usage: python3 tools/check_entrances.py worlds/story
@@ -5,9 +8,15 @@ change (World.enter_room) lands on solid ground: floor (or a jump-through) at th
 import json, os, sys
 
 
+# Find border entrances whose initial walk-in space is blocked or lacks the expected support.
 def bad_entrances(d):
-    W = json.load(open(os.path.join(d, "world.json")))
-    rooms = {n: (p[0], p[1], json.load(open(os.path.join(d, n + ".json")))) for n, p in W["rooms"].items()}
+    # Read one JSON document and close the file before returning its data.
+    def load(name):
+        with open(os.path.join(d, name)) as f:
+            return json.load(f)
+    W = load("world.json")
+    rooms = {n: (p[0], p[1], load(n + ".json")) for n, p in W["rooms"].items()}
+    # Look up one tile, handling coordinates that fall outside the selected room.
     def tile(n, x, y):
         rx, ry, L = rooms[n]
         if 0 <= x < L["w"] and 0 <= y < L["h"]: return L["tiles"][y][x]

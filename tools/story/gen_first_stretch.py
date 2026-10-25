@@ -1,3 +1,6 @@
+# Story generation source. Room helpers use tile coordinates and convert placed objects to pixels. Executing this script writes room JSON/world layout and may replace hand-edited generated files; do not run it merely to read the code.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Generator for worlds/story (chapter 1). Rooms are edited in-game too, so it only rewrites the rooms
 # you name (their in-game edits are lost); "all" rewrites every room and world.json.
 #   python3 -I tools/story/gen_first_stretch.py worlds/story a1_ape_arena [more rooms...]
@@ -9,23 +12,32 @@ if not ONLY:
 T = 8
 
 class Room:
+    # Build the in-memory room/grid representation used by this tool from its input data.
     def __init__(s, name, title, w, h, env, fill="0"):
         s.name, s.title, s.w, s.h, s.env = name, title, w, h, env
         s.g = [[fill] * w for _ in range(h)]
         s.ents = []
+    # Fill an inclusive tile rectangle in the generated room.
     def rect(s, x0, y0, x1, y1, c):  # inclusive
         for y in range(max(0, y0), min(s.h - 1, y1) + 1):
             for x in range(max(0, x0), min(s.w - 1, x1) + 1):
                 s.g[y][x] = c
+    # Fill a generated tile rectangle with solid terrain.
     def solid(s, *a): s.rect(*a, "1")
+    # Clear a generated tile rectangle to walkable empty space.
     def open(s, *a): s.rect(*a, "0")
+    # Append an object, converting its tile position into the pixel coordinates required by level JSON.
     def ent(s, t, x, y, **kw): s.ents.append({"t": t, "x": x * T, "y": y * T, **kw})
+    # Place backdrop scenery ahead of its doorway in drawing order.
     def building(s, x, y, w, h, style):  # scenery, walked through; first in the list so doors draw over it
         s.ents.insert(0, {"t": "building", "x": x * T, "y": y * T, "w": w * T, "h": h * T, "style": style})
+    # Place a row of upward-facing spikes across the requested tile interval.
     def spikes_up(s, x0, x1, y):
         for x in range(x0, x1 + 1): s.ent("spikes_up", x, y)
+    # Place a rectangular water region, converting its tile dimensions into pixels.
     def water(s, x0, y0, x1, y1, **kw):
         s.ents.append({"t": "water", "x": x0 * T, "y": y0 * T, "w": (x1 - x0 + 1) * T, "h": (y1 - y0 + 1) * T, **kw})
+    # Write the generated room dictionary as a project JSON file.
     def save(s):
         d = {"name": s.title, "w": s.w, "h": s.h, "environment": s.env,
              "tiles": ["".join(r) for r in s.g], "entities": s.ents}
@@ -33,15 +45,22 @@ class Room:
 
 G = 19  # ground top row everywhere (rows G..h-1 solid)
 
-# 1. Meadow: flat, a few jumps and spikes, no enemies
+# 1. Meadow: learn to jump. Nothing here hurts: a missed jump only drops you onto grass or into a shallow dip
+#    you can hop out of. Harm starts once you fall down the hole in The Big Jump.
 m = Room("m1_meadow", "Meadow", 80, 23, "sky")
 m.solid(0, G, 79, 22); m.solid(0, 0, 0, 22)
 m.solid(14, 18, 16, 18)                      # low bump
+m.solid(20, 16, 22, 16)                      # floating ledge over the path
 m.solid(26, 17, 27, 18)                      # 2-high block
-m.open(36, G, 38, G); m.spikes_up(36, 38, G) # small spike pit, 3 wide
-m.solid(48, 17, 50, 18)
-m.spikes_up(58, 58, 18)                      # one spike on the grass
+m.open(32, G, 36, 20)                        # shallow dip, 2 deep: jump it, or climb back out
+m.solid(34, 19, 34, 20)                      # stepping stone in the dip
+m.solid(41, 17, 43, 18); m.solid(57, 17, 59, 18)  # an arch: blocks at the ends, floating ledges between
+for x, y in ((45, 15), (49, 13), (53, 15)):
+    m.solid(x, y, x + 2, y)
+m.ent("strawberry", 50, 11)                  # on top of the arch
+m.open(61, G, 64, 20)                        # second dip
 m.solid(66, 17, 69, 18)
+m.solid(72, 16, 73, 18)                      # 3-high block: a full jump
 m.ent("spawn", 3, 18)
 m.ent("note", 6, 18, text="Chapter 1 (work in progress): head right")
 
@@ -57,6 +76,11 @@ j.ent("spawn", 2, 18)
 j.ent("note", 11, 14, text="The big jump: needs a wavedash (dash comes from a later level). Drop in to go on.")
 j.ent("strawberry", 36, 16)                  # far side reward, for later
 
+# The hole: the gap in The Big Jump drops a whole screen down this shaft before reaching the Lake Cave.
+hole = Room("m3_the_hole", "The Hole", 40, 23, "cavern_deep", fill="1")
+hole.open(13, 0, 26, 22)
+hole.ent("note", 20, 3, text="Down you go. From here on, things can hurt")
+
 # 3. Lake cave: darker, a lake, dead-end tunnels, a roar from the left. 5 screens wide, 2 tall.
 c = Room("c1_lake_cave", "Lake Cave", 200, 46, "cavern_deep", fill="1")
 # upper cave (row band 6..18, floor row G)
@@ -68,10 +92,17 @@ c.open(12, 8, 14, 14)                        # dead-end side tunnel up
 c.solid(74, 6, 84, 8); c.solid(104, 6, 118, 9)  # uneven ceiling
 c.open(100, 2, 102, 8)                       # dead-end tunnel up
 c.solid(106, 13, 112, 13)                    # floating ledge
+c.open(99, G, 101, 20); c.spikes_up(99, 101, 20)  # spike pit past the lake (3 tiles of run-up after it)
+c.spikes_up(104, 110, 18); c.solid(107, 17, 107, 18)  # spiky floor with a stepping stone in the middle
 c.open(119, 9, 198, G - 1)                   # right chambers
 c.solid(130, 9, 138, 11); c.solid(160, 9, 175, 12); c.solid(186, 9, 198, 13)  # ceiling teeth
 c.open(150, 3, 152, 8)                       # dead-end tunnel up
 c.solid(146, 16, 148, 18); c.solid(168, 17, 171, 18)  # rocks to hop over
+c.open(126, G, 128, 20); c.spikes_up(126, 128, 20)    # Cave Teeth: spike pits between the teeth
+c.open(136, G, 138, 20); c.spikes_up(136, 138, 20)  # room to land before the tall rock
+c.solid(154, 16, 155, 16)                             # a ledge to hop from
+c.open(174, G, 176, 20); c.spikes_up(174, 176, 20)    # Cove Tunnel: a pit between the rocks and the ledge
+c.open(189, G, 191, 20); c.spikes_up(189, 191, 20)    # and one under the low ceiling
 c.solid(178, 13, 182, 13)                    # ledge
 c.open(70, G, 95, 20); c.water(70, G, 95, 20)  # the lake, in a dip
 c.open(199, 16, 199, 18)                     # right edge: rows 16..18 lead into Cove Town
@@ -108,6 +139,7 @@ t.ents.append({"t": "house_door", "x": 10 * T, "y": 16 * T, "w": 2 * T, "h": 3 *
 t.ents.append({"t": "house_door", "x": 20 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "h2", "to": "h2_quest_house:out"})
 
 # Cove Town's houses, inside (reached through their house doors; press interact at a door)
+# Construct a small indoor room and its linked town entrance.
 def house(name, title, town_door, note):
     h = Room(name, title, 30, 14, "building", fill="1")
     h.open(1, 1, 28, 11)                     # floor rows 12..13
@@ -120,15 +152,18 @@ h1 = house("h1_villager_house", "Villager's House", "h1", "Villager (NPC, not bu
 h2 = house("h2_quest_house", "Quest Giver's House", "h2", "Quest giver (NPC, not built yet): the quest rewards a skill point")
 
 # 5. Jungle (section 1.5): forest theme, a hollow trunk, leaf platforms, calm Mosstrots; the player drops down again
+# Place a leaf-shaped one-way platform with tile-based width.
 def leaf(r, x, y, w): r.ents.append({"t": "leaf", "x": x * T, "y": y * T, "w": w * T, "h": 8})
+# Place a right-facing ground walker at the requested tile position.
 def mosstrot(r, x, y): r.ents.append({"t": "enemy_mosstrot", "x": x * T, "y": y * T, "facing": 1})
 j1 = Room("j1_jungle_edge", "Jungle Edge", 40, 23, "forest")
 j1.solid(0, G, 39, 22); j1.solid(0, 0, 39, 1); j1.solid(0, 0, 0, 14); j1.solid(39, 0, 39, 22)
 j1.solid(14, 4, 16, 15)                      # big trunk, hollow at the base (rows 16..18)
 leaf(j1, 9, 16, 4); leaf(j1, 4, 13, 4); leaf(j1, 9, 10, 4); leaf(j1, 4, 7, 4)  # zigzag up the trunk's left side
 j1.ent("strawberry", 5, 4)
-mosstrot(j1, 24, 18)
+mosstrot(j1, 26, 18)
 j1.open(31, G, 38, 22)                       # the ground ends: drop into the falls below
+j1.open(20, G, 22, 20); j1.spikes_up(20, 22, 20)  # thorn pit, 3 tiles past the hollow trunk
 j1.ent("note", 27, 18, text="Mosstrots just wander. Jump over them.")
 
 j2 = Room("j2_jungle_falls", "Jungle Falls", 80, 23, "forest", fill="1")
@@ -137,6 +172,8 @@ j2.solid(5, 13, 22, 18); j2.open(5, 16, 22, 18)   # hill with a tunnel through i
 j2.ent("strawberry", 6, 17)
 mosstrot(j2, 14, 12); mosstrot(j2, 28, 18)
 j2.open(40, G, 60, 20); j2.water(40, G, 60, 20)   # the lake
+j2.open(33, G, 35, 20); j2.spikes_up(33, 35, 20)  # thorn pit before the lake
+leaf(j2, 41, 17, 2); leaf(j2, 49, 16, 3)          # leaf hops across the lake (or swim)
 j2.ents.append({"t": "waterfall", "x": 44 * T, "y": 3 * T, "w": 4 * T, "h": 16 * T})
 leaf(j2, 56, 16, 4); leaf(j2, 51, 13, 4); leaf(j2, 56, 10, 4)  # up from the lake's right shore
 j2.ent("strawberry", 58, 7)
@@ -151,11 +188,13 @@ j3.solid(32, 6, 46, 18); j3.open(32, 16, 46, 18)  # hill with a tunnel through i
 j3.solid(52, 2, 54, 16)                      # big trunk, hollow at the base
 leaf(j3, 56, 16, 3); leaf(j3, 59, 13, 4); leaf(j3, 56, 10, 3)  # up the trunk's right side
 j3.ent("strawberry", 57, 8)
+j3.open(26, 19, 28, 20); j3.spikes_up(26, 28, 20)  # thorn pit on the long flat stretch
 mosstrot(j3, 39, 5)  # on the tunnel hill's top, off the walking path
 j3.open(79, 11, 79, 14)                      # right edge rows 11..14 lead into the Ape's arena
 j3.ent("note", 75, 14, text="A deep roar ahead: the Ape's arena")
 
 # 6. The Ape's arena (section 1.6, the boss is not built yet) and the fork (1.7)
+# Place a doorway rectangle with its ID and destination link.
 def door(r, x, y, did, to): r.ents.append({"t": "door", "x": x * T, "y": y * T, "w": 2 * T, "h": 3 * T, "id": did, "to": to})
 a1 = Room("a1_ape_arena", "Ape Arena", 56, 23, "forest", fill="1")
 a1.open(1, 2, 54, G - 1); a1.open(0, 11, 0, 14); a1.open(55, 12, 55, 15)
@@ -165,15 +204,15 @@ a1.open(12, G, 15, 22)                       # left branch (lines up with Jungle
 a1.ents.append({"t": "auto_walk", "x": 0, "y": 11 * T, "w": 3 * T, "h": 4 * T, "dir": 1, "time": 0.7, "while_boss": True})
 a1.ents.append({"t": "boss_gate", "x": 0, "y": 11 * T, "w": T, "h": 4 * T, "closes_behind": True})
 a1.spikes_up(42, 44, 18)
+a1.ents.append({"t": "jumpthru", "x": 18 * T, "y": 16 * T, "w": 4 * T, "h": 8})  # platforms: a jump up out of a slam's reach
+a1.ents.append({"t": "jumpthru", "x": 33 * T, "y": 16 * T, "w": 4 * T, "h": 8})
 a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T,
     "range": [6 * T, 51 * T],
-    "spikes": [[[46 * T, 18 * T, 3]], [[39 * T, 18 * T, 2], [48 * T, 18 * T, 2]]],
+    # after each hit the old spikes crumble and new ones appear on the other side (4 hits: 3 patches)
+    "spikes": [[[20 * T, 18 * T, 3]], [[46 * T, 18 * T, 3]], [[8 * T, 18 * T, 2], [26 * T, 18 * T, 2]]],
     "orb": [45 * T, 16 * T]})
 a1.ents.append({"t": "boss_gate", "x": 55 * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
 a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
-a1.ent("note", 11, 18, text="Left branch, once the Ape is beaten: down here, back through the jungle")
-a1.ent("note", 17, 18, text="The Ape! Move towards it when it leaps: it lands past you")
-a1.ent("note", 40, 18, text="Lure its leaps onto spikes")
 a1.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 
 # Right branch: a long sand cave climbing at about 14 degrees (30 rows over 120 columns), then the shore and the
@@ -185,9 +224,11 @@ STEPS = [(k * SW + 8) // 16 for k in range(1, 16)]  # first column of each step:
 top = [39 - 2 * sum(1 for b in STEPS if b <= x) for x in range(SW)]  # first solid row under the corridor
 for x in range(SW):
     s1.open(x, top[x] - 7, x, top[x] - 1)
+# Carve a pit and place spikes along its floor.
 def spike_pit(a, b):                         # 3 deep, spikes on its floor
     s1.open(a, top[a], b, top[a] + 2)
     s1.spikes_up(a, b, top[a] + 2)
+# Place temporary support across a pit, optionally including spikes below.
 def crumble_bridge(a, b, spikes=False):      # breakable sand over a 2-deep pit
     s1.open(a, top[a], b, top[a] + 1)
     if spikes: s1.spikes_up(a, b, top[a] + 1)
@@ -196,14 +237,16 @@ def crumble_bridge(a, b, spikes=False):      # breakable sand over a 2-deep pit
 spike_pit(18, 20)
 crumble_bridge(26, 28)       # 3 wide after 3 tiles of run-up: the Ape leaps clear of it
 spike_pit(41, 43)
-s1.solid(55, top[55] - 7, 59, top[55] - 5)   # low ceiling: only a short hop clears the pit under it
 spike_pit(56, 58)
+s1.ents.append({"t": "breakwall", "x": 55 * T, "y": (top[55] - 7) * T, "w": 5 * T, "h": 3 * T})  # low ceiling: only a short hop clears the pit; the Ape smashes it
 crumble_bridge(79, 81, spikes=True)
 spike_pit(93, 95)
 spike_pit(108, 110)
-s1.ents.append({"t": "ape_chase", "x": 0, "y": top[0] * T - 32, "trigger": 12 * T, "end": 113 * T})
-s1.ent("note", 6, top[6] - 1, text="The Ape screams and chases you up the cave: don't stop")
-s1.ent("note", 112, top[112] - 1, text="Rocks fall and seal the cave behind you (not built yet): the Ape gives up here")
+for hx in (32, 47, 62, 70, 85):  # hanging rock: the player runs under it, the chasing Ape smashes it and gets hurt
+    s1.ents.append({"t": "breakwall", "x": hx * T, "y": (top[hx] - 7) * T, "w": 2 * T, "h": 3 * T})
+# The Ape stops at "end": the ceiling just ahead of it caves in ("seal"), for good. Overtaking the player kills.
+s1.ents.append({"t": "ape_chase", "x": 0, "y": top[0] * T - 32, "trigger": 12 * T, "end": 99 * T,
+                "seal": [102 * T, (top[102] - 7) * T, 2 * T, 7 * T]})
 s1.ent("note", 116, top[116] - 1, text="Reward: the sword (not built yet; needs 2 energy blocks to use)")
 
 s2 = Room("s2_shore", "Shore", 80, 23, "sea")
@@ -213,6 +256,10 @@ s2.ent("strawberry", 10, 1)
 s2.ent("note", 4, 8, text="The mountain: clearly climbable, but not yet")
 s2.solid(15, G, 79, 22); s2.solid(79, 0, 79, 22)
 s2.open(56, G, 78, 21); s2.water(56, G, 78, 21)  # the sea
+s2.solid(20, 17, 21, 18); s2.solid(36, 17, 37, 18)  # rocks on the beach
+s2.open(27, G, 29, 20); s2.spikes_up(27, 29, 20)    # urchins in a tide pool
+for x, y in ((60, 17), (66, 16), (72, 17)):          # stepping stones out over the sea
+    s2.solid(x, y, x + 1, y)
 s2.ent("note", 60, 18, text="Raft to the next island (not built): needs the lighthouse quest")
 s2.building(44, 0, 9, 19, "tower")  # the lighthouse: a backdrop with its door at the foot
 s2.ents.append({"t": "house_door", "x": 44 * T, "y": 16 * T, "w": 2 * T, "h": 3 * T, "id": "lh", "to": "lh1_lighthouse_stairs:bottom"})
@@ -244,12 +291,17 @@ l1.open(1, 3, 78, G - 1); l1.open(12, 0, 15, 2); l1.open(0, 15, 0, 18)
 l1.solid(30, 14, 40, 18); l1.open(30, 17, 40, 18)  # hill with a low tunnel
 l1.open(60, G, 70, 20); l1.water(60, G, 70, 20)
 mosstrot(l1, 22, 18); mosstrot(l1, 52, 18)
-l1.ent("note", 8, 18, text="The Ape screams behind you; cross the jungle again (audio not built)")
+for a in (5, 46):                            # thorn pits: one on the way out (left), one off it
+    l1.open(a, G, a + 2, 20); l1.spikes_up(a, a + 2, 20)
+leaf(l1, 62, 16, 3)                          # a leaf hop over the pool
+l1.ent("note", 8, 18, text="The Ape screams behind you; cross the jungle again", sound="ape_scream")
 
 l2 = Room("l2_net_trap", "Net Trap", 80, 23, "forest", fill="1")
 l2.open(1, 3, 78, G - 1); l2.open(79, 15, 79, 18)
 leaf(l2, 50, 15, 4); leaf(l2, 44, 12, 4)
 mosstrot(l2, 60, 18)
+for a in (66, 34):                           # thorn pits on the way to the trap
+    l2.open(a, G, a + 2, 20); l2.spikes_up(a, a + 2, 20)
 door(l2, 20, 16, "net", "l3_treetop_village:net")
 l2.ent("note", 25, 18, text="Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in")
 
@@ -267,21 +319,24 @@ l3.ent("note", 68, 7, text="Reward: wall grab (not built yet)")
 l3.ent("note", 76, 19, text="Where the village leads: still open")
 
 # Lake Cave is built as one grid, then cut into rooms of its own (one per added screen).
+# Extract a named smaller room from the larger authored layout and adjust its coordinates.
 def cut(name, title, x0, y0, w, h):
     r = Room(name, title, w, h, c.env)
     r.g = [row[x0:x0 + w] for row in c.g[y0:y0 + h]]
     for e in c.ents:
         if x0 * T <= e["x"] < (x0 + w) * T and y0 * T <= e["y"] < (y0 + h) * T:
             r.ents.append({**e, "x": e["x"] - x0 * T, "y": e["y"] - y0 * T})
-    return r, 40 + x0, 23 + y0
-rooms = [(m, 0, 0), (j, 80, 0),
+    return r, 40 + x0, 46 + y0
+D = 23  # everything below the meadow sits one screen lower, under The Hole
+rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
     cut("c0_roar_tunnel", "Roar Tunnel", 0, 0, 40, 23),
     cut("c1_lake_cave", "Lake Cave", 40, 0, 80, 23),
     cut("c2_cave_teeth", "Cave Teeth", 120, 0, 40, 23),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
-    (t, 240, 23), (j1, 280, 23), (j2, 280, 46), (j3, 360, 46),
-    (a1, 440, 46), (h1, 240, 100), (h2, 280, 100), (lh, 320, 100), (s1, 496, 23), (s2, 616, 23), (s3, 656, 0), (l1, 440, 69), (l2, 360, 69), (l3, 360, -2)]
+    (t, 240, 23 + D), (j1, 280, 23 + D), (j2, 280, 46 + D), (j3, 360, 46 + D),
+    (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 320, 100 + D), (s1, 496, 23 + D), (s2, 616, 23 + D),
+    (s3, 656, 0 + D), (l1, 440, 69 + D), (l2, 360, 69 + D), (l3, 360, -2 + D)]
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))

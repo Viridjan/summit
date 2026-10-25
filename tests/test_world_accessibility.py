@@ -1,3 +1,6 @@
+# Regression tests for world accessibility. Temporary fixtures keep these checks independent of personal save data.
+# Reading help: docs/CODE_GUIDE.md.
+
 """Small deterministic maps that exercise the offline accessibility checker."""
 import contextlib
 import io
@@ -14,11 +17,13 @@ from check_side_openings import audit as audit_sides
 
 
 class AccessibilityTests(unittest.TestCase):
+    # Create a temporary fixture directory for this test; cleanup keeps generated test data out of the project.
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
+    # Write the small room/world fixtures used to isolate one accessibility behavior.
     def world(self, rooms, positions=None):
         positions = positions or {name: [i * 10, 0] for i, name in enumerate(rooms)}
         (self.root / "world.json").write_text(json.dumps({"start": "a", "rooms": positions}))
@@ -28,6 +33,7 @@ class AccessibilityTests(unittest.TestCase):
             (self.root / (name + ".json")).write_text(json.dumps({"name": name, "w": len(tiles[0]), "h": len(tiles), "tiles": tiles, "entities": entities}))
         return Audit(self.root)
 
+    # Regression coverage for disconnected rooms and directed doors. The assertions below state the expected behavior of this case.
     def test_disconnected_rooms_and_directed_doors(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         audit = self.world({"a": (tiles, []), "b": (tiles, [])})
@@ -40,6 +46,7 @@ class AccessibilityTests(unittest.TestCase):
         self.assertEqual(result["errors"], [])
         self.assertEqual(result["models"]["standing"]["rooms_reached"], 2)
 
+    # Regression coverage for one tile passage needs crouch. The assertions below state the expected behavior of this case.
     def test_one_tile_passage_needs_crouch(self):
         # Adjacent rooms share a one-tile-high edge opening.
         a = ["1111111", "1000001", "1000000", "1000001", "1111111"]
@@ -48,6 +55,7 @@ class AccessibilityTests(unittest.TestCase):
         self.assertEqual(result["models"]["hazards"]["rooms_reached"], 2)
         self.assertEqual(result["models"]["standing"]["unreached_rooms"], ["b"])
 
+    # Regression coverage for acid barrier and partial regions. The assertions below state the expected behavior of this case.
     def test_acid_barrier_and_partial_regions(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         result = self.world({"a": (tiles, [{"t": "acid", "x": 24, "y": 8, "w": 8, "h": 24}])}).run()
@@ -55,23 +63,27 @@ class AccessibilityTests(unittest.TestCase):
         self.assertEqual(result["models"]["acid"]["partial_rooms"], ["a"])
         self.assertEqual(result["models"]["acid"]["rooms"]["a"]["unreached_sample_local_tile"], [4, 1])
 
+    # Regression coverage for spikes distinguished from acid. The assertions below state the expected behavior of this case.
     def test_spikes_distinguished_from_acid(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         result = self.world({"a": (tiles, [{"t": "spikes_up", "x": 24, "y": 8, "w": 8, "h": 24}])}).run()
         self.assertEqual(result["models"]["acid"]["partial_rooms"], [])
         self.assertEqual(result["models"]["hazards"]["partial_rooms"], ["a"])
 
+    # Regression coverage for invalid door is reported. The assertions below state the expected behavior of this case.
     def test_invalid_door_is_reported(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         result = self.world({"a": (tiles, [{"t": "door", "id": "bad", "to": "missing:door", "x": 8, "y": 8}])}).run()
         self.assertIn("missing target", result["errors"][0])
 
+    # Regression coverage for negative world coordinates. The assertions below state the expected behavior of this case.
     def test_negative_world_coordinates(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         result = self.world({"a": (tiles, [])}, {"a": [-10, -10]}).run()
         self.assertEqual(result["spawn_tile"], (-8, -8))
         self.assertTrue(result["models"]["standing"]["spawn_valid"])
 
+    # Regression coverage for cli strict status and artifacts. The assertions below state the expected behavior of this case.
     def test_cli_strict_status_and_artifacts(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         self.world({"a": (tiles, []), "b": (tiles, [])})
@@ -82,6 +94,7 @@ class AccessibilityTests(unittest.TestCase):
         self.assertEqual(Path(str(output) + ".png").read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
         self.assertEqual(json.loads(Path(str(output) + ".json").read_text())["room_count"], 2)
 
+    # Regression coverage for spawn outside room rejected. The assertions below state the expected behavior of this case.
     def test_spawn_outside_room_rejected(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         self.world({"a": (tiles, [])})
@@ -92,6 +105,7 @@ class AccessibilityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "spawn is outside"):
             Audit(self.root)
 
+    # Regression coverage for side opening into void is grouped. The assertions below state the expected behavior of this case.
     def test_side_opening_into_void_is_grouped(self):
         tiles = ["1111111", "0000001", "0000001", "1000001", "1111111"]
         self.world({"a": (tiles, [])})
@@ -101,6 +115,7 @@ class AccessibilityTests(unittest.TestCase):
         self.assertEqual((opening["reason"], opening["side"]), ("no_adjacent_room", "left"))
         self.assertEqual((opening["y_start_px"], opening["y_end_px_exclusive"]), (8, 24))
 
+    # Regression coverage for side opening distinguishes wall and valid exit. The assertions below state the expected behavior of this case.
     def test_side_opening_distinguishes_wall_and_valid_exit(self):
         a = ["1111111", "1000000", "1000000", "1000001", "1111111"]
         b = ["1111111", "1000001", "0000001", "1000001", "1111111"]
@@ -111,6 +126,7 @@ class AccessibilityTests(unittest.TestCase):
         self.assertEqual((opening["source"], opening["target"], opening["reason"]), ("a", "b", "neighbour_wall"))
         self.assertEqual((opening["y_start_px"], opening["y_end_px_exclusive"]), (8, 16))
 
+    # Regression coverage for overlap rejected. The assertions below state the expected behavior of this case.
     def test_overlap_rejected(self):
         tiles = ["1111111", "1000001", "1000001", "1000001", "1111111"]
         with self.assertRaisesRegex(ValueError, "overlapping"):

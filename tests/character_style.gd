@@ -1,15 +1,21 @@
 extends SceneTree
+# Checks the requested Nori hair cues: brown with available dash, gray when spent and brown again after refill.
+# Reading help: docs/CODE_GUIDE.md.
+
 
 var failures := 0
 
+# Record a failed expectation with its explanation so the runner can report failures and return an appropriate exit code.
 func check(ok: bool, message: String) -> void:
 	if not ok:
 		failures += 1
 		push_error(message)
 
+# Godot calls this SceneTree entry point at startup; begin or schedule the standalone runner workload.
 func _initialize() -> void:
 	call_deferred("run")
 
+# Execute this standalone regression workload and quit with its accumulated failure count.
 func run() -> void:
 	var art = load("res://scripts/character_art.gd")
 	var player = load("res://scripts/player.gd").new(null, Vector2.ZERO)

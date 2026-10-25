@@ -325,3 +325,27 @@ Phase 5 - Input and tooling (2026-10-21/22)
   starts 3 tiles after a step (the jump up a step carried straight into the pit).
 - 2026-10-24: stretch aspect "expand": on phones the touch controls sit at the real screen edges (TouchControls.at keeps each one's distance to the nearest edges); the world keeps its 1280x720 view centred with black bars (World.Letterbox).
 - 2026-10-24: the Sand Cave Ape's planned path never touches breakable blocks (crumble/breakable walls are empty to the planner, which also rejects any run whose box touches one; breakables get their own take-off margin). Crumble bridges now 3 wide with 3 tiles of run-up (26-28, 79-81).
+- 2026-10-24: more platforming in every room on the route. Meadow: harmless (no spikes; dips you can hop out of,
+  ledges, an arch with a star, a 3-high block). New room m3_the_hole: the Big Jump's gap now drops a whole extra
+  screen (46 rows, was 23) before the Lake Cave; every room below moved down 23 rows. Harm starts past the hole:
+  spike/thorn pits (3 wide, 3 tiles of run-up) in Lake Cave, Cave Teeth, Cove Tunnel, Jungle Edge/Falls/Hills,
+  Shore, Jungle Depths and Net Trap; leaf hops over the jungle lakes; stepping stones on the shore.
+  Tests: the hold-right story bot checks the route (invincible); the Ape planner proves a spike-free run with plain
+  jumps across Meadow, Cave Teeth, Cove Tunnel, Jungle Edge, Jungle Hills and Shore.
+- 2026-10-24: buildings always draw first (behind doors), whatever their order in the level file.
+- 2026-10-24: Story is the default adventure world (first in the menu picker; settings world "" = story). Summit is second.
+- 2026-10-25: Godot keeps 30 log files (tests were rotating play logs away).
+- 2026-10-25: Codex review fixes: Ape chase plan cache keys on all planner inputs (world, room, level data, tuning, endpoint), capped at 16; malformed saves normalized (finite spawn, blocks >= 1, energy clamped, int/float accepted); Ape run animation is a coherent 4-frame loop; tuning preset list ok on fresh install; bench compiles again; SFX synthesized at boot. tools/verify.sh runs every suite and fails on engine errors, not just exit codes.
+- 2026-10-25: Sand Cave low ceiling removed; ApeChase planner now also keeps the Ape's 24px body out of terrain (longer wall run-ups 22-34px). Ape screams and chase rules documented in STORY_DESIGN.
+- 2026-10-25: Sand Cave low ceiling back as breakable rock (breakwall over cols 55-59): player short-hops under it, the chasing Ape smashes it (not saved). Planner may pass through breakable walls, never stand on them.
+- 2026-10-25: Sand Cave: Ape blinks hurt when it smashes rock; at the last step a cave-in (ape_chase 'seal' rect, a resting falling block) drops behind the player and stays for the run. Spawned entities now register as solids too (World._register).
+- 2026-10-25: Removed solved design notes: Ape arena (fight hint, lure onto spikes, left branch) and Sand Cave (chase, cave-in).
+- 2026-10-25: Ape arena: Ape HP 4; each spike hit crumbles the spikes in its range and the next patch appears on the other side (20-22, then 46-48, then 8-9 + 26-27); two jump-through platforms (18-21 and 33-36, row 16).
+- 2026-10-25: Door prompt is the interact button sprite, not a triangle. scripts/button_art.gd generates keycaps (3x5 pixel font, arrows) and pad buttons (Xbox-coloured A/B/X/Y, LB/RB/LT/RT, ST/BK, d-pad); Game.using_pad tracks the last device used.
+- 2026-10-25: Sand Cave chase: kill line instead of body contact (Ape centre past player centre = death, any height); 5 hanging breakwall chunks (32,47,62,70,85) + low ceiling hurt the Ape; landings drop cosmetic debris; the Ape triggers the cave-in itself on reaching end (99*T), seal at cols 102-103.
+- 2026-10-25: Perf pass (measured): story rooms run 35-75 us/tick physics, room change ~2 ms. Ape chase planner 76 -> 27 ms (long run-ups tried first) and runs on the room's first tick, not at the trigger.
+- 2026-10-25: Ape chase planner has a 150 ms budget (0 = unlimited for offline proofs); with no route the Ape screams and leaves (not saved). Cave-in rock drawn with breakable-rock art (falling block d.art). Jungle Depths note plays ape_scream.
+- 2026-10-25: Fixes: chase planner sliced over frames (ChasePlan, 3 ms/frame, worst frame 27 -> 3 ms); PlayStation prompts (Game.pad_ps by joy name); collision indexes (fixed solids + jump-throughs by 64px column, touchables by type): dense bench 3.5 -> 1.3 ms, normal 368 -> 233 us; player_touch/player_riding cheap rejects; Level Complete leaked a Button (smoke leaks 128 -> 1); smoke fails on orphan nodes.
+- 2026-10-25: Game.quit_game(): menu Quit, window close and test runners stop all sound, free the music engine and wait 0.1+0.25 s so audio playbacks are released; roar test reads PCM once. Exit leak warnings: 0 in every runner.
+- 2026-10-25: Energy block +10 (was +20). F3 energy panel (scripts/energy_panel.gd): live energy/max/blocks, current rate and cause, all gain/loss rules, 10 s graph with block lines, last changes logged by World.energy_event (jump, hit, death refill, block, orb, Ape).
+- 2026-10-25: A hit is always a death and never touches energy (HIT_ENERGY/hit_energy removed; no refill on death). Beating the Ape no longer drains energy.

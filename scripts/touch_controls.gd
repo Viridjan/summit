@@ -1,4 +1,10 @@
 extends Control
+# Touchscreen input adapter: turns finger presses into the same actions used by keyboard/gamepad.
+# Each finger has an index so moving the stick and pressing Jump can happen at the same time.
+# The stick has a dead zone (small ignored motions) and maps larger motions to eight directions.
+# Controls release held actions when hidden, preventing a menu transition from leaving movement stuck.
+# Reading help: docs/CODE_GUIDE.md.
+
 # On-screen controls for phones and tablets. Each finger presses the same input actions as the keyboard,
 # so gameplay code needs nothing special. Left: a stick (8 directions). Right: Jump, Dash, Attack, Grab.
 # Top right: Pause and Map. Menus need nothing: Godot turns taps into mouse clicks.
@@ -22,14 +28,17 @@ var fingers := {}  # touch index -> "stick" or an action name
 var stick := Vector2.ZERO  # finger offset from the stick centre
 var held_dirs := {}  # direction actions the stick is pressing now
 
+# Check whether Godot reports touchscreen support before automatically adding touch controls.
 static func wanted() -> bool:
 	return DisplayServer.is_touchscreen_available()
 
+# Stretch this input overlay to the viewport and redraw when its layout changes.
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	resized.connect(queue_redraw)
 
+# Track finger presses/drags/releases and emit the matching ordinary input actions.
 func _input(event: InputEvent) -> void:
 	# hidden: ignore new touches, but still let go of held ones (a lost release would leave a button stuck)
 	if not is_visible_in_tree() and not (event is InputEventScreenTouch and not event.pressed):
@@ -60,9 +69,11 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		queue_redraw()
 
+# Keep each reference control anchored to its nearest screen edges when the aspect ratio changes.
 func at(p: Vector2) -> Vector2:
 	return Vector2(p.x if p.x < 640 else size.x - (1280 - p.x), p.y if p.y < 360 else size.y - (720 - p.y))
 
+# Identify a touched button or the broad lower-left stick region; return empty for unrelated touches.
 func _hit(p: Vector2) -> String:
 	for b in BUTTONS:
 		if p.distance_to(at(b[2])) <= b[3] * 1.2:
@@ -71,6 +82,7 @@ func _hit(p: Vector2) -> String:
 		return "stick"
 	return ""
 
+# Clamp the virtual stick offset, apply its dead zone and update only direction actions that changed.
 func _move_stick(p: Vector2) -> void:
 	stick = (p - at(STICK_C)).limit_length(STICK_R)
 	var on := {}
@@ -85,6 +97,7 @@ func _move_stick(p: Vector2) -> void:
 			held_dirs[d] = on.get(d, false)
 			_send(d, held_dirs[d])
 
+# Inject an InputEventAction so both polled movement and event-driven pause/map controls see it.
 func _send(action: String, on: bool) -> void:  # a real event, so _unhandled_input (pause, map) sees it too
 	var e := InputEventAction.new()
 	e.action = action
@@ -92,6 +105,7 @@ func _send(action: String, on: bool) -> void:  # a real event, so _unhandled_inp
 	e.strength = 1.0 if on else 0.0
 	Input.parse_input_event(e)
 
+# Release every held touch action when controls disappear, avoiding stuck movement or buttons.
 func release_all() -> void:  # when hidden (menus), so nothing stays held
 	for a in fingers.values():
 		if a != "stick":
@@ -100,10 +114,12 @@ func release_all() -> void:  # when hidden (menus), so nothing stays held
 	_move_stick(at(STICK_C))
 	queue_redraw()
 
+# React to visibility changes by clearing touch state when the overlay becomes hidden.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
 		release_all()
 
+# Draw the stick, button labels and pressed highlights at their current screen positions.
 func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	var sc := at(STICK_C)

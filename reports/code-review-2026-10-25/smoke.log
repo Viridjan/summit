@@ -1,0 +1,27 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+ERROR: Couldn't open directory at path "user://tuning/".
+   at: get_files_at (core/io/dir_access.cpp:578)
+   GDScript backtrace (most recent call first):
+       [0] list_presets (res://scripts/tuning.gd:201)
+       [1] _fill_presets (res://scripts/debug_panel.gd:295)
+       [2] _ready (res://scripts/debug_panel.gd:158)
+       [3] _toggle_debug (res://scripts/world.gd:919)
+       [4] _ready (res://tests/smoke.gd:92)
+       [5] _frames (res://tests/smoke.gd:268)
+ERROR: Couldn't open directory at path "user://tuning/".
+   at: get_files_at (core/io/dir_access.cpp:578)
+   GDScript backtrace (most recent call first):
+       [0] list_presets (res://scripts/tuning.gd:201)
+       [1] _fill_presets (res://scripts/debug_panel.gd:295)
+       [2] _ready (res://scripts/debug_panel.gd:158)
+       [3] _toggle_debug (res://scripts/world.gd:919)
+       [4] _unhandled_input (res://scripts/world.gd:705)
+SMOKE OK
+WARNING: 1 RID of type "CanvasItem" was leaked.
+   at: _free_rids (servers/rendering/renderer_canvas_cull.cpp:2733)
+ERROR: 13 RID allocations of type 'PN13RendererDummy14TextureStorage12DummyTextureE' were leaked at exit.
+ERROR: 66 RID allocations of type 'PN18TextServerAdvanced22ShapedTextDataAdvancedE' were leaked at exit.
+ERROR: 1 RID allocations of type 'PN18TextServerAdvanced12FontAdvancedE' were leaked at exit.
+WARNING: 128 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

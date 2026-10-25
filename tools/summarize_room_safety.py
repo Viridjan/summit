@@ -1,3 +1,6 @@
+# Reads machine-readable room-safety results and groups repeated failures into a concise human-readable report.
+# Reading help: docs/CODE_GUIDE.md.
+
 """Combine runtime transition probes, replay traces and side-opening checks into one report."""
 import argparse
 from collections import Counter
@@ -5,6 +8,7 @@ import json
 from pathlib import Path
 
 
+# Load the requested JSON findings and print a grouped summary for manual review.
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--transitions', type=Path, default=Path('reports/story-room-safety.json'))

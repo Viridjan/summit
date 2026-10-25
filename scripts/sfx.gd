@@ -1,6 +1,18 @@
 extends Node
+# Sound effects service: creates short PCM waveforms and plays them through reusable voices.
+# PCM is a sequence of speaker amplitudes sampled many times per second; WAV stores those samples.
+# An envelope shapes the volume over time to avoid abrupt clicks at the beginning and end.
+# A voice is one AudioStreamPlayer: several voices let effects overlap, with a fixed maximum count.
+# Per-sound cooldowns suppress duplicate bursts. The SFX bus controls effects independently of music.
+# Synthesis uses a seeded random generator so its noise sounds are repeatable.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Original synthesized effects. Cached PCM keeps playback independent of the music synth.
 ## Parameters: duration, start/end pitch, noise mix, pulse mix.
+# Each row is [seconds, starting Hz, ending Hz, noise share, pulse-wave share].
+# Hz means oscillations per second. Higher playback pitch also shortens a sample duration.
+const Audio := preload("res://scripts/audio.gd")
+
 const SOUNDS := {
 	"jump": [0.12, 260, 650, 0.05, 0.25],
 	"wall_jump": [0.15, 360, 900, 0.12, 0.3],
@@ -36,11 +48,13 @@ const SOUNDS := {
 	"ui": [0.065, 700, 1000, 0.0, 0.2],
 }
 const VOICES := 16
+# streams holds reusable audio data; voices hold playback state. Many voices can refer to one stream.
 var streams: Dictionary = {}
 var voices: Array[AudioStreamPlayer] = []
 var cooldowns: Dictionary = {}
 var cursor := 0
 
+# Build the repeatable sound bank and fixed voice pool, then apply the saved effects volume.
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	if AudioServer.get_bus_index("SFX") < 0:
@@ -59,11 +73,11 @@ func _ready() -> void:
 		voices.append(voice)
 	set_volume(float(Game.settings.sfx_volume))
 
+# Set only the SFX audio bus; zero mutes it, while positive linear volume is converted to decibels.
 func set_volume(value: float) -> void:
-	var bus := AudioServer.get_bus_index("SFX")
-	AudioServer.set_bus_mute(bus, value <= 0.0)
-	AudioServer.set_bus_volume_db(bus, linear_to_db(clampf(value, 0.001, 1.0)))
+	Audio.set_bus_volume("SFX", value)
 
+# Reject unknown/too-recent effects, choose a reusable voice and start its cached waveform at the requested pitch.
 func play(key: String, pitch: float = 1.0) -> void:
 	if not streams.has(key):
 		return
@@ -81,6 +95,7 @@ func play(key: String, pitch: float = 1.0) -> void:
 	voice.pitch_scale = clampf(pitch, 0.5, 2.0)
 	voice.play()
 
+# Turn duration/pitch/noise settings into signed 16-bit mono PCM with a click-free volume envelope.
 func _synthesize(spec: Array) -> AudioStreamWAV:
 	var rate := 22050
 	var count := int(float(spec[0]) * rate)
@@ -99,14 +114,11 @@ func _synthesize(spec: Array) -> AudioStreamWAV:
 		var sample := lerpf(tone, noise, float(spec[3]))
 		var envelope := minf(float(i) / (rate * 0.004), 1.0) * pow(1.0 - t, 1.8)
 		bytes.encode_s16(i * 2, int(sample * envelope * 22000))
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = rate
-	stream.data = bytes
-	return stream
+	return Audio.pcm16(bytes, rate)
 
 # The Ape's scream: a harsh shriek that jumps up, wavers and drops, with breath noise.
 # echo: the same scream in a cave, followed by darker, alternating left/right reflections.
+# Synthesize a rough vocal shriek, optionally adding delayed stereo reflections for a cave.
 func _ape_scream(echo: bool) -> AudioStreamWAV:
 	var rate := 22050
 	var duration := 1.2
@@ -148,14 +160,10 @@ func _ape_scream(echo: bool) -> AudioStreamWAV:
 		dark_r = lerpf(dark_r, er, 0.25)
 		bytes.encode_s16(i * 4, int(clampf(d * 0.8 + dark_l, -0.95, 0.95) * 26000))
 		bytes.encode_s16(i * 4 + 2, int(clampf(d * 0.8 + dark_r, -0.95, 0.95) * 26000))
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = rate
-	stream.stereo = true
-	stream.data = bytes
-	return stream
+	return Audio.pcm16(bytes, rate, true)
 
 # Layered vocal harmonics, breath and delayed cave reflections, authored as stereo PCM.
+# Layer low vocal harmonics and breath, with stronger left-channel sound and quieter delayed reflections.
 func _cave_roar() -> AudioStreamWAV:
 	var rate := 22050
 	var duration := 3.4
@@ -190,9 +198,4 @@ func _cave_roar() -> AudioStreamWAV:
 		var right := clampf(dry[i] * 0.12 + echo * 0.65, -0.95, 0.95)
 		bytes.encode_s16(i * 4, int(left * 28000))
 		bytes.encode_s16(i * 4 + 2, int(right * 28000))
-	var stream := AudioStreamWAV.new()
-	stream.format = AudioStreamWAV.FORMAT_16_BITS
-	stream.mix_rate = rate
-	stream.stereo = true
-	stream.data = bytes
-	return stream
+	return Audio.pcm16(bytes, rate, true)

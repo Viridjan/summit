@@ -1,4 +1,10 @@
 extends RefCounted
+# Original musical scores represented as numbers rather than recordings.
+# A degree is a position in a musical scale; pitch() turns it into a semitone-based note number.
+# -1 in a melody means rest (silence). Each arranged score has lead, harmony, bass and percussion.
+# The music engine turns these patterns into instructions for the SiON synthesizer.
+# Reading help: docs/CODE_GUIDE.md.
+
 ## Original eight-bar scores. Degrees describe a melody in each environment's mode.
 ## Adventure-game reference: singable motifs, modal harmony and contrasting regions.
 ## No third-party melodies, recordings or samples are used.
@@ -42,9 +48,11 @@ const SCORES := {
 		"b": [5, 4, 2, -1, 3, 2, 0, 1, 2, 3, 4, 1, 2, 1, 0, 0]},
 }
 
+# Convert a scale degree, including degrees beyond one octave, into an absolute semitone note number.
 static func pitch(root: int, mode: Array, degree: int) -> int:
 	return root + int(mode[posmod(degree, 7)]) + int(floorf(degree / 7.0)) * 12
 
+# Expand a score into 64 steps of melody, harmony, bass and percussion for the music engine.
 static func arrange(environment: String) -> Dictionary:
 	var key := environment if SCORES.has(environment) else ""
 	var score: Dictionary = SCORES[key]

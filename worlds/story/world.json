@@ -1,66 +1,7 @@
 {
+	"start": "m1_meadow",
 	"abilities": [],
 	"rooms": {
-		"a1_ape_arena": [
-			440,
-			46
-		],
-		"c0_roar_tunnel": [
-			40,
-			23
-		],
-		"c1_lake_cave": [
-			80,
-			23
-		],
-		"c2_cave_teeth": [
-			160,
-			23
-		],
-		"c3_cove_tunnel": [
-			200,
-			23
-		],
-		"c4_deep_lake": [
-			120,
-			46
-		],
-		"h1_villager_house": [
-			240,
-			100
-		],
-		"h2_quest_house": [
-			280,
-			100
-		],
-		"j1_jungle_edge": [
-			280,
-			23
-		],
-		"j2_jungle_falls": [
-			280,
-			46
-		],
-		"j3_jungle_hills": [
-			360,
-			46
-		],
-		"l1_jungle_depths": [
-			440,
-			69
-		],
-		"l2_net_trap": [
-			360,
-			69
-		],
-		"l3_treetop_village": [
-			360,
-			-2
-		],
-		"lh1_lighthouse_stairs": [
-			608,
-			-37
-		],
 		"m1_meadow": [
 			0,
 			0
@@ -69,22 +10,85 @@
 			80,
 			0
 		],
-		"s1_sand_cave": [
-			496,
+		"m3_the_hole": [
+			80,
 			23
 		],
-		"s2_shore": [
-			616,
-			23
+		"c0_roar_tunnel": [
+			40,
+			46
 		],
-		"s3_lighthouse_top": [
-			656,
-			0
+		"c1_lake_cave": [
+			80,
+			46
+		],
+		"c2_cave_teeth": [
+			160,
+			46
+		],
+		"c3_cove_tunnel": [
+			200,
+			46
+		],
+		"c4_deep_lake": [
+			120,
+			69
 		],
 		"t1_cove_town": [
 			240,
+			46
+		],
+		"j1_jungle_edge": [
+			280,
+			46
+		],
+		"j2_jungle_falls": [
+			280,
+			69
+		],
+		"j3_jungle_hills": [
+			360,
+			69
+		],
+		"a1_ape_arena": [
+			440,
+			69
+		],
+		"h1_villager_house": [
+			240,
+			123
+		],
+		"h2_quest_house": [
+			280,
+			123
+		],
+		"lh1_lighthouse_stairs": [
+			320,
+			123
+		],
+		"s1_sand_cave": [
+			496,
+			46
+		],
+		"s2_shore": [
+			616,
+			46
+		],
+		"s3_lighthouse_top": [
+			656,
 			23
+		],
+		"l1_jungle_depths": [
+			440,
+			92
+		],
+		"l2_net_trap": [
+			360,
+			92
+		],
+		"l3_treetop_village": [
+			360,
+			21
 		]
-	},
-	"start": "m1_meadow"
+	}
 }

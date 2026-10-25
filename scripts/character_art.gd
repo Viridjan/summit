@@ -1,4 +1,11 @@
 extends RefCounted
+# Original Nori artwork, authored as small text grids where each letter selects a palette color.
+# Each animation occupies an atlas row; each 16x16 cell in that row is one pose.
+# Transparent spaces are empty pixels. Pixel clusters are drawn directly, without smooth rescaling.
+# The head and trailing hair use matching shades of the current dash-availability color.
+# texture() caches a whole atlas for each hair color; _pose() authors one cell of that atlas.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Original Celeste-inspired 16px climber. Frames are authored as native pixel shapes,
 # then baked once into a shared atlas; gameplay draws one textured quad per body.
 
@@ -140,6 +147,7 @@ const HAIR_CLUMPS := [
 static var _textures: Dictionary = {}
 
 # Same two shades build_atlas uses for the hair on the head.
+# Derive shadow/base/highlight colors from one hair cue, keeping gray shades neutral.
 static func hair_shades(hair_color: Color) -> Dictionary:
 	return {
 		"h": hair_color.darkened(0.32),
@@ -148,9 +156,11 @@ static func hair_shades(hair_color: Color) -> Dictionary:
 	}
 
 # How far the head sits below its usual spot on this frame (the hair anchor follows it).
+# Return the pose-specific one-pixel head offset so the trailing hair anchor follows the body.
 static func head_drop(animation: String, column: int) -> int:
 	return 1 if (animation == "idle" and column in IDLE_EXHALE) or (animation == "run" and column in [1, 5]) else 0
 
+# Convert seconds into an atlas cell; airborne/landing animations hold their last frame instead of looping.
 static func frame(animation: String, clock: float) -> Vector2i:
 	var spec: Array = ANIMATIONS[animation]
 	var column := maxi(0, int(clock * spec[2]))
@@ -160,12 +170,14 @@ static func frame(animation: String, clock: float) -> Vector2i:
 		column %= int(spec[1])
 	return Vector2i(column, spec[0])
 
+# Reuse a generated atlas for the same hair color instead of rebuilding pixels every draw.
 static func texture(hair_color: Color = Color("493022")) -> Texture2D:
 	var key := hair_color.to_rgba32()
 	if not _textures.has(key):
 		_textures[key] = ImageTexture.create_from_image(build_atlas(hair_color))
 	return _textures[key]
 
+# Choose the authored height for a standing, compressed landing or crouched pose.
 static func pose_height(animation: String, i: int) -> int:
 	if animation in ["duck", "boost"]:
 		return CROUCHED_HEIGHT
@@ -173,11 +185,13 @@ static func pose_height(animation: String, i: int) -> int:
 		return [8, 10, STANDING_HEIGHT][i]
 	return STANDING_HEIGHT
 
+# Fill a small rectangle clipped to one atlas cell, avoiding accidental edits to neighboring frames.
 static func _box(img: Image, origin: Vector2i, rect: Rect2i, color: Color) -> void:
 	var clipped := rect.intersection(Rect2i(0, 0, SIZE, SIZE))
 	if clipped.has_area():
 		img.fill_rect(Rect2i(origin + clipped.position, clipped.size), color)
 
+# Create every animation cell using a shared palette with the requested hair shades.
 static func build_atlas(hair_color: Color = Color("493022")) -> Image:
 	var img := Image.create(SIZE * COLUMNS, SIZE * ANIMATIONS.size(), false, Image.FORMAT_RGBA8)
 	img.fill(Color.TRANSPARENT)
@@ -190,6 +204,7 @@ static func build_atlas(hair_color: Color = Color("493022")) -> Image:
 			_pose(img, origin, animation, i, colors)
 	return img
 
+# Choose text-grid body/limb rows for a pose and write their colored pixels into one atlas cell.
 static func _pose(img: Image, origin: Vector2i, animation: String, i: int, colors: Dictionary) -> void:
 	var height := pose_height(animation, i)
 	var rows: Array = CROUCH if height == CROUCHED_HEIGHT else STAND

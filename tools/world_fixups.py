@@ -1,3 +1,6 @@
+# World-data repair utilities. Unlike the audit tools, these functions can rewrite room JSON to seal edges, settle liquids, alter hazards, remove unreachable content or add spawns. Review generated changes before keeping them.
+# Reading help: docs/CODE_GUIDE.md.
+
 # Fix-ups for an adventure world, run after building or editing it:
 # 1. seal_edges: an open tile on a room's left, right or top edge that faces no room, or rock in the next room, becomes
 #    rock (it looked like a way through but was an invisible wall or led into rock). Bottom openings over nothing stay:
@@ -25,6 +28,7 @@ HAZARD = ("acid", "water", "spikes_up", "spikes_down", "spikes_left", "spikes_ri
 SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru", "leaf")
 
 
+# Close exposed room-edge cells that do not lead to a valid matching neighbor.
 def seal_edges(world_dir):
     W = json.load(open(os.path.join(world_dir, "world.json")))
     rooms = {}
@@ -64,6 +68,7 @@ def seal_edges(world_dir):
     print(f"{world_dir}: {total} edge tiles sealed")
 
 
+# Read the world manifest and associated room dictionaries for the repair pass.
 def _load(world_dir):
     W = json.load(open(os.path.join(world_dir, "world.json")))
     rooms = {}
@@ -73,12 +78,14 @@ def _load(world_dir):
     return W, rooms
 
 
+# Write the modified room dictionaries back to their JSON files.
 def _save(world_dir, rooms):
     for n, (L, pretty) in rooms.items():
         with open(os.path.join(world_dir, n + ".json"), "w") as f:
             json.dump(L, f, indent="\t" if pretty else None, separators=None if pretty else (",", ":"))
 
 
+# Fit a liquid region into available terrain while tracking already occupied cells.
 def settle_pool(tiles, w, h, x0, y0, pw, ph, taken):
     """Rows of a pool whose surface box is (x0, y0, pw, ph) in tiles: {y: [(xa, xb), ...]} (xb exclusive), or None."""
     is_open = lambda x, y: 0 <= x < w and 0 <= y < h and tiles[y][x] == "0" and (x, y) not in taken
@@ -111,6 +118,7 @@ def settle_pool(tiles, w, h, x0, y0, pw, ph, taken):
     return None
 
 
+# Reposition liquid entities to align pools with the surrounding terrain.
 def settle_liquids(world_dir):
     W, rooms = _load(world_dir)
     kept = dropped = 0
@@ -157,6 +165,7 @@ def settle_liquids(world_dir):
     print(f"{world_dir}: {kept} pools settled, {dropped} that could not be held removed")
 
 
+# Assign connected-component labels to open grid cells using neighbor traversal.
 def _label(free, H, W):
     """4-connected labels of the True cells of a flat list (row-major); -1 elsewhere."""
     lab = [-1] * (H * W)
@@ -176,6 +185,7 @@ def _label(free, H, W):
     return lab
 
 
+# Adjust acid barriers according to the repair pass connectivity rules.
 def unblock_acid(world_dir):
     W_, rooms = _load(world_dir)
     pos = {n: W_["rooms"][n] for n in rooms}
@@ -211,6 +221,7 @@ def unblock_acid(world_dir):
     plab = _label(acid, H, W)
     parent = {}
 
+    # Find the representative of a connected group in the union/find bookkeeping.
     def find(a):
         while parent.get(a, a) != a:
             a = parent[a]
@@ -228,6 +239,7 @@ def unblock_acid(world_dir):
                 if 0 <= a < W * H and lab[a] >= 0:
                     sides.setdefault(p, set()).add(lab[a])
 
+    # Check which region groups become connected under a proposed choice.
     def joined(use):
         parent.clear()
         for a, b in base_links:
@@ -267,6 +279,7 @@ def unblock_acid(world_dir):
     print(f"{world_dir}: {len(water)} of {len(sides)} acid pools turned to water so nothing is cut off")
 
 
+# Remove placed content that the repair model classifies as unreachable.
 def drop_unreachable(world_dir):
     W_, rooms = _load(world_dir)
     pos = W_["rooms"]
@@ -318,6 +331,7 @@ def drop_unreachable(world_dir):
     print(f"{world_dir}: {len(gone)} rooms that can't be reached removed {gone}")
 
 
+# Add room entry spawn markers derived from the available passages.
 def add_spawns(world_dir):
     W = json.load(open(os.path.join(world_dir, "world.json")))
     rooms = {}
