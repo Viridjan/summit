@@ -90,5 +90,13 @@
 			360,
 			21
 		]
+	},
+	"variants": {
+		"a1_ape_arena": [
+			{
+				"when": "a1_ape_arena:ape_144_120",
+				"room": "a1_ape_arena_after"
+			}
+		]
 	}
 }

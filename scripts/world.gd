@@ -190,6 +190,8 @@ var paused := false
 var done := false
 
 var ui: CanvasLayer
+var spawn_room := ""  # adventure: the room the respawn point (spawn) is in; another room when this one has no safe point
+var kept_spikes := {}  # room -> [[type, x, y]...]: spikes as a boss fight left them, kept for respawns until the room is left
 var energy_log: Array = []  # [time, cause, delta], newest first (F3 panel)
 var energy_panel: Control
 var touch: Control  # phone controls, only on touchscreens
@@ -232,6 +234,7 @@ func _ready() -> void:
 	level_id = Game.file_safe(data.get("name", "untitled"))
 	if adventure():
 		room = Game.adv.room
+		spawn_room = room
 		room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
 		for k in Game.adv.stars:
 			collected[k] = true
@@ -314,7 +317,7 @@ func _build(keep_player := false) -> void:
 			total_berries += 1
 	if adventure():
 		total_berries = Adventure.star_count(Game.adv_world)
-		if Game.adv.spawn is Array:
+		if Game.adv.spawn is Array and Game.adv.room == room:
 			spawn = Vector2(Game.adv.spawn[0], Game.adv.spawn[1])
 	# draw solids under everything else
 	ents.sort_custom(func(a, b): return int(a.solid or a.jumpthru) > int(b.solid or b.jumpthru))
@@ -422,7 +425,7 @@ func _go_door(door) -> void:
 	if to.contains(":"):
 		target_room = to.get_slice(":", 0)
 		to = to.get_slice(":", 1)
-	var lvl: Dictionary = data if target_room == room else (Game.adv_world.rooms[target_room].level if adventure() and Game.adv_world.rooms.has(target_room) else {})
+	var lvl: Dictionary = data if target_room == room else (Adventure.room_level(Game.adv_world, target_room, broken) if adventure() and Game.adv_world.rooms.has(target_room) else {})
 	var dest = null
 	for e in lvl.get("entities", []):
 		if e.t in E.DOOR_TYPES and e.get("id", "") == to:
@@ -455,7 +458,8 @@ func enter_room(next: String, at = null) -> void:
 		in_dir = 1 if player.center().x >= gw * T else (-1 if player.center().x < 0 else 0)
 	room = next
 	room_origin = Vector2(Game.adv_world.rooms[room].pos * T)
-	data = Game.adv_world.rooms[room].level
+	data = Adventure.room_level(Game.adv_world, room, broken)
+	kept_spikes.clear()  # the room is left: a fight's leftovers don't carry over
 	Game.get_music_engine().follow_environment(data.get("environment", ""))
 	tiles = []
 	player.followers.clear()  # unbanked stars go back to their room
@@ -472,18 +476,22 @@ func enter_room(next: String, at = null) -> void:
 		walk_target_x = T * 1.5 if in_dir > 0 else (gw - 1.5) * T
 		player.force_move_x = in_dir
 		player.force_move_x_timer = 0.6
-	# respawn at the room's spawn marker closest to where we came in, else at the entry point
-	var best: Vector2 = player.pos
-	var best_d := INF
+	# Respawn at the safe spawn marker closest to where we came in, else the entry point if it's safe.
+	# Fundamental rule: never in a hazard (docs/WORLD_DESIGN.md). With no safe point here (a flooded room,
+	# mid-air), the last safe respawn stays, even in the previous room; the save keeps it too.
+	var points: Array = []
 	for d in data.entities:
 		if d.t == "spawn":
-			var sp := Vector2(float(d.x) + 4, float(d.y) + 8)
-			if sp.distance_to(player.pos) < best_d:
-				best_d = sp.distance_to(player.pos)
-				best = sp
-	spawn = best
-	Game.adv.room = room
-	Game.adv.spawn = [spawn.x, spawn.y]
+			points.append(Vector2(float(d.x) + 4, float(d.y) + 8))
+	points.sort_custom(func(a, b): return a.distance_to(player.pos) < b.distance_to(player.pos))
+	points.append(player.pos)  # markers first; the entry point is the fallback
+	for sp in points:
+		if safe_spawn(sp):
+			spawn = sp
+			spawn_room = room
+			Game.adv.room = room
+			Game.adv.spawn = [spawn.x, spawn.y]
+			break
 	if not Game.adv.visited.has(room):
 		Game.adv.visited.append(room)
 	_save_run()
@@ -601,6 +609,14 @@ func update_energy(dt: float) -> void:
 		Adventure.regen_energy(Game.adv, dt)
 	elif not Adventure.water_energy(Game.adv, dt):
 		player.die(Vector2.UP)
+
+# A respawn point is safe when the player standing there is out of water and acid, clear of spikes and on ground.
+func safe_spawn(p: Vector2) -> bool:
+	var body := Rect2i(int(p.x) - 4, int(p.y) - 11, 8, 11)
+	if liquid_at(body, "water") or liquid_at(body, "acid") or touching_spikes(body.grow(1)):
+		return false
+	var feet := Rect2i(int(p.x) - 3, int(p.y), 6, 1)
+	return collide_solid(feet) != null or collide_jumpthru(feet) != null
 
 # Check whether the player centre is inside a water entity.
 func in_water() -> bool:
@@ -866,6 +882,8 @@ func _physics_process(_delta: float) -> void:
 		respawn_timer -= dt
 		if respawn_timer <= 0:
 			Game.play_sfx("respawn")
+			if adventure() and spawn_room != room:  # this room has no safe point: back to the last one
+				enter_room(spawn_room, spawn)
 			_build()
 	else:
 		player.update(dt)

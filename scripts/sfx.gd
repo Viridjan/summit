@@ -48,6 +48,8 @@ const SOUNDS := {
 	"ui": [0.065, 700, 1000, 0.0, 0.2],
 }
 const VOICES := 16
+const BASE_DB := -10.0  # effects at 20% of their synthesized level (BASE_DB + linear_to_db(0.2)); the setting scales from there
+const GAIN := {"cave_roar": 2.0}  # per-sound loudness on top: the Roar Tunnel's roar at 200%
 # streams holds reusable audio data; voices hold playback state. Many voices can refer to one stream.
 var streams: Dictionary = {}
 var voices: Array[AudioStreamPlayer] = []
@@ -68,7 +70,7 @@ func _ready() -> void:
 	for i in VOICES:
 		var voice := AudioStreamPlayer.new()
 		voice.bus = "SFX"
-		voice.volume_db = -10.0 + linear_to_db(0.2)  # effects at 20% of their synthesized level; the setting scales from there
+		voice.volume_db = BASE_DB + linear_to_db(0.2)
 		add_child(voice)
 		voices.append(voice)
 	set_volume(float(Game.settings.sfx_volume))
@@ -92,6 +94,7 @@ func play(key: String, pitch: float = 1.0) -> void:
 			voice = candidate
 			break
 	voice.stream = streams[key]
+	voice.volume_db = BASE_DB + linear_to_db(0.2 * GAIN.get(key, 1.0))
 	voice.pitch_scale = clampf(pitch, 0.5, 2.0)
 	voice.play()
 

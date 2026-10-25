@@ -45,6 +45,8 @@ func run() -> void:
 			if voice.playing and voice.stream == stream:
 				playing += 1
 		check(playing == 1, "Entering the trigger plays the roar")
+		var loud: Array = sfx.voices.filter(func(v): return v.playing and v.stream == stream)
+		check(loud.size() == 1 and is_equal_approx(loud[0].volume_db, sfx.BASE_DB + linear_to_db(0.4)), "The roar plays at 200% of the effects level")
 		sfx.cooldowns.clear()
 		trigger.touch(null)
 		playing = 0

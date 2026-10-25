@@ -1871,7 +1871,7 @@ class Ape extends Ent:
 	const SLAM_REACH := 16  # landing shockwave: this far out on both sides, along the ground
 	const SLAM_HEIGHT := 8
 	const SLAM_TIME := 0.2
-	const FAR := 140.0
+	const FAR := 96.0  # throw beyond this (centre to centre, px); leap between NEAR and FAR; scream within NEAR
 	const NEAR := 44.0
 	const WAKE := 220.0
 	var hp := HP
@@ -1888,6 +1888,7 @@ class Ape extends Ent:
 	var id := ""
 	var x_min := 0.0
 	var x_max := 0.0
+	var restored := false  # aftermath (kept spikes, orb) applied after a respawn
 	# True while the room has an Ape that isn't beaten (gates and the entrance walk follow it).
 	# Find whether this room still contains an undefeated arena Ape, excluding the chase version.
 	static func alive_in(world) -> bool:
@@ -1955,6 +1956,8 @@ class Ape extends Ent:
 		flash = maxf(0.0, flash - dt)
 		_update_stones(dt)
 		if phase == "gone":
+			if not restored and w.kept_spikes.has(w.room):
+				_restore_aftermath()
 			return
 		if slam_t > 0:
 			slam_t -= dt
@@ -2084,7 +2087,7 @@ class Ape extends Ent:
 			return
 		stage += 1
 		for e in w.touchables:  # the spikes it hit (and any others in its range) break under it
-			if e is Spikes and e.collidable and e.rect.position.x >= x_min and e.rect.position.x <= x_max:
+			if e is Spikes and e.dir == "up" and e.collidable and e.rect.position.x >= x_min and e.rect.position.x <= x_max:
 				e.collidable = false
 				w.burst(Vector2(e.rect.get_center()), Color("e8e8f0"), 3)
 		var patches: Array = d.get("spikes", [])
@@ -2098,8 +2101,29 @@ class Ape extends Ent:
 		Game.play_sfx("complete")
 		phase = "gone"
 		collidable = false
+		restored = true
+		var kept := []  # the spikes as the fight left them: a death before leaving the room keeps them
+		for e in w.touchables:
+			if e is Spikes and e.collidable:
+				kept.append([e.d.t, int(e.d.x), int(e.d.y)])
+		w.kept_spikes[w.room] = kept
 		w.break_wall(id)
 		w.shake_dir(Vector2.ZERO, 0.4)
+		if d.has("orb"):
+			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
+	# Rebuilt after a death in the room it was beaten in: the spikes go back to how the fight left them, the orb too.
+	func _restore_aftermath() -> void:
+		restored = true
+		var kept: Array = w.kept_spikes[w.room]
+		var have := {}
+		for e in w.touchables:
+			if e is Spikes:
+				var k := [e.d.t, int(e.d.x), int(e.d.y)]
+				e.collidable = kept.has(k)
+				have[str(k)] = true
+		for k in kept:
+			if not have.has(str(k)):
+				w.spawn_entity({"t": k[0], "x": k[1], "y": k[2]})
 		if d.has("orb"):
 			w.spawn_entity({"t": "energy_orb", "x": int(d.orb[0]), "y": int(d.orb[1])})
 	# Move thrown stones, then resolve player, trunk and solid-terrain impacts.

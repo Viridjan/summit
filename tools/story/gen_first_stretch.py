@@ -204,16 +204,30 @@ a1.open(12, G, 15, 22)                       # left branch (lines up with Jungle
 a1.ents.append({"t": "auto_walk", "x": 0, "y": 11 * T, "w": 3 * T, "h": 4 * T, "dir": 1, "time": 0.7, "while_boss": True})
 a1.ents.append({"t": "boss_gate", "x": 0, "y": 11 * T, "w": T, "h": 4 * T, "closes_behind": True})
 a1.spikes_up(42, 44, 18)
-a1.ents.append({"t": "jumpthru", "x": 18 * T, "y": 16 * T, "w": 4 * T, "h": 8})  # platforms: a jump up out of a slam's reach
-a1.ents.append({"t": "jumpthru", "x": 33 * T, "y": 16 * T, "w": 4 * T, "h": 8})
+# solid platforms, uneven: the Ape lands on them too, and can't fit under the low ones (16-24 px gaps)
+ARENA_PLATFORMS = [(29, 32, 16), (34, 36, 13), (38, 41, 15), (10, 12, 14)]
+for x0, x1, py in ARENA_PLATFORMS:
+    a1.solid(x0, py, x1, py)
+for y in range(5, 9): a1.ent("spikes_right", 1, y)    # wall spikes, out of the Ape's range: they stay all fight
+for y in range(4, 9): a1.ent("spikes_left", 54, y)
 a1.ents.append({"t": "boss_ape", "x": 18 * T, "y": 15 * T,
-    "range": [6 * T, 51 * T],
+    "range": [1 * T, 55 * T],  # the whole arena, exit ledges included
     # after each hit the old spikes crumble and new ones appear on the other side (4 hits: 3 patches)
     "spikes": [[[20 * T, 18 * T, 3]], [[46 * T, 18 * T, 3]], [[8 * T, 18 * T, 2], [26 * T, 18 * T, 2]]],
     "orb": [45 * T, 16 * T]})
 a1.ents.append({"t": "boss_gate", "x": 55 * T, "y": 12 * T, "w": T, "h": 4 * T})   # right exit
 a1.ents.append({"t": "boss_gate", "x": 12 * T, "y": G * T, "w": 4 * T, "h": T})   # the hole to the left branch
 a1.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
+# After the Ape (world.json "variants"): the same terrain and spawns, with no boss or gates, the spikes as the
+# fight leaves them (the last patch and the walls) and the orb.
+APE_ID = "a1_ape_arena:ape_%d_%d" % (18 * T, 15 * T)
+a1b = Room("a1_ape_arena_after", "Ape Arena", 56, 23, "forest", fill="1")
+a1b.g = [row[:] for row in a1.g]  # ponytail: ignored at runtime (the base room's tiles are used), kept valid
+for x0, n in ((8, 2), (26, 2)): a1b.spikes_up(x0, x0 + n - 1, 18)
+for y in range(5, 9): a1b.ent("spikes_right", 1, y)
+for y in range(4, 9): a1b.ent("spikes_left", 54, y)
+a1b.ent("energy_orb", 45, 16)
+a1b.ent("note", 52, 15, text="Right branch: the sand cave. Reward for the Ape: a power-up (not decided yet)")
 
 # Right branch: a long sand cave climbing at about 14 degrees (30 rows over 120 columns), then the shore and the
 # lighthouse. Jump-only challenges (no abilities yet), with the beaten Ape chasing the player up it.
@@ -343,7 +357,10 @@ if unknown:
 written = [r for r, _, _ in rooms if "all" in ONLY or r.name in ONLY]
 for r in written:
     r.save()
+if a1 in written:
+    a1b.save()
 if "all" in ONLY:
-    json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms}},
+    json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms},
+               "variants": {"a1_ape_arena": [{"when": APE_ID, "room": "a1_ape_arena_after"}]}},
               open(os.path.join(OUT, "world.json"), "w"), indent="\t")
 print("wrote", ", ".join(r.name for r in written))

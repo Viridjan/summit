@@ -474,6 +474,42 @@ func check_shipped_world() -> void:
 		var run: PackedVector2Array = E.ApeChase.plan(pw, Rect2i(sx - 16, sy - 32, 32, 32), to_x, false, 0)
 		check(not run.is_empty(), "%s: a spike-free path across with plain jumps" % rn)
 		pw.free()
+	# fundamental rule: respawn points are never in a hazard. Every spawn marker of every story room is safe
+	# (out of water/acid, clear of spikes, on ground); a room with no safe point keeps the last safe respawn.
+	var unsafe := []
+	for rn in story.rooms:
+		Game.adv = Adventure.new_run(story)
+		Game.adv.room = rn
+		Game.adv.spawn = null
+		Game.level = story.rooms[rn].level
+		var sw3 = load("res://scripts/world.gd").new()
+		add_child(sw3)
+		sw3.set_physics_process(false)
+		for d in story.rooms[rn].level.entities:
+			if d.t == "spawn" and not sw3.safe_spawn(Vector2(float(d.x) + 4, float(d.y) + 8)):
+				unsafe.append("%s %d,%d" % [rn, d.x / 8, d.y / 8])
+		sw3.free()
+	check(unsafe.is_empty(), "every spawn marker is a safe respawn point (%s)" % [unsafe])
+	Game.adv = Adventure.new_run(story)
+	Game.adv.room = "c1_lake_cave"
+	Game.adv.spawn = null
+	Game.level = story.rooms["c1_lake_cave"].level
+	var fw = load("res://scripts/world.gd").new()
+	w = fw
+	add_child(fw)
+	fw.set_physics_process(false)
+	var dry_spawn: Vector2 = fw.spawn
+	var c4_origin: Vector2 = Vector2(story.rooms["c4_deep_lake"].pos * 8)
+	var c1_origin: Vector2 = Vector2(story.rooms["c1_lake_cave"].pos * 8)
+	fw.enter_room("c4_deep_lake", Vector2(20 * 8, 10 * 8))  # swimming in
+	var kept: bool = fw.room == "c4_deep_lake" and fw.spawn_room == "c1_lake_cave" and Game.adv.room == "c1_lake_cave"
+	p().die(Vector2.UP)
+	fw.respawn_timer = 0.0
+	fw.paused = false
+	fw._physics_process(DT)
+	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.spawn == dry_spawn,
+		"a flooded room gets no respawn point: dying there returns to the last safe one (%s, %s, %s)" % [fw.room, fw.spawn_room, fw.spawn])
+	fw.queue_free()
 	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
 	Game.adv = Adventure.new_run(story)
 	Game.adv.room = "c2_cave_teeth"
@@ -1410,8 +1446,63 @@ func check_ape_hitbox_shapes() -> void:
 	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
 	check(arena.entities.all(func(e): return e.t != "ape_trunk"), "Ape arena removes the tree obstacle")
 	var boss: Dictionary = arena.entities.filter(func(e): return e.t == "boss_ape")[0]
-	check(not boss.has("range2") and int(boss.range[0]) == 48 and int(boss.range[1]) == 408 and int(arena.w) == 56, "Ape arena (70%% wide) uses one unrestricted fighting range")
+	check(not boss.has("range2") and int(boss.range[0]) == 8 and int(boss.range[1]) == 440 and int(arena.w) == 56, "Ape arena (70%% wide) uses one unrestricted fighting range")
 	check(arena.tiles[19].substr(44,10)=="1".repeat(10), "former tree bridge pit is safe solid ground")
+	# the Ape gets everywhere in the arena: leaps at players all over it never stick or end inside terrain, and land
+	# on the floor, both exit ledges and every platform, edge to edge
+	var keep_lv = Game.level
+	var keep_world = w
+	var keep_inv2: bool = Game.settings.invincible
+	Game.settings.invincible = true
+	var lv2: Dictionary = arena.duplicate(true)
+	lv2.entities = lv2.entities.filter(func(e): return e.t != "auto_walk")
+	Game.level = lv2
+	var aw = load("res://scripts/world.gd").new()
+	add_child(aw)
+	aw.set_physics_process(false)
+	var bape = aw.ents.filter(func(e): return e.d.t == "boss_ape")[0]
+	var spots := []
+	for x in range(1, 55):
+		for y in range(1, 22):
+			if lv2.tiles[y][x] == "0" and lv2.tiles[y - 1][x] == "0" and lv2.tiles[y + 1][x] == "1":
+				spots.append(Vector2(x * 8 + 4, (y + 1) * 8))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 3
+	var bad := 0
+	var cols := {}
+	var rows := {}
+	for it in 600:
+		aw.player.pos = spots[rng.randi() % spots.size()]
+		bape.phase = "crouch"
+		bape.timer = 0.0
+		bape.hp = 99
+		var air := 0
+		bape.update(DT)
+		while bape.phase == "air" and air < 240:
+			bape.update(DT)
+			air += 1
+		if bape.phase == "air" or aw.collide_solid(bape.rect, bape) != null:
+			bad += 1
+		cols[int(bape.center().x / 8)] = true
+		rows[bape.rect.end.y / 8] = true
+		bape.stones.clear()
+	aw.free()
+	w = keep_world
+	Game.level = keep_lv
+	Game.settings.invincible = keep_inv2
+	var all_cols := range(3, 53).all(func(c): return cols.has(c))
+	check(bad == 0 and all_cols and rows.has(19) and rows.has(16) and rows.has(15) and rows.has(14) and rows.has(13),
+		"the Ape reaches the whole arena: floor, ledges, every platform; never stuck or inside rock (%d bad, rows %s)" % [bad, rows.keys()])
+	# conditional rooms: once the Ape is beaten, entering the arena loads its aftermath variant
+	var Adv = load("res://scripts/adventure.gd")
+	var sw2: Dictionary = Adv.load_world("res://worlds/story/world.json")
+	var base_lv: Dictionary = Adv.room_level(sw2, "a1_ape_arena", [])
+	var ape_id: String = sw2.rooms.a1_ape_arena.variants[0].when
+	var after: Dictionary = Adv.room_level(sw2, "a1_ape_arena", [ape_id])
+	check(base_lv.entities.any(func(e): return e.t == "boss_ape") and not after.entities.any(func(e): return e.t == "boss_ape" or e.t == "boss_gate")
+		and after.tiles == base_lv.tiles and after.entities.filter(func(e): return e.t == "spawn").size() == base_lv.entities.filter(func(e): return e.t == "spawn").size()
+		and after.entities.any(func(e): return e.t == "energy_orb"),
+		"a beaten Ape's arena comes back as its variant: no boss or gates, same terrain and spawns, the orb")
 
 # Regression coverage for ape. The assertions below state the expected behavior of this case.
 func check_ape() -> void:
@@ -1525,6 +1616,15 @@ func check_ape() -> void:
 	ape._land()
 	step(90)
 	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.EnergyOrb).size() == 1, "the last hit beats the Ape: gates open, it stays beaten, an energy orb appears")
+	# dying before leaving the room: the rebuilt room keeps the spikes as the fight left them, and the orb
+	var live_spikes := func(): return find.call(E.Spikes).filter(func(e): return e.collidable).map(func(e): return Vector2i(e.d.x, e.d.y))
+	var left_by_fight: Array = live_spikes.call()
+	left_by_fight.sort()
+	w._build()
+	step(3)
+	var after_death: Array = live_spikes.call()
+	after_death.sort()
+	check(after_death == left_by_fight and find.call(E.EnergyOrb).size() == 1, "after the fight, a death in the room keeps its spikes as they were (%s vs %s)" % [after_death, left_by_fight])
 	# the landing slams the ground: a shockwave hits beside the body, not just under it
 	Game.settings.invincible = false
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])

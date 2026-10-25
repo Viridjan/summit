@@ -416,7 +416,7 @@ func playtest_adventure(world: Dictionary, room: String) -> void:
 
 # Select the restored room level and open the World screen.
 func _enter_adventure() -> void:
-	level = adv_world.rooms[adv.room].level
+	level = Adventure.room_level(adv_world, adv.room, adv.get("broken", []))
 	playtest = false
 	goto("world")
 

@@ -46,7 +46,8 @@ func run() -> void:
 	game.settings.sfx_volume = 0.7
 	game.apply_settings()
 	check(not AudioServer.is_bus_mute(AudioServer.get_bus_index("SFX")), "Raising SFX volume unmutes effects")
-	check(is_equal_approx(sfx.voices[0].volume_db, -10.0 + linear_to_db(0.2)), "Effects play at 20% of their synthesized level")
+	check(sfx.voices.all(func(v): return v.stream == null or is_equal_approx(v.volume_db, sfx.BASE_DB + linear_to_db(0.2 * sfx.GAIN.get(sfx.streams.find_key(v.stream), 1.0)))),
+		"Effects play at 20% of their synthesized level (times their own gain)")
 	game.get_music_engine()
 	game.settings.music_volume = 0.0
 	game.apply_settings()

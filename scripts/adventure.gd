@@ -42,12 +42,39 @@ static func load_world(path: String) -> Dictionary:
 		var lvl := Game.load_level(name, dir)
 		if not lvl.is_empty():
 			out.rooms[name] = {"pos": Vector2i(int(p[0]), int(p[1])), "level": lvl}
+	# Conditional rooms: "variants": {room: [{"when": run flag, "room": other file}]}. Once the run has the flag
+	# (World.broken: a beaten boss, a broken wall...), entering the room loads the variant instead (room_level).
+	var vs = json.data.get("variants", {})
+	if vs is Dictionary:
+		for name in vs:
+			if not (out.rooms.has(name) and vs[name] is Array):
+				continue
+			for v in vs[name]:
+				var lvl := Game.load_level(str(v.get("room", "")), dir) if v is Dictionary else {}
+				var base: Dictionary = out.rooms[name].level
+				if lvl.is_empty() or lvl.w != base.w or lvl.h != base.h:
+					push_warning("variant %s of %s skipped: missing or a different size" % [v, name])
+					continue
+				out.rooms[name].get_or_add("variants", []).append({"when": str(v.get("when", "")), "room": str(v.room), "level": lvl})
 	var ab = json.data.get("abilities", [])
 	if ab is Array:
 		out.abilities = ab.filter(func(a): return a in ABILITIES)
 	var start = json.data.get("start", "")
 	out.start = start if out.rooms.has(start) else (out.rooms.keys()[0] if not out.rooms.is_empty() else "")
 	return out
+
+# The level to build for a room: its first variant whose flag the run has, else its own.
+# A variant brings its own objects; terrain and spawn markers stay the base room's, so tools that fix the base
+# (edge sealing, entrance spawns) cover it too.
+static func room_level(world: Dictionary, name: String, flags) -> Dictionary:
+	var r: Dictionary = world.rooms[name]
+	for v in r.get("variants", []):
+		if flags.has(v.when):
+			var lvl: Dictionary = v.level.duplicate()
+			lvl.tiles = r.level.tiles
+			lvl.entities = r.level.entities.filter(func(e): return e.t == "spawn") + v.level.entities.filter(func(e): return e.t != "spawn")
+			return lvl
+	return r.level
 
 # Writes world.json only; room files are saved separately (Game.save_level).
 # Write the room layout and starting abilities; individual room contents are saved separately.
@@ -56,10 +83,17 @@ static func save_world(path: String, world: Dictionary) -> bool:
 	for name in world.rooms:
 		var p: Vector2i = world.rooms[name].pos
 		rooms[name] = [p.x, p.y]
+	var variants := {}
+	for name in world.rooms:
+		if world.rooms[name].has("variants"):
+			variants[name] = world.rooms[name].variants.map(func(v): return {"when": v.when, "room": v.room})
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return false
-	f.store_string(JSON.stringify({"start": world.start, "abilities": world.get("abilities", []), "rooms": rooms}, "\t"))
+	var out := {"start": world.start, "abilities": world.get("abilities", []), "rooms": rooms}
+	if not variants.is_empty():
+		out.variants = variants
+	f.store_string(JSON.stringify(out, "\t"))
 	return true
 
 # Room area in world pixels.

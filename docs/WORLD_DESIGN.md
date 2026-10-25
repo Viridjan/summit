@@ -126,6 +126,15 @@ is omitted. It rejects overlapping room rectangles instead of guessing which roo
 owns them. Use the flagged routes to choose real Godot movement tests, rather than
 treating these results as proof that rooms can or cannot be played through.
 
+## Fundamental rule: respawn points are never in a hazard
+
+A respawn point must be safe: the player standing there is out of water and acid, clear of spikes, and on
+ground (World.safe_spawn). Entering a room picks its nearest safe spawn marker, else the entry point if that is
+safe. A room with no safe point (flooded, like Deep Lake, or entered mid-air) gets none: the last safe
+respawn stays, even in the previous room, and the save keeps it; dying there sends the player back to it.
+Hazardous rooms therefore need no spawn of their own, and must never be given one inside the hazard. The tests
+check every spawn marker of every story room against this rule.
+
 ## Walking in after a room change
 
 Crossing into a room sideways walks the player 1 unit in: to the middle of the room's second tile
