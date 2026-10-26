@@ -597,6 +597,7 @@ class CombatEnemy extends Ent:
 	var facing := -1
 	var clock := 0.0
 	var flash := 0.0
+	var seen := false  # reported to the Monsters tab once on screen
 	var home := Vector2.ZERO
 	var phase := "idle"
 	var timer := 0.0
@@ -651,6 +652,9 @@ class CombatEnemy extends Ent:
 		clock += dt
 		flash = maxf(0, flash - dt)
 		var on: bool = collidable and w != null and w.player != null and not w.player.dead and center().distance_to(w.player.center()) < 320
+		if on and not seen and w.view_rect().intersects(Rect2(rect)):
+			seen = true
+			w.saw_enemy(d.t)
 		if on and variant == "venom":
 			update_venom(dt)
 		return on
@@ -754,6 +758,7 @@ class CombatEnemy extends Ent:
 			collidable = false
 			puddles.clear()
 			if w != null:
+				w.killed_enemy(d.t)
 				w.burst(center(), EnemyArt.COLORS["y"], 6)
 				if variant == "brood":
 					brood()

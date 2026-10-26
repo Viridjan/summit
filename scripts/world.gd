@@ -699,6 +699,18 @@ func drain_stamina(amount: float, why := "jump") -> void:
 		Adventure.drain_stamina(Game.adv, amount)
 		stamina_event(why, Game.adv.stamina - was)
 
+# Monsters tab (map screen): a monster counts as found once it is on screen, and every kill is counted.
+func saw_enemy(t: String) -> void:
+	if adventure() and not Game.adv.seen.has(t):
+		Game.adv.seen.append(t)
+func killed_enemy(t: String) -> void:
+	if adventure():
+		saw_enemy(t)
+		Game.adv.kills[t] = int(Game.adv.kills.get(t, 0)) + 1
+# The camera's view in room pixels.
+func view_rect() -> Rect2:
+	return Rect2(cam.position - VIEW / 2.0, VIEW) if cam != null else Rect2(bounds)
+
 # Add to the F3 recap: how often (or how long) a cause changed stamina, and by how much in all.
 func _tally(why: String, delta: float, amount: float) -> void:
 	var t: Array = stamina_totals.get(why, [0.0, 0.0])

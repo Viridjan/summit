@@ -177,7 +177,8 @@ static func _open_overlap(a: Dictionary, b: Dictionary, r: Rect2i) -> bool:
 static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
 		"stars": [], "deaths": 0, "time": 0.0, "done": false,
-		"blocks": 1, "stamina": BASE_STAMINA, "taken": []}  # taken: one-time pickups, "room:x:y"
+		"blocks": 1, "stamina": BASE_STAMINA, "taken": [],  # taken: one-time pickups, "room:x:y"
+		"seen": [], "kills": {}}  # monsters met (type ids, Monsters tab) and killed (type id -> count)
 
 # Calculate stamina capacity from the base allowance plus collected extra blocks.
 static func stamina_max(run: Dictionary) -> float:
@@ -250,8 +251,13 @@ static func restore_run(world: Dictionary, run) -> Dictionary:
 	run.deaths = maxi(0, int(run.deaths)) if _finite(run.deaths) else 0
 	run.time = maxf(0.0, run.time) if _finite(run.time) else 0.0
 	run.stamina = clampf(run.stamina, 0.0, stamina_max(run)) if _finite(run.stamina) else stamina_max(run)
-	for k in ["abilities", "visited", "stars", "taken"]:
+	for k in ["abilities", "visited", "stars", "taken", "seen"]:
 		run[k] = run[k].filter(func(x): return x is String)
+	var kills := {}
+	for t in run.kills:
+		if t is String and _finite(run.kills[t]):
+			kills[t] = maxi(0, int(run.kills[t]))
+	run.kills = kills
 	if not run.visited.has(run.room):
 		run.visited.append(run.room)  # the map always shows the current room
 	return run

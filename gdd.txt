@@ -389,3 +389,4 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-25: Stamina regen by fill: 3/s empty -> 12/s at half -> 4/s full (STAMINA_REGEN_EMPTY / _MAX / _FULL).
 - 2026-10-25: Stamina HUD bar twice as wide (0.92 px per stamina; graphics only).
 - 2026-10-25: Debug tools split: F1 movement tuning, F4 state machine + live variables (new), F3 stamina, F2 hitboxes. The pause menu lost "Tuning & State"; its top right has Tuning / State / Stamina buttons.
+- 2026-10-26: Monsters tab on the map screen (M, Q/E) tracks the run: monsters are found once on screen (run.seen), unknown ones show as ???, kills counted per type (run.kills), with Found X/Y and total kills. Main menu Monsters still shows everything.

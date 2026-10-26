@@ -1474,6 +1474,38 @@ func check_ape_hitbox_shapes() -> void:
 		and after.entities.any(func(e): return e.t == "stamina_orb"),
 		"a beaten Ape's arena comes back as its variant: no boss or gates, same terrain and spawns, the orb")
 
+# Monsters tab: a monster is found once on screen; kills are counted per type, kept in the run, shown on the map.
+func check_monster_log() -> void:
+	const Adventure := preload("res://scripts/adventure.gd")
+	var keep_adv: Dictionary = Game.adv
+	var keep_world: Dictionary = Game.adv_world
+	var keep_temp: bool = Game.adv_temp
+	Game.adv_world = Adventure.load_world(FIXTURE_WORLD + "world.json")
+	Game.adv = Adventure.new_run(Game.adv_world)
+	Game.adv_temp = true
+	make_world([{"t": "enemy_mosstrot", "x": 400, "y": 27 * 8, "facing": 1}])
+	var m = w.ents.filter(func(e): return e is E.CombatEnemy)[0]
+	w.cam.position = Vector2(80, 200)  # far from it: not found yet
+	step(2)
+	var hidden: bool = not Game.adv.seen.has("enemy_mosstrot")
+	w.cam.position = m.center()
+	p().pos = m.center() + Vector2(-60, 0)
+	step(2)
+	var found: bool = Game.adv.seen.has("enemy_mosstrot")
+	for k in 10:
+		m.flash = 0.0
+		m.hit(p())
+	var mv = load("res://scripts/map_view.gd").new(w)
+	add_child(mv)
+	var shown: bool = mv.bestiary.run == Game.adv
+	mv.free()
+	var restored: Dictionary = Adventure.restore_run(Adventure.load_world(FIXTURE_WORLD + "world.json"), Game.adv.duplicate(true))
+	check(hidden and found and Game.adv.kills.get("enemy_mosstrot", 0) == 1 and shown and restored.kills == {"enemy_mosstrot": 1} and restored.seen == ["enemy_mosstrot"],
+		"monsters are found once on screen, kills counted, saved, and shown on the map's Monsters tab (%s, %s)" % [Game.adv.seen, Game.adv.kills])
+	Game.adv = keep_adv
+	Game.adv_world = keep_world
+	Game.adv_temp = keep_temp
+
 # Pause menu: the three debug tools top right (no "Tuning & State" entry); F1 tuning and F4 state are separate panels.
 func check_debug_tools() -> void:
 	make_world([])
@@ -2590,6 +2622,7 @@ func _ready() -> void:
 	check_ape()
 	check_guardian()
 	check_debug_tools()
+	check_monster_log()
 	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)

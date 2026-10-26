@@ -77,6 +77,8 @@ func _ready() -> void:
 	for l in layers:
 		area = area.merge(l[0])
 	bestiary = Bestiary.new()
+	if world.adventure():
+		bestiary.run = Game.adv
 	bestiary.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	bestiary.offset_top = 70
 	bestiary.offset_bottom = -40
