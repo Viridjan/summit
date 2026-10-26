@@ -49,8 +49,8 @@ then the opposite leg. Contact frames plant one boot while the other bends and p
 Each half-cycle then has a brief flight frame with both boots off the baseline. A darker far-leg shade separates the two legs at this scale.
 The supporting foot travels backward through each step rather than both boots
 spreading apart on the floor. Hip placement, body height and draw origin stay
-fixed; speed scaling and movement physics are unchanged. `run-poses.png` shows
-the full row. The browser preview uses the current idle timing and avoids adding
+fixed; speed scaling and movement physics are unchanged. The run poses are the second row of
+`nori.png`. The browser preview uses the current idle timing and avoids adding
 a run-only hair bob that the runtime does not apply.
 
 ### Coordinated motion pass

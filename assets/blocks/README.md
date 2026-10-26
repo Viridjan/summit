@@ -12,7 +12,8 @@ dark fill, white outline, and animated stars; the teal reference exports are unu
 remain tied to existing entity states; hitboxes and mechanics are unchanged.
 
 Open [preview.html](preview.html) for labelled examples at several sizes and damage
-states. The PNGs here are reference exports, not separate runtime dependencies.
+states. One sheet per style (`<style>.png`: one 56×32 cell per example size; breakwall adds a
+damage row), described in `manifest.json`. They are reference exports, not runtime dependencies.
 
 ```sh
 godot --headless --path . --script res://tools/export_blocks.gd

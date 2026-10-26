@@ -1,12 +1,11 @@
 # Summit enemy sprites
 
-Original pixel artwork authored in `scripts/enemy_art.gd`, exported to `enemies.png`.
+Original pixel artwork authored in `scripts/enemy_art.gd`, exported as one sheet per family (`thornmite.png`, `skree.png`, ... `mosstrot.png`): the original type in row 0, then its variants, four 32×32 frames per row; `manifest.json` lists the rows.
 No extracted artwork from any other game is included. Behaviour adaptations,
 controls, placement and references are documented in [ENEMIES.md](../../docs/ENEMIES.md).
 
-Open `preview.html` for an animated gallery. The atlas has one row per enemy type in
-`Entities.TYPES` order (the nine families, then each family's variants), four 32×32
-frames per row. Small sprites sit centred in their cell; Giants are drawn at 2×.
+Open `preview.html` for an animated gallery. Each family sheet has one row per type
+(the original, then its variants in `Entities.TYPES` order), four 32×32 frames per row. Small sprites sit centred in their cell; Giants are drawn at 2×.
 
 Regenerate with `godot --headless --path . --script res://tools/export_enemies.gd`.
 
@@ -15,7 +14,7 @@ bark highlights, a faceted rock brow and toothy jaw, and a shaded mushroom cap
 with gills. Their four poses use leaf sway, alternating heavy steps, and a
 breathing cap/tendril cycle. Variants share the refined shapes and tint the new
 highlight colours. Gameplay hitboxes, draw origins and enemy behaviour are unchanged.
-`new-families.png` shows these three rows at native resolution.
+`mosstrot.png`, `cragjaw.png` and `murkspore.png` show them at native resolution.
 
 ## Ape profile artwork
 

@@ -41,10 +41,10 @@ Attack with **A**; hold a direction to aim the swing. Enemies use the existing o
 
 ## Art and tests
 
-The atlas (`assets/enemies/enemies.png`, preview in `assets/enemies/preview.html`) has one row per type in `Entities.TYPES` order. Each row is four 32×32 frames, and small sprites sit centred in their cell. `EnemyArt.draw(..., scale)` draws Giants at 2× and Brood children at 0.5×.
+The sheets (`assets/enemies/<family>.png`, one per family, preview in `assets/enemies/preview.html`) have one row per type: the original, then its variants in `Entities.TYPES` order. Each row is four 32×32 frames, and small sprites sit centred in their cell. `EnemyArt.draw(..., scale)` draws Giants at 2× and Brood children at 0.5×.
 
 ```sh
-godot --headless --path . --script res://tools/export_enemies.gd  # regenerate enemies.png
+godot --headless --path . --script res://tools/export_enemies.gd  # regenerate the family sheets
 python3 tools/run_enemy_tests.py  # focused enemy checks
 godot --headless --path . res://tests/test.tscn
 godot --headless --path . res://tests/smoke.tscn

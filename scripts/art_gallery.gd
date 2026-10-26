@@ -5,7 +5,7 @@ extends VBoxContainer
 const ApeArt := preload("res://scripts/ape_art.gd")
 const CELL := 110.0  # minimum cell width (px); images show at their true size (1 art px = 1 screen px)
 const SKIP := ["res://assets/themes/review/"]  # before/after review shots, not game art
-const BACKDROPS := ["background", "foreground", "preview", "contact-sheet"]  # full-screen images: shown at 30%
+const BACKDROPS := ["background", "foreground", "preview"]  # full-screen images: shown at 30%
 const BACKDROP_SCALE := 0.3
 const APE_POSES := ["idle", "crouch", "air", "land", "throw", "scream", "run"]
 

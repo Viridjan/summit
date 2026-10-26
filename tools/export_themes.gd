@@ -356,7 +356,6 @@ func decorations(theme: String) -> Image:
 	return img
 # Run this offline image export and quit; output images are regenerated from the authored source.
 func _initialize() -> void:
-	var contact := canvas(640,720)
 	var theme_index := 0
 	for theme in THEMES:
 		var dir: String = "res://assets/themes/"+theme
@@ -385,8 +384,6 @@ func _initialize() -> void:
 				scene.blit_rect(tile(theme,mask,(x+y)%4),Rect2i(0,0,8,8),Vector2i(x*8,y*8))
 		for i in 8: scene.blend_rect(props,Rect2i(i*16,0,16,16),Vector2i(i*40,136 if i<3 or i>4 else 152))
 		scene.save_png(dir+"/preview.png")
-		contact.blit_rect(scene,Rect2i(0,0,320,180),Vector2i((theme_index%2)*320,(theme_index/2)*180))
 		theme_index += 1
 		print("EXPORTED ",theme," (terrain + two scenery layers + decorations + preview)")
-	contact.save_png("res://assets/themes/contact-sheet.png")
 	quit()

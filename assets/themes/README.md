@@ -49,9 +49,8 @@ uses layered pixel clusters, irregular trunks, branches and roots; rural cottage
 retain pitched roofs with subtle shingles, timber braces and chimney smoke.
 The atlas layout, collision grid and existing room assignments are unchanged.
 
-Open `review/index.html` for before/after compositions; `review/before/` preserves
-the artwork reviewed in this pass. `contact-sheet.png` shows the current eight
-scenes. Both are review assets, not runtime texture dependencies.
+Before/after compositions from this pass moved to `docs/reviews/themes-before/` (not game art).
+Each theme's `preview.png` shows its scene; the old combined contact sheet was dropped.
 
 ### Squared visual style
 

@@ -1,0 +1,87 @@
+{
+	"cell": [
+		32,
+		32
+	],
+	"frames": 4,
+	"sheets": [
+		{
+			"file": "thornmite.png",
+			"rows": [
+				"enemy_thornmite",
+				"enemy_thornmite_swift",
+				"enemy_thornmite_venom",
+				"enemy_thornmite_brood",
+				"enemy_thornmite_giant"
+			]
+		},
+		{
+			"file": "skree.png",
+			"rows": [
+				"enemy_skree",
+				"enemy_skree_swift",
+				"enemy_skree_armored",
+				"enemy_skree_venom"
+			]
+		},
+		{
+			"file": "bat.png",
+			"rows": [
+				"enemy_bat",
+				"enemy_bat_swift",
+				"enemy_bat_brood"
+			]
+		},
+		{
+			"file": "skeleton.png",
+			"rows": [
+				"enemy_skeleton",
+				"enemy_skeleton_armored",
+				"enemy_skeleton_shielded",
+				"enemy_skeleton_giant"
+			]
+		},
+		{
+			"file": "hornback.png",
+			"rows": [
+				"enemy_hornback",
+				"enemy_hornback_shielded",
+				"enemy_hornback_swift",
+				"enemy_hornback_giant"
+			]
+		},
+		{
+			"file": "fuzzbob.png",
+			"rows": [
+				"enemy_fuzzbob",
+				"enemy_fuzzbob_brood",
+				"enemy_fuzzbob_venom",
+				"enemy_fuzzbob_giant"
+			]
+		},
+		{
+			"file": "cragjaw.png",
+			"rows": [
+				"enemy_cragjaw",
+				"enemy_cragjaw_armored",
+				"enemy_cragjaw_shielded"
+			]
+		},
+		{
+			"file": "murkspore.png",
+			"rows": [
+				"enemy_murkspore",
+				"enemy_murkspore_swift",
+				"enemy_murkspore_venom",
+				"enemy_murkspore_brood"
+			]
+		},
+		{
+			"file": "mosstrot.png",
+			"rows": [
+				"enemy_mosstrot"
+			]
+		}
+	],
+	"source": "scripts/enemy_art.gd (drawn at runtime; these are reference exports)"
+}
