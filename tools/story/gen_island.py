@@ -63,13 +63,13 @@ n.open(1, 2, 38, 16)
 n.open(33, 17, 38, 19); n.thru(33, 38, 17)                   # the way back down (crust)
 n.pool(4, 17, 9, 18)                                         # a tide pool
 n.solid(15, 14, 17, 16); n.solid(18, 12, 23, 16); n.solid(24, 14, 26, 16)  # the cliff (steps both sides), a star on top
-n.ent("strawberry", 21, 11)
+n.ent("energy_fragment", 21, 11, id="north_cliff")
 
 s = room("i03_south_shore", "South Shore", 40, 20, SHORE, 700, 69)
 s.open(1, 2, 38, 16)
 s.open(30, 0, 33, 1); s.ladder(15, 0, (22, 27), (29, 34))   # back up to the west shore
 s.pool(8, 17, 13, 18)
-s.solid(4, 14, 6, 16); s.ent("strawberry", 5, 13)
+s.solid(4, 14, 6, 16); s.ent("energy_fragment", 5, 13, id="south_rocks")
 # Optional cliff-top route over the tide pool; the floor route stays available.
 s.solid(8, 11, 10, 11); s.solid(12, 10, 19, 10)
 s.ent("strawberry", 16, 9)
@@ -78,7 +78,7 @@ e = room("i08_east_shore", "East Shore", 40, 23, SHORE, 868, 46)
 e.open(1, 2, 38, 19); e.open(0, 16, 0, 19)
 e.open(6, 20, 9, 22); e.thru(6, 9, 20)                       # crust: down into the sea cave
 e.pool(28, 20, 37, 21)                                       # the sea
-e.solid(20, 17, 22, 19); e.ent("strawberry", 21, 16)
+e.solid(20, 17, 22, 19); e.ent("energy_fragment", 21, 16, id="east_coast")
 
 # --- Volcano: foothills, ascent, crater, east slope ----------------------------------------------------------------
 f = room("i04_foothills", "Foothills", 40, 23, VOLCANO, 740, 46)
@@ -194,7 +194,7 @@ GUARDIAN_ID = "i16_guardian_chamber:guardian_%d_%d" % (14 * T, 2 * T)
 o = room("i17_crystal_pocket", "Crystal Pocket", 24, 16, CAVE, 748, 115)
 o.open(1, 2, 22, 12); o.open(12, 0, 15, 1)
 o.ladder(12, 0, (11, 16), (4, 9))
-o.ent("strawberry", 4, 12)
+o.ent("discovery_npc", 3.5, 11, name="Crystal Keeper", kind="mage", variant=2, text="Three energy fragments form one energy upgrade.")
 
 # --- write ---------------------------------------------------------------------------------------------------------
 names = {x.name for x in rooms}

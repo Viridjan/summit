@@ -48,6 +48,7 @@ func _main() -> void:
 	if OS.has_feature("editor"):  # the world files live in res://, writable only from source
 		body.add_child(Game.button("World Editor", func(): Game.goto("world_editor")))
 	body.add_child(Game.button("Monsters", _monsters))
+	body.add_child(Game.button("Art", _art))
 	body.add_child(Game.button("Music Studio", func(): Game.goto("music_studio")))
 	body.add_child(Game.button("Options", _options))
 	body.add_child(Game.button("Credits", _credits))
@@ -81,6 +82,15 @@ func _monsters() -> void:
 	var b := Bestiary.new()
 	b.custom_minimum_size = Vector2(860, 505)
 	body.add_child(b)
+	var back := Game.button("Back", _main)
+	body.add_child(back)
+	back.grab_focus()
+
+# Every piece of game art, by folder (scripts/art_gallery.gd).
+func _art() -> void:
+	_clear()
+	body.add_child(Game.label("Art", 44))
+	body.add_child(load("res://scripts/art_gallery.gd").new())
 	var back := Game.button("Back", _main)
 	body.add_child(back)
 	back.grab_focus()

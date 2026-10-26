@@ -7,7 +7,7 @@
 		],
 		"c0_roar_tunnel": [
 			40,
-			46
+			53
 		],
 		"c1_lake_cave": [
 			80,
@@ -15,11 +15,11 @@
 		],
 		"c2_cave_teeth": [
 			160,
-			46
+			51
 		],
 		"c3_cove_tunnel": [
 			200,
-			46
+			53
 		],
 		"c4_deep_lake": [
 			120,
@@ -35,7 +35,7 @@
 		],
 		"j1_jungle_edge": [
 			280,
-			46
+			49
 		],
 		"j2_jungle_falls": [
 			280,
@@ -43,7 +43,7 @@
 		],
 		"j3_jungle_hills": [
 			360,
-			69
+			73
 		],
 		"l1_jungle_depths": [
 			396,
@@ -51,11 +51,11 @@
 		],
 		"l2_net_trap": [
 			316,
-			92
+			99
 		],
 		"l3_treetop_village": [
 			360,
-			21
+			26
 		],
 		"lh1_lighthouse_stairs": [
 			593,
@@ -63,11 +63,11 @@
 		],
 		"m1_meadow": [
 			0,
-			0
+			7
 		],
 		"m2_big_jump": [
 			80,
-			0
+			7
 		],
 		"m3_the_hole": [
 			80,
@@ -87,7 +87,7 @@
 		],
 		"t1_cove_town": [
 			240,
-			46
+			53
 		],
 		"i01_west_shore": [
 			700,
@@ -95,7 +95,7 @@
 		],
 		"i02_north_shore": [
 			700,
-			26
+			30
 		],
 		"i03_south_shore": [
 			700,
@@ -103,11 +103,11 @@
 		],
 		"i08_east_shore": [
 			868,
-			46
+			53
 		],
 		"i04_foothills": [
 			740,
-			46
+			53
 		],
 		"i05_ascent": [
 			780,
@@ -115,7 +115,7 @@
 		],
 		"i06_crater": [
 			804,
-			23
+			30
 		],
 		"i07_east_slope": [
 			844,
@@ -127,15 +127,15 @@
 		],
 		"i10_junction": [
 			828,
-			69
+			76
 		],
 		"i11_flooded_hall": [
 			780,
-			69
+			76
 		],
 		"i12_echo_gallery": [
 			740,
-			69
+			76
 		],
 		"i13_lower_maze": [
 			740,

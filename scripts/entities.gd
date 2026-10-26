@@ -36,6 +36,8 @@ const TYPES := {
 	"refill": ["Dash Crystal", false, Color("4ee05a"), Refill],
 	"refill_two": ["Double Crystal", false, Color("ff6def"), Refill],
 	"strawberry": ["Star", false, Color("ffd34e"), Star],  # id kept for old level files
+	"energy_fragment": ["Energy Fragment (Interact)", false, Color("8ce1cc"), Discovery],
+	"discovery_npc": ["Character (Interact)", false, Color("a4b7cf"), Discovery],
 	"jumpthru": ["Jump-Through", true, Color("a07850"), JumpThru],
 	"crumble": ["Crumble Block", true, Color("8a7a6a"), Crumble],
 	"falling": ["Falling Block", true, Color("7a6a9a"), FallingBlock],
@@ -168,6 +170,9 @@ class Ent extends RefCounted:
 
 	# Optional construction hook; subclasses set dimensions, flags and their own starting state here.
 	func setup() -> void: pass
+	# What it is and what it is doing, for the F2 overlay's mouse-over (subclasses add their state).
+	func describe() -> String:
+		return str(TYPES[d.t][0]) if TYPES.has(d.t) else str(d.t)
 	# Report whether Ent currently participates in lethal contact checks.
 	func hurts() -> bool: return false  # true: touching it is damage, checked against the player's smaller damage_rect()
 	# Expose active circular hazards; an empty list means no circular damage is active.
@@ -254,6 +259,8 @@ class SpawnMarker extends Ent:
 
 # Directional lethal surface. The contact rules consider approach direction instead of killing through its back.
 class Spikes extends Ent:
+	func describe() -> String:
+		return "Spikes: deadly when you move into the points (touch box 7 px along the tile)"
 	var dir := "up"
 	# Report whether Spikes currently participates in lethal contact checks.
 	func hurts() -> bool: return true
@@ -427,7 +434,7 @@ class StaminaBlock extends Ent:  # adventure: +1 stamina block, once per run
 	func setup() -> void:
 		rect = Rect2i(rect.position.x - 3, rect.position.y - 3, 14, 14)  # exactly the sprite
 		if w != null:
-			key = "%s:%d:%d" % [w.room, int(d.x), int(d.y)]
+			key = str(d.get("pickup_key", "%s:%d:%d" % [w.room, int(d.x), int(d.y)]))
 		collidable = w == null or (w.adventure() and not w.stamina_block_taken(key))
 	# Advance StaminaBlock timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(dt: float) -> void:
@@ -576,6 +583,13 @@ class Placeholder extends Ent:  # enemy / breakable stand-in: a labelled box, ha
 # Common enemy health, variants, safe movement, detection, contact damage and projectile handling.
 # Variants adjust this shared behavior so each family does not reimplement shields, venom and health.
 class CombatEnemy extends Ent:
+	const PHASE_HELP := {"idle": "patrolling or waiting", "windup": "winding up an attack: get clear", "dive": "diving at you",
+		"swoop": "swooping at you", "charge": "charging along the ground", "leap": "leaping at you", "rest": "recovering: safe to hit",
+		"return": "going back to its spot"}
+	func describe() -> String:
+		if not collidable:
+			return "%s: defeated" % TYPES[d.t][0]
+		return "%s (HP %d) - %s: %s" % [TYPES[d.t][0], hp, phase, PHASE_HELP.get(phase, phase)]
 	# Report whether CombatEnemy currently participates in lethal contact checks.
 	func hurts() -> bool: return true
 	# variant -> [speed, warning, recovery multipliers, body scale]
@@ -1250,6 +1264,8 @@ class MurksporeEnemy extends CombatEnemy:
 
 # Water/acid region. Water drains adventure stamina; acid is a lethal contact surface.
 class Liquid extends Ent:  # water: drains adventure stamina (World.update_stamina); acid: kills on touch (like spikes)
+	func describe() -> String:
+		return "Acid: deadly to touch" if d.t == "acid" else "Water: you swim; drains stamina 40/s, no regeneration; 0 drowns"
 	# Report whether Liquid currently participates in lethal contact checks.
 	func hurts() -> bool: return d.t == "acid"
 	# Initialize Liquid dimensions, collision flags and starting data before World uses the object.
@@ -1349,7 +1365,50 @@ class Note extends Ent:  # design reminder or a one-shot authored sound trigger
 
 
 # Collectible that follows the player, then banks after a short stay on safe ground.
-class Star extends Ent:  # the collectible (type id "strawberry")
+class Discovery extends Ent:
+	var key := ""
+	var near := 0.0
+	var clock := 0.0
+	var speaking := 0.0
+	func setup() -> void:
+		rect.size = Vector2i(8,12) if d.t == "energy_fragment" else Vector2i(16,16)
+		if d.t == "energy_fragment": rect.position.y -= 4
+		if w != null:
+			key = "fragment:%s:%s" % [w.room, str(d.get("id", "%d_%d" % [int(d.x),int(d.y)]))]
+			if d.t == "energy_fragment": collidable = w.adventure() and not w.stamina_block_taken(key)
+	func touch_rect() -> Rect2i:
+		return rect.grow(8)
+	func vis_rect() -> Rect2i:
+		return rect.grow(20)
+	func update(dt: float) -> void:
+		near = maxf(0,near-dt)
+		speaking = maxf(0,speaking-dt)
+		clock += dt
+	func touch(p) -> void:
+		near = 0.12
+		if p.dead or not p.interact:
+			return
+		p.interact = false  # one press cannot also activate a nearby doorway
+		if d.t == "energy_fragment":
+			if w.collect_energy_fragment(key): collidable = false
+		else:
+			speaking = 3.0
+			w.show_interaction("%s: %s" % [d.get("name","Traveller"),d.get("text","...")])
+			Game.play_sfx("note")
+	func draw(ci: CanvasItem) -> void:
+		if not collidable: return
+		if d.t == "energy_fragment":
+			var c := Vector2(rect.get_center())
+			ci.draw_colored_polygon(PackedVector2Array([c+Vector2(0,-5),c+Vector2(4,-1),c+Vector2(1,5),c+Vector2(-4,2)]),Color("8ce1cc"))
+			ci.draw_line(c+Vector2(0,-3),c+Vector2(-1,2),Color("d9fff0"),1.0)
+		else:
+			ci.draw_texture_rect(IslandArt.texture(str(d.get("kind","elf")),"talk" if speaking>0 else "idle",int(clock*5),int(d.get("variant",0))),Rect2(rect),false)
+		if near > 0 and w != null:
+			var icon := ButtonArt.prompt("interact")
+			ci.draw_texture_rect(icon,Rect2(Vector2(rect.get_center())-Vector2(5,rect.size.y/2.0+13),Vector2(10,10)),false)
+
+
+class Star extends Ent:  # legacy collectible; new discovery placements use explicit interaction
 	const STAR_PTS := [Vector2(0, -4.5), Vector2(1.2, -1.6), Vector2(4.3, -1.4), Vector2(1.9, 0.6), Vector2(2.6, 3.6), Vector2(0, 2), Vector2(-2.6, 3.6), Vector2(-1.9, 0.6), Vector2(-4.3, -1.4), Vector2(-1.2, -1.6)]  # 5-point star around (0, 0)
 	var id := ""
 	var following := false
@@ -1358,7 +1417,7 @@ class Star extends Ent:  # the collectible (type id "strawberry")
 	var t := 0.0
 	# Initialize Star dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
-		id = "%d_%d" % [rect.position.x, rect.position.y]
+		id = str(d.get("persistent_id", "%d_%d" % [rect.position.x, rect.position.y]))
 		if w != null:
 			id = w.star_key(id)
 		rect = Rect2i(rect.position.x - 1, rect.position.y - 1, 10, 10)
@@ -1827,6 +1886,8 @@ class ApeTrunk extends Ent:
 # until the player has passed it (left to right), then shuts behind them.
 # Arena barrier that follows the living boss state and can close behind the entering player.
 class BossGate extends Ent:
+	func describe() -> String:
+		return "Boss gate: %s" % ("shut (opens when the boss is beaten)" if collidable else "open")
 	var passed := false
 	# Initialize BossGate dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
@@ -1871,6 +1932,8 @@ class IslandProp extends Ent:
 # A cracked ceiling strip: every d.every seconds a rock (8x8) shakes loose at a random spot along it (dust for
 # WARN seconds first), falls, kills on contact and breaks on the ground. Never two rocks in the same column at once.
 class RockFall extends Ent:
+	func describe() -> String:
+		return "Falling rocks: one every %.1f s at a random spot; dust shows where, %.1f s before it drops" % [float(d.get("every", 1.4)), WARN]
 	const ROCK := 8
 	const WARN := 0.6
 	const G := 300.0
@@ -1924,6 +1987,8 @@ class RockFall extends Ent:
 
 
 class VentPlug extends Ent:
+	func describe() -> String:
+		return "Vent plug: broken (rubble)" if broken else "Vent plug: bait an eruption onto it to hurt the Guardian"
 	var broken := false
 	func draw(ci: CanvasItem) -> void:
 		ci.draw_texture_rect(IslandArt.texture("vent", "broken" if broken else "idle"), Rect2(rect), false)
@@ -1935,6 +2000,11 @@ class VentPlug extends Ent:
 # boss gates open and the room's "after" variant loads). The warning shortens as plugs break. The body is out of
 # reach: only the eruptions hurt. d.door: a house door spawned on victory (the shortcut home).
 class Guardian extends Ent:
+	const PHASE_HELP := {"sleep": "asleep until you come in", "idle": "pausing before the next eruption",
+		"warn": "the glowing cracks mark where it erupts: leave them", "erupt": "fire column: deadly", "hurt": "a plug broke under it: reeling",
+		"dying": "beaten", "gone": "beaten"}
+	func describe() -> String:
+		return "Guardian (%d plugs left) - %s: %s" % [plugs().size() if w != null else 0, phase, PHASE_HELP.get(phase, "")]
 	const ERUPT_W := 24
 	const ERUPT_H := 32
 	const WARN := [1.0, 0.85, 0.7]  # telegraph per plug broken so far
@@ -2084,6 +2154,13 @@ class AutoWalk extends Ent:
 # an stamina orb appears (d.orb).
 # Arena boss: choose a stone throw, leap/slam or scream according to player distance and fight state.
 class Ape extends Ent:
+	const PHASE_HELP := {"sleep": "asleep; wakes when you come near", "idle": "pausing before its next attack",
+		"throw": "about to throw a stone at you", "crouch": "winding up a leap: it lands past you", "air": "leaping; the landing shockwave hurts",
+		"scream": "screaming: the circle around it is deadly", "hurt": "landed on spikes: hurt", "dying": "beaten", "gone": "gone",
+		"wait": "waiting out of sight", "off": "not here yet", "roar": "roaring before the chase", "chase": "chasing: if it passes you, you die"}
+	func describe() -> String:
+		return "%s - %s: %s%s" % ["Ape (chase)" if self is ApeChase else "Ape (HP %d)" % hp, phase, PHASE_HELP.get(phase, ""),
+			" (enraged)" if not self is ApeChase and enraged() and phase != "gone" else ""]
 	const HP := 4
 	const SIZE := 32
 	const BODY := 24  # contact box: one square, a bit larger than the 22px body bands it replaced

@@ -2106,9 +2106,7 @@ func draw(ci: CanvasItem) -> void:
 				if shades.has(ch):
 					ci.draw_rect(Rect2(tl + Vector2(x, y), Vector2.ONE), shades[ch])
 	var mod := Color.WHITE
-	if is_tired() and flash:
-		mod = Color(1, 0.5, 0.5)
-	elif state == ST_STAR_FLY:
+	if state == ST_STAR_FLY:
 		mod = Color(1, 0.95, 0.6)
 	var f := _frame()
 	var sc := Vector2(scale.x * facing, scale.y)

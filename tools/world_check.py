@@ -48,7 +48,7 @@ class World:
                         self.plat.add((ex + i, base))
                 elif t.startswith("spikes_"):
                     self.spike.add((ex, ey))
-                elif t in ("ability_dash", "ability_climb", "goal", "strawberry", "refill"):
+                elif t in ("ability_dash", "ability_climb", "goal", "strawberry", "refill", "energy_fragment", "discovery_npc"):
                     self.items.setdefault((ex, ey), []).append((t, name, e))
                 elif t == "spawn" and name == self.start and not hasattr(self, "spawn"):
                     self.spawn = (ex, ey)

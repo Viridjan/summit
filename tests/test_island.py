@@ -26,6 +26,17 @@ class Island(unittest.TestCase):
                for k in self.touched if k.startswith("strawberry:i")}
         self.assertEqual(stars - got, set())
 
+    def test_new_fragments_and_characters_are_reachable(self):
+        # The jungle character is encountered before the one-way sand cave.
+        # Start this check in the opening region, not at the later island raft.
+        _, discoveries = explore(self.W,MODELS["cautious"],set(),[self.W.spawn])
+        wanted = {(e["t"],n,ox+int(e["x"])//8,oy+int(e["y"])//8)
+                  for n,(ox,oy,level) in self.W.rooms.items() for e in level["entities"]
+                  if e["t"] in ("energy_fragment","discovery_npc")}
+        got = {(k.split(":")[0],k.split(":")[1],*map(int,k.split(":")[2].split(",")))
+               for k in discoveries}
+        self.assertEqual(wanted-got,set())
+
     def test_the_far_rooms_lead_back_to_the_refuge_and_the_shore(self):
         for name in ("i16_guardian_chamber", "i17_crystal_pocket", "i02_north_shore", "i03_south_shore", "i11_flooded_hall", "i06_crater"):
             start = min(c for c in self.ground if self.W.room_of.get(c) == name)

@@ -75,9 +75,10 @@
 			"h": 8
 		},
 		{
-			"t": "strawberry",
+			"t": "energy_fragment",
 			"x": 40,
-			"y": 104
+			"y": 104,
+			"id": "south_rocks"
 		},
 		{
 			"t": "strawberry",

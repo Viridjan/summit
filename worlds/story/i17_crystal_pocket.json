@@ -64,9 +64,13 @@
 			"h": 8
 		},
 		{
-			"t": "strawberry",
-			"x": 32,
-			"y": 96
+			"t": "discovery_npc",
+			"x": 28,
+			"y": 88,
+			"name": "Crystal Keeper",
+			"kind": "mage",
+			"variant": 2,
+			"text": "Three energy fragments form one energy upgrade."
 		}
 	]
 }

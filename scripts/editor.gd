@@ -136,9 +136,40 @@ func _build_ui() -> void:
 	var tools := VBoxContainer.new()
 	tools.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(tools)
-	_tool_button(tools, "tile", "Ground Tiles", Color("7d84c4"))
-	for t in E.TYPES:
-		_tool_button(tools, t, E.TYPES[t][0], E.TYPES[t][2])
+	var groups := {}  # group -> [ids], in registry order (enemies sorted by family below)
+	var order: Array = []
+	for t in ["tile"] + E.TYPES.keys():
+		var g := palette_group(t)
+		if not groups.has(g):
+			groups[g] = []
+			order.append(g)
+		groups[g].append(t)
+	order.sort_custom(func(a, b): return GROUP_ORDER.find(a.get_slice(":", 0)) < GROUP_ORDER.find(b.get_slice(":", 0)) or (a.get_slice(":", 0) == b.get_slice(":", 0) and a < b))
+	if groups.has("Terrain") and groups.Terrain.has("leaf"):  # the two one-way platforms side by side
+		groups.Terrain.erase("leaf")
+		groups.Terrain.insert(groups.Terrain.find("jumpthru") + 1, "leaf")
+	if groups.has("Enemies & bosses"):  # each enemy family together (original first), then the bosses
+		var keys: Array = E.TYPES.keys()
+		groups["Enemies & bosses"].sort_custom(func(a, b): return _enemy_key(a, keys) < _enemy_key(b, keys))
+	for g in order:
+		var box := VBoxContainer.new()
+		var head := Button.new()  # click to fold/unfold the group
+		head.text = "%s %s" % ["v" if g == "Terrain" else ">", g.replace(":", ": ")]
+		head.flat = true
+		head.focus_mode = Control.FOCUS_NONE
+		head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		head.add_theme_color_override("font_color", Color("ffd34e"))
+		box.visible = g == "Terrain"
+		head.pressed.connect(func():
+			box.visible = not box.visible
+			head.text = ("v " if box.visible else "> ") + g.replace(":", ": "))
+		tools.add_child(head)
+		tools.add_child(box)
+		for t in groups[g]:
+			if t == "tile":
+				_tool_button(box, "tile", "Ground Tiles", Color("7d84c4"))
+			else:
+				_tool_button(box, t, E.TYPES[t][0], E.TYPES[t][2])
 
 	var bottom := PanelContainer.new()
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -146,6 +177,33 @@ func _build_ui() -> void:
 	root.add_child(bottom)
 	status = Label.new()
 	bottom.add_child(status)
+
+const GROUP_ORDER := ["Terrain", "Hazards", "Movement", "Pickups", "Doors & people", "Enemies & bosses", "Placeholders", "Other"]
+# Palette section for a tool id: terrain pieces, hazards, movement gadgets, pickups, doors and people, and one section
+# for every enemy and boss (registry order: each enemy family together, then the bosses and their arena pieces).
+static func palette_group(t: String) -> String:
+	if t == "note" or (E.TYPES.has(t) and E.TYPES[t][3] == E.Placeholder):  # stand-ins and design notes
+		return "Placeholders"
+	if t.begins_with("enemy") or t.begins_with("boss") or t.begins_with("ape") or t in ["auto_walk", "vent_plug"]:
+		return "Enemies & bosses"
+	if t in ["tile", "jumpthru", "leaf", "crumble", "falling", "breakable", "breakwall", "waterfall"]:
+		return "Terrain"
+	if t.begins_with("spikes") or t in ["acid", "rockfall"]:
+		return "Hazards"
+	if t.begins_with("spring") or t.begins_with("booster") or t in ["refill", "refill_two", "bumper", "feather", "dream", "zip", "water"]:
+		return "Movement"
+	if t.begins_with("ability") or t.begins_with("stamina") or t in ["strawberry", "goal", "energy_fragment"]:
+		return "Pickups"
+	if t in ["spawn", "door", "house_door", "building", "note", "island_prop", "discovery_npc"] or t.begins_with("village"):
+		return "Doors & people"
+	return "Other"
+
+# Sort key in Enemies & bosses: enemies by family (original first, then variants in registry order), bosses after.
+static func _enemy_key(t: String, keys: Array) -> Array:
+	if t.begins_with("enemy_"):
+		var fam := "enemy_" + t.get_slice("_", 1)
+		return [0, keys.find(fam), keys.find(t)]
+	return [1, 0, keys.find(t)]
 
 # Create a small editor label.
 func _lbl(t: String) -> Label:

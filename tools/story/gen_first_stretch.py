@@ -57,7 +57,7 @@ m.solid(34, 19, 34, 20)                      # stepping stone in the dip
 m.solid(41, 17, 43, 18); m.solid(57, 17, 59, 18)  # an arch: blocks at the ends, floating ledges between
 for x, y in ((45, 15), (49, 13), (53, 15)):
     m.solid(x, y, x + 2, y)
-m.ent("strawberry", 50, 11)                  # on top of the arch
+
 m.open(61, G, 64, 20)                        # second dip
 m.solid(66, 17, 69, 18)
 m.solid(72, 16, 73, 18)                      # 3-high block: a full jump
@@ -160,7 +160,7 @@ j1 = Room("j1_jungle_edge", "Jungle Edge", 40, 23, "forest")
 j1.solid(0, G, 39, 22); j1.solid(0, 0, 39, 1); j1.solid(0, 0, 0, 14); j1.solid(39, 0, 39, 22)
 j1.solid(14, 4, 16, 15)                      # big trunk, hollow at the base (rows 16..18)
 leaf(j1, 9, 16, 4); leaf(j1, 4, 13, 4); leaf(j1, 9, 10, 4); leaf(j1, 4, 7, 4)  # zigzag up the trunk's left side
-j1.ent("strawberry", 5, 4)
+j1.ent("discovery_npc", 4.5, 5, name="Aerin", kind="elf", variant=0, text="Leaf paths lead to places the main trail misses.")
 mosstrot(j1, 26, 18)
 j1.open(31, G, 38, 22)                       # the ground ends: drop into the falls below
 j1.open(20, G, 22, 20); j1.spikes_up(20, 22, 20)  # thorn pit, 3 tiles past the hollow trunk

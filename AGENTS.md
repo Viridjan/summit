@@ -35,3 +35,11 @@ Git history is unavailable in this checkout, so no existing commit convention ca
 ## Assets & Local Data
 
 Preserve sprite license files and Celeste movement-code attribution. Editor levels save under `user://levels/`; use disposable levels for manual testing and keep personal runtime data out of contributions.
+
+## Story content direction
+
+New optional discoveries must be interactable entities (energy fragments,
+characters, or encounters/minibosses), rather than new passive stars. Existing
+stars are legacy content being replaced gradually. Three energy fragments grant
+one capacity upgrade. Keep most ordinary rooms compact so tall climbs and boss
+arenas remain exceptional; preserve safe passages when changing room heights.

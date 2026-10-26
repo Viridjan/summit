@@ -427,7 +427,9 @@ func check_shipped_world() -> void:
 		if sw.room != story_seen[-1]:
 			story_seen.append(sw.room)
 			if sw.room == "j2_jungle_falls":  # dropped in from Jungle Edge, one screen above
-				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == Rect2(0, -23 * 8, 40 * 8, 23 * 8)
+				var previous: Dictionary = story.rooms.j1_jungle_edge
+				var expected := Rect2(Vector2(previous.pos-story.rooms.j2_jungle_falls.pos)*8,Vector2(previous.level.w,previous.level.h)*8)
+				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == expected
 	Game.settings.invincible = false
 	check(story_seen == ["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
@@ -492,7 +494,7 @@ func check_shipped_world() -> void:
 	w = ww
 	add_child(ww)
 	ww.set_physics_process(false)
-	ww.player = Bot.new(ww, Vector2(40 * 8 - 6, 19 * 8))
+	ww.player = Bot.new(ww, Vector2(40 * 8 - 6, (19-int(story.rooms.c2_cave_teeth.level.get("vertical_trim",0))) * 8))
 	p().hold = {"right": true}
 	for k in 30:
 		step()
@@ -509,7 +511,7 @@ func check_shipped_world() -> void:
 		ww._physics_process(DT)
 	var small_ok: bool = ww.mask_a > 0.99 and ww.cam_pos.distance_to(Vector2(ww.bounds.get_center())) < 1.0
 	var small_msg := "mask %s cam %s centre %s" % [ww.mask_a, ww.cam_pos, ww.bounds.get_center()]
-	ww.enter_room("t1_cove_town", Vector2(88, 152))
+	ww.enter_room("t1_cove_town", Vector2(88,152-int(story.rooms.t1_cove_town.level.get("vertical_trim",0))*8))
 	check(small_ok and ww.mask_a == 0.0, "a small room is centred and masked in black; the mask drops on entering the next room (%s)" % small_msg)
 	ww.queue_free()
 	# house doors: standing at one (or pressing up) does nothing; interact goes inside, and again comes back out
@@ -521,7 +523,7 @@ func check_shipped_world() -> void:
 	w = hw
 	add_child(hw)
 	hw.set_physics_process(false)
-	hw.player = Bot.new(hw, Vector2(88, 19 * 8))
+	hw.player = Bot.new(hw, Vector2(88,(19-int(story.rooms.t1_cove_town.level.get("vertical_trim",0)))*8))
 	step(20)
 	p().hold = {"up": true}
 	step(5)
@@ -1505,6 +1507,39 @@ func check_monster_log() -> void:
 	Game.adv = keep_adv
 	Game.adv_world = keep_world
 	Game.adv_temp = keep_temp
+
+# Main menu Art screen: every art folder is a section (themes one each, review shots left out) plus the Ape poses.
+func check_art_gallery() -> void:
+	var g = load("res://scripts/art_gallery.gd").new()
+	add_child(g)
+	var titles: Array = g.order
+	var all_tex: bool = titles.all(func(t): return g.sections[t].all(func(i): return i[1] is Texture2D))
+	check(all_tex and titles.has("Ape") and g.sections["Ape"].size() == 7 and titles.has("Island") and titles.has("Blocks") and titles.has("Theme: forest")
+		and titles.has("Theme: volcano") and not titles.any(func(t): return t.contains("review") or t.contains("Review")) and g.grid.get_child_count() > 0,
+		"Art screen: every art folder as a section, plus the Ape's poses (%s)" % [titles])
+	g.free()
+
+# Editor palette: every object type sits in a named group; enemies are grouped by family.
+func check_palette_groups() -> void:
+	var Ed = load("res://scripts/editor.gd")
+	var other: Array = E.TYPES.keys().filter(func(t): return Ed.palette_group(t) == "Other")
+	check(other.is_empty() and Ed.palette_group("enemy_thornmite_giant") == "Enemies & bosses" and Ed.palette_group("boss_ape") == "Enemies & bosses"
+		and Ed.palette_group("tile") == "Terrain" and Ed.palette_group("spikes_left") == "Hazards"
+		and Ed.palette_group("dream") == "Movement" and Ed.palette_group("zip") == "Movement" and Ed.palette_group("water") == "Movement"
+		and Ed.palette_group("enemy") == "Placeholders" and Ed.palette_group("breakable") == "Placeholders" and Ed.palette_group("note") == "Placeholders",
+		"editor palette groups every type: enemies and bosses together, placeholders together (ungrouped: %s)" % [other])
+
+# F2 overlay mouse-over: every legend row is explained, and objects describe themselves and their state.
+func check_hover_help() -> void:
+	make_world([{"t": "boss_ape", "x": 200, "y": 28 * 8 - 32}, {"t": "enemy_hornback", "x": 300, "y": 27 * 8, "facing": 1},
+		{"t": "spikes_up", "x": 100, "y": 27 * 8}, {"t": "boss_gate", "x": 0, "y": 160, "w": 8, "h": 32}])
+	var ape = w.ents.filter(func(e): return e is E.Ape)[0]
+	ape.phase = "crouch"
+	var texts: Array = w.ents.map(func(e): return e.describe())
+	var legend_ok: bool = w.HITBOX_KEY.all(func(k): return k.size() == 3 and str(k[2]).length() > 20)
+	check(legend_ok and texts.any(func(t): return t.begins_with("Ape (HP 4) - crouch: winding up a leap")) and texts.any(func(t): return t.contains("Hornback") and t.contains("idle"))
+		and texts.any(func(t): return t.begins_with("Spikes:")) and texts.any(func(t): return t.begins_with("Boss gate: shut")) and w.hover_lines() is Array,
+		"F2 mouse-over: legend rows explained, objects describe their state (%s)" % [texts])
 
 # Pause menu: the three debug tools top right (no "Tuning & State" entry); F1 tuning and F4 state are separate panels.
 func check_debug_tools() -> void:
@@ -2623,6 +2658,9 @@ func _ready() -> void:
 	check_guardian()
 	check_debug_tools()
 	check_monster_log()
+	check_hover_help()
+	check_palette_groups()
+	check_art_gallery()
 	check_background_parallax()
 
 	print("\n%d failure(s)" % fails)

@@ -29,6 +29,7 @@ run '^ROAR OK' --script tests/roar.gd
 run '^MUSIC OK' --script tests/music.gd
 run '^ENVIRONMENT MUSIC OK' --script tests/environment_music.gd
 run '^APE ART OK' --script tests/ape_art.gd
+run '^DISCOVERIES OK' --script tests/discoveries.gd
 run '^CHARACTER STYLE OK' --script tests/character_style.gd
 export BENCH_RUNS=1 BENCH_TICKS=120 BENCH_ONLY=normal
 run 'physics med [0-9]' res://tests/bench.tscn

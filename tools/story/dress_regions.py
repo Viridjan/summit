@@ -20,8 +20,10 @@ def decorate(name, theme=None, props=(), people=(), clear_notes=()):
     data["entities"] = [e for e in data["entities"] if e.get("art_tag") != "regions-v1"
                         and not (e["t"] == "note" and any(s in e.get("text", "") for s in clear_notes))]
     for kind, x, y, variant in props:
+        y -= int(data.get("vertical_trim",0))*8
         data["entities"].append(dict(t="island_prop", kind=kind, x=x, y=y, variant=variant, art_tag="regions-v1"))
     for kind, x, y, variant in people:
+        y -= int(data.get("vertical_trim",0))*8
         data["entities"].append(dict(t="village_"+kind, x=x, y=y, variant=variant, art_tag="regions-v1"))
     if theme == "volcano":
         for e in data["entities"]:

@@ -40,14 +40,15 @@ class RoomMask extends Node2D:
 		screen._draw_room_mask(self)
 
 # Hitbox overlay (F2) colours, also listed in its legend: [label, colour].
-const HITBOX_KEY := [
-	["Solid, platform", Color(1, 0.9, 0.2, 0.9)],
-	["Touch: pickups, hazards, triggers", Color(1, 0.5, 0.1, 0.9)],
-	["Damage: projectiles, scream, slam", Color(1, 0.15, 0.2, 0.9)],
-	["Player: collision", Color(0.2, 1, 0.3, 0.9)],
-	["Player: damage box", Color(1, 0.3, 0.8, 0.9)],
-	["Attack swing", Color(0.55, 0.8, 1, 0.9)],
+const HITBOX_KEY := [  # [label, colour, mouse-over explanation]
+	["Solid, platform", Color(1, 0.9, 0.2, 0.9), "Blocks movement: walls, blocks, gates; jump-throughs hold you from above only."],
+	["Touch: pickups, hazards, triggers", Color(1, 0.5, 0.1, 0.9), "Something happens when your damage box overlaps it: pick up, die, open, play a sound. Faded: inactive."],
+	["Damage: projectiles, scream, slam", Color(1, 0.15, 0.2, 0.9), "Live attacks: touching one with your damage box kills you (stones, logs, rocks, screams, shockwaves, eruptions)."],
+	["Player: collision", Color(0.2, 1, 0.3, 0.9), "What hits walls and floors (8 x 11 px, shorter when ducking)."],
+	["Player: damage box", Color(1, 0.3, 0.8, 0.9), "The smaller box hazards and attacks must touch to kill you."],
+	["Attack swing", Color(0.55, 0.8, 1, 0.9), "The sword swing's reach while attacking: hits enemies and breakable walls."],
 ]
+const PlayerStates := preload("res://scripts/debug_panel.gd")
 
 # On-screen HUD: stamina (top left), area name (top centre), timer and deaths (top right).
 # Draws black bars around the fixed game view when the window has extra screen space.
@@ -91,6 +92,18 @@ class Hud extends Control:
 		return out
 
 	# Draw a small HUD text item with consistent font/position settings.
+	# A wrapped mouse-over box (F2 overlay), kept on screen.
+	func _tooltip(font: Font, at: Vector2, lines: Array) -> void:
+		const TW := 360.0
+		var fs := 14
+		var text := "\n".join(lines)
+		var h := font.get_multiline_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, TW, fs).y
+		var pos := at + Vector2(16, 16)
+		pos.x = minf(pos.x, size.x - TW - 20)
+		pos.y = minf(pos.y, size.y - h - 20)
+		draw_rect(Rect2(pos - Vector2(8, 6), Vector2(TW + 16, h + 12)), Color(0.04, 0.05, 0.09, 0.92))
+		draw_multiline_string(font, pos + Vector2(0, fs), text, HORIZONTAL_ALIGNMENT_LEFT, TW, fs, -1, Color.WHITE)
+
 	func _text(font: Font, at: Vector2, s: String, fs: int, col := Color.WHITE) -> void:
 		draw_string_outline(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 6, Color.BLACK)
 		draw_string(font, at, s, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, col)
@@ -118,6 +131,8 @@ class Hud extends Control:
 				draw_rect(Rect2(r.position, Vector2(r.size.x * f, r.size.y)), col)
 				x += r.size.x + 8.0
 			y += 34.0
+			_text(font,Vector2(M,y+18),"Fragments %d/3" % (int(Game.adv.get("fragments",0)) % 3),18,Color("8ce1cc"))
+			y += 26.0
 		if w.total_berries > 0:
 			_text(font, Vector2(M, y + 18), "★ %d/%d" % [w.collected.size(), w.total_berries], 18, Color("ffd34e"))
 		# top centre: the area's name
@@ -144,10 +159,17 @@ class Hud extends Control:
 				widest = maxf(widest, font.get_string_size(k[0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
 			var box := Rect2(sz.x - M - widest - 40, sz.y - M - key.size() * 20 - 12, widest + 40, key.size() * 20 + 12)
 			draw_rect(box, Color(0, 0, 0, 0.6))
+			var mouse := get_local_mouse_position()
+			var tip := ""
 			for i in key.size():
 				var ky := box.position.y + 8 + i * 20
 				draw_rect(Rect2(box.position.x + 10, ky + 3, 14, 10), key[i][1], false, 1.0)
 				draw_string(font, Vector2(box.position.x + 32, ky + 13), key[i][0], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)
+				if Rect2(box.position.x, ky, box.size.x, 20).has_point(mouse):
+					tip = key[i][2]
+			var lines: Array = [tip] if tip != "" else w.hover_lines()
+			if not lines.is_empty():
+				_tooltip(font, mouse, lines)
 
 var tile_layer: TileLayer
 var background: Background
@@ -340,7 +362,11 @@ func _build(keep_player := false) -> void:
 	if adventure():
 		total_berries = Adventure.star_count(Game.adv_world)
 		if Game.adv.spawn is Array and Game.adv.room == room:
-			spawn = Vector2(Game.adv.spawn[0], Game.adv.spawn[1])
+			var saved_spawn := Vector2(Game.adv.spawn[0], Game.adv.spawn[1])
+			if safe_spawn(saved_spawn):
+				spawn = saved_spawn
+			else:
+				Game.adv.spawn = null
 	# draw solids under everything else
 	ents.sort_custom(func(a, b): return int(a.solid or a.jumpthru) > int(b.solid or b.jumpthru))
 	if not keep_player:
@@ -692,12 +718,42 @@ func add_stamina_block(key: String) -> void:
 		stamina_event("stamina block (+capacity)", Adventure.STAMINA_PER_BLOCK)
 		_save_run()
 
+func show_interaction(text: String) -> void:
+	note_label.text = text
+	note_t = 3.0
+
+func collect_energy_fragment(key: String) -> bool:
+	if not adventure() or not Adventure.collect_energy_fragment(Game.adv,key):
+		return false
+	var complete: bool = int(Game.adv.fragments) % 3 == 0
+	Game.play_sfx("unlock" if complete else "pickup")
+	show_interaction("Energy upgraded! +%d capacity" % int(Adventure.STAMINA_PER_BLOCK) if complete else "Energy fragment %d/3" % (int(Game.adv.fragments)%3))
+	_save_run()
+	return true
+
 # Spend adventure stamina for an action; standalone levels have no adventure stamina cost.
 func drain_stamina(amount: float, why := "jump") -> void:
 	if adventure():
 		var was: float = Game.adv.stamina
 		Adventure.drain_stamina(Game.adv, amount)
 		stamina_event(why, Game.adv.stamina - was)
+
+# F2 overlay mouse-over: what is under the mouse in the world (the player, then objects), with its state.
+func hover_lines() -> Array:
+	var at := get_global_mouse_position()
+	var out := []
+	if Rect2(player.hitbox()).grow(1).has_point(at):
+		var help: String = PlayerStates.StateGraph.HELP[player.state] if player.state < PlayerStates.StateGraph.HELP.size() else ""
+		out.append("Player - %s" % help)
+	for e in ents:
+		if out.size() >= 4:
+			break
+		var hit: bool = Rect2(e.rect).grow(1).has_point(at) or Rect2(e.touch_rect()).grow(1).has_point(at)
+		for b in e.damage_boxes():
+			hit = hit or Rect2(b).grow(1).has_point(at)
+		if hit and not e is E.Building and not e is E.SpawnMarker:
+			out.append(e.describe())
+	return out
 
 # Monsters tab (map screen): a monster counts as found once it is on screen, and every kill is counted.
 func saw_enemy(t: String) -> void:

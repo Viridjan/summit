@@ -178,7 +178,7 @@ static func new_run(world: Dictionary) -> Dictionary:
 	return {"room": world.start, "spawn": null, "abilities": world.get("abilities", []).duplicate(), "visited": [world.start],
 		"stars": [], "deaths": 0, "time": 0.0, "done": false,
 		"blocks": 1, "stamina": BASE_STAMINA, "taken": [],  # taken: one-time pickups, "room:x:y"
-		"seen": [], "kills": {}}  # monsters met (type ids, Monsters tab) and killed (type id -> count)
+		"seen": [], "kills": {}, "fragments": 0}  # fragments: total pieces; each three grant one capacity block
 
 # Calculate stamina capacity from the base allowance plus collected extra blocks.
 static func stamina_max(run: Dictionary) -> float:
@@ -231,6 +231,16 @@ static func add_stamina_block(run: Dictionary) -> void:
 	run.blocks += 1
 	run.stamina += STAMINA_PER_BLOCK
 
+# Persistent, explicit-interaction discovery. Stable IDs also survive room resizing.
+static func collect_energy_fragment(run: Dictionary, key: String) -> bool:
+	if run.taken.has(key):
+		return false
+	run.taken.append(key)
+	run.fragments = int(run.get("fragments", 0)) + 1
+	if run.fragments % 3 == 0:
+		add_stamina_block(run)
+	return true
+
 # A saved run with missing or wrong-typed fields filled from a fresh one (older or hand-edited saves).
 # Unusable saves (not a run, or its room is gone) start over.
 # Normalize saved data against current world/rule limits before gameplay reads its fields.
@@ -248,6 +258,7 @@ static func restore_run(world: Dictionary, run) -> Dictionary:
 	if not (run.spawn is Array and run.spawn.size() == 2 and _finite(run.spawn[0]) and _finite(run.spawn[1])):
 		run.spawn = null
 	run.blocks = maxi(1, int(run.blocks)) if _finite(run.blocks) else 1
+	run.fragments = maxi(0, int(run.fragments)) if _finite(run.fragments) else 0
 	run.deaths = maxi(0, int(run.deaths)) if _finite(run.deaths) else 0
 	run.time = maxf(0.0, run.time) if _finite(run.time) else 0.0
 	run.stamina = clampf(run.stamina, 0.0, stamina_max(run)) if _finite(run.stamina) else stamina_max(run)
