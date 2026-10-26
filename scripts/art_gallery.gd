@@ -3,14 +3,14 @@ extends VBoxContainer
 # Ape's poses (drawn in code). Read-only. Uses ResourceLoader.list_directory so it works in exported builds too.
 
 const ApeArt := preload("res://scripts/ape_art.gd")
-const CELL := 150.0  # thumbnail box (px); images scale up by whole steps to fit, never blurred
+const CELL := 110.0  # minimum cell width (px); images show at their true size (1 art px = 1 screen px)
 const SKIP := ["res://assets/themes/review/"]  # before/after review shots, not game art
 const APE_POSES := ["idle", "crouch", "air", "land", "throw", "scream", "run"]
 
 var sections := {}  # title -> [[name, Texture2D], ...]
 var order: Array = []
 var current := ""
-var grid: GridContainer
+var grid: HFlowContainer
 var buttons: Control
 
 func _ready() -> void:
@@ -35,8 +35,8 @@ func _ready() -> void:
 	scroll.custom_minimum_size = Vector2(860, 420)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(scroll)
-	grid = GridContainer.new()
-	grid.columns = 5
+	grid = HFlowContainer.new()  # cells as wide as their image: big sheets take a whole row
+	grid.custom_minimum_size.x = 840
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	scroll.add_child(grid)
@@ -75,23 +75,18 @@ func _show(title: String) -> void:
 	for item in sections[title]:
 		var tex: Texture2D = item[1]
 		var cell := VBoxContainer.new()
-		cell.custom_minimum_size = Vector2(CELL, CELL + 40)
-		var pic := TextureRect.new()
+		cell.custom_minimum_size.x = maxf(CELL, tex.get_width())
+		var pic := TextureRect.new()  # true size: no scaling at all
 		pic.texture = tex
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		var k := maxf(1.0, floorf(CELL / maxf(tex.get_width(), tex.get_height())))  # whole-number zoom, or shrink to fit
-		var fit := minf(1.0, CELL / maxf(tex.get_width(), tex.get_height()))
-		pic.custom_minimum_size = Vector2(tex.get_width(), tex.get_height()) * (k if k > 1.0 else fit)
-		pic.custom_minimum_size = pic.custom_minimum_size.min(Vector2(CELL, CELL))
+		pic.stretch_mode = TextureRect.STRETCH_KEEP
 		pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		cell.add_child(pic)
 		var l := Label.new()
 		l.text = "%s\n%dx%d" % [item[0], tex.get_width(), tex.get_height()]
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_font_size_override("font_size", 13)
-		l.custom_minimum_size.x = CELL
+		l.custom_minimum_size.x = maxf(CELL, tex.get_width())
 		l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 		cell.add_child(l)
 		grid.add_child(cell)
