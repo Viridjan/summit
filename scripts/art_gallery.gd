@@ -5,6 +5,8 @@ extends VBoxContainer
 const ApeArt := preload("res://scripts/ape_art.gd")
 const CELL := 110.0  # minimum cell width (px); images show at their true size (1 art px = 1 screen px)
 const SKIP := ["res://assets/themes/review/"]  # before/after review shots, not game art
+const BACKDROPS := ["background", "foreground", "preview", "contact-sheet"]  # full-screen images: shown at 30%
+const BACKDROP_SCALE := 0.3
 const APE_POSES := ["idle", "crouch", "air", "land", "throw", "scream", "run"]
 
 var sections := {}  # title -> [[name, Texture2D], ...]
@@ -74,19 +76,25 @@ func _show(title: String) -> void:
 		c.queue_free()
 	for item in sections[title]:
 		var tex: Texture2D = item[1]
+		var k := BACKDROP_SCALE if item[0] in BACKDROPS else 1.0  # sprites at true size, backdrops at 30%
+		var shown := (Vector2(tex.get_width(), tex.get_height()) * k).round()
 		var cell := VBoxContainer.new()
-		cell.custom_minimum_size.x = maxf(CELL, tex.get_width())
-		var pic := TextureRect.new()  # true size: no scaling at all
+		cell.custom_minimum_size.x = maxf(CELL, shown.x)
+		var pic := TextureRect.new()
 		pic.texture = tex
-		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.stretch_mode = TextureRect.STRETCH_KEEP
+		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if k == 1.0 else CanvasItem.TEXTURE_FILTER_LINEAR
+		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		pic.stretch_mode = TextureRect.STRETCH_SCALE
+		pic.custom_minimum_size = shown
 		pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		cell.add_child(pic)
 		var l := Label.new()
 		l.text = "%s\n%dx%d" % [item[0], tex.get_width(), tex.get_height()]
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_font_size_override("font_size", 13)
-		l.custom_minimum_size.x = maxf(CELL, tex.get_width())
+		l.custom_minimum_size.x = maxf(CELL, shown.x)
+		if k != 1.0:
+			l.text += " (30%)"
 		l.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 		cell.add_child(l)
 		grid.add_child(cell)
