@@ -1900,7 +1900,7 @@ class BossGate extends Ent:
 			collidable = not w.broken.has(str(d.until))
 			return
 		if d.get("closes_behind", false) and not passed:
-			passed = w.player.hitbox().position.x > rect.end.x + 4
+			passed = w.player.hitbox().position.x >= rect.end.x  # fully past it (a respawn next to it counts)
 		collidable = Ape.alive_in(w) and (passed or not d.get("closes_behind", false))
 	# Draw BossGate at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:

@@ -176,15 +176,17 @@ var background: Background
 var room_mask: RoomMask
 var mask_a := 0.0  # room mask opacity
 # Room transition: the room left darkens towards the new one (REVEAL_OUT), all black for REVEAL_HOLD, then the new
-# room clears from the entry side onwards (REVEAL_IN): the same soft edge and pace on both sides.
-const REVEAL_OUT := 0.35
+# room clears from the entry side onwards (REVEAL_IN): the same soft edge and pace on both sides. The view does not
+# slide: it stays on the old room until the middle of the hold, then cuts to the new room.
+const REVEAL_OUT := 0.5
 const REVEAL_HOLD := 0.2
-const REVEAL_IN := 0.35
+const REVEAL_IN := 0.5
 const REVEAL_TIME := REVEAL_OUT + REVEAL_HOLD + REVEAL_IN
 const REVEAL_FADE := 96.0  # px of black-to-clear gradient at the sweeping edges
 var reveal_t := 1.0  # 0..1 of REVEAL_TIME; 1 = done
 var reveal_dir := Vector2.RIGHT  # the sweep's direction (an axis)
 var reveal_from := 0.0  # where it starts, along that axis
+var reveal_cut := true  # the camera has jumped to the new room (false while the old room is still in view)
 var reveal_old := Rect2()  # the room just left (sideways or vertical crossings): it darkens from its far side
 
 var data: Dictionary
@@ -1047,7 +1049,15 @@ func _physics_process(_delta: float) -> void:
 	for i in snow.size():
 		snow[i] = Vector2(fposmod(snow[i].x - 20 * dt, VIEW.x), fposmod(snow[i].y + 12 * dt, VIEW.y))
 
-	if not player.dead:
+	var cut := REVEAL_OUT + REVEAL_HOLD * 0.5  # mid-way through the black hold
+	if reveal_t < 1.0 and reveal_t * REVEAL_TIME < cut:
+		pass  # crossing: the view stays on the room being left while it darkens
+	elif not reveal_cut:  # then, hidden in the black, it jumps to the new room (no slide)
+		reveal_cut = true
+		cam_pos = _clamp_cam(player.camera_target())
+		cam_prev = cam_pos
+		cam_now = cam_pos
+	elif not player.dead:
 		var target: Vector2 = _clamp_cam(player.camera_target())
 		cam_pos += (target - cam_pos) * (1.0 - pow(0.01, dt))
 	var off := Vector2.ZERO
@@ -1072,6 +1082,7 @@ func _cam_settled() -> bool:
 # side, towards its centre.
 func _start_reveal(in_dir: int, went_up: bool, by_door: bool) -> void:
 	reveal_t = 0.0
+	reveal_cut = false
 	if in_dir != 0 and not by_door:
 		reveal_dir = Vector2(in_dir, 0)
 	elif not by_door:
@@ -1094,11 +1105,33 @@ func _draw_reveal(ci: CanvasItem) -> void:
 	var k_in: float = ease.call(clampf((t - REVEAL_OUT - REVEAL_HOLD) / REVEAL_IN, 0.0, 1.0))
 	var b := Rect2(bounds)
 	var far := (b.end if reveal_dir.dot(Vector2.ONE) > 0 else b.position).dot(reveal_dir)  # the side it clears to
+	_outside_black(ci, [b, reveal_old], k_out * (1.0 - k_in))  # the other rooms around: fade out, black, fade back
 	_sweep(ci, b, lerpf(reveal_from, far + REVEAL_FADE, k_in), false)  # new room: black ahead of the edge
 	if reveal_old.has_area():
 		var start := (reveal_old.position if reveal_dir.dot(Vector2.ONE) > 0 else reveal_old.end).dot(reveal_dir)
 		var stop := (reveal_old.end if reveal_dir.dot(Vector2.ONE) > 0 else reveal_old.position).dot(reveal_dir)
 		_sweep(ci, reveal_old, lerpf(start - REVEAL_FADE, stop, k_out), true)  # old room: black behind the edge
+
+# Black at alpha a over the view except the given rects (the two rooms of the crossing; empty rects are ignored):
+# the view is cut on every rect edge and each cell outside them is filled.
+func _outside_black(ci: CanvasItem, keep: Array, a: float) -> void:
+	if a <= 0.0:
+		return
+	var v := Rect2(cam.position - VIEW / 2.0, VIEW).grow(2)
+	var rects: Array = keep.filter(func(k): return k.has_area())
+	var xs := [v.position.x, v.end.x]
+	var ys := [v.position.y, v.end.y]
+	for k in rects:
+		xs += [clampf(k.position.x, v.position.x, v.end.x), clampf(k.end.x, v.position.x, v.end.x)]
+		ys += [clampf(k.position.y, v.position.y, v.end.y), clampf(k.end.y, v.position.y, v.end.y)]
+	xs.sort()
+	ys.sort()
+	var c := Color(0, 0, 0, a)
+	for i in xs.size() - 1:
+		for j in ys.size() - 1:
+			var cell := Rect2(xs[i], ys[j], xs[i + 1] - xs[i], ys[j + 1] - ys[j])
+			if cell.has_area() and not rects.any(func(k): return k.has_point(cell.get_center())):
+				ci.draw_rect(cell, c)
 
 # One sweep over area along reveal_dir, in u = position along the travel direction (u grows the way the player
 # goes): behind = false, black from `front` onwards with a clear-to-black gradient over the REVEAL_FADE before it;

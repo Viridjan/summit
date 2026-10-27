@@ -510,6 +510,14 @@ func check_shipped_world() -> void:
 	# a room smaller than the view sits centred, with black around it; entering the next room drops the mask
 	ww.enter_room("h1_villager_house", Vector2(40, 100))
 	var revealing: bool = ww.reveal_t == 0.0 and absf(ww.reveal_dir.x) + absf(ww.reveal_dir.y) == 1.0 and not ww.reveal_old.has_area()  # a door: no old room to darken
+	var cam0: Vector2 = ww.cam_pos
+	for k in 20:  # 0.33 s: still darkening, the view holds still
+		ww._physics_process(DT)
+	var held: bool = ww.cam_pos == cam0
+	for k in 20:  # 0.67 s: past the middle of the black hold, the view has cut to the new room
+		ww._physics_process(DT)
+	var cut_ok: bool = ww.cam_pos.distance_to(ww._clamp_cam(ww.player.camera_target())) < 1.0
+	check(held and cut_ok and cam0.distance_to(ww.cam_pos) > 1.0, "the view doesn't slide: it holds on the old room, then cuts to the new one in the black (%s -> %s)" % [cam0, ww.cam_pos])
 	for k in 240:
 		ww._physics_process(DT)
 	var small_ok: bool = ww.mask_a > 0.99 and ww.cam_pos.distance_to(Vector2(ww.bounds.get_center())) < 1.0
@@ -1623,6 +1631,24 @@ func check_guardian() -> void:
 		"beaten: saved, gates open, the door home appears")
 	Game.settings.invincible = keep_inv
 
+# Respawning in the Ape arena (spawn right next to the entrance gate) shuts the gate behind the player.
+func check_arena_respawn_gate() -> void:
+	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
+	var sp: Dictionary = arena.entities.filter(func(e): return e.t == "spawn").reduce(func(a, e): return e if a == null or e.x < a.x else a)
+	Game.level = arena
+	if w:
+		w.queue_free()
+	w = load("res://scripts/world.gd").new()
+	add_child(w)
+	w.set_physics_process(false)
+	w.player = Bot.new(w, Vector2(float(sp.x) + 4, float(sp.y) + 8))
+	step(3)
+	var gate = w.ents.filter(func(e): return e is E.BossGate and e.d.get("closes_behind", false))[0]
+	p().hold = {"left": true}
+	step(40)
+	p().hold = {}
+	check(gate.collidable and p().hitbox().position.x >= gate.rect.end.x, "respawning at the arena's left spawn shuts the gate behind you (player x %s)" % p().pos.x)
+
 # Regression coverage for ape. The assertions below state the expected behavior of this case.
 func check_ape() -> void:
 	var floor_y := 28 * 8
@@ -2674,6 +2700,7 @@ func _ready() -> void:
 	check_bestiary()
 	check_ape_hitbox_shapes()
 	check_ape()
+	check_arena_respawn_gate()
 	check_guardian()
 	check_debug_tools()
 	check_monster_log()
