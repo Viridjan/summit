@@ -175,6 +175,17 @@ var tile_layer: TileLayer
 var background: Background
 var room_mask: RoomMask
 var mask_a := 0.0  # room mask opacity
+# Room transition: the room left darkens towards the new one (REVEAL_OUT), all black for REVEAL_HOLD, then the new
+# room clears from the entry side onwards (REVEAL_IN): the same soft edge and pace on both sides.
+const REVEAL_OUT := 0.35
+const REVEAL_HOLD := 0.2
+const REVEAL_IN := 0.35
+const REVEAL_TIME := REVEAL_OUT + REVEAL_HOLD + REVEAL_IN
+const REVEAL_FADE := 96.0  # px of black-to-clear gradient at the sweeping edges
+var reveal_t := 1.0  # 0..1 of REVEAL_TIME; 1 = done
+var reveal_dir := Vector2.RIGHT  # the sweep's direction (an axis)
+var reveal_from := 0.0  # where it starts, along that axis
+var reveal_old := Rect2()  # the room just left (sideways or vertical crossings): it darkens from its far side
 
 var data: Dictionary
 var level_id := ""
@@ -519,6 +530,7 @@ func enter_room(next: String, at = null) -> void:
 	leaving_ents = left
 	leaving_rect = Rect2(old_origin - room_origin, left_size)
 	player.pos = global - room_origin if at == null else at
+	_start_reveal(in_dir, went_up, at != null)
 	if went_up and at == null:  # Celeste-style lift so an upward exit doesn't fall straight back
 		player.speed.y = minf(player.speed.y, player.JUMP_SPEED)
 	walk_dir = in_dir
@@ -1045,6 +1057,7 @@ func _physics_process(_delta: float) -> void:
 	cam_now = cam_pos + off
 	cam.position = cam_now.round()
 	mask_a = move_toward(mask_a, 1.0 if _cam_settled() else 0.0, dt * 4.0)
+	reveal_t = minf(1.0, reveal_t + dt / REVEAL_TIME)
 	note_t -= dt
 	note_label.visible = note_t > 0 and map_view == null
 	hud.queue_redraw()
@@ -1055,17 +1068,85 @@ func _cam_settled() -> bool:
 	var d: Vector2 = (_clamp_cam(player.camera_target()) - cam_pos).abs()
 	return (bounds.size.x >= VIEW.x or d.x < 1.0) and (bounds.size.y >= VIEW.y or d.y < 1.0)
 
+# Sideways: across from that edge; up or down: from the bottom or top; a door: from the player along the room's longer
+# side, towards its centre.
+func _start_reveal(in_dir: int, went_up: bool, by_door: bool) -> void:
+	reveal_t = 0.0
+	if in_dir != 0 and not by_door:
+		reveal_dir = Vector2(in_dir, 0)
+	elif not by_door:
+		reveal_dir = Vector2(0, -1 if went_up else 1)
+	else:
+		var to: Vector2 = Vector2(bounds.get_center()) - player.pos
+		reveal_dir = Vector2(signf(to.x) if to.x != 0 else 1.0, 0) if bounds.size.x >= bounds.size.y else Vector2(0, signf(to.y) if to.y != 0 else 1.0)
+	reveal_old = Rect2() if by_door else leaving_rect
+	reveal_from = player.pos.dot(reveal_dir) if by_door else (Rect2(bounds).position.dot(reveal_dir) if reveal_dir.dot(Vector2.ONE) > 0 else Rect2(bounds).end.dot(reveal_dir))
+
+# The crossing as one wave of darkness travelling with the player: the room left darkens from its far side towards
+# the new room, and the new room, black at first, clears from the entry side onwards. Both edges are soft
+# (REVEAL_FADE px of gradient) and move together, eased out.
+func _draw_reveal(ci: CanvasItem) -> void:
+	if reveal_t >= 1.0:
+		return
+	var t := reveal_t * REVEAL_TIME
+	var ease := func(x: float) -> float: return x * x * (3.0 - 2.0 * x)  # smoothstep: gentle start and stop
+	var k_out: float = ease.call(clampf(t / REVEAL_OUT, 0.0, 1.0))
+	var k_in: float = ease.call(clampf((t - REVEAL_OUT - REVEAL_HOLD) / REVEAL_IN, 0.0, 1.0))
+	var b := Rect2(bounds)
+	var far := (b.end if reveal_dir.dot(Vector2.ONE) > 0 else b.position).dot(reveal_dir)  # the side it clears to
+	_sweep(ci, b, lerpf(reveal_from, far + REVEAL_FADE, k_in), false)  # new room: black ahead of the edge
+	if reveal_old.has_area():
+		var start := (reveal_old.position if reveal_dir.dot(Vector2.ONE) > 0 else reveal_old.end).dot(reveal_dir)
+		var stop := (reveal_old.end if reveal_dir.dot(Vector2.ONE) > 0 else reveal_old.position).dot(reveal_dir)
+		_sweep(ci, reveal_old, lerpf(start - REVEAL_FADE, stop, k_out), true)  # old room: black behind the edge
+
+# One sweep over area along reveal_dir, in u = position along the travel direction (u grows the way the player
+# goes): behind = false, black from `front` onwards with a clear-to-black gradient over the REVEAL_FADE before it;
+# behind = true, black up to `front` with a black-to-clear gradient over the REVEAL_FADE after it.
+func _sweep(ci: CanvasItem, area: Rect2, front: float, behind: bool) -> void:
+	var horiz := reveal_dir.x != 0
+	var s: float = reveal_dir.x if horiz else reveal_dir.y  # world coordinate = u * s
+	var a0: float = (area.position.x if horiz else area.position.y) * s
+	var a1: float = (area.end.x if horiz else area.end.y) * s
+	var ulo := minf(a0, a1)
+	var uhi := maxf(a0, a1)
+	var solid := Vector2(front, uhi) if not behind else Vector2(ulo, front)  # [from, to] in u
+	var grad := Vector2(front - REVEAL_FADE, front) if not behind else Vector2(front, front + REVEAL_FADE)
+	var g_black_at_end := not behind  # the gradient's black end: its far end (ahead) or its start (behind)
+	_band(ci, area, horiz, s, clampf(solid.x, ulo, uhi), clampf(solid.y, ulo, uhi), Color.BLACK, Color.BLACK)
+	var t0 := clampf(grad.x, ulo, uhi)
+	var t1 := clampf(grad.y, ulo, uhi)
+	if t1 > t0:  # alpha along the gradient, at its clipped ends
+		var al := func(u: float) -> float: return clampf((u - grad.x) / REVEAL_FADE, 0.0, 1.0) if g_black_at_end else clampf((grad.y - u) / REVEAL_FADE, 0.0, 1.0)
+		_band(ci, area, horiz, s, t0, t1, Color(0, 0, 0, al.call(t0)), Color(0, 0, 0, al.call(t1)))
+
+# A band of area between u0 < u1 (along the travel axis), coloured c0 at u0 and c1 at u1.
+func _band(ci: CanvasItem, area: Rect2, horiz: bool, s: float, u0: float, u1: float, c0: Color, c1: Color) -> void:
+	if u1 <= u0:
+		return
+	var w0 := u0 * s
+	var w1 := u1 * s
+	var pts: PackedVector2Array
+	if horiz:
+		pts = [Vector2(w0, area.position.y), Vector2(w1, area.position.y), Vector2(w1, area.end.y), Vector2(w0, area.end.y)]
+	else:
+		pts = [Vector2(area.position.x, w0), Vector2(area.position.x, w1), Vector2(area.end.x, w1), Vector2(area.end.x, w0)]
+	ci.draw_polygon(pts, PackedColorArray([c0, c1, c1, c0]))
+
 # Black over the parts of the view outside this room (they only show when the room is smaller than the view).
 func _draw_room_mask(ci: CanvasItem) -> void:
+	_draw_reveal(ci)
 	if mask_a <= 0.0:
 		return
 	var v := Rect2(cam.position - VIEW / 2.0, VIEW).grow(2)
 	var b := Rect2(bounds)
 	var c := Color(0, 0, 0, mask_a)
-	ci.draw_rect(Rect2(v.position.x, v.position.y, v.size.x, b.position.y - v.position.y), c)  # above
-	ci.draw_rect(Rect2(v.position.x, b.end.y, v.size.x, v.end.y - b.end.y), c)  # below
-	ci.draw_rect(Rect2(v.position.x, b.position.y, b.position.x - v.position.x, b.size.y), c)  # left
-	ci.draw_rect(Rect2(b.end.x, b.position.y, v.end.x - b.end.x, b.size.y), c)  # right
+	if b.size.y < VIEW.y:  # only along the axes where the room is smaller than the view (centred there)
+		ci.draw_rect(Rect2(v.position.x, v.position.y, v.size.x, b.position.y - v.position.y), c)  # above
+		ci.draw_rect(Rect2(v.position.x, b.end.y, v.size.x, v.end.y - b.end.y), c)  # below
+	if b.size.x < VIEW.x:
+		ci.draw_rect(Rect2(v.position.x, b.position.y, b.position.x - v.position.x, b.size.y), c)  # left
+		ci.draw_rect(Rect2(b.end.x, b.position.y, v.end.x - b.end.x, b.size.y), c)  # right
 
 # Keep the camera within the room limits while handling rooms smaller than the view.
 func _clamp_cam(t: Vector2) -> Vector2:

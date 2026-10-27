@@ -1,12 +1,12 @@
 extends SceneTree
-# Offline export of the six authored Ape poses and four frame columns. Writes the project reference atlas and an enlarged temporary preview.
+# Offline export of the seven authored Ape poses and four frame columns. Writes the project reference atlas and an enlarged temporary preview.
 # Reading help: docs/CODE_GUIDE.md.
 
 
 # Run this offline image export and quit; output images are regenerated from the authored source.
 func _initialize() -> void:
 	var art = load("res://scripts/ape_art.gd")
-	var poses := ["idle", "crouch", "air", "throw", "scream", "run"]
+	var poses := ["idle", "crouch", "air", "throw", "scream", "run", "land"]
 	var sheet := Image.create(128, poses.size() * 32, false, Image.FORMAT_RGBA8)
 	for row in poses.size():
 		for frame in 4:

@@ -504,15 +504,24 @@ func check_shipped_world() -> void:
 	for k in 40:
 		step()
 	check(ww.cam_prev.distance_to(ww.cam_now) < 8.0, "render interpolation follows a room change instead of sweeping (cam %s -> %s)" % [ww.cam_prev, ww.cam_now])
+	check(ww.reveal_dir == Vector2.RIGHT and ww.reveal_old.has_area() and ww.reveal_old.end.x <= 0.0,
+		"a sideways crossing darkens the room left (on the left) and clears the new one, both moving right (%s)" % [ww.reveal_old])
 	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
 	# a room smaller than the view sits centred, with black around it; entering the next room drops the mask
 	ww.enter_room("h1_villager_house", Vector2(40, 100))
+	var revealing: bool = ww.reveal_t == 0.0 and absf(ww.reveal_dir.x) + absf(ww.reveal_dir.y) == 1.0 and not ww.reveal_old.has_area()  # a door: no old room to darken
 	for k in 240:
 		ww._physics_process(DT)
 	var small_ok: bool = ww.mask_a > 0.99 and ww.cam_pos.distance_to(Vector2(ww.bounds.get_center())) < 1.0
 	var small_msg := "mask %s cam %s centre %s" % [ww.mask_a, ww.cam_pos, ww.bounds.get_center()]
 	ww.enter_room("t1_cove_town", Vector2(88,152-int(story.rooms.t1_cove_town.level.get("vertical_trim",0))*8))
 	check(small_ok and ww.mask_a == 0.0, "a small room is centred and masked in black; the mask drops on entering the next room (%s)" % small_msg)
+	check(revealing and ww.reveal_t == 0.0, "entering a room starts the black-to-clear reveal from the entry side")
+	var took := 0
+	while ww.reveal_t < 1.0 and took < 600:
+		ww._physics_process(DT)
+		took += 1
+	check(ww.reveal_t == 1.0 and absi(took - roundi(ww.REVEAL_TIME * 60)) <= 1, "the transition takes %.2f s: darken, hold black, clear (%d ticks)" % [ww.REVEAL_TIME, took])
 	ww.queue_free()
 	# house doors: standing at one (or pressing up) does nothing; interact goes inside, and again comes back out
 	Game.adv = Adventure.new_run(story)
@@ -1514,9 +1523,19 @@ func check_art_gallery() -> void:
 	add_child(g)
 	var titles: Array = g.order
 	var all_tex: bool = titles.all(func(t): return g.sections[t].all(func(i): return i[1] is Texture2D))
-	check(all_tex and titles.has("Ape") and g.sections["Ape"].size() == 7 and titles.has("Island") and titles.has("Blocks") and titles.has("Theme: forest")
-		and titles.has("Theme: volcano") and not titles.any(func(t): return t.contains("review") or t.contains("Review")) and g.grid.get_child_count() > 0,
-		"Art screen: every art folder as a section, plus the Ape's poses (%s)" % [titles])
+	var ape_tex: Texture2D = load("res://assets/enemies/ape.png")
+	var ape_rows: Array = g.rows_of("res://assets/enemies/ape.png", ape_tex)
+	var thorn: Array = g.rows_of("res://assets/enemies/thornmite.png", load("res://assets/enemies/thornmite.png"))
+	var wall: Array = g.rows_of("res://assets/blocks/breakwall.png", load("res://assets/blocks/breakwall.png"))
+	var serpent: Array = g.rows_of("res://assets/island/serpent.png", load("res://assets/island/serpent.png"))
+	var nori: Array = g.rows_of("res://assets/nori/nori.png", load("res://assets/nori/nori.png"))
+	var bg: Array = g.rows_of("res://assets/themes/forest/background.png", load("res://assets/themes/forest/background.png"))
+	check(all_tex and titles.has("Enemies") and titles.has("Island") and titles.has("Blocks") and titles.has("Theme: forest")
+		and not titles.any(func(t): return t.contains("review") or t.contains("Review")) and g.list.get_child_count() > 0
+		and ape_rows.size() == 7 and ape_rows[0][0] == "idle" and ape_rows[0][1][0].size == Vector2i(32, 32)
+		and thorn[0][0] == "thornmite" and thorn[0][1].size() == 4 and wall.size() == 2 and wall[0][1][1].size == Vector2i(32, 8)
+		and serpent.size() == 6 and serpent[0][1][0].size == Vector2i(96, 64) and nori[1][0] == "run" and bg.is_empty(),
+		"Art screen: sections per folder; sheets cut into single sprites at true size (%s)" % [titles])
 	g.free()
 
 # Editor palette: every object type sits in a named group; enemies are grouped by family.
