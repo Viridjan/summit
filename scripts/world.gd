@@ -1091,7 +1091,7 @@ func freefall(name: String) -> bool:
 	if not _freefall.has(name):
 		var lv: Dictionary = Game.adv_world.rooms[name].level
 		var t: Array = lv.tiles
-		var stand: bool = lv.entities.any(func(e): return e.t in ["jumpthru", "leaf"])
+		var stand: bool = lv.entities.any(func(e): return e.t == "jumpthru")
 		for y in range(t.size() - 1):
 			if stand:
 				break

@@ -44,25 +44,28 @@
 			"entrance": true
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 448,
 			"y": 96,
 			"w": 24,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 472,
 			"y": 72,
 			"w": 32,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 448,
 			"y": 48,
 			"w": 24,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
 			"t": "strawberry",

@@ -102,7 +102,6 @@ const TYPES := {
 	"breakwall": ["Breakable Wall", true, Color("b08a60"), BreakWall],
 	"water": ["Water", true, Color("4a8ae0"), Liquid],
 	# story jungle (docs/STORY_DESIGN.md 1.5): a leafy jump-through, and falling water that pushes the player down
-	"leaf": ["Leaf Platform", true, Color("7fc04e"), Leaf],
 	"waterfall": ["Waterfall", true, Color("8ac8f0"), Waterfall],
 	"acid": ["Acid", true, Color("6ae070"), Liquid],
 	# design note: marks what a spot needs (a power-up not built yet, a boss, a secret...)
@@ -1465,20 +1464,28 @@ class Star extends Ent:  # legacy collectible; new discovery placements use expl
 
 
 # One-way platform: supports downward landings but permits upward travel through it.
+# One-way platform: land on it from above, jump up through it, down + jump drops through. Its look follows the
+# room's environment (d.look overrides it): leaves in the jungle (forest), the plank rail elsewhere until each
+# environment has its own art (docs/reviews/platform-art/CODEX_PROMPT.md). Old "leaf" platforms load as
+# jump-throughs with look "forest" (Game.validate_level).
 class JumpThru extends Ent:
+	static var editor_look := ""  # the editor sets this to the edited room's environment before drawing
 	# Initialize JumpThru dimensions, collision flags and starting data before World uses the object.
 	func setup() -> void:
 		jumpthru = true
 		rect.size.y = 5
+	func look() -> String:
+		if d.has("look"):
+			return str(d.look)
+		return str(w.data.get("environment", "")) if w != null else editor_look
 	# Draw JumpThru at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
-		BlockArt.draw(ci, rect, "jumpthru")
-
-
-# Leaf-themed artwork for the same one-way-platform collision behavior.
-class Leaf extends JumpThru:  # a jump-through drawn as leaves on a stem, filling its box exactly
-	# Draw Leaf at its current pose; this must also work for an editor preview with no World.
-	func draw(ci: CanvasItem) -> void:
+		if look() == "forest":
+			_draw_leaves(ci)
+		else:
+			BlockArt.draw(ci, rect, "jumpthru")
+	# Leaves on a stem, filling the box exactly.
+	func _draw_leaves(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
 		ci.draw_rect(Rect2(r.position + Vector2(0, r.size.y - 1), Vector2(r.size.x, 1)), Color("41673a"))  # stem
 		for x in range(0, int(r.size.x), 6):

@@ -1,54 +1,54 @@
-# Codex prompt: artwork for the one-way platforms (Jump-Through and Leaf Platform)
+# Codex prompt: a jump-through for each environment
 
-Read `AGENTS.md` first. Stay inside this repository. Do not change gameplay, collision, room files or generators.
+Read `AGENTS.md` and `assets/README.md` (the art layout standard) first. Stay inside this repository. Do not change
+gameplay, collision, room files or generators. Use the `pixel-art-studio` skill for the sprites.
 
-## Context (verified in code, 2026-10-26)
+## Context (verified in code, 2026-10-28)
 
-- Two editor tools place the same one-way platform: `jumpthru` ("Jump-Through") and `leaf` ("Leaf Platform").
-  Both are `JumpThru` in `scripts/entities.gd` (`class Leaf extends JumpThru` only overrides `draw`).
-  Behaviour is identical: land on it from above, jump up through it, down + jump drops through.
-- Collision: the entity's `rect` is `w` px wide (a multiple of 8, from 16 to about 80) and **5 px tall**
-  (`JumpThru.setup` sets `rect.size.y = 5`); the level file stores `h: 8`. The top edge of `rect` is the
-  standing surface.
-- Current art is procedural and placeholder-grade:
-  - `jumpthru`: `scripts/block_art.gd` style `"jumpthru"` (bevelled slab, grain every 8 px), drawn by
-    `BlockArt.draw(ci, rect, "jumpthru")`.
-  - `leaf`: `Leaf.draw` in `scripts/entities.gd` paints flat green rectangles on a 1 px stem.
-- Usage today: 113 jump-throughs across every environment; 16 leaf platforms, all in jungle rooms
-  (`j1`-`j3`, `l1`-`l3`, environment `forest`). Environments in use: forest, sand, sea, sky, temple, building,
-  cavern, cavern_deep, island_shore, volcano, volcanic_cave.
+- There is one one-way platform type, `jumpthru` ("Jump-Through", `class JumpThru` in `scripts/entities.gd`). The
+  former Leaf Platform is now a jump-through with the jungle look (old `"leaf"` data converts on load).
+- Behaviour: land on it from above, jump up through it, down + jump drops through.
+- Collision: `rect` is `w` px wide (a multiple of 8, about 16 to 80) and **5 px tall** (`JumpThru.setup`); the room
+  file stores `h: 8`. The rect's top edge is the standing surface.
+- **Look**: `JumpThru.look()` returns `d.look` if the platform sets one, else the room's `environment`
+  (`World.data.environment`; in the editor, `JumpThru.editor_look`). `JumpThru.draw` picks the art from it:
+  today `forest` draws procedural leaves (`_draw_leaves`), everything else the plank rail
+  (`BlockArt.draw(ci, rect, "jumpthru")`, `scripts/block_art.gd`).
+- Environments (`EnvironmentArt.THEMES`, `scripts/environment_art.gd`): `sand`, `sea`, `cavern`, `cavern_deep`,
+  `sky`, `temple`, `building`, `forest`, `island_shore`, `volcano`, `volcanic_cave`; plus `""` (editor levels
+  with no environment). Their terrain, backgrounds and decorations are in `assets/themes/<environment>/`.
+- Jump-throughs in the story today, by look: volcanic_cave 46, island_shore 24, forest 22, temple 13, volcano 11,
+  cavern_deep 10, building 4, sea 2 (sand, cavern, sky: none yet, but give them one).
 
 ## What to make
 
-1. **Jump-Through (generic)**: a thin plank or ledge that reads as "you can stand on the top and pass through
-   from below", for every environment. One shared design is fine; a palette or material per environment
-   (wood, stone, basalt, coral...) is better if it stays readable. Use `Room.environment` (the room's
-   `environment`) to pick it.
-2. **Leaf Platform (jungle)**: broad leaves or a fern frond on a stem, clearly organic, same footprint.
+One jump-through design per environment (12 looks: the 11 environments and `""`), each matching its
+environment's terrain palette and materials, for example: driftwood or coral (sea, island_shore), sandstone slab
+(sand), mossy stone ledge (cavern), dark crystal shelf (cavern_deep), cloud or rope bridge (sky), carved stone
+(temple), wooden shelf or beam (building), leaves on a branch (forest, keep the current idea), cooled basalt
+(volcano), obsidian with a faint glow (volcanic_cave), the current plank rail (`""`).
 
-For both:
-- **The art must match the collision exactly where it matters**: the top surface line is the rect's top edge;
-  nothing solid-looking above it. The body may hang at most 3 px below the 5 px rect (decorative underside,
-  roots, leaf tips), never wider than `rect`.
-- Tile horizontally for any width that is a multiple of 8 (left cap, repeatable middle, right cap), no visible
-  seams.
-- Pixel art at the game's native scale (1 game px = 1 art px), matching `assets/paper-pixels/` and the
-  existing block art: limited palette, crisp edges, top light / bottom shadow like the other blocks.
-- Optional: a 2-4 frame idle sway for the leaf (very subtle, max 1 px), driven by world time.
+For every look:
+- **Collision honesty**: the top surface line is the rect's top edge; nothing solid-looking above it. Decoration
+  may hang at most 3 px below the 5 px rect, never wider than the rect.
+- **Tiling**: any width that is a multiple of 8: left cap, repeatable 8 px middle, right cap; no seams.
+- **Readable as one-way**: a thin, light top edge and an open or airy underside, so it never reads as a solid block.
+- Pixel art at native scale (1 art px = 1 game px), limited palette, nearest filtering, consistent light from the
+  top-left like the rest of the game.
+- Optional, subtle idle motion (max 1 px, 2-4 frames) only where it fits (leaves, cloud, glow).
 
 ## Deliverables
 
-- Generated or hand-made sprites under `assets/platforms/` (PNG + a short `README.md` with sizes, palette and
-  licence: original work).
-- Drawing code: keep the call sites (`JumpThru.draw`, `Leaf.draw`); draw the new art inside the same `rect`
-  rules above. If you add a texture cache, key it by style, environment and width.
-- A preview page like `assets/blocks/preview.html` / `assets/island/preview.html` showing both platforms at
-  widths 16, 24, 40, 80 in every environment.
-- A check runner (see `tests/island_art.gd` / `tests/ape_art.gd`): exact image sizes, transparent background,
-  top row of the art at the rect's top, nothing outside the allowed bounds, the leaf animation (if any) has
-  distinct frames. Add it to `tools/verify.sh` with a success line.
-- Run `sh tools/verify.sh` (0 failing) before handing back. Note in `gdd.txt` (one dated line).
+- `assets/platforms/<look>.png` (one sheet per look: row 0 = left cap, middle tiles, right cap as 8x8 cells; extra
+  rows for animation frames) and `assets/platforms/manifest.json` (cell size, columns, frames per look), a
+  `README.md` and a `preview.html` showing every look at widths 16, 24, 40, 80, following `assets/README.md`.
+- Drawing: `JumpThru.draw` keeps its signature; draw the sheet for `look()`, falling back to the plank rail for an
+  unknown look. Cache textures by look and width.
+- A check runner like `tests/island_art.gd`: one sheet per environment, exact cell sizes, transparent background,
+  art top row at the rect's top, nothing outside the allowed bounds, animation frames distinct where animated.
+  Add it to `tools/verify.sh` with a success line.
+- `sh tools/verify.sh` at 0 failing; one dated line in `gdd.txt`.
 
 ## Out of scope
 
-Behaviour changes, merging the two types, editing room JSON, new environments, sound.
+Behaviour or collision changes, editing room files, new environments, sound.

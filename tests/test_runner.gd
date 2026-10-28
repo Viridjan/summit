@@ -434,7 +434,7 @@ func check_shipped_world() -> void:
 			if sw.room == "j2_jungle_falls":  # dropped in from Jungle Edge, one screen above
 				var previous: Dictionary = story.rooms.j1_jungle_edge
 				var expected := Rect2(Vector2(previous.pos-story.rooms.j2_jungle_falls.pos)*8,Vector2(previous.level.w,previous.level.h)*8)
-				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == expected
+				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "jumpthru" and e.look() == "forest") and sw.leaving_rect == expected
 	Game.settings.invincible = false
 	check(story_seen == ["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (the Lake Caves maze skipped (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
@@ -1605,13 +1605,25 @@ func check_camera_zone() -> void:
 	check(fixed == w._clamp_cam(Vector2(180, 120)) and centred == w._clamp_cam(Vector2(350, 170)) and free == w._clamp_cam(p().camera_target()),
 		"camera zones fix the view on their point (or centre) while the player is inside (%s, %s, %s)" % [fixed, centred, free])
 
+# Leaf platforms are jump-throughs: an old "leaf" loads as a jump-through with the jungle look; the look follows the room.
+func check_jumpthru_looks() -> void:
+	var lv := Game.validate_level({"name": "x", "w": 10, "h": 4, "environment": "forest", "tiles": ["0000000000", "0000000000", "0000000000", "1111111111"],
+		"entities": [{"t": "leaf", "x": 8, "y": 16, "w": 16, "h": 8}, {"t": "jumpthru", "x": 40, "y": 16, "w": 16, "h": 8}]})
+	Game.level = lv
+	make_world(lv.entities)
+	var jt: Array = w.ents.filter(func(e): return e is E.JumpThru)
+	var looks: Array = jt.map(func(e): return e.look())
+	check(lv.entities[0].t == "jumpthru" and lv.entities[0].look == "forest" and looks.count("forest") >= 1 and jt.all(func(e): return e.jumpthru),
+		"an old leaf platform loads as a jungle-look jump-through (%s)" % [looks])
+
 # Editor palette: every object type sits in a named group; enemies are grouped by family.
 func check_palette_groups() -> void:
 	var Ed = load("res://scripts/editor.gd")
 	var other: Array = E.TYPES.keys().filter(func(t): return Ed.palette_group(t) == "Other")
 	check(other.is_empty() and Ed.palette_group("enemy_thornmite_giant") == "Enemies & bosses" and Ed.palette_group("boss_ape") == "Enemies & bosses"
 		and Ed.palette_group("tile") == "Terrain" and Ed.palette_group("spikes_left") == "Hazards"
-		and Ed.palette_group("dream") == "Movement" and Ed.palette_group("zip") == "Movement" and Ed.palette_group("water") == "Movement"
+		and Ed.palette_group("dream") == "Movement" and Ed.palette_group("zip") == "Movement" and Ed.palette_group("water") == "Terrain" and Ed.palette_group("acid") == "Terrain" and not E.TYPES.has("leaf") and Ed.palette_subgroup("enemy_thornmite_giant") == "Thornmite" and Ed.palette_subgroup("vent_plug") == "Guardian"
+		and Ed.palette_subgroup("ape_chase") == "Ape" and Ed.palette_subgroup("boss_gate") == "Boss arena"
 		and Ed.palette_group("enemy") == "Placeholders" and Ed.palette_group("breakable") == "Placeholders" and Ed.palette_group("note") == "Placeholders",
 		"editor palette groups every type: enemies and bosses together, placeholders together (ungrouped: %s)" % [other])
 
@@ -2765,6 +2777,7 @@ func _ready() -> void:
 	check_monster_log()
 	check_hover_help()
 	check_palette_groups()
+	check_jumpthru_looks()
 	check_camera_zone()
 	check_regions()
 	check_art_gallery()

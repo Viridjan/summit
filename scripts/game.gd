@@ -337,6 +337,9 @@ static func validate_level(d, fallback_name := "untitled") -> Dictionary:
 		if not row is String or row.length() != w or tile_re.search(row) == null:
 			return {}
 	for e in ents:
+		if e is Dictionary and e.get("t") == "leaf":  # leaf platforms are jump-throughs with the jungle look
+			e.t = "jumpthru"
+			e.look = "forest"
 		if not e is Dictionary or not e.get("t") is String or not Entities.TYPES.has(e.t):
 			return {}
 		if not (_is_num(e.get("x"), -MAX_COORD, MAX_COORD) and _is_num(e.get("y"), -MAX_COORD, MAX_COORD)):

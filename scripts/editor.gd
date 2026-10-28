@@ -145,9 +145,6 @@ func _build_ui() -> void:
 			order.append(g)
 		groups[g].append(t)
 	order.sort_custom(func(a, b): return GROUP_ORDER.find(a.get_slice(":", 0)) < GROUP_ORDER.find(b.get_slice(":", 0)) or (a.get_slice(":", 0) == b.get_slice(":", 0) and a < b))
-	if groups.has("Terrain") and groups.Terrain.has("leaf"):  # the two one-way platforms side by side
-		groups.Terrain.erase("leaf")
-		groups.Terrain.insert(groups.Terrain.find("jumpthru") + 1, "leaf")
 	if groups.has("Enemies & bosses"):  # each enemy family together (original first), then the bosses
 		var keys: Array = E.TYPES.keys()
 		groups["Enemies & bosses"].sort_custom(func(a, b): return _enemy_key(a, keys) < _enemy_key(b, keys))
@@ -165,11 +162,19 @@ func _build_ui() -> void:
 			head.text = ("v " if box.visible else "> ") + g.replace(":", ": "))
 		tools.add_child(head)
 		tools.add_child(box)
+		var sub_box: VBoxContainer = null
+		var sub_name := ""
 		for t in groups[g]:
+			var parent: VBoxContainer = box
+			if g == "Enemies & bosses":  # one foldable subgroup per enemy family / boss
+				if palette_subgroup(t) != sub_name:
+					sub_name = palette_subgroup(t)
+					sub_box = _fold(box, sub_name, Color("e6c27a"))
+				parent = sub_box
 			if t == "tile":
-				_tool_button(box, "tile", "Ground Tiles", Color("7d84c4"))
+				_tool_button(parent, "tile", "Ground Tiles", Color("7d84c4"))
 			else:
-				_tool_button(box, t, E.TYPES[t][0], E.TYPES[t][2])
+				_tool_button(parent, t, E.TYPES[t][0], E.TYPES[t][2])
 
 	var bottom := PanelContainer.new()
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -186,11 +191,11 @@ static func palette_group(t: String) -> String:
 		return "Placeholders"
 	if t.begins_with("enemy") or t.begins_with("boss") or t.begins_with("ape") or t in ["auto_walk", "vent_plug"]:
 		return "Enemies & bosses"
-	if t in ["tile", "jumpthru", "leaf", "crumble", "falling", "breakable", "breakwall", "waterfall"]:
+	if t in ["tile", "jumpthru", "crumble", "falling", "breakable", "breakwall", "waterfall", "water", "acid"]:
 		return "Terrain"
-	if t.begins_with("spikes") or t in ["acid", "rockfall"]:
+	if t.begins_with("spikes") or t in ["rockfall"]:
 		return "Hazards"
-	if t.begins_with("spring") or t.begins_with("booster") or t in ["refill", "refill_two", "bumper", "feather", "dream", "zip", "water"]:
+	if t.begins_with("spring") or t.begins_with("booster") or t in ["refill", "refill_two", "bumper", "feather", "dream", "zip"]:
 		return "Movement"
 	if t in ["camera_zone"]:
 		return "Triggers"
@@ -200,12 +205,40 @@ static func palette_group(t: String) -> String:
 		return "Doors & people"
 	return "Other"
 
+# A folded sub-header inside a palette group; returns the box its buttons go in.
+func _fold(parent: Control, title: String, col: Color) -> VBoxContainer:
+	var head := Button.new()
+	head.text = "   > " + title
+	head.flat = true
+	head.focus_mode = Control.FOCUS_NONE
+	head.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	head.add_theme_color_override("font_color", col)
+	var box := VBoxContainer.new()
+	box.visible = false
+	head.pressed.connect(func():
+		box.visible = not box.visible
+		head.text = ("   v " if box.visible else "   > ") + title)
+	parent.add_child(head)
+	parent.add_child(box)
+	return box
+
+# Subgroup inside Enemies & bosses: the enemy family's name (from its original type's label), or the boss.
+static func palette_subgroup(t: String) -> String:
+	if t.begins_with("enemy_"):
+		var fam := "enemy_" + t.get_slice("_", 1)
+		return str(E.TYPES[fam][0]).get_slice(" · ", 0) if E.TYPES.has(fam) else fam
+	if t in ["boss_ape", "ape_chase", "ape_trunk"]:
+		return "Ape"
+	if t in ["boss_guardian", "vent_plug"]:
+		return "Guardian"
+	return "Boss arena"
+
 # Sort key in Enemies & bosses: enemies by family (original first, then variants in registry order), bosses after.
 static func _enemy_key(t: String, keys: Array) -> Array:
 	if t.begins_with("enemy_"):
 		var fam := "enemy_" + t.get_slice("_", 1)
 		return [0, keys.find(fam), keys.find(t)]
-	return [1, 0, keys.find(t)]
+	return [1, ["Ape", "Guardian", "Boss arena"].find(palette_subgroup(t)), keys.find(t)]
 
 # Create a small editor label.
 func _lbl(t: String) -> Label:
@@ -662,6 +695,7 @@ func _draw() -> void:
 	var view := Rect2(cam.position - vs / 2.0, vs)
 	var b := Rect2(0, 0, level.w * T, level.h * T)
 	var cull := Rect2i(view.position.floor(), view.size.ceil()).grow(1)
+	E.JumpThru.editor_look = str(level.get("environment", ""))  # jump-throughs take the room's look
 	for e in preview:
 		if e != null and e.vis_rect().intersects(cull):
 			e.draw(self)

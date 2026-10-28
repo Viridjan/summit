@@ -35,18 +35,20 @@
 			"entrance": true
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 400,
 			"y": 64,
 			"w": 32,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 352,
 			"y": 40,
 			"w": 32,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
 			"t": "enemy_mosstrot",

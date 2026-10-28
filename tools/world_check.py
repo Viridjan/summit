@@ -39,7 +39,7 @@ class World:
             for e in lvl["entities"]:
                 ex, ey = ox + int(e["x"]) // T, oy + int(e["y"]) // T
                 t = e["t"]
-                if t in ("jumpthru", "leaf"):
+                if t == "jumpthru":
                     for i in range(int(e["w"]) // T):
                         self.plat.add((ex + i, ey))
                 elif t == "ape_trunk":  # assume the fight is won: the felled trunk lies at its base, as long as it was tall

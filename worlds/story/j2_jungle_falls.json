@@ -74,18 +74,20 @@
 			"y": 160
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 328,
 			"y": 136,
 			"w": 16,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 392,
 			"y": 128,
 			"w": 24,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
 			"t": "waterfall",
@@ -95,25 +97,28 @@
 			"h": 128
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 448,
 			"y": 128,
 			"w": 32,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 408,
 			"y": 104,
 			"w": 32,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
-			"t": "leaf",
+			"t": "jumpthru",
 			"x": 448,
 			"y": 80,
 			"w": 32,
-			"h": 8
+			"h": 8,
+			"look": "forest"
 		},
 		{
 			"t": "strawberry",

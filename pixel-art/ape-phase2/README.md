@@ -30,4 +30,4 @@ Visual passes: first refined the mantle into broken fur clusters, then checked
 all pose silhouettes and the rendered arena. The final atlas has twelve colors,
 no partial alpha, no isolated pixels and no near-duplicate colors under the
 skill's stats heuristic. Run frames and the jump sequence are provided for
-timing review. The capture helper freezes simulation for reproducible images.
+timing review. Arena images preserve the earlier concept review.

@@ -170,7 +170,7 @@ h2 = house("h2_quest_house", "Quest Giver's House", "h2", "Quest giver (NPC, not
 
 # 5. Jungle (section 1.5): forest theme, a hollow trunk, leaf platforms, calm Mosstrots; the player drops down again
 # Place a leaf-shaped one-way platform with tile-based width.
-def leaf(r, x, y, w): r.ents.append({"t": "leaf", "x": x * T, "y": y * T, "w": w * T, "h": 8})
+def leaf(r, x, y, w): r.ents.append({"t": "jumpthru", "x": x * T, "y": y * T, "w": w * T, "h": 8, "look": "forest"})  # a jungle jump-through
 # Place a right-facing ground walker at the requested tile position.
 def mosstrot(r, x, y): r.ents.append({"t": "enemy_mosstrot", "x": x * T, "y": y * T, "facing": 1})
 j1 = Room("j1_jungle_edge", "Jungle Edge", 40, 23, "forest")

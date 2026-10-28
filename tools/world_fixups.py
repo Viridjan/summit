@@ -31,7 +31,7 @@ def unit(text):
 
 
 HAZARD = ("acid", "water", "spikes_up", "spikes_down", "spikes_left", "spikes_right")
-SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru", "leaf")
+SOLID_ENTS = ("breakwall", "crumble", "falling", "zip", "dream", "jumpthru")
 
 
 # Close exposed room-edge cells that do not lead to a valid matching neighbor.

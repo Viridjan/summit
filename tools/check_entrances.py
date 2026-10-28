@@ -31,7 +31,7 @@ def bad_entrances(d):
     plat = {}
     for n, (rx, ry, L) in rooms.items():
         for e in L["entities"]:
-            if e["t"] in ("jumpthru", "leaf"):
+            if e["t"] == "jumpthru":
                 for i in range(int(e["w"]) // 8):
                     plat[(n, int(e["x"]) // 8 + i, int(e["y"]) // 8)] = True
     spikes = {}
