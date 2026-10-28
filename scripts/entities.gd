@@ -2686,7 +2686,7 @@ class Ape extends Ent:
 class ApeChase extends Ape:
 	const ROAR_TIME := 1.0  # it screams this long before giving chase
 	const SEAL_TIME := 0.4  # the cave-in rock takes this long to drop
-	const PLAN_BUDGET_MS := 150  # give up planning after this much work (an edited room with no route)
+	const PLAN_BUDGET_MS := 1500  # give up after this much planning work (an edited room with no route); generous: the web build runs the planner several times slower (Sand Cave: ~90 ms native)
 	const PLAN_SLICE_MS := 3.0  # planning work per frame while waiting
 	static var _plans := {}  # hash of planner inputs -> PackedVector2Array of feet positions, one per tick
 	var path := PackedVector2Array()
