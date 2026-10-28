@@ -1,5 +1,107 @@
 {
 	"abilities": [],
+	"regions": [
+		{
+			"color": "#7fc4e8",
+			"name": "Meadow",
+			"rooms": [
+				"m1_meadow",
+				"m2_big_jump"
+			]
+		},
+		{
+			"color": "#5a6fd0",
+			"name": "Lake Caves",
+			"rooms": [
+				"c0_roar_tunnel",
+				"c1_lake_cave",
+				"c5_lake_crossing",
+				"c6_wall_cave",
+				"c2_cave_teeth",
+				"c3_cove_tunnel",
+				"c4_deep_lake"
+			]
+		},
+		{
+			"color": "#e0b25a",
+			"name": "Cove Town",
+			"rooms": [
+				"t1_cove_town",
+				"h1_villager_house",
+				"h2_quest_house"
+			]
+		},
+		{
+			"color": "#5cbf5a",
+			"name": "Jungle",
+			"rooms": [
+				"j1_jungle_edge",
+				"j2_jungle_falls",
+				"j3_jungle_hills",
+				"a1_ape_arena",
+				"l1_jungle_depths",
+				"l2_net_trap"
+			]
+		},
+		{
+			"color": "#a6d65a",
+			"name": "Treetop Village",
+			"rooms": [
+				"l3_treetop_village"
+			]
+		},
+		{
+			"color": "#d9a066",
+			"name": "Sand Cave",
+			"rooms": [
+				"s1_sand_cave"
+			]
+		},
+		{
+			"color": "#4fc3c0",
+			"name": "Lighthouse Coast",
+			"rooms": [
+				"s2_shore",
+				"lh1_lighthouse_stairs",
+				"s3_lighthouse_top"
+			]
+		},
+		{
+			"color": "#f0d890",
+			"name": "Island Shores",
+			"rooms": [
+				"i01_west_shore",
+				"i02_north_shore",
+				"i03_south_shore",
+				"i08_east_shore"
+			]
+		},
+		{
+			"color": "#e0603a",
+			"name": "Volcano",
+			"rooms": [
+				"i04_foothills",
+				"i05_ascent",
+				"i06_crater",
+				"i07_east_slope"
+			]
+		},
+		{
+			"color": "#a05ad0",
+			"name": "Volcanic Maze",
+			"rooms": [
+				"i09_sea_cave",
+				"i10_junction",
+				"i11_flooded_hall",
+				"i12_echo_gallery",
+				"i13_lower_maze",
+				"i14_vent_shaft",
+				"i15_quiet_refuge",
+				"i16_guardian_chamber",
+				"i17_crystal_pocket"
+			]
+		}
+	],
 	"rooms": {
 		"a1_ape_arena": [
 			440,
@@ -11,7 +113,7 @@
 		],
 		"c1_lake_cave": [
 			80,
-			46
+			23
 		],
 		"c2_cave_teeth": [
 			160,
@@ -25,6 +127,14 @@
 			120,
 			69
 		],
+		"c5_lake_crossing": [
+			110,
+			59
+		],
+		"c6_wall_cave": [
+			138,
+			58
+		],
 		"h1_villager_house": [
 			240,
 			123
@@ -32,62 +142,6 @@
 		"h2_quest_house": [
 			280,
 			123
-		],
-		"j1_jungle_edge": [
-			280,
-			49
-		],
-		"j2_jungle_falls": [
-			280,
-			69
-		],
-		"j3_jungle_hills": [
-			360,
-			73
-		],
-		"l1_jungle_depths": [
-			396,
-			92
-		],
-		"l2_net_trap": [
-			316,
-			99
-		],
-		"l3_treetop_village": [
-			360,
-			26
-		],
-		"lh1_lighthouse_stairs": [
-			593,
-			-14
-		],
-		"m1_meadow": [
-			0,
-			7
-		],
-		"m2_big_jump": [
-			80,
-			7
-		],
-		"m3_the_hole": [
-			80,
-			23
-		],
-		"s1_sand_cave": [
-			471,
-			46
-		],
-		"s2_shore": [
-			591,
-			46
-		],
-		"s3_lighthouse_top": [
-			631,
-			23
-		],
-		"t1_cove_town": [
-			240,
-			53
 		],
 		"i01_west_shore": [
 			700,
@@ -100,10 +154,6 @@
 		"i03_south_shore": [
 			700,
 			69
-		],
-		"i08_east_shore": [
-			868,
-			53
 		],
 		"i04_foothills": [
 			740,
@@ -120,6 +170,10 @@
 		"i07_east_slope": [
 			844,
 			23
+		],
+		"i08_east_shore": [
+			868,
+			53
 		],
 		"i09_sea_cave": [
 			868,
@@ -157,13 +211,57 @@
 			748,
 			115
 		],
-		"c5_lake_crossing": [
-			110,
+		"j1_jungle_edge": [
+			280,
+			49
+		],
+		"j2_jungle_falls": [
+			280,
+			69
+		],
+		"j3_jungle_hills": [
+			360,
+			73
+		],
+		"l1_jungle_depths": [
+			396,
+			92
+		],
+		"l2_net_trap": [
+			316,
+			99
+		],
+		"l3_treetop_village": [
+			360,
+			26
+		],
+		"lh1_lighthouse_stairs": [
+			593,
+			-14
+		],
+		"m1_meadow": [
+			0,
+			7
+		],
+		"m2_big_jump": [
+			80,
+			7
+		],
+		"s1_sand_cave": [
+			471,
 			46
 		],
-		"c6_wall_cave": [
-			138,
+		"s2_shore": [
+			591,
 			46
+		],
+		"s3_lighthouse_top": [
+			631,
+			23
+		],
+		"t1_cove_town": [
+			240,
+			53
 		]
 	},
 	"start": "m1_meadow",
@@ -174,120 +272,17 @@
 				"when": "a1_ape_arena:ape_144_120"
 			}
 		],
-		"i16_guardian_chamber": [
-			{
-				"when": "i16_guardian_chamber:guardian_112_16",
-				"room": "i16_guardian_chamber_after"
-			}
-		],
 		"i01_west_shore": [
 			{
-				"when": "i16_guardian_chamber:guardian_112_16",
-				"room": "i01_west_shore_after"
+				"room": "i01_west_shore_after",
+				"when": "i16_guardian_chamber:guardian_112_16"
+			}
+		],
+		"i16_guardian_chamber": [
+			{
+				"room": "i16_guardian_chamber_after",
+				"when": "i16_guardian_chamber:guardian_112_16"
 			}
 		]
-	},
-	"regions": [
-		{
-			"name": "Meadow",
-			"color": "#7fc4e8",
-			"rooms": [
-				"m1_meadow",
-				"m2_big_jump"
-			]
-		},
-		{
-			"name": "Lake Caves",
-			"color": "#5a6fd0",
-			"rooms": [
-				"m3_the_hole",
-				"c0_roar_tunnel",
-				"c1_lake_cave",
-				"c5_lake_crossing",
-				"c6_wall_cave",
-				"c2_cave_teeth",
-				"c3_cove_tunnel",
-				"c4_deep_lake"
-			]
-		},
-		{
-			"name": "Cove Town",
-			"color": "#e0b25a",
-			"rooms": [
-				"t1_cove_town",
-				"h1_villager_house",
-				"h2_quest_house"
-			]
-		},
-		{
-			"name": "Jungle",
-			"color": "#5cbf5a",
-			"rooms": [
-				"j1_jungle_edge",
-				"j2_jungle_falls",
-				"j3_jungle_hills",
-				"a1_ape_arena",
-				"l1_jungle_depths",
-				"l2_net_trap"
-			]
-		},
-		{
-			"name": "Treetop Village",
-			"color": "#a6d65a",
-			"rooms": [
-				"l3_treetop_village"
-			]
-		},
-		{
-			"name": "Sand Cave",
-			"color": "#d9a066",
-			"rooms": [
-				"s1_sand_cave"
-			]
-		},
-		{
-			"name": "Lighthouse Coast",
-			"color": "#4fc3c0",
-			"rooms": [
-				"s2_shore",
-				"lh1_lighthouse_stairs",
-				"s3_lighthouse_top"
-			]
-		},
-		{
-			"name": "Island Shores",
-			"color": "#f0d890",
-			"rooms": [
-				"i01_west_shore",
-				"i02_north_shore",
-				"i03_south_shore",
-				"i08_east_shore"
-			]
-		},
-		{
-			"name": "Volcano",
-			"color": "#e0603a",
-			"rooms": [
-				"i04_foothills",
-				"i05_ascent",
-				"i06_crater",
-				"i07_east_slope"
-			]
-		},
-		{
-			"name": "Volcanic Maze",
-			"color": "#a05ad0",
-			"rooms": [
-				"i09_sea_cave",
-				"i10_junction",
-				"i11_flooded_hall",
-				"i12_echo_gallery",
-				"i13_lower_maze",
-				"i14_vent_shaft",
-				"i15_quiet_refuge",
-				"i16_guardian_chamber",
-				"i17_crystal_pocket"
-			]
-		}
-	]
+	}
 }

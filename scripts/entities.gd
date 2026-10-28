@@ -2245,6 +2245,8 @@ class Ape extends Ent:
 	const SLAM_HEIGHT := 8
 	const SLAM_TIME := 0.2
 	const THROW_CHANCE := 0.2  # each attack: a stone throw at random; otherwise distance picks scream or leap
+	const VOLLEY := 3  # a cornered player: the Ape leaps to the far side and throws this many stones...
+	const VOLLEY_GAP := 0.35  # ...this far apart (a single throw winds up 0.7 s)
 	const NEAR := 44.0
 	const WAKE := 220.0
 	const PAUSE := 0.765  # idle waits between attacks are scaled by this (0.85, then 10% less)
@@ -2262,6 +2264,8 @@ class Ape extends Ent:
 	var stage := 0
 	var then_slam := false
 	var hops := 0  # in-place hops still to do after an enraged scream
+	var retreat := false  # this leap goes away from a cornered player, then a volley follows
+	var volley := 0  # stones still to throw in a volley
 	var throw_chance := THROW_CHANCE  # tests pin it to 0 or 1
 	var slam_scale := 1.0
 	var logs: Array = []  # [top-left, vy, wait]
@@ -2369,19 +2373,28 @@ class Ape extends Ent:
 						_go("throw", 0.7)
 					elif absf(p.center().y - center().y) > absf(dx):  # player above or below (steeper than 45 degrees): leap
 						_go("crouch", 0.45)
-					elif dist > NEAR or _cornered(p):
+					elif _cornered(p):  # the player is pinned against a wall: leap away to the far side, then 3 stones
+						retreat = true
+						_go("crouch", 0.45)
+					elif dist > NEAR:
 						_go("crouch", 0.45)
 					else:
 						_go("scream", 0.5)
 			"throw":
 				if timer <= 0:
 					_throw(p.center())
-					_go("idle", 1.0 * PAUSE)
+					volley = maxi(0, volley - 1)
+					if volley > 0:
+						_go("throw", VOLLEY_GAP)
+					else:
+						_go("idle", 1.0 * PAUSE)
 			"crouch":
 				if timer <= 0:
 					var side := 1.0 if dx > 0 else -1.0
 					var r := leap_range()
 					var tx := clampf(p.center().x + side * OVERSHOOT, r.x + SIZE / 2.0, r.y - SIZE / 2.0)
+					if retreat:  # to the end of its range away from the player
+						tx = r.x + SIZE / 2.0 if side > 0 else r.y - SIZE / 2.0
 					slam_scale = 1.0
 					if hops > 0:  # enraged: hop straight up and down where it stands, a wider shockwave each time
 						tx = center().x
@@ -2489,12 +2502,18 @@ class Ape extends Ent:
 		_drop_log()  # every landing shakes one log loose, the hops in place too
 		if hops > 0:
 			_go("crouch", 0.25)
+		elif retreat:  # landed away from a cornered player: a volley of 3 stones
+			retreat = false
+			volley = VOLLEY
+			_go("throw", VOLLEY_GAP)
 		else:
 			_go("idle", 0.6 * PAUSE)
 	# Remove boss health, select the hurt/dying phase and reveal the next arena hazards when applicable.
 	func _hit() -> void:
 		hp -= 1
 		hops = 0
+		retreat = false
+		volley = 0
 		var feet := Rect2i(rect.position.x, rect.end.y - 4, rect.size.x, 4)
 		flash = 0.8
 		w.burst(center(), Color("ff6040"), 14)
@@ -2562,11 +2581,19 @@ class Ape extends Ent:
 	# A log shakes loose from the ceiling at a random spot across the arena, never overlapping a log still falling.
 	func _drop_log() -> void:
 		var r := leap_range()
-		var lx := 0.0
-		for tries in 20:  # ponytail: rejection sampling, fine for an arena much wider than a log
-			lx = randf_range(r.x, r.y - LOG.x)
-			if logs.all(func(l): return absf(l[0].x - lx) >= LOG.x):
+		var lx := NAN
+		var spikes: Array = w.touchables.filter(func(e): return e is Spikes and e.collidable)
+		var pr: Rect2i = w.player.hitbox()
+		for tries in 40:  # ponytail: rejection sampling, fine for an arena much wider than a log
+			var x := randf_range(r.x, r.y - LOG.x)
+			var span := Vector2(x, x + LOG.x)
+			var clear := func(a: float, b: float) -> bool: return b <= span.x or a >= span.y
+			if logs.all(func(l): return absf(l[0].x - x) >= LOG.x) and clear.call(pr.position.x, pr.end.x) \
+					and spikes.all(func(e): return clear.call(e.rect.position.x, e.rect.end.x)):
+				lx = x  # not onto another log, the player's column, or a spike already there
 				break
+		if is_nan(lx):
+			return  # no free spot this time: no log
 		var y := 0
 		while y < w.gh * T and w.collide_solid(Rect2i(int(lx), y, LOG.x, LOG.y)) != null:
 			y += T

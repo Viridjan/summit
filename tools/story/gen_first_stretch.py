@@ -77,7 +77,7 @@ j.ent("note", 11, 14, text="The big jump: needs a wavedash (dash comes from a la
 j.ent("strawberry", 36, 16)                  # far side reward, for later
 
 # The hole: the gap in The Big Jump drops a whole screen down this shaft before reaching the Lake Cave.
-hole = Room("m3_the_hole", "The Hole", 40, 23, "cavern_deep", fill="1")
+hole = Room("m3_the_hole", "The Hole", 30, 23, "cavern_deep", fill="1")
 hole.open(13, 0, 26, 22)
 hole.ent("note", 20, 3, text="Down you go. From here on, things can hurt")
 
@@ -346,11 +346,18 @@ def cut(name, title, x0, y0, w, h):
         if x0 * T <= e["x"] < (x0 + w) * T and y0 * T <= e["y"] < (y0 + h) * T:
             r.ents.append({**e, "x": e["x"] - x0 * T, "y": e["y"] - y0 * T})
     return r, 40 + x0, 46 + y0
+# The Hole sits on top of the Lake Cave's landing: one room, the shaft over the cave (user's merge, 2026-10-28).
+def under_hole(cut_room):
+    r, x, y = cut_room
+    r.g = [row[:r.w] for row in hole.g] + r.g
+    r.ents = hole.ents + [{**e, "y": e["y"] + hole.h * T} for e in r.ents]
+    r.h += hole.h
+    return r, x, y - hole.h
 D = 23  # everything below the meadow sits one screen lower, under The Hole
-rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
+rooms = [(m, 0, 0), (j, 80, 0),
     cut("c0_roar_tunnel", "Roar Tunnel", 0, 0, 40, 23),
-    cut("c1_lake_cave", "Lake Cave", 40, 0, 28, 23),       # one screen each: the landing,
-    cut("c5_lake_crossing", "Lake Crossing", 68, 0, 30, 23),  # the lake,
+    under_hole(cut("c1_lake_cave", "Lake Cave", 40, 0, 30, 23)),  # one screen each: the shaft and landing,
+    cut("c5_lake_crossing", "Lake Crossing", 70, 0, 28, 23),  # the lake,
     cut("c6_wall_cave", "Wall Cave", 98, 0, 22, 23),      # the wall and the ladder up from the Deep Lake
     cut("c2_cave_teeth", "Cave Teeth", 120, 0, 40, 23),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),

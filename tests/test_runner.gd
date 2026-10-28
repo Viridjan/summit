@@ -341,7 +341,7 @@ func check_shipped_world() -> void:
 		check(n_spawns > 0 and bad_spawns.is_empty(), "%s: %d entrance spawns, all standing on ground (bad: %s)" % [wp.get_base_dir().get_file(), n_spawns, bad_spawns])
 		# water and acid (tools/world_fixups.py settle_liquids): every row open, with rock just left and right of it
 		var bad_liquid := []
-		for rn in wd.rooms.keys().filter(func(n): return n not in ["c1_lake_cave", "c5_lake_crossing"]):  # the lake: hand-shaped pools (World Editor)
+		for rn in wd.rooms.keys().filter(func(n): return n not in ["c1_lake_cave", "c5_lake_crossing", "m1_meadow"]):  # hand-shaped pools (World Editor)
 			var lv: Dictionary = wd.rooms[rn].level
 			for e in lv.entities:
 				if e.t in ["water", "acid"]:
@@ -436,7 +436,7 @@ func check_shipped_world() -> void:
 				var expected := Rect2(Vector2(previous.pos-story.rooms.j2_jungle_falls.pos)*8,Vector2(previous.level.w,previous.level.h)*8)
 				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "jumpthru" and e.look() == "forest") and sw.leaving_rect == expected
 	Game.settings.invincible = false
-	check(story_seen == ["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (the Lake Caves maze skipped (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (the Lake Caves maze skipped (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
 	# the hazards past The Hole can be crossed with plain jumps: the Ape's planner finds a spike-free run across
 	# each room that is crossed left to right
@@ -505,11 +505,8 @@ func check_shipped_world() -> void:
 	fw2.set_physics_process(false)
 	var ff_rooms: Array = story.rooms.keys().filter(func(n): return fw2.freefall(n))
 	fw2.player.pos = Vector2(20 * 8, fw2.gh * 8 + 4)  # fallen out of the bottom of the big jump's gap
-	fw2.enter_room("m3_the_hole")
-	var no_fade_in: bool = fw2.reveal_t == 1.0
-	fw2.player.pos = Vector2(20 * 8, fw2.gh * 8 + 4)
-	fw2.enter_room("c1_lake_cave")
-	check(ff_rooms == ["m3_the_hole"] and no_fade_in and fw2.reveal_t == 1.0, "only The Hole is a freefall room; falling into and out of it skips the fade (%s)" % [ff_rooms])
+	fw2.enter_room("c1_lake_cave")  # The Hole is now the top of the Lake Cave: falling in enters a new region
+	check(ff_rooms.is_empty() and fw2.reveal_t == 0.0, "no freefall rooms left (The Hole is part of the Lake Cave); falling in from the meadow fades into the new region (%s)" % [ff_rooms])
 	fw2.queue_free()
 	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
 	Game.adv = Adventure.new_run(story)
@@ -1672,6 +1669,15 @@ func check_editor_flow() -> void:
 	we._gui_input(click)
 	var ed = Game.main.get_child(-1)
 	var opened: bool = ed.has_method("_leave") and Game.editor_file == "m1_meadow" and Game.editor_return == "world_editor"
+	ed.level.tiles[0] = "1".repeat(4) + ed.level.tiles[0].substr(4)  # cut/paste: a 4x1 strip of rock and an object on it
+	ed.level.tiles[1] = "0".repeat(4) + ed.level.tiles[1].substr(4)
+	ed.level.entities.append({"t": "strawberry", "x": 8, "y": 8})
+	ed.sel = Rect2i(0, 0, 4, 2)
+	ed._copy(true)
+	var cleared: bool = ed.level.tiles[0].begins_with("0000") and not ed.level.entities.any(func(e): return e.t == "strawberry" and e.x == 8 and e.y == 8)
+	ed._paste(Vector2i(10, 3))
+	var pasted: bool = ed.level.tiles[3].substr(10, 4) == "1111" and ed.level.entities.any(func(e): return e.t == "strawberry" and e.x == 88 and e.y == 32)
+	check(cleared and pasted, "editor: a cut clears the selected tiles and objects; paste puts both back at the mouse (%s, %s)" % [cleared, pasted])
 	ed.level.name = "changed"
 	var esc := InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
@@ -1842,6 +1848,21 @@ func check_ape() -> void:
 	ape.timer = 0.0
 	ape.update(0.0)
 	var cornered_phase: String = ape.phase
+	Game.settings.invincible = true  # follow it through: a leap away to the far side, then a volley of 3 stones
+	var away := false
+	var volley_n := 0
+	var had_stones := 0
+	for k in 300:
+		step()
+		if ape.phase != "air" and ape.phase != "crouch" and not away:
+			away = ape.center().x < p().center().x - 120
+		if ape.stones.size() > had_stones:
+			volley_n += ape.stones.size() - had_stones
+		had_stones = ape.stones.size()
+		if ape.phase == "idle" and volley_n > 0:
+			break
+	Game.settings.invincible = keep_inv
+	check(away and volley_n == E.Ape.VOLLEY, "a cornered player: the Ape leaps to the far side and throws %d stones in a row (away %s, thrown %d)" % [E.Ape.VOLLEY, away, volley_n])
 	make_world([{"t": "boss_ape", "x": 200, "y": floor_y - 32}])
 	ape = find.call(E.Ape)[0]
 	p().pos = Vector2(200 + 32 + 10, floor_y)
@@ -1937,6 +1958,8 @@ func check_ape() -> void:
 	var gate = find.call(E.BossGate)[0]
 	p().pos = Vector2(320, floor_y)
 	ape.phase = "idle"
+	var keep_inv4: bool = Game.settings.invincible
+	Game.settings.invincible = true  # spikes and gates here, not dodging (the player stands in the line of its stones)
 	var live := func(): return find.call(E.Spikes).filter(func(e): return e.collidable)
 	for k in 200:
 		step()
@@ -1951,9 +1974,14 @@ func check_ape() -> void:
 	check(gate.collidable, "boss gates stay shut while the Ape lives")
 	ape.hp = 1
 	ape.rect.position = Vector2i(92, floor_y - 32)  # onto the lone spike
+	ape.stones.clear()
+	var keep_inv3: bool = Game.settings.invincible
+	Game.settings.invincible = true  # the boss's defeat, not the player's dodging (a volley could still be in the air)
 	ape._land()
 	step(90)
+	Game.settings.invincible = keep_inv3
 	check(ape.phase == "gone" and not gate.collidable and w.broken.has(ape.id) and find.call(E.StaminaOrb).size() == 1, "the last hit beats the Ape: gates open, it stays beaten, an stamina orb appears")
+	Game.settings.invincible = keep_inv4
 	# dying before leaving the room: the rebuilt room keeps the spikes as the fight left them, and the orb
 	var live_spikes := func(): return find.call(E.Spikes).filter(func(e): return e.collidable).map(func(e): return Vector2i(e.d.x, e.d.y))
 	var left_by_fight: Array = live_spikes.call()
@@ -2006,6 +2034,24 @@ func check_ape() -> void:
 	ape.phase = "air"
 	ape._land()
 	check(ape.logs.size() == 1, "a leap drops one log, from the first hit on (%d)" % ape.logs.size())
+	w.spawn_entity({"t": "spikes_up", "x": 296, "y": floor_y - 8})
+	step()
+	var avoids := true
+	for k in 100:
+		ape.logs.clear()
+		ape._drop_log()
+		for l in ape.logs:
+			var lx: float = l[0].x
+			var hb: Rect2i = p().hitbox()
+			avoids = avoids and (lx + E.Ape.LOG.x <= hb.position.x or lx >= hb.end.x) and (lx + E.Ape.LOG.x <= 296 or lx >= 304)
+	check(avoids, "logs never fall onto the player's column or a spike already there")
+	for e in find.call(E.Spikes):
+		if e.rect.position.x == 296:
+			e.collidable = false
+			w.ents.erase(e)
+			w.touchables.erase(e)
+	ape.logs.clear()
+	ape._drop_log()
 	var apart := true
 	var spread := {}
 	for k in 200:

@@ -9,6 +9,7 @@ extends Node2D
 # Level editor.
 # LMB: paint tiles / place entity (drag to size blocks).  RMB: erase tile / delete entity.
 # MMB or Space+drag: pan.  Wheel: zoom.  Ctrl+Z undo, Ctrl+S save, F5 playtest.
+# Shift+drag: select an area; Ctrl+C / Ctrl+X copy or cut it, Ctrl+V pastes at the mouse (also in another room).
 
 const E := preload("res://scripts/entities.gd")
 const Art := preload("res://scripts/art.gd")
@@ -37,6 +38,9 @@ var dragging_paint := 0  # 0 none, 1 paint, -1 erase
 var last_cell := Vector2i(-1, -1)
 var rect_start = null  # Vector2i cell where a sized drag began
 var zip_pending = null  # zip mover dict waiting for its target click
+var sel_start = null  # Vector2i cell where a Shift+drag selection began
+var sel := Rect2i()  # selected cells (Shift+drag); Ctrl+C / Ctrl+X copy or cut them
+static var clip := {}  # {w, h, tiles: [String], entities: [Dictionary]}; kept across rooms
 var panning := false
 var space_down := false
 
@@ -438,6 +442,54 @@ func _paint_line(a: Vector2i, b: Vector2i, v: bool) -> void:
 		var t := 0.0 if n == 0 else float(i) / n
 		_set_tile(Vector2i(roundi(lerpf(a.x, b.x, t)), roundi(lerpf(a.y, b.y, t))), v)
 
+# Copy the selected cells' tiles and the objects whose top-left lies inside; a cut also clears them.
+func _copy(cut: bool) -> void:
+	var o := sel.position * T
+	clip = {w = sel.size.x, h = sel.size.y, tiles = [], entities = []}
+	for y in range(sel.position.y, sel.end.y):
+		clip.tiles.append(level.tiles[y].substr(sel.position.x, sel.size.x))
+	var area := Rect2i(o, sel.size * T)
+	var inside := func(e: Dictionary) -> bool: return area.has_point(Vector2i(int(e.x), int(e.y)))
+	for e in level.entities.filter(inside):
+		var d: Dictionary = e.duplicate(true)
+		_shift(d, -o)
+		clip.entities.append(d)
+	if cut:
+		_push_undo()
+		for y in range(sel.position.y, sel.end.y):
+			for x in range(sel.position.x, sel.end.x):
+				_set_tile(Vector2i(x, y), false)
+		level.entities = level.entities.filter(func(e): return not inside.call(e))
+		_refresh()
+	_status("%s %dx%d, %d objects (Ctrl+V pastes at the mouse)" % ["Cut" if cut else "Copied", sel.size.x, sel.size.y, clip.entities.size()])
+
+# Paste the clipboard with its top-left at cell c: tiles overwrite, objects are added (one spawn per room).
+func _paste(c: Vector2i) -> void:
+	_push_undo()
+	for y in int(clip.h):
+		for x in int(clip.w):
+			_set_tile(c + Vector2i(x, y), clip.tiles[y][x] == "1")
+	var bounds := Rect2i(0, 0, level.w * T, level.h * T)
+	for e in clip.entities:
+		var d: Dictionary = e.duplicate(true)
+		_shift(d, c * T)
+		if not bounds.has_point(Vector2i(int(d.x), int(d.y))):
+			continue
+		if d.t == "spawn":
+			level.entities = level.entities.filter(func(o): return o.t != "spawn")
+		level.entities.append(d)
+	sel = Rect2i(c, Vector2i(clip.w, clip.h)).intersection(Rect2i(0, 0, level.w, level.h))
+	_refresh()
+	_status("Pasted %dx%d" % [clip.w, clip.h])
+
+# Move an object dictionary by off pixels (zip movers' targets too).
+func _shift(d: Dictionary, off: Vector2i) -> void:
+	d.x = int(d.x) + off.x
+	d.y = int(d.y) + off.y
+	if d.has("tx"):
+		d.tx = int(d.tx) + off.x
+		d.ty = int(d.ty) + off.y
+
 # Find the topmost placed object under a tile-centred click; return -1 when none is found.
 func _entity_at(c: Vector2i) -> int:
 	var p := Vector2i(c.x * T + 4, c.y * T + 4)
@@ -557,6 +609,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			_undo()
 		elif event.keycode == KEY_S and event.ctrl_pressed:
 			_save()
+		elif event.keycode in [KEY_C, KEY_X] and event.ctrl_pressed and sel.has_area():
+			_copy(event.keycode == KEY_X)
+		elif event.keycode == KEY_V and event.ctrl_pressed and not clip.is_empty():
+			_paste(_cell_at_mouse())
 		elif event.keycode == KEY_F5:
 			_playtest()
 		elif event.keycode == KEY_ESCAPE:  # back to where the editor was opened from (asks to save first)
@@ -600,7 +656,18 @@ func _unhandled_input(event: InputEvent) -> void:
 # Begin or finish a left-button placement gesture, including sized objects and moving-platform targets.
 func _left(pressed: bool) -> void:
 	var c := _cell_at_mouse()
+	if pressed and Input.is_key_pressed(KEY_SHIFT):  # Shift+drag: select an area
+		sel_start = c
+		sel = Rect2i(c, Vector2i.ONE)
+		_redraw()
+		return
+	if not pressed and sel_start != null:
+		sel = Rect2i(Vector2i(mini(sel_start.x, c.x), mini(sel_start.y, c.y)), (sel_start - c).abs() + Vector2i.ONE).intersection(Rect2i(0, 0, level.w, level.h))
+		sel_start = null
+		_redraw()
+		return
 	if pressed:
+		sel = Rect2i()
 		if zip_pending != null:
 			_push_undo()
 			zip_pending.tx = c.x * T
@@ -678,7 +745,7 @@ func _process(dt: float) -> void:
 	elif msg_t > 0:
 		status.text = msg
 	else:
-		status.text = "Tile %d, %d   |   LMB place/paint  RMB erase  MMB/Space+drag pan  Wheel zoom  Ctrl+Z undo  Ctrl+S save  F5 playtest" % [c.x, c.y]
+		status.text = "Tile %d, %d   |   LMB place/paint  RMB erase  MMB/Space+drag pan  Wheel zoom  Ctrl+Z undo  Shift+drag select  Ctrl+X/C/V cut/copy/paste  Ctrl+S save  F5 playtest" % [c.x, c.y]
 
 # ---------------- drawing ----------------
 # Draw room scenery and editor background beneath the retained terrain.
@@ -719,6 +786,10 @@ func _draw() -> void:
 		draw_rect(Rect2(lo, hi - lo), Color(E.TYPES[tool][2], 0.5))
 	else:
 		draw_rect(Rect2(c * T, Vector2(T, T)), Color(1, 1, 1, 0.3), false, 1.0 / cam.zoom.x)
+	if sel_start != null or sel.has_area():
+		var sr: Rect2i = Rect2i(Vector2i(mini(sel_start.x, c.x), mini(sel_start.y, c.y)), (sel_start - c).abs() + Vector2i.ONE) if sel_start != null else sel
+		draw_rect(Rect2(sr.position * T, sr.size * T), Color(0.4, 0.8, 1.0, 0.15))
+		draw_rect(Rect2(sr.position * T, sr.size * T), Color(0.4, 0.8, 1.0), false, 1.0 / cam.zoom.x)
 	if zip_pending != null:
 		var from := Vector2(zip_pending.x, zip_pending.y) + Vector2(zip_pending.w, zip_pending.h) / 2.0
 		draw_line(from, Vector2(c * T) + Vector2(4, 4), Color("d0b040"), 1.0 / cam.zoom.x)

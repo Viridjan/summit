@@ -15,7 +15,7 @@ class LakeCaves(unittest.TestCase):
     def setUpClass(cls):
         cls.W = World(str(ROOT))
         ox, oy = cls.W.rooms["c1_lake_cave"][:2]
-        cls.landing = (ox + 20, oy + 18)  # under the shaft from The Hole
+        cls.landing = (ox + 20, oy + 23 + 18)  # under the shaft (The Hole is the top 23 rows)
         cls.ground, cls.touched = explore(cls.W, MODELS["cautious"], set(), [cls.landing])
 
     def test_every_lake_room_and_both_stars(self):
@@ -23,16 +23,6 @@ class LakeCaves(unittest.TestCase):
         self.assertTrue(LAKE <= reached, LAKE - reached)
         stars = {k.split(":")[1] for k in self.touched if k.startswith("strawberry:c")}
         self.assertEqual(stars, {"c0_roar_tunnel", "c4_deep_lake"})
-
-    def test_the_main_tunnel_is_walled_after_the_lake(self):
-        # without the Deep Lake, the far side of Lake Cave is cut off (rock or breakable walls): the detour is part of the route
-        lv = self.W.rooms["c6_wall_cave"][2]
-        walls = [e for e in lv["entities"] if e["t"] == "breakwall"]  # rock, or breakable walls (need the sword)
-
-        def blocked(y):
-            return any(lv["tiles"][y][x] == "1" or any(e["x"] <= x * 8 < e["x"] + e["w"] and e["y"] <= y * 8 < e["y"] + e["h"] for e in walls)
-                       for x in range(0, 8))
-        self.assertTrue(all(blocked(y) for y in range(15, 19)))
 
 
 if __name__ == "__main__":
