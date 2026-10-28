@@ -70,9 +70,9 @@ func _ready() -> void:
 		for name in Game.adv.visited:
 			if Game.adv_world.rooms.has(name):
 				var r: Dictionary = Game.adv_world.rooms[name]
-				layers.append([Rect2(Adventure.room_rect(r)), terrain(r.level), name == world.room])
+				layers.append([Rect2(Adventure.room_rect(r)), terrain(r.level), name == world.room, Adventure.region_of(Game.adv_world, name)])
 	else:
-		layers.append([Rect2(world.bounds), terrain(world.data), true])
+		layers.append([Rect2(world.bounds), terrain(world.data), true, {}])
 	area = layers[0][0]
 	for l in layers:
 		area = area.merge(l[0])
@@ -140,11 +140,20 @@ func _draw() -> void:
 		return
 	var xf := _xform()
 	var s := xf.get_scale().x
+	var named := {}  # region name -> [colour, screen rect of its explored rooms]
 	for l in layers:
 		var r := Rect2(xf * l[0].position, l[0].size * s)
+		var g: Dictionary = l[3]
 		draw_rect(r, Color("1a1e33") if l[2] else Color("121526"))
 		draw_texture_rect(l[1], r, false)
-		draw_rect(r, Color(1, 1, 1, 0.5 if l[2] else 0.15), false, 1.0)
+		if not g.is_empty():  # rooms tinted by region, over the terrain
+			draw_rect(r, Color(g.color, 0.25))
+			named[g.name] = [g.color, named[g.name][1].merge(r) if named.has(g.name) else r]
+		draw_rect(r, Color.WHITE if l[2] else (Color(g.color, 0.7) if not g.is_empty() else Color(1, 1, 1, 0.15)), false, 1.0)
+	for n in named:  # region names, over the middle of what's been explored of them
+		var at: Vector2 = named[n][1].get_center() + Vector2(-font.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x / 2.0, 6)
+		draw_string_outline(font, at, n, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 5, Color(0, 0, 0, 0.85))
+		draw_string(font, at, n, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, named[n][0].lightened(0.35))
 	# entities, spawn, camera view and player of the current room
 	var o: Vector2 = world.room_origin
 	for e in world.ents:

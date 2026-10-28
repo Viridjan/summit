@@ -37,13 +37,13 @@
 		},
 		{
 			"t": "spawn",
-			"x": 328,
+			"x": 424,
 			"y": 144,
 			"entrance": true
 		},
 		{
 			"t": "spawn",
-			"x": 424,
+			"x": 352,
 			"y": 144,
 			"entrance": true
 		},

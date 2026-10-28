@@ -1,11 +1,11 @@
 {
 	"counts": {
-		"bounds_valid_starts": 9766,
+		"bounds_valid_starts": 8920,
 		"door_crossings": 12489,
 		"door_valid_starts": 12489,
-		"edge_candidates": 114432,
-		"edge_crossings": 18324,
-		"edge_valid_starts": 18324
+		"edge_candidates": 83136,
+		"edge_crossings": 14004,
+		"edge_valid_starts": 14004
 	},
 	"coverage": "Every integer seam alignment in both directions, standing/crouched; every valid integer door contact; every open outer-boundary alignment. Uses actual move_exact, bounds, room-exit, door, and enter_room methods. Rendering/saves disabled; room collision data cached.",
 	"finding_groups": [],

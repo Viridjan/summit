@@ -178,5 +178,106 @@
 				"room": "i01_west_shore_after"
 			}
 		]
-	}
+	},
+	"regions": [
+		{
+			"name": "Meadow",
+			"color": "#7fc4e8",
+			"rooms": [
+				"m1_meadow",
+				"m2_big_jump"
+			]
+		},
+		{
+			"name": "Lake Caves",
+			"color": "#5a6fd0",
+			"rooms": [
+				"m3_the_hole",
+				"c0_roar_tunnel",
+				"c1_lake_cave",
+				"c2_cave_teeth",
+				"c3_cove_tunnel",
+				"c4_deep_lake"
+			]
+		},
+		{
+			"name": "Cove Town",
+			"color": "#e0b25a",
+			"rooms": [
+				"t1_cove_town",
+				"h1_villager_house",
+				"h2_quest_house"
+			]
+		},
+		{
+			"name": "Jungle",
+			"color": "#5cbf5a",
+			"rooms": [
+				"j1_jungle_edge",
+				"j2_jungle_falls",
+				"j3_jungle_hills",
+				"a1_ape_arena",
+				"l1_jungle_depths",
+				"l2_net_trap"
+			]
+		},
+		{
+			"name": "Treetop Village",
+			"color": "#a6d65a",
+			"rooms": [
+				"l3_treetop_village"
+			]
+		},
+		{
+			"name": "Sand Cave",
+			"color": "#d9a066",
+			"rooms": [
+				"s1_sand_cave"
+			]
+		},
+		{
+			"name": "Lighthouse Coast",
+			"color": "#4fc3c0",
+			"rooms": [
+				"s2_shore",
+				"lh1_lighthouse_stairs",
+				"s3_lighthouse_top"
+			]
+		},
+		{
+			"name": "Island Shores",
+			"color": "#f0d890",
+			"rooms": [
+				"i01_west_shore",
+				"i02_north_shore",
+				"i03_south_shore",
+				"i08_east_shore"
+			]
+		},
+		{
+			"name": "Volcano",
+			"color": "#e0603a",
+			"rooms": [
+				"i04_foothills",
+				"i05_ascent",
+				"i06_crater",
+				"i07_east_slope"
+			]
+		},
+		{
+			"name": "Volcanic Maze",
+			"color": "#a05ad0",
+			"rooms": [
+				"i09_sea_cave",
+				"i10_junction",
+				"i11_flooded_hall",
+				"i12_echo_gallery",
+				"i13_lower_maze",
+				"i14_vent_shaft",
+				"i15_quiet_refuge",
+				"i16_guardian_chamber",
+				"i17_crystal_pocket"
+			]
+		}
+	]
 }

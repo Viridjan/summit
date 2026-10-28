@@ -339,7 +339,7 @@ func _ready() -> void:
 	Game.get_music_engine().follow_environment(data.get("environment", ""))
 	_load_near()
 	_scan_floor_gaps()
-	cam_pos = _clamp_cam(player.camera_target())
+	cam_pos = cam_goal()
 	snap_interp()
 
 # Recreate the collision grid and entity objects; keep_player preserves the actor during a room transition.
@@ -504,7 +504,7 @@ func _go_door(door) -> void:
 		_unstick()
 	else:
 		enter_room(target_room, at)
-		cam_pos = _clamp_cam(player.camera_target())  # a door can lead anywhere: don't sweep the view across the world
+		cam_pos = cam_goal()  # a door can lead anywhere: don't sweep the view across the world
 		snap_interp()
 	door_block = Rect2i(dr)
 
@@ -532,7 +532,11 @@ func enter_room(next: String, at = null) -> void:
 	leaving_ents = left
 	leaving_rect = Rect2(old_origin - room_origin, left_size)
 	player.pos = global - room_origin if at == null else at
-	_start_reveal(in_dir, went_up, at != null)
+	if freefall(old_room) or freefall(room):  # falling through: no fade, the view follows the fall
+		reveal_t = 1.0
+		reveal_cut = true
+	else:
+		_start_reveal(in_dir, went_up, at != null)
 	if went_up and at == null:  # Celeste-style lift so an upward exit doesn't fall straight back
 		player.speed.y = minf(player.speed.y, player.JUMP_SPEED)
 	walk_dir = in_dir
@@ -1054,11 +1058,11 @@ func _physics_process(_delta: float) -> void:
 		pass  # crossing: the view stays on the room being left while it darkens
 	elif not reveal_cut:  # then, hidden in the black, it jumps to the new room (no slide)
 		reveal_cut = true
-		cam_pos = _clamp_cam(player.camera_target())
+		cam_pos = cam_goal()
 		cam_prev = cam_pos
 		cam_now = cam_pos
 	elif not player.dead:
-		var target: Vector2 = _clamp_cam(player.camera_target())
+		var target: Vector2 = cam_goal()
 		cam_pos += (target - cam_pos) * (1.0 - pow(0.01, dt))
 	var off := Vector2.ZERO
 	if shake_t > 0:
@@ -1075,8 +1079,28 @@ func _physics_process(_delta: float) -> void:
 
 # The camera has arrived along every axis on which the room is smaller than the view (so it is centred there).
 func _cam_settled() -> bool:
-	var d: Vector2 = (_clamp_cam(player.camera_target()) - cam_pos).abs()
+	var d: Vector2 = (cam_goal() - cam_pos).abs()
 	return (bounds.size.x >= VIEW.x or d.x < 1.0) and (bounds.size.y >= VIEW.y or d.y < 1.0)
+
+# A freefall room is one you only fall through: nowhere to stand (no open cell above rock inside it, no
+# jump-through). Crossings into or out of one skip the transition fade. Cached per room.
+var _freefall := {}
+func freefall(name: String) -> bool:
+	if not adventure() or not Game.adv_world.rooms.has(name):
+		return false
+	if not _freefall.has(name):
+		var lv: Dictionary = Game.adv_world.rooms[name].level
+		var t: Array = lv.tiles
+		var stand: bool = lv.entities.any(func(e): return e.t in ["jumpthru", "leaf"])
+		for y in range(t.size() - 1):
+			if stand:
+				break
+			for x in str(t[y]).length():
+				if t[y][x] == "0" and t[y + 1][x] == "1":
+					stand = true
+					break
+		_freefall[name] = not stand
+	return _freefall[name]
 
 # Sideways: across from that edge; up or down: from the bottom or top; a door: from the player along the room's longer
 # side, towards its centre.
@@ -1180,6 +1204,16 @@ func _draw_room_mask(ci: CanvasItem) -> void:
 	if b.size.x < VIEW.x:
 		ci.draw_rect(Rect2(v.position.x, b.position.y, b.position.x - v.position.x, b.size.y), c)  # left
 		ci.draw_rect(Rect2(b.end.x, b.position.y, v.end.x - b.end.x, b.size.y), c)  # right
+
+# Where the view wants to be: a camera zone's fixed point while the player is inside one, else following the player;
+# always kept within the room.
+func cam_goal() -> Vector2:
+	if player != null:
+		var at: Vector2 = player.center()
+		for e in ents:
+			if e is E.CameraZone and Rect2(e.rect).has_point(at):
+				return _clamp_cam(e.focus())
+	return _clamp_cam(player.camera_target())
 
 # Keep the camera within the room limits while handling rooms smaller than the view.
 func _clamp_cam(t: Vector2) -> Vector2:
@@ -1411,7 +1445,7 @@ func _restart() -> void:
 	pending_door = null
 	door_block = Rect2i()
 	_build()
-	cam_pos = _clamp_cam(player.camera_target())
+	cam_pos = cam_goal()
 	snap_interp()
 
 # Choose a return-button label appropriate to adventure or editor playtesting.

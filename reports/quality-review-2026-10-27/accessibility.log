@@ -1,0 +1,5 @@
+topology   39/39 rooms; 0 partial; spawn OK
+acid       39/39 rooms; 0 partial; spawn OK
+hazards    39/39 rooms; 0 partial; spawn OK
+standing   39/39 rooms; 0 partial; spawn OK
+Reports: reports/quality-review-2026-10-27/accessibility.{md,json,png}

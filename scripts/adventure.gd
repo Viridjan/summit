@@ -29,7 +29,7 @@ const WATER_DRAIN := 40.0  # per second while in water (4 every 0.1 s); no regen
 # Rooms whose file is missing or invalid are skipped.
 # Read a world manifest and validated room files, skipping unusable entries before selecting a valid start room.
 static func load_world(path: String) -> Dictionary:
-	var out := {"start": "", "rooms": {}, "abilities": []}  # abilities: what a new run starts with
+	var out := {"start": "", "rooms": {}, "abilities": [], "regions": []}  # abilities: what a new run starts with
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return out
@@ -58,12 +58,27 @@ static func load_world(path: String) -> Dictionary:
 					push_warning("variant %s of %s skipped: missing or a different size" % [v, name])
 					continue
 				out.rooms[name].get_or_add("variants", []).append({"when": str(v.get("when", "")), "room": str(v.room), "level": lvl})
+	# Regions: named, coloured groups of rooms ("regions": [{"name", "color", "rooms": [...]}]), shown on the map
+	# and in the World Editor. A room belongs to at most one region (the first that lists it).
+	out.regions = []
+	var rg = json.data.get("regions", [])
+	for g in (rg if rg is Array else []):
+		if g is Dictionary and g.get("rooms") is Array:
+			var rooms: Array = g.rooms.filter(func(n): return out.rooms.has(n) and not out.regions.any(func(o): return o.rooms.has(n)))
+			out.regions.append({"name": str(g.get("name", "Region")), "color": Color.from_string(str(g.get("color", "")), Color("8090a0")), "rooms": rooms})
 	var ab = json.data.get("abilities", [])
 	if ab is Array:
 		out.abilities = ab.filter(func(a): return a in ABILITIES)
 	var start = json.data.get("start", "")
 	out.start = start if out.rooms.has(start) else (out.rooms.keys()[0] if not out.rooms.is_empty() else "")
 	return out
+
+# The region a room belongs to ({} when none).
+static func region_of(world: Dictionary, name: String) -> Dictionary:
+	for g in world.get("regions", []):
+		if g.rooms.has(name):
+			return g
+	return {}
 
 # The level to build for a room: its first variant whose flag the run has, else its own.
 # A variant brings its own objects; terrain and spawn markers stay the base room's, so tools that fix the base
@@ -93,6 +108,8 @@ static func save_world(path: String, world: Dictionary) -> bool:
 	if f == null:
 		return false
 	var out := {"start": world.start, "abilities": world.get("abilities", []), "rooms": rooms}
+	if not world.get("regions", []).is_empty():
+		out.regions = world.regions.map(func(g): return {"name": g.name, "color": "#" + g.color.to_html(false), "rooms": g.rooms})
 	if not variants.is_empty():
 		out.variants = variants
 	f.store_string(JSON.stringify(out, "\t"))

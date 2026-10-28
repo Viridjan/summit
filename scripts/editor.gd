@@ -178,7 +178,7 @@ func _build_ui() -> void:
 	status = Label.new()
 	bottom.add_child(status)
 
-const GROUP_ORDER := ["Terrain", "Hazards", "Movement", "Pickups", "Doors & people", "Enemies & bosses", "Placeholders", "Other"]
+const GROUP_ORDER := ["Terrain", "Hazards", "Movement", "Pickups", "Doors & people", "Triggers", "Enemies & bosses", "Placeholders", "Other"]
 # Palette section for a tool id: terrain pieces, hazards, movement gadgets, pickups, doors and people, and one section
 # for every enemy and boss (registry order: each enemy family together, then the bosses and their arena pieces).
 static func palette_group(t: String) -> String:
@@ -192,6 +192,8 @@ static func palette_group(t: String) -> String:
 		return "Hazards"
 	if t.begins_with("spring") or t.begins_with("booster") or t in ["refill", "refill_two", "bumper", "feather", "dream", "zip", "water"]:
 		return "Movement"
+	if t in ["camera_zone"]:
+		return "Triggers"
 	if t.begins_with("ability") or t.begins_with("stamina") or t in ["strawberry", "goal", "energy_fragment"]:
 		return "Pickups"
 	if t in ["spawn", "door", "house_door", "building", "note", "island_prop", "discovery_npc"] or t.begins_with("village"):

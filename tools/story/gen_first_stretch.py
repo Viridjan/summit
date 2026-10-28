@@ -338,6 +338,10 @@ rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
     (t, 240, 23 + D), (j1, 280, 23 + D), (j2, 280, 46 + D), (j3, 360, 46 + D),
     (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 593, -14), (s1, 471, 23 + D), (s2, 591, 23 + D),
     (s3, 631, 0 + D), (l1, 396, 69 + D), (l2, 316, 69 + D), (l3, 360, -2 + D)]
+# The end of the first vertical descent (Big Jump gap -> The Hole -> Lake Cave): a fixed view over the landing chamber
+for r_, _, _ in rooms:
+    if r_.name == "c1_lake_cave":
+        r_.ents.append({"t": "camera_zone", "x": 0, "y": 0, "w": 30 * T, "h": 23 * T, "focus": [15 * T, 13 * T]})
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))
@@ -346,7 +350,7 @@ for r in written:
     r.save()
 if a1 in written:
     a1b.save()
-if "all" in ONLY:  # rewrites world.json without the island: run tools/story/gen_island.py again after
+if "all" in ONLY:  # rewrites world.json without the island, variants and regions: run gen_island.py after, restore "regions"
     json.dump({"start": "m1_meadow", "abilities": [], "rooms": {r.name: [x, y] for r, x, y in rooms},
                "variants": {"a1_ape_arena": [{"when": APE_ID, "room": "a1_ape_arena_after"}]}},
               open(os.path.join(OUT, "world.json"), "w"), indent="\t")

@@ -1,5 +1,10 @@
 # World design
 
+**Regions** (2026-10-28): rooms are grouped into named, coloured regions, set in `world.json` (`"regions": [{"name",
+"color", "rooms"}]`) and shown on the map screen and in the World Editor. Story regions: Meadow, Lake Caves, Cove Town,
+Jungle, Treetop Village, Sand Cave, Lighthouse Coast, Island Shores, Volcano, Volcanic Maze (grouped by background,
+with small rooms joined to the region they belong to in the story). Older notes below say "area" for the same idea.
+
 The former Summit world (`res://adventure/`, removed 2026-10-25; still in git history): 14 rooms in 4 areas, each borrowing from one game.
 This is a study from knowledge of the games, not from their data files; Metroid Zero Mission
 details come from the decompilation notes in `METROID_NOTES.md`.

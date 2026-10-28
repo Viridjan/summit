@@ -485,6 +485,22 @@ func check_shipped_world() -> void:
 	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.spawn == dry_spawn,
 		"a flooded room gets no respawn point: dying there returns to the last safe one (%s, %s, %s)" % [fw.room, fw.spawn_room, fw.spawn])
 	fw.queue_free()
+	# freefall rooms (nowhere to stand: The Hole) skip the transition fade, in and out; others keep it
+	Game.adv = Adventure.new_run(story)
+	Game.adv.room = "m2_big_jump"
+	Game.level = story.rooms["m2_big_jump"].level
+	var fw2 = load("res://scripts/world.gd").new()
+	w = fw2
+	add_child(fw2)
+	fw2.set_physics_process(false)
+	var ff_rooms: Array = story.rooms.keys().filter(func(n): return fw2.freefall(n))
+	fw2.player.pos = Vector2(20 * 8, fw2.gh * 8 + 4)  # fallen out of the bottom of the big jump's gap
+	fw2.enter_room("m3_the_hole")
+	var no_fade_in: bool = fw2.reveal_t == 1.0
+	fw2.player.pos = Vector2(20 * 8, fw2.gh * 8 + 4)
+	fw2.enter_room("c1_lake_cave")
+	check(ff_rooms == ["m3_the_hole"] and no_fade_in and fw2.reveal_t == 1.0, "only The Hole is a freefall room; falling into and out of it skips the fade (%s)" % [ff_rooms])
+	fw2.queue_free()
 	# sideways room changes walk the player 1 unit in, to the middle of the second tile column, where they respawn
 	Game.adv = Adventure.new_run(story)
 	Game.adv.room = "c2_cave_teeth"
@@ -1545,6 +1561,38 @@ func check_art_gallery() -> void:
 		and serpent.size() == 6 and serpent[0][1][0].size == Vector2i(96, 64) and nori[1][0] == "run" and bg.is_empty(),
 		"Art screen: sections per folder; sheets cut into single sprites at true size (%s)" % [titles])
 	g.free()
+
+# Regions: every story room in exactly one named, coloured region; they survive a World Editor save.
+func check_regions() -> void:
+	var Adv = load("res://scripts/adventure.gd")
+	var world: Dictionary = Adv.load_world("res://worlds/story/world.json")
+	var counted := {}
+	for g in world.regions:
+		for n in g.rooms:
+			counted[n] = counted.get(n, 0) + 1
+	var colors: Array = world.regions.map(func(g): return g.color.to_html(false))
+	var each_once: bool = world.rooms.keys().all(func(n): return counted.get(n, 0) == 1)
+	var dir := "user://test_regions/"
+	DirAccess.make_dir_recursive_absolute(dir)
+	Adv.save_world(dir + "world.json", world)
+	var raw = JSON.parse_string(FileAccess.get_file_as_string(dir + "world.json"))
+	DirAccess.remove_absolute(dir + "world.json")
+	DirAccess.remove_absolute(dir)
+	check(world.regions.size() == 10 and each_once and colors.size() == Array(colors).reduce(func(u, c): return u if u.has(c) else u + [c], []).size()
+		and Adv.region_of(world, "a1_ape_arena").name == "Jungle" and raw.regions.size() == 10 and raw.regions[0].color.begins_with("#"),
+		"story rooms are grouped in 10 named, coloured regions (each room once), kept by World Editor saves")
+
+# Camera zones: inside one the view goal is its fixed point (or the zone's centre), outside it follows the player.
+func check_camera_zone() -> void:
+	make_world([{"t": "camera_zone", "x": 0, "y": 0, "w": 200, "h": 240, "focus": [180, 120]}, {"t": "camera_zone", "x": 300, "y": 100, "w": 100, "h": 140}])
+	p().pos = Vector2(80, 27 * 8)
+	var fixed: Vector2 = w.cam_goal()
+	p().pos = Vector2(350, 27 * 8)
+	var centred: Vector2 = w.cam_goal()
+	p().pos = Vector2(250, 27 * 8)
+	var free: Vector2 = w.cam_goal()
+	check(fixed == w._clamp_cam(Vector2(180, 120)) and centred == w._clamp_cam(Vector2(350, 170)) and free == w._clamp_cam(p().camera_target()),
+		"camera zones fix the view on their point (or centre) while the player is inside (%s, %s, %s)" % [fixed, centred, free])
 
 # Editor palette: every object type sits in a named group; enemies are grouped by family.
 func check_palette_groups() -> void:
@@ -2706,6 +2754,8 @@ func _ready() -> void:
 	check_monster_log()
 	check_hover_help()
 	check_palette_groups()
+	check_camera_zone()
+	check_regions()
 	check_art_gallery()
 	check_background_parallax()
 

@@ -1,0 +1,442 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+WARNING: ApeChase: no path found to x 496
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _next (res://scripts/entities.gd:2850)
+         [1] _tick (res://scripts/entities.gd:2889)
+         [2] run (res://scripts/entities.gd:2869)
+         [3] update (res://scripts/entities.gd:2695)
+         [4] _physics_process (res://scripts/world.gd:1041)
+         [5] _world_bench (res://tests/bench.gd:278)
+normal physics med 511.0 p95 825 | draw med 158.0 p95 314
+dense physics med 2793.5 p95 4918 | draw med 1648.0 p95 3034
+moving physics med 2077.5 p95 3614 | draw med 128.0 p95 234
+large_blocks physics med 285.5 p95 477 | draw med 63.0 p95 134
+{
+	"dense": {
+		"counts": {
+			"jumpthru_outside_per_tick": 0.98,
+			"jumpthru_outside_scan_per_tick": 244.44,
+			"jumpthru_per_tick": 0.39,
+			"jumpthru_scan_per_tick": 97.22,
+			"solid_per_tick": 4.06,
+			"solid_scan_per_tick": 3045.83,
+			"spikes_per_tick": 0.21,
+			"spikes_scan_per_tick": 39.69,
+			"touch_per_tick": 0.96,
+			"touch_scan_per_tick": 1433.33
+		},
+		"draw_us": {
+			"max": 4715,
+			"median": 1648.0,
+			"n": 708,
+			"p95": 3034
+		},
+		"entities": 2500,
+		"frame_us": {
+			"max": 16391,
+			"median": 7160.5,
+			"n": 360,
+			"p95": 11432
+		},
+		"lists": {
+			"jumpthrus": 250,
+			"solids": 750,
+			"spikes": 188,
+			"touchables": 1500
+		},
+		"physics_us": {
+			"max": 6920,
+			"median": 2793.5,
+			"n": 360,
+			"p95": 4918
+		},
+		"player_end": [
+			"(104.0, 304.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 22536,
+					"median": 21250.0,
+					"n": 10,
+					"p95": 22536
+				},
+				"draw_us": {
+					"max": 4715,
+					"median": 1522.5,
+					"n": 354,
+					"p95": 2905
+				},
+				"frame_us": {
+					"max": 16391,
+					"median": 6655.0,
+					"n": 180,
+					"p95": 10716
+				},
+				"physics_us": {
+					"max": 6920,
+					"median": 2600.0,
+					"n": 180,
+					"p95": 4956
+				}
+			},
+			{
+				"build_us": {
+					"max": 23383,
+					"median": 21717.0,
+					"n": 10,
+					"p95": 23383
+				},
+				"draw_us": {
+					"max": 4204,
+					"median": 1842.5,
+					"n": 354,
+					"p95": 3135
+				},
+				"frame_us": {
+					"max": 14167,
+					"median": 7649.5,
+					"n": 180,
+					"p95": 11510
+				},
+				"physics_us": {
+					"max": 6877,
+					"median": 2990.5,
+					"n": 180,
+					"p95": 4812
+				}
+			}
+		],
+		"size": [
+			240,
+			40
+		]
+	},
+	"large_blocks": {
+		"counts": {
+			"jumpthru_outside_per_tick": 0.98,
+			"jumpthru_outside_scan_per_tick": 0.0,
+			"jumpthru_per_tick": 0.39,
+			"jumpthru_scan_per_tick": 0.0,
+			"solid_per_tick": 4.06,
+			"solid_scan_per_tick": 129.96,
+			"spikes_per_tick": 0.21,
+			"spikes_scan_per_tick": 0.0,
+			"touch_per_tick": 0.96,
+			"touch_scan_per_tick": 0.0
+		},
+		"draw_us": {
+			"max": 1703,
+			"median": 63.0,
+			"n": 708,
+			"p95": 134
+		},
+		"entities": 32,
+		"frame_us": {
+			"max": 13710,
+			"median": 6920.0,
+			"n": 360,
+			"p95": 7491
+		},
+		"lists": {
+			"jumpthrus": 0,
+			"solids": 32,
+			"spikes": 0,
+			"touchables": 0
+		},
+		"physics_us": {
+			"max": 795,
+			"median": 285.5,
+			"n": 360,
+			"p95": 477
+		},
+		"player_end": [
+			"(104.0, 624.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 5021,
+					"median": 3864.0,
+					"n": 10,
+					"p95": 5021
+				},
+				"draw_us": {
+					"max": 224,
+					"median": 60.0,
+					"n": 354,
+					"p95": 105
+				},
+				"frame_us": {
+					"max": 8012,
+					"median": 6936.0,
+					"n": 180,
+					"p95": 7341
+				},
+				"physics_us": {
+					"max": 540,
+					"median": 271.0,
+					"n": 180,
+					"p95": 437
+				}
+			},
+			{
+				"build_us": {
+					"max": 4312,
+					"median": 3828.5,
+					"n": 10,
+					"p95": 4312
+				},
+				"draw_us": {
+					"max": 1703,
+					"median": 67.0,
+					"n": 354,
+					"p95": 162
+				},
+				"frame_us": {
+					"max": 13710,
+					"median": 6904.5,
+					"n": 180,
+					"p95": 7691
+				},
+				"physics_us": {
+					"max": 795,
+					"median": 316.0,
+					"n": 180,
+					"p95": 526
+				}
+			}
+		],
+		"size": [
+			400,
+			80
+		]
+	},
+	"meta": {
+		"cores": 16,
+		"cpu": "13th Gen Intel(R) Core(TM) i5-13400F",
+		"display": "headless",
+		"engine": "4.7.2-stable (arch_linux)",
+		"os": "Linux",
+		"renderer": "gl_compatibility",
+		"runs": 2,
+		"seed": 12345,
+		"ticks": 180,
+		"time": "2026-10-27T22:21:01",
+		"video_adapter": "",
+		"viewport": "(1280.0, 1280.0)",
+		"warmup": 60
+	},
+	"moving": {
+		"counts": {
+			"jumpthru_outside_per_tick": 0.98,
+			"jumpthru_outside_scan_per_tick": 0.0,
+			"jumpthru_per_tick": 0.39,
+			"jumpthru_scan_per_tick": 0.0,
+			"solid_per_tick": 49.13,
+			"solid_scan_per_tick": 9826.67,
+			"spikes_per_tick": 0.21,
+			"spikes_scan_per_tick": 0.0,
+			"touch_per_tick": 0.96,
+			"touch_scan_per_tick": 0.0
+		},
+		"draw_us": {
+			"max": 440,
+			"median": 128.0,
+			"n": 708,
+			"p95": 234
+		},
+		"entities": 200,
+		"frame_us": {
+			"max": 11872,
+			"median": 6867.5,
+			"n": 360,
+			"p95": 8223
+		},
+		"lists": {
+			"jumpthrus": 0,
+			"solids": 200,
+			"spikes": 0,
+			"touchables": 0
+		},
+		"physics_us": {
+			"max": 4568,
+			"median": 2077.5,
+			"n": 360,
+			"p95": 3614
+		},
+		"player_end": [
+			"(104.0, 1584.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 2406,
+					"median": 2072.0,
+					"n": 10,
+					"p95": 2406
+				},
+				"draw_us": {
+					"max": 440,
+					"median": 134.0,
+					"n": 354,
+					"p95": 238
+				},
+				"frame_us": {
+					"max": 11110,
+					"median": 6912.0,
+					"n": 180,
+					"p95": 8165
+				},
+				"physics_us": {
+					"max": 4557,
+					"median": 2200.0,
+					"n": 180,
+					"p95": 3668
+				}
+			},
+			{
+				"build_us": {
+					"max": 3179,
+					"median": 2019.5,
+					"n": 10,
+					"p95": 3179
+				},
+				"draw_us": {
+					"max": 321,
+					"median": 126.0,
+					"n": 354,
+					"p95": 230
+				},
+				"frame_us": {
+					"max": 11872,
+					"median": 6853.0,
+					"n": 180,
+					"p95": 8233
+				},
+				"physics_us": {
+					"max": 4568,
+					"median": 2037.0,
+					"n": 180,
+					"p95": 3592
+				}
+			}
+		],
+		"size": [
+			120,
+			200
+		]
+	},
+	"normal": {
+		"counts": {
+			"dream_per_tick": 0.01,
+			"dream_scan_per_tick": 0.01,
+			"jumpthru_outside_per_tick": 1.08,
+			"jumpthru_outside_scan_per_tick": 2.17,
+			"jumpthru_per_tick": 0.41,
+			"jumpthru_scan_per_tick": 0.81,
+			"solid_per_tick": 4.01,
+			"solid_scan_per_tick": 28.08,
+			"spikes_per_tick": 0.02,
+			"spikes_scan_per_tick": 0.07,
+			"touch_per_tick": 0.98,
+			"touch_scan_per_tick": 70.4
+		},
+		"draw_us": {
+			"max": 2506,
+			"median": 158.0,
+			"n": 716,
+			"p95": 314
+		},
+		"entities": 81,
+		"frame_us": {
+			"max": 11735,
+			"median": 6910.0,
+			"n": 360,
+			"p95": 7542
+		},
+		"lists": {
+			"jumpthrus": 2,
+			"solids": 7,
+			"spikes": 4,
+			"touchables": 72
+		},
+		"physics_us": {
+			"max": 4509,
+			"median": 511.0,
+			"n": 360,
+			"p95": 825
+		},
+		"player_end": [
+			"(12.0, 198.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 2282,
+					"median": 1254.5,
+					"n": 10,
+					"p95": 2282
+				},
+				"draw_us": {
+					"max": 639,
+					"median": 150.5,
+					"n": 358,
+					"p95": 257
+				},
+				"frame_us": {
+					"max": 8229,
+					"median": 6926.0,
+					"n": 180,
+					"p95": 7443
+				},
+				"physics_us": {
+					"max": 1604,
+					"median": 475.5,
+					"n": 180,
+					"p95": 706
+				}
+			},
+			{
+				"build_us": {
+					"max": 2925,
+					"median": 1575.5,
+					"n": 10,
+					"p95": 2925
+				},
+				"draw_us": {
+					"max": 2506,
+					"median": 170.5,
+					"n": 358,
+					"p95": 380
+				},
+				"frame_us": {
+					"max": 11735,
+					"median": 6889.5,
+					"n": 180,
+					"p95": 7608
+				},
+				"physics_us": {
+					"max": 4509,
+					"median": 576.5,
+					"n": 180,
+					"p95": 892
+				}
+			}
+		],
+		"size": [
+			60,
+			30
+		]
+	}
+}

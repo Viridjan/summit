@@ -143,15 +143,24 @@ func _draw() -> void:
 			draw_line(Vector2(0, o.y + y * step), Vector2(size.x, o.y + y * step), Color(1, 1, 1, 0.04))
 	var bad := cache_bad
 	var font := get_theme_default_font()
+	var named := {}  # region name -> [colour, screen rect of its rooms]
 	for name in world.rooms:
 		var r: Dictionary = world.rooms[name]
 		var rect := Rect2(to_screen(Vector2(r.pos)), Vector2(r.level.w, r.level.h) * zoom)
+		var g := Adventure.region_of(world, name)
 		draw_rect(rect, Color("1e2442") if name == selected else Color("121526"))
 		draw_texture_rect(thumbs[name], rect, false)
-		var edge := Color.RED if bad.has(name) else (Color.WHITE if name == selected else Color(1, 1, 1, 0.3))
+		if not g.is_empty():  # rooms tinted by region, over the thumbnail
+			draw_rect(rect, Color(g.color, 0.35))
+			named[g.name] = [g.color, named[g.name][1].merge(rect) if named.has(g.name) else rect]
+		var edge := Color.RED if bad.has(name) else (Color.WHITE if name == selected else (Color(g.color, 0.8) if not g.is_empty() else Color(1, 1, 1, 0.3)))
 		draw_rect(rect, edge, false, 2.0 if name == selected or bad.has(name) else 1.0)
 		var label: String = ("* " if name == world.start else "") + name
 		draw_string(font, rect.position + Vector2(4, 16), label, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 8, 14, Color.WHITE)
+	for n in named:  # region names, centred over each region
+		var at: Vector2 = named[n][1].get_center() + Vector2(-font.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x / 2.0, 8)
+		draw_string_outline(font, at, n, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, 6, Color(0, 0, 0, 0.85))
+		draw_string(font, at, n, HORIZONTAL_ALIGNMENT_LEFT, -1, 22, named[n][0].lightened(0.35))
 	for seg in cache_ways:
 		draw_line(to_screen(seg[0] / T), to_screen(seg[1] / T), Color("4ee05a"), 3.0)
 	for l in cache_links:  # doors: cyan line from each door to where it leads

@@ -1,0 +1,13 @@
+ok    res://tests/test.tscn (0 leak warnings)
+ok    res://tests/smoke.tscn (0 leak warnings)
+ok    --script tests/sfx.gd (0 leak warnings)
+ok    --script tests/roar.gd (0 leak warnings)
+ok    --script tests/music.gd (0 leak warnings)
+ok    --script tests/environment_music.gd (0 leak warnings)
+ok    --script tests/ape_art.gd (0 leak warnings)
+ok    --script tests/discoveries.gd (1 leak warnings)
+ok    --script tests/character_style.gd (0 leak warnings)
+ok    res://tests/bench.tscn (0 leak warnings)
+ok    python unittest
+ok    git diff --check
+0 failing

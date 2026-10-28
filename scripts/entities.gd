@@ -115,6 +115,8 @@ const TYPES := {
 	"boss_gate": ["Boss Gate", true, Color("4a6a3a"), BossGate],
 	# walks the player in d.dir (1 right, -1 left) for d.time seconds on touch; "while_boss": only while an Ape lives
 	"auto_walk": ["Auto Walk", true, Color("a0d0ff"), AutoWalk],
+	# fixed camera: while the player is inside the zone, the view centres on d.focus [x, y] px (default: the zone's centre)
+	"camera_zone": ["Camera Zone", true, Color("c0a0ff"), CameraZone],
 	# Boss 2, the volcanic guardian (docs/reviews/eastern-island): bait its eruptions onto the vent plugs
 	"boss_guardian": ["Guardian (boss)", true, Color("7a3a2a"), Guardian],
 	"vent_plug": ["Vent Plug", false, Color("ff7a30"), VentPlug],
@@ -2124,6 +2126,27 @@ class Guardian extends Ent:
 
 # Walks the player in for a moment (the arena's entrance), using Celeste's forced movement. Once per visit.
 # One-use trigger that briefly forces horizontal movement, usually to walk into the boss arena.
+class CameraZone extends Ent:
+	# The point the view centres on while the player is inside.
+	func focus() -> Vector2:
+		return Vector2(float(d.focus[0]), float(d.focus[1])) if d.has("focus") else Vector2(rect.get_center())
+	func describe() -> String:
+		return "Camera zone: the view stays fixed on %s while you are inside" % focus()
+	# Editor only: a dashed frame and its focus point; invisible in the game.
+	func draw(ci: CanvasItem) -> void:
+		if w != null:
+			return
+		var r := Rect2(rect)
+		var c := Color(0.75, 0.63, 1.0)
+		ci.draw_rect(r, Color(c, 0.12))
+		for x in range(int(r.position.x), int(r.end.x), 6):
+			ci.draw_line(Vector2(x, r.position.y), Vector2(minf(x + 3, r.end.x), r.position.y), c, 1.0)
+			ci.draw_line(Vector2(x, r.end.y), Vector2(minf(x + 3, r.end.x), r.end.y), c, 1.0)
+		var f := focus()
+		ci.draw_line(f - Vector2(4, 0), f + Vector2(4, 0), c, 1.0)
+		ci.draw_line(f - Vector2(0, 4), f + Vector2(0, 4), c, 1.0)
+
+
 class AutoWalk extends Ent:
 	var used := false
 	# Apply AutoWalk interaction when World reports an overlapping player.
