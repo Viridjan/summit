@@ -81,49 +81,39 @@ hole = Room("m3_the_hole", "The Hole", 40, 23, "cavern_deep", fill="1")
 hole.open(13, 0, 26, 22)
 hole.ent("note", 20, 3, text="Down you go. From here on, things can hurt")
 
-# 3. Lake cave: darker, a lake, dead-end tunnels, a roar from the left. 5 screens wide, 2 tall.
+# 3. Lake caves: one long tunnel, never more than 4 tiles tall (rows 15..18 over the floor at G), from the roar on the
+#    left, under the shaft from the big jump, across a lake on stepping stones, through the teeth to Cove Town. A gap
+#    in the lake drops into the Deep Lake below (a tunnel of pools, a star, a ladder back up). Inside 4 tiles a jump
+#    rises only ~2 before the ceiling, so gaps are 3 wide. Cut into rooms below; ceiling rows above 14 stay rock.
 c = Room("c1_lake_cave", "Lake Cave", 200, 46, "cavern_deep", fill="1")
-# upper cave (row band 6..18, floor row G)
-c.open(41, 6, 118, G - 1)                    # first chamber, under the big jump
-c.open(53, 0, 66, 5)                         # shaft from the big jump
-c.solid(41, 6, 48, 14)                       # rock; the roar tunnel runs under it
-c.open(1, 15, 48, G - 1)                     # roar tunnel to the far left (dead end)
-c.open(12, 8, 14, 14)                        # dead-end side tunnel up
-c.solid(74, 6, 84, 8); c.solid(104, 6, 118, 9)  # uneven ceiling
-c.open(100, 2, 102, 8)                       # dead-end tunnel up
-c.solid(106, 13, 112, 13)                    # floating ledge
-c.open(99, G, 101, 20); c.spikes_up(99, 101, 20)  # spike pit past the lake (3 tiles of run-up after it)
-c.spikes_up(104, 110, 18); c.solid(107, 17, 107, 18)  # spiky floor with a stepping stone in the middle
-c.open(119, 9, 198, G - 1)                   # right chambers
-c.solid(130, 9, 138, 11); c.solid(160, 9, 175, 12); c.solid(186, 9, 198, 13)  # ceiling teeth
-c.open(150, 3, 152, 8)                       # dead-end tunnel up
-c.solid(146, 16, 148, 18); c.solid(168, 17, 171, 18)  # rocks to hop over
-c.open(126, G, 128, 20); c.spikes_up(126, 128, 20)    # Cave Teeth: spike pits between the teeth
-c.open(136, G, 138, 20); c.spikes_up(136, 138, 20)  # room to land before the tall rock
-c.solid(154, 16, 155, 16)                             # a ledge to hop from
-c.open(174, G, 176, 20); c.spikes_up(174, 176, 20)    # Cove Tunnel: a pit between the rocks and the ledge
-c.open(189, G, 191, 20); c.spikes_up(189, 191, 20)    # and one under the low ceiling
-c.solid(178, 13, 182, 13)                    # ledge
-c.open(70, G, 95, 20); c.water(70, G, 95, 20)  # the lake, in a dip
+c.open(1, 15, 198, 18)                       # the tunnel (4 tall)
+c.open(53, 0, 66, 14)                        # shaft from the big jump, down into the tunnel
+c.solid(18, 15, 21, 15)                      # Roar Tunnel: a low rock in the roof
+c.open(70, G, 96, 21); c.water(70, G, 96, 21)  # the lake, in a 3-deep dip
+for x in (73, 78, 83, 88, 93):
+    c.solid(x, G, x + 1, 21)                 # stepping stones, 3-tile gaps
+c.open(85, 22, 87, 25); c.water(85, 22, 87, 25, top=False)  # under the gap at 85..87: the way down to the Deep Lake
+c.open(99, G, 101, 20); c.spikes_up(99, 101, 20)          # spike pit past the lake
+c.solid(130, 15, 133, 15); c.solid(144, 15, 147, 15)      # Cave Teeth: the roof bites down to 3 tiles
+c.open(126, G, 128, 20); c.spikes_up(126, 128, 20)
+c.open(136, G, 138, 20); c.spikes_up(136, 138, 20)
+c.solid(150, 18, 151, 18)                    # a rock to hop
+c.solid(165, 15, 168, 15)                    # Cove Tunnel: low roof
+c.open(174, G, 176, 20); c.spikes_up(174, 176, 20)
+c.open(189, G, 191, 20); c.spikes_up(189, 191, 20)
 c.open(199, 16, 199, 18)                     # right edge: rows 16..18 lead into Cove Town
-# lower cave (one screen, cols 80..119 rows 23..45): a hole in the lake floor drops into a flooded deep lake
-c.open(88, 21, 91, 25)
-c.open(81, 26, 118, 40)
-c.solid(98, 26, 108, 29)                     # ceiling tooth
-# One body of water, surface at the lake (row 19): the hole, all of Deep Lake and the shaft back up are under it.
-c.water(88, 21, 91, 22, top=False); c.water(114, G, 118, 22)  # hole and shaft, Lake Cave side
-c.water(88, 23, 91, 25, top=False); c.water(114, 23, 118, 25, top=False)  # the same, Deep Lake side
-c.water(81, 26, 97, 29, top=False); c.water(109, 26, 118, 29, top=False)  # either side of the tooth
-c.water(81, 30, 118, 40, top=False)
-c.open(114, G, 118, 25)                      # way back up: a shaft of jump-through platforms
-for y in (37, 34, 31, 28, 25, 22, 19):       # the top one (row 19) carries the cave floor over the shaft
-    c.ents.append({"t": "jumpthru", "x": 114 * T, "y": y * T, "w": 5 * T, "h": 8})
+# Deep Lake (cols 80..119, rows 23..45): a 4-tall tunnel under the lake with pools to jump, a star, a ladder back up
+c.open(81, 26, 118, 29)
+for x in (91, 99, 106):
+    c.open(x, 30, x + 2, 32); c.water(x, 30, x + 2, 32)
+c.open(114, G, 117, 25)                      # the ladder shaft up into the lake cave's floor
+for y in (27, 24, 21):
+    c.ents.append({"t": "jumpthru", "x": 114 * T, "y": y * T, "w": 4 * T, "h": 8})
+c.ents.append({"t": "jumpthru", "x": 114 * T, "y": G * T, "w": 4 * T, "h": 8})  # flush with the floor: down + jump
+c.ent("strawberry", 110, 29)
 c.ent("spawn", 60, 18)
 c.ent("spawn", 196, 18)
 c.ent("note", 3, 18, text="A roar from the left", sound="cave_roar")
-c.ent("note", 101, 5, text="Dead end")
-c.ent("note", 151, 6, text="Dead end")
-c.ent("strawberry", 82, 39)
 
 # 4. Cove town: two NPCs, the second stamina block, a quest
 t = Room("t1_cove_town", "Cove Town", 40, 23, "sea")
@@ -341,7 +331,7 @@ rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
 # The end of the first vertical descent (Big Jump gap -> The Hole -> Lake Cave): a fixed view over the landing chamber
 for r_, _, _ in rooms:
     if r_.name == "c1_lake_cave":
-        r_.ents.append({"t": "camera_zone", "x": 0, "y": 0, "w": 30 * T, "h": 23 * T, "focus": [15 * T, 13 * T]})
+        r_.ents.append({"t": "camera_zone", "x": 0, "y": 0, "w": 30 * T, "h": 23 * T, "focus": [15 * T, 14 * T]})
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))

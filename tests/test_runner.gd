@@ -476,6 +476,11 @@ func check_shipped_world() -> void:
 	var dry_spawn: Vector2 = fw.spawn
 	var c4_origin: Vector2 = Vector2(story.rooms["c4_deep_lake"].pos * 8)
 	var c1_origin: Vector2 = Vector2(story.rooms["c1_lake_cave"].pos * 8)
+	var deep: Dictionary = Game.adv_world.rooms["c4_deep_lake"]
+	var dry_level: Dictionary = deep.level
+	var flooded: Dictionary = dry_level.duplicate(true)  # the rule, on a fully flooded copy of the Deep Lake
+	flooded.entities = flooded.entities.filter(func(e): return e.t != "spawn") + [{"t": "water", "x": 0, "y": 0, "w": int(flooded.w) * 8, "h": int(flooded.h) * 8}]
+	deep.level = flooded
 	fw.enter_room("c4_deep_lake", Vector2(20 * 8, 10 * 8))  # swimming in
 	var kept: bool = fw.room == "c4_deep_lake" and fw.spawn_room == "c1_lake_cave" and Game.adv.room == "c1_lake_cave"
 	p().die(Vector2.UP)
@@ -484,6 +489,7 @@ func check_shipped_world() -> void:
 	fw._physics_process(DT)
 	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.spawn == dry_spawn,
 		"a flooded room gets no respawn point: dying there returns to the last safe one (%s, %s, %s)" % [fw.room, fw.spawn_room, fw.spawn])
+	deep.level = dry_level
 	fw.queue_free()
 	# freefall rooms (nowhere to stand: The Hole) skip the transition fade, in and out; others keep it
 	Game.adv = Adventure.new_run(story)
