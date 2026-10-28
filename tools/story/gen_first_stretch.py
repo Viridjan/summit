@@ -109,11 +109,12 @@ c.ent("strawberry", 5, 12)
 # Lake Cave: under the shaft, across the lake on stepping stones; a wall then blocks M, so the way on is down a
 # gap in the lake into the Deep Lake and up its ladder on the far side of the wall
 roof_spikes(44, 48, 15)
-c.open(70, G, 96, 21); c.water(70, G, 96, 21)  # the lake, in a 3-deep dip
+c.open(70, G, 95, 21); c.water(70, G, 95, 21)  # the lake, in a 3-deep dip (2 flat tiles before Wall Cave)
 for x in (73, 78, 83, 88, 93):
     c.solid(x, G, x + 1, 21)                 # stepping stones, 3-tile gaps
 c.open(85, 22, 87, 25); c.water(85, 22, 87, 25, top=False)  # under the gap at 85..87: down to the Deep Lake
-c.solid(100, 15, 101, 18)                    # the wall
+for x, y, w_, h_ in ((784, 144, 8, 8), (792, 120, 16, 32), (808, 128, 8, 24), (816, 136, 8, 16)):  # the wall: breakable
+    c.ents.append({"t": "breakwall", "x": x, "y": y, "w": w_, "h": h_})  # stack, as edited in the World Editor
 c.open(81, 26, 118, 29)                      # D
 for x in (91, 99, 106):
     c.open(x, 30, x + 2, 32); c.water(x, 30, x + 2, 32)
@@ -348,17 +349,15 @@ def cut(name, title, x0, y0, w, h):
 D = 23  # everything below the meadow sits one screen lower, under The Hole
 rooms = [(m, 0, 0), (j, 80, 0), (hole, 80, 23),
     cut("c0_roar_tunnel", "Roar Tunnel", 0, 0, 40, 23),
-    cut("c1_lake_cave", "Lake Cave", 40, 0, 80, 23),
+    cut("c1_lake_cave", "Lake Cave", 40, 0, 28, 23),       # one screen each: the landing,
+    cut("c5_lake_crossing", "Lake Crossing", 68, 0, 30, 23),  # the lake,
+    cut("c6_wall_cave", "Wall Cave", 98, 0, 22, 23),      # the wall and the ladder up from the Deep Lake
     cut("c2_cave_teeth", "Cave Teeth", 120, 0, 40, 23),
     cut("c3_cove_tunnel", "Cove Tunnel", 160, 0, 40, 23),
     cut("c4_deep_lake", "Deep Lake", 80, 23, 40, 23),
     (t, 240, 23 + D), (j1, 280, 23 + D), (j2, 280, 46 + D), (j3, 360, 46 + D),
     (a1, 440, 46 + D), (h1, 240, 100 + D), (h2, 280, 100 + D), (lh, 593, -14), (s1, 471, 23 + D), (s2, 591, 23 + D),
     (s3, 631, 0 + D), (l1, 396, 69 + D), (l2, 316, 69 + D), (l3, 360, -2 + D)]
-# The end of the first vertical descent (Big Jump gap -> The Hole -> Lake Cave): a fixed view over the landing chamber
-for r_, _, _ in rooms:
-    if r_.name == "c1_lake_cave":
-        r_.ents.append({"t": "camera_zone", "x": 0, "y": 0, "w": 30 * T, "h": 23 * T, "focus": [15 * T, 14 * T]})
 unknown = ONLY - {"all"} - {r.name for r, _, _ in rooms}
 if unknown:
     sys.exit("no such room: %s" % ", ".join(sorted(unknown)))

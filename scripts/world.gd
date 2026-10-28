@@ -175,9 +175,9 @@ var tile_layer: TileLayer
 var background: Background
 var room_mask: RoomMask
 var mask_a := 0.0  # room mask opacity
-# Room transition: the room left darkens towards the new one (REVEAL_OUT), all black for REVEAL_HOLD, then the new
-# room clears from the entry side onwards (REVEAL_IN): the same soft edge and pace on both sides. The view does not
-# slide: it stays on the old room until the middle of the hold, then cuts to the new room.
+# Region transition (moving into another region; rooms of one region just follow the player): the room left
+# darkens towards the new one (REVEAL_OUT), the view cuts to the new room in the black, the new room clears from the
+# entry side onwards (REVEAL_IN; same soft edge and pace), then the player waits REVEAL_HOLD before moving on.
 const REVEAL_OUT := 0.5
 const REVEAL_HOLD := 0.2
 const REVEAL_IN := 0.5
@@ -532,7 +532,7 @@ func enter_room(next: String, at = null) -> void:
 	leaving_ents = left
 	leaving_rect = Rect2(old_origin - room_origin, left_size)
 	player.pos = global - room_origin if at == null else at
-	if freefall(old_room) or freefall(room):  # falling through: no fade, the view follows the fall
+	if freefall(old_room) or freefall(room) or not new_region(old_room, room):  # same region / falling: no fade
 		reveal_t = 1.0
 		reveal_cut = true
 	else:
@@ -1034,7 +1034,8 @@ func _physics_process(_delta: float) -> void:
 		if respawn_timer <= 0:
 			respawn()
 	else:
-		player.update(dt)
+		if reveal_t >= 1.0 or reveal_t * REVEAL_TIME < REVEAL_OUT + REVEAL_IN:  # the wait at the end: held still
+			player.update(dt)
 		after_player_move()
 		update_stamina(dt)
 	for e in ents:
@@ -1053,7 +1054,7 @@ func _physics_process(_delta: float) -> void:
 	for i in snow.size():
 		snow[i] = Vector2(fposmod(snow[i].x - 20 * dt, VIEW.x), fposmod(snow[i].y + 12 * dt, VIEW.y))
 
-	var cut := REVEAL_OUT + REVEAL_HOLD * 0.5  # mid-way through the black hold
+	var cut := REVEAL_OUT  # the moment the old room is fully dark
 	if reveal_t < 1.0 and reveal_t * REVEAL_TIME < cut:
 		pass  # crossing: the view stays on the room being left while it darkens
 	elif not reveal_cut:  # then, hidden in the black, it jumps to the new room (no slide)
@@ -1081,6 +1082,15 @@ func _physics_process(_delta: float) -> void:
 func _cam_settled() -> bool:
 	var d: Vector2 = (cam_goal() - cam_pos).abs()
 	return (bounds.size.x >= VIEW.x or d.x < 1.0) and (bounds.size.y >= VIEW.y or d.y < 1.0)
+
+# True when the two rooms are in different regions (the fade marks arriving in a new area). Worlds without regions
+# never fade.
+func new_region(a: String, b: String) -> bool:
+	if not adventure():
+		return false
+	var ra: Dictionary = Adventure.region_of(Game.adv_world, a)
+	var rb: Dictionary = Adventure.region_of(Game.adv_world, b)
+	return not ra.is_empty() and not rb.is_empty() and ra.name != rb.name
 
 # A freefall room is one you only fall through: nowhere to stand (no open cell above rock inside it, no
 # jump-through). Crossings into or out of one skip the transition fade. Cached per room.
@@ -1126,7 +1136,7 @@ func _draw_reveal(ci: CanvasItem) -> void:
 	var t := reveal_t * REVEAL_TIME
 	var ease := func(x: float) -> float: return x * x * (3.0 - 2.0 * x)  # smoothstep: gentle start and stop
 	var k_out: float = ease.call(clampf(t / REVEAL_OUT, 0.0, 1.0))
-	var k_in: float = ease.call(clampf((t - REVEAL_OUT - REVEAL_HOLD) / REVEAL_IN, 0.0, 1.0))
+	var k_in: float = ease.call(clampf((t - REVEAL_OUT) / REVEAL_IN, 0.0, 1.0))
 	var b := Rect2(bounds)
 	var far := (b.end if reveal_dir.dot(Vector2.ONE) > 0 else b.position).dot(reveal_dir)  # the side it clears to
 	_outside_black(ci, [b, reveal_old], k_out * (1.0 - k_in))  # the other rooms around: fade out, black, fade back

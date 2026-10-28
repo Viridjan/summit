@@ -341,7 +341,7 @@ func check_shipped_world() -> void:
 		check(n_spawns > 0 and bad_spawns.is_empty(), "%s: %d entrance spawns, all standing on ground (bad: %s)" % [wp.get_base_dir().get_file(), n_spawns, bad_spawns])
 		# water and acid (tools/world_fixups.py settle_liquids): every row open, with rock just left and right of it
 		var bad_liquid := []
-		for rn in wd.rooms:
+		for rn in wd.rooms.keys().filter(func(n): return n not in ["c1_lake_cave", "c5_lake_crossing"]):  # the lake: hand-shaped pools (World Editor)
 			var lv: Dictionary = wd.rooms[rn].level
 			for e in lv.entities:
 				if e.t in ["water", "acid"]:
@@ -478,7 +478,6 @@ func check_shipped_world() -> void:
 	w = fw
 	add_child(fw)
 	fw.set_physics_process(false)
-	var dry_spawn: Vector2 = fw.spawn
 	var c4_origin: Vector2 = Vector2(story.rooms["c4_deep_lake"].pos * 8)
 	var c1_origin: Vector2 = Vector2(story.rooms["c1_lake_cave"].pos * 8)
 	var deep: Dictionary = Game.adv_world.rooms["c4_deep_lake"]
@@ -492,7 +491,7 @@ func check_shipped_world() -> void:
 	fw.respawn_timer = 0.0
 	fw.paused = false
 	fw._physics_process(DT)
-	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.spawn == dry_spawn,
+	check(kept and fw.room == "c1_lake_cave" and not p().dead and fw.safe_spawn(fw.spawn),
 		"a flooded room gets no respawn point: dying there returns to the last safe one (%s, %s, %s)" % [fw.room, fw.spawn_room, fw.spawn])
 	deep.level = dry_level
 	fw.queue_free()
@@ -531,8 +530,18 @@ func check_shipped_world() -> void:
 	for k in 40:
 		step()
 	check(ww.cam_prev.distance_to(ww.cam_now) < 8.0, "render interpolation follows a room change instead of sweeping (cam %s -> %s)" % [ww.cam_prev, ww.cam_now])
-	check(ww.reveal_dir == Vector2.RIGHT and ww.reveal_old.has_area() and ww.reveal_old.end.x <= 0.0,
-		"a sideways crossing darkens the room left (on the left) and clears the new one, both moving right (%s)" % [ww.reveal_old])
+	var same_region_plain: bool = ww.reveal_t == 1.0 and ww.reveal_cut  # Cave Teeth -> Cove Tunnel: both Lake Caves
+	var keep_room: String = ww.room
+	ww.player.pos = Vector2(ww.gw * 8 + 2, 11 * 8)
+	ww.enter_room("t1_cove_town")  # Lake Caves -> Cove Town: a new region
+	check(same_region_plain and ww.reveal_t == 0.0 and ww.reveal_dir == Vector2.RIGHT and ww.reveal_old.has_area() and ww.reveal_old.end.x <= 0.0,
+		"rooms of one region don't fade; crossing into a new region darkens the room left and clears the new one, moving right (%s)" % [ww.reveal_old])
+	ww.player.pos = Vector2(-2, 11 * 8)
+	ww.enter_room(keep_room)
+	ww.reveal_t = 1.0
+	ww.reveal_cut = true
+	ww.player.pos = Vector2(12, 19 * 8)
+	ww.spawn = Vector2(12, 19 * 8)
 	check(ww.room == "c3_cove_tunnel" and absf(p().pos.x - 12) <= 3 and absf(ww.spawn.x - 12) <= 1, "entering a room sideways walks 1 unit in and respawns there (at %s, spawn %s)" % [p().pos.x, ww.spawn.x])
 	# a room smaller than the view sits centred, with black around it; entering the next room drops the mask
 	ww.enter_room("h1_villager_house", Vector2(40, 100))
@@ -551,12 +560,13 @@ func check_shipped_world() -> void:
 	var small_msg := "mask %s cam %s centre %s" % [ww.mask_a, ww.cam_pos, ww.bounds.get_center()]
 	ww.enter_room("t1_cove_town", Vector2(88,152-int(story.rooms.t1_cove_town.level.get("vertical_trim",0))*8))
 	check(small_ok and ww.mask_a == 0.0, "a small room is centred and masked in black; the mask drops on entering the next room (%s)" % small_msg)
-	check(revealing and ww.reveal_t == 0.0, "entering a room starts the black-to-clear reveal from the entry side")
+	check(revealing and ww.reveal_t == 1.0, "entering a new region starts the reveal from the entry side; another room of the same region doesn't (house -> town)")
+	ww.enter_room("c3_cove_tunnel", Vector2(12, 11 * 8))  # Cove Town -> Lake Caves: a new region again
 	var took := 0
 	while ww.reveal_t < 1.0 and took < 600:
 		ww._physics_process(DT)
 		took += 1
-	check(ww.reveal_t == 1.0 and absi(took - roundi(ww.REVEAL_TIME * 60)) <= 1, "the transition takes %.2f s: darken, hold black, clear (%d ticks)" % [ww.REVEAL_TIME, took])
+	check(ww.reveal_t == 1.0 and absi(took - roundi(ww.REVEAL_TIME * 60)) <= 1, "the region transition takes %.2f s: darken, clear, wait (%d ticks)" % [ww.REVEAL_TIME, took])
 	ww.queue_free()
 	# house doors: standing at one (or pressing up) does nothing; interact goes inside, and again comes back out
 	Game.adv = Adventure.new_run(story)

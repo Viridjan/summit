@@ -7,7 +7,7 @@ change (World.enter_room) lands on solid ground: floor (or a jump-through) at th
 """
 import json, os, sys
 
-DROP_IN = {"a1_ape_arena"}  # rooms whose side doorways deliberately drop into them (Ape arena, user's design 2026-10-25)
+DROP_IN = {"a1_ape_arena", "c5_lake_crossing"}  # side doorways that deliberately don't open onto flat floor (the Ape arena drops in; the lake crossing starts and ends in water)
 
 
 # Find border entrances whose initial walk-in space is blocked or lacks the expected support.

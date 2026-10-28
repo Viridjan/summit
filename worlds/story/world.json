@@ -156,6 +156,14 @@
 		"i17_crystal_pocket": [
 			748,
 			115
+		],
+		"c5_lake_crossing": [
+			110,
+			46
+		],
+		"c6_wall_cave": [
+			138,
+			46
 		]
 	},
 	"start": "m1_meadow",
@@ -195,6 +203,8 @@
 				"m3_the_hole",
 				"c0_roar_tunnel",
 				"c1_lake_cave",
+				"c5_lake_crossing",
+				"c6_wall_cave",
 				"c2_cave_teeth",
 				"c3_cove_tunnel",
 				"c4_deep_lake"
