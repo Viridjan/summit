@@ -32,11 +32,15 @@ class LakeCaves(unittest.TestCase):
         self.assertIn("c0_roar_tunnel", back)
 
     def test_the_main_tunnel_is_walled_after_the_lake(self):
-        # without the Deep Lake, the far side of Lake Cave is cut off: the detour is part of the route
+        # without the Deep Lake, the far side of Lake Cave is cut off (rock or breakable walls): the detour is part of the route
         ox, oy = self.W.rooms["c1_lake_cave"][:2]
         lv = self.W.rooms["c1_lake_cave"][2]
-        wall = [lv["tiles"][y][60] for y in range(15, 19)]
-        self.assertEqual(wall, ["1"] * 4)
+        walls = [e for e in lv["entities"] if e["t"] == "breakwall"]  # rock, or breakable walls (need the sword)
+
+        def blocked(y):
+            return any(lv["tiles"][y][x] == "1" or any(e["x"] <= x * 8 < e["x"] + e["w"] and e["y"] <= y * 8 < e["y"] + e["h"] for e in walls)
+                       for x in range(56, 64))
+        self.assertTrue(all(blocked(y) for y in range(15, 19)))
 
 
 if __name__ == "__main__":

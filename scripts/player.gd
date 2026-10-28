@@ -2080,6 +2080,8 @@ func _animation() -> String:
 		return "skid"
 	if landing_visual_timer > 0 and absf(speed.x) < 10:
 		return "land"
+	if in_x != 0 and w != null and solid_at(Vector2(in_x, 0)):  # pushing against a wall: no walking on the spot
+		return "idle"
 	return "run" if absf(speed.x) > 1 else "idle"
 
 # Convert the selected animation and its local clock into an atlas column and row.

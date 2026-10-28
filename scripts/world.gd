@@ -1267,9 +1267,11 @@ func _draw() -> void:
 			leaving_ents = []
 		draw_set_transform(leaving_rect.position)
 		var old_cull := Rect2i(cull.position - Vector2i(leaving_rect.position), cull.size)
+		E.Ent.draw_peers = leaving_ents  # its blocks join among themselves, not with the new room's
 		for e in leaving_ents:
 			if e.vis_rect().intersects(old_cull):
 				e.draw(self)
+		E.Ent.draw_peers = null
 		draw_set_transform(Vector2.ZERO)
 	_draw_floor_gaps()
 	for t in trails:

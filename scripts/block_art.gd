@@ -38,8 +38,15 @@ static func _fill(img: Image, rect: Rect2i, color: Color) -> void:
 	var area := rect.intersection(Rect2i(Vector2i.ZERO, img.get_size()))
 	if area.has_area(): img.fill_rect(area, color)
 
-# Draw a whole connected platform/block image with style-specific edges and damage markings.
-static func build_piece(style: String, size: Vector2i, damage := 0) -> Image:
+# Sides that continue into a touching block of the same kind (no frame drawn there): bit flags.
+const JOIN_LEFT := 1
+const JOIN_RIGHT := 2
+const JOIN_TOP := 4
+const JOIN_BOTTOM := 8
+
+# Draw a whole connected platform/block image with style-specific edges and damage markings. joins: sides that
+# continue into a touching block of the same kind; they get no frame, so touching blocks read as one.
+static func build_piece(style: String, size: Vector2i, damage := 0, joins := 0) -> Image:
 	var img := Image.create(maxi(1, size.x), maxi(1, size.y), false, Image.FORMAT_RGBA8)
 	var colors: Array = PALETTES[style]
 	var width := img.get_width()
@@ -65,18 +72,23 @@ static func build_piece(style: String, size: Vector2i, damage := 0) -> Image:
 					if grain == 0: img.set_pixel(x, y, colors[1])
 				"jumpthru":
 					if x % 8 == 4: img.set_pixel(x, y, colors[1])
-	# Coherent bevels: top/left light, bottom/right shadow, four corner joints.
-	_fill(img, Rect2i(0, 0, width, 1), colors[2])
-	_fill(img, Rect2i(0, 1, 1, height - 1), colors[2].darkened(0.18))
-	_fill(img, Rect2i(0, height - 1, width, 1), colors[3])
-	_fill(img, Rect2i(width - 1, 0, 1, height), colors[3])
+	# Coherent bevels: top/left light, bottom/right shadow, four corner joints; none on joined sides.
+	var l := joins & JOIN_LEFT == 0
+	var r := joins & JOIN_RIGHT == 0
+	var t := joins & JOIN_TOP == 0
+	var b := joins & JOIN_BOTTOM == 0
+	if t: _fill(img, Rect2i(0, 0, width, 1), colors[2])
+	if l: _fill(img, Rect2i(0, 1 if t else 0, 1, height), colors[2].darkened(0.18))
+	if b: _fill(img, Rect2i(0, height - 1, width, 1), colors[3])
+	if r: _fill(img, Rect2i(width - 1, 0, 1, height), colors[3])
 	if width >= 4 and height >= 4:
-		_fill(img, Rect2i(1, 1, width - 2, 1), colors[4])
-		_fill(img, Rect2i(1, height - 2, width - 2, 1), colors[1])
-		for corner in [Vector2i.ZERO, Vector2i(width - 2, 0), Vector2i(0, height - 2), Vector2i(width - 2, height - 2)]:
-			_fill(img, Rect2i(corner, Vector2i(2, 2)), colors[3])
-			img.set_pixelv(corner + Vector2i(1, 1) if corner == Vector2i.ZERO else corner, colors[4])
-	if width >= 14 and height >= 12:
+		if t: _fill(img, Rect2i(1 if l else 0, 1, width - (1 if l else 0) - (1 if r else 0), 1), colors[4])
+		if b: _fill(img, Rect2i(1 if l else 0, height - 2, width - (1 if l else 0) - (1 if r else 0), 1), colors[1])
+		for corner in [[Vector2i.ZERO, l and t], [Vector2i(width - 2, 0), r and t], [Vector2i(0, height - 2), l and b], [Vector2i(width - 2, height - 2), r and b]]:
+			if corner[1]:
+				_fill(img, Rect2i(corner[0], Vector2i(2, 2)), colors[3])
+				img.set_pixelv(corner[0] + Vector2i(1, 1) if corner[0] == Vector2i.ZERO else corner[0], colors[4])
+	if width >= 14 and height >= 12 and joins == 0:
 		for point in [Vector2i(3, 3), Vector2i(width - 4, 3), Vector2i(3, height - 4), Vector2i(width - 4, height - 4)]:
 			img.set_pixelv(point, colors[2] if style in ["falling", "zip"] else colors[4])
 	# A single central symbol, not an icon stamped on every block in the structure.
@@ -98,8 +110,8 @@ static func build_piece(style: String, size: Vector2i, damage := 0) -> Image:
 	return img
 
 # Reuse complete block artwork for identical style, size and damage settings.
-static func texture(style: String, size: Vector2i, damage := 0) -> Texture2D:
-	var key := "%s:%d:%d:%d" % [style, size.x, size.y, damage]
+static func texture(style: String, size: Vector2i, damage := 0, joins := 0) -> Texture2D:
+	var key := "%s:%d:%d:%d:%d" % [style, size.x, size.y, damage, joins]
 	if _textures.has(key):
 		var cached: Texture2D = _textures[key]
 		_textures.erase(key)
@@ -111,14 +123,14 @@ static func texture(style: String, size: Vector2i, damage := 0) -> Texture2D:
 		var oldest: Texture2D = _textures[first]
 		_cached_pixels -= oldest.get_width() * oldest.get_height()
 		_textures.erase(first)
-	var result := ImageTexture.create_from_image(build_piece(style, size, damage))
+	var result := ImageTexture.create_from_image(build_piece(style, size, damage, joins))
 	_textures[key] = result
 	_cached_pixels += area
 	return result
 
 # Place the cached block image at its world rectangle, including any visual shake offset.
-static func draw(ci: CanvasItem, rect: Rect2i, style: String, offset := Vector2.ZERO, damage := 0) -> void:
-	var image := texture(style, rect.size, damage)
+static func draw(ci: CanvasItem, rect: Rect2i, style: String, offset := Vector2.ZERO, damage := 0, joins := 0) -> void:
+	var image := texture(style, rect.size, damage, joins)
 	# Retained canvas commands use texture RIDs: keep every texture from this draw
 	# alive even if another piece evicts it from the shared size cache.
 	var frame := Engine.get_process_frames()

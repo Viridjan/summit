@@ -171,6 +171,30 @@ class Ent extends RefCounted:
 
 	# Optional construction hook; subclasses set dimensions, flags and their own starting state here.
 	func setup() -> void: pass
+	# The editor's preview objects (it has no World), so drawing can see neighbours there too.
+	static var editor_ents: Array = []
+	static var draw_peers = null  # set while drawing a group that isn't w.ents (the room being left)
+	# The objects this one draws among: its room's, or the group being drawn, or the editor's.
+	func peers() -> Array:
+		if draw_peers != null:
+			return draw_peers
+		return w.ents if w != null else editor_ents
+	# Sides (BlockArt.JOIN_* bits) where another collidable object of the same type touches this one along an edge:
+	# touching blocks draw as one. sides limits which sides are looked at.
+	func joins(sides := 15) -> int:
+		var out := 0
+		var me := Rect2(rect)
+		for e in peers():
+			if e == self or e == null or e.d.t != d.t or not e.collidable:
+				continue
+			var o := Rect2(e.rect)
+			var vert := me.position.y < o.end.y and o.position.y < me.end.y
+			var horiz := me.position.x < o.end.x and o.position.x < me.end.x
+			if vert and o.end.x == me.position.x: out |= BlockArt.JOIN_LEFT
+			if vert and o.position.x == me.end.x: out |= BlockArt.JOIN_RIGHT
+			if horiz and o.end.y == me.position.y: out |= BlockArt.JOIN_TOP
+			if horiz and o.position.y == me.end.y: out |= BlockArt.JOIN_BOTTOM
+		return out & sides
 	# What it is and what it is doing, for the F2 overlay's mouse-over (subclasses add their state).
 	func describe() -> String:
 		return str(TYPES[d.t][0]) if TYPES.has(d.t) else str(d.t)
@@ -1279,7 +1303,7 @@ class Liquid extends Ent:  # water: drains adventure stamina (World.update_stami
 	func draw(ci: CanvasItem) -> void:
 		if d.t == "acid" and d.get("skin", "") == "lava":
 			ci.draw_rect(Rect2(rect), Color("b9533e"))
-			if d.get("top", true):
+			if d.get("top", true) and joins(BlockArt.JOIN_TOP) == 0:  # the glowing top only where nothing is above
 				var tex := IslandArt.texture("lava", "idle", int(Time.get_ticks_msec()/150) if w != null else 0)
 				for x in range(0, rect.size.x, 32):
 					var size := Vector2(mini(32, rect.size.x-x), mini(8, rect.size.y))
@@ -1287,8 +1311,25 @@ class Liquid extends Ent:  # water: drains adventure stamina (World.update_stami
 			return
 		var c: Color = TYPES[d.t][2]
 		ci.draw_rect(Rect2(rect), Color(c, 0.35))
-		if d.get("top", true):  # only a pool's surface row draws the line (tools/world_fixups.py settle_liquids)
-			ci.draw_line(Vector2(rect.position), Vector2(rect.end.x, rect.position.y), Color(c.lightened(0.4), 0.9), 1.0)
+		if d.get("top", true):  # the surface line, only where no other pool of the same liquid sits right above
+			var above := Rect2(rect.position.x, rect.position.y - 1, rect.size.x, 1)
+			var covers: Array = []  # x spans of pools over the top edge (usually none)
+			for e in peers():
+				if e != self and e is Liquid and e.d.t == d.t and Rect2(e.rect).intersects(above):
+					covers.append(Vector2(e.rect.position.x, e.rect.end.x))
+			var col := Color(c.lightened(0.4), 0.9)
+			if covers.is_empty():
+				ci.draw_line(Vector2(rect.position), Vector2(rect.end.x, rect.position.y), col, 1.0)
+				return
+			var step := 8 if rect.position.x % 8 == 0 and rect.size.x % 8 == 0 else 1
+			var x := rect.position.x
+			while x < rect.end.x:
+				var x1 := x
+				while x1 < rect.end.x and not covers.any(func(v): return x1 >= v.x and x1 < v.y):
+					x1 += step
+				if x1 > x:
+					ci.draw_line(Vector2(x, rect.position.y), Vector2(x1, rect.position.y), col, 1.0)
+				x = x1 + step
 
 
 # Attackable solid wall. Destroying it records a persistent ID so it stays gone in the adventure.
@@ -1325,7 +1366,7 @@ class BreakWall extends Ent:
 		if not collidable:
 			return
 		var damage := clampi(int(d.get("hp", 3)) - hp, 0, 2)
-		BlockArt.draw(ci, rect, "breakwall", shake, damage)
+		BlockArt.draw(ci, rect, "breakwall", shake, damage, joins())
 		var r := Rect2(Vector2(rect.position) + shake, rect.size)
 		if flash > 0:
 			ci.draw_rect(r, Color(1, 1, 1, 0.5))
@@ -1482,8 +1523,8 @@ class JumpThru extends Ent:
 	func draw(ci: CanvasItem) -> void:
 		if look() == "forest":
 			_draw_leaves(ci)
-		else:
-			BlockArt.draw(ci, rect, "jumpthru")
+		else:  # side by side, rails join (5 px tall: only left and right)
+			BlockArt.draw(ci, rect, "jumpthru", Vector2.ZERO, 0, joins(BlockArt.JOIN_LEFT | BlockArt.JOIN_RIGHT))
 	# Leaves on a stem, filling the box exactly.
 	func _draw_leaves(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
@@ -1548,7 +1589,7 @@ class Crumble extends Ent:
 		if not collidable:
 			ci.draw_rect(Rect2(rect), Color(1, 1, 1, 0.08), false, 1.0)
 			return
-		BlockArt.draw(ci, rect, "crumble", shake, 1 if st == 1 else 0)
+		BlockArt.draw(ci, rect, "crumble", shake, 1 if st == 1 else 0, joins())
 
 
 # Heavy support that shakes when ridden, falls pixel by pixel and stops when it reaches solid terrain.

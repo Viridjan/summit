@@ -1605,6 +1605,78 @@ func check_camera_zone() -> void:
 	check(fixed == w._clamp_cam(Vector2(180, 120)) and centred == w._clamp_cam(Vector2(350, 170)) and free == w._clamp_cam(p().camera_target()),
 		"camera zones fix the view on their point (or centre) while the player is inside (%s, %s, %s)" % [fixed, centred, free])
 
+# Pushing against a wall doesn't play the walk animation.
+func check_wall_push_idle() -> void:
+	var wall := []
+	for y in range(10, 28):
+		wall.append([20, y])
+	make_world([], wall)
+	p().pos = Vector2(20 * 8 - 4, 28 * 8)
+	p().hold = {"right": true}
+	var anims := {}
+	for k in 30:
+		step()
+		anims[p()._animation()] = true
+	p().hold = {}
+	check(not anims.has("run") and anims.has("idle") and p().pos.x <= 20 * 8 - 4, "pushing against a wall stays idle, no walking on the spot (%s)" % [anims.keys()])
+
+# Touching blocks of one kind draw as one (no frame between them): walls, crumble, rails, liquids.
+func check_block_joins() -> void:
+	make_world([{"t": "breakwall", "x": 80, "y": 160, "w": 16, "h": 24}, {"t": "breakwall", "x": 96, "y": 160, "w": 16, "h": 24},
+		{"t": "breakwall", "x": 80, "y": 136, "w": 16, "h": 24}, {"t": "jumpthru", "x": 200, "y": 160, "w": 16, "h": 8}, {"t": "jumpthru", "x": 216, "y": 160, "w": 16, "h": 8}])
+	var walls: Array = w.ents.filter(func(e): return e is E.BreakWall)
+	var a = walls[0]
+	var joined: int = a.joins()
+	var rails: Array = w.ents.filter(func(e): return e is E.JumpThru)
+	var rail_join: int = rails[0].joins(E.BlockArt.JOIN_LEFT | E.BlockArt.JOIN_RIGHT)
+	var as_leaving: int = -1  # drawn as the room being left (w.ents is the new room by then): still joined
+	var keep_ents: Array = w.ents
+	w.ents = []
+	E.Ent.draw_peers = walls
+	as_leaving = a.joins()
+	E.Ent.draw_peers = null
+	w.ents = keep_ents
+	walls[1].collidable = false  # broken: its neighbour's edge comes back
+	var after: int = a.joins()
+	var BA = E.BlockArt
+	var open_img: Image = BA.build_piece("breakwall", Vector2i(16, 24), 0, BA.JOIN_RIGHT)
+	var shut_img: Image = BA.build_piece("breakwall", Vector2i(16, 24), 0, 0)
+	check(joined == BA.JOIN_RIGHT | BA.JOIN_TOP and as_leaving == joined and rail_join == BA.JOIN_RIGHT and after == BA.JOIN_TOP
+		and open_img.get_pixel(15, 12) != shut_img.get_pixel(15, 12), "touching walls and rails join (no frame between them); a broken wall's neighbour gets its edge back")
+
+# World Editor: a double click on a room opens it; in the room editor Esc goes back, asking to save unsaved edits.
+func check_editor_flow() -> void:
+	var keep_main = Game.main
+	var keep_path: String = Game.world_path
+	Game.main = Node.new()
+	add_child(Game.main)
+	Game.world_path = "res://worlds/story/world.json"
+	Game.goto("world_editor")
+	var we = Game.main.get_child(-1)
+	var room: Dictionary = we.world.rooms["m1_meadow"]
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.double_click = true
+	click.position = we.to_screen(Vector2(room.pos) + Vector2(4, 4))
+	we._gui_input(click)
+	var ed = Game.main.get_child(-1)
+	var opened: bool = ed.has_method("_leave") and Game.editor_file == "m1_meadow" and Game.editor_return == "world_editor"
+	ed.level.name = "changed"
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	ed._unhandled_input(esc)
+	var dlg = ed.get_children().filter(func(c): return c is ConfirmationDialog)
+	var asks: bool = dlg.size() == 1 and dlg[0].ok_button_text == "Save" and dlg[0].dialog_text.contains("Save")
+	if asks:
+		dlg[0].custom_action.emit("discard")
+	var back: bool = Game.main.get_child(-1).has_method("_edit")
+	check(opened and asks and back, "double click opens a room; Esc asks to save unsaved edits, then goes back to the World Editor (%s, %s, %s)" % [opened, asks, back])
+	Game.main.queue_free()
+	Game.main = keep_main
+	Game.world_path = keep_path
+
 # Leaf platforms are jump-throughs: an old "leaf" loads as a jump-through with the jungle look; the look follows the room.
 func check_jumpthru_looks() -> void:
 	var lv := Game.validate_level({"name": "x", "w": 10, "h": 4, "environment": "forest", "tiles": ["0000000000", "0000000000", "0000000000", "1111111111"],
@@ -2778,6 +2850,9 @@ func _ready() -> void:
 	check_hover_help()
 	check_palette_groups()
 	check_jumpthru_looks()
+	check_editor_flow()
+	check_block_joins()
+	check_wall_push_idle()
 	check_camera_zone()
 	check_regions()
 	check_art_gallery()

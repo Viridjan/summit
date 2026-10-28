@@ -344,15 +344,23 @@ func _save() -> void:
 	Game.editor_level = level.duplicate(true)
 	saved_level = level.duplicate(true)
 
-# Ask before discarding unsaved edits, otherwise return directly to the owning menu or world editor.
+# Go back to the menu or the World Editor; with unsaved edits, ask first: Save, Don't save, or Cancel (stay).
 func _leave() -> void:
 	if level == saved_level:
 		Game.goto(Game.editor_return)
 		return
+	if get_children().any(func(c): return c is ConfirmationDialog):
+		return  # already asking
 	var dlg := ConfirmationDialog.new()
-	dlg.dialog_text = "Leave without saving your changes?"
-	dlg.ok_button_text = "Leave"
-	dlg.confirmed.connect(func(): Game.goto(Game.editor_return))
+	dlg.dialog_text = "Save your changes before leaving?"
+	dlg.ok_button_text = "Save"
+	dlg.add_button("Don't save", true, "discard")
+	dlg.confirmed.connect(func():
+		_save()
+		Game.goto(Game.editor_return))
+	dlg.custom_action.connect(func(action: StringName):
+		if action == "discard":
+			Game.goto(Game.editor_return))
 	dlg.visibility_changed.connect(func():
 		if not dlg.visible:
 			dlg.queue_free())
@@ -551,6 +559,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_save()
 		elif event.keycode == KEY_F5:
 			_playtest()
+		elif event.keycode == KEY_ESCAPE:  # back to where the editor was opened from (asks to save first)
+			get_viewport().set_input_as_handled()
+			_leave()
 	if event is InputEventKey and event.keycode == KEY_SPACE:
 		space_down = event.pressed
 
@@ -696,6 +707,7 @@ func _draw() -> void:
 	var b := Rect2(0, 0, level.w * T, level.h * T)
 	var cull := Rect2i(view.position.floor(), view.size.ceil()).grow(1)
 	E.JumpThru.editor_look = str(level.get("environment", ""))  # jump-throughs take the room's look
+	E.Ent.editor_ents = preview  # touching blocks and pools draw as one
 	for e in preview:
 		if e != null and e.vis_rect().intersects(cull):
 			e.draw(self)

@@ -178,6 +178,11 @@ func _gui_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			var hit := Adventure.room_at(world, to_tile(event.position) * T)
+			if hit != "" and event.double_click:  # double click: edit that room
+				selected = hit
+				drag_room = ""
+				_edit()
+				return
 			if hit != "":
 				selected = hit
 				drag_room = hit
