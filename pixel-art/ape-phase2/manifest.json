@@ -1,0 +1,45 @@
+{
+  "cell": [
+    32,
+    32
+  ],
+  "columns": 4,
+  "poses": [
+    "idle",
+    "crouch",
+    "air",
+    "throw",
+    "scream",
+    "run",
+    "land",
+    "launch",
+    "rise",
+    "apex",
+    "fall",
+    "hurt",
+    "dying",
+    "sleep"
+  ],
+  "looping": {
+    "run": {
+      "frames": 4,
+      "fps": 10
+    }
+  },
+  "palette": [
+    "#211f2b",
+    "#343443",
+    "#505363",
+    "#747989",
+    "#92969e",
+    "#c2bcae",
+    "#e2d8bb",
+    "#79483f",
+    "#b66a50",
+    "#d99b72",
+    "#f6c75a",
+    "#f0dfb1"
+  ],
+  "anchor": "bottom center",
+  "license": "Original Summit artwork; project license."
+}

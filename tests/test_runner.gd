@@ -424,6 +424,11 @@ func check_shipped_world() -> void:
 			if walk == 0:
 				p().tap["jump"] = true
 		step()
+		if sw.room == "c1_lake_cave" and story_seen[-1] == "c1_lake_cave":  # the Lake Caves are a maze (tests/test_lake_caves.py): on to Cove Town
+			var t1: Dictionary = story.rooms.t1_cove_town.level
+			var t1_spawns: Array = t1.entities.filter(func(e): return e.t == "spawn")
+			t1_spawns.sort_custom(func(a, b): return a.x < b.x)
+			sw.enter_room("t1_cove_town", Vector2(float(t1_spawns[0].x) + 4, float(t1_spawns[0].y) + 8))
 		if sw.room != story_seen[-1]:
 			story_seen.append(sw.room)
 			if sw.room == "j2_jungle_falls":  # dropped in from Jungle Edge, one screen above
@@ -431,11 +436,11 @@ func check_shipped_world() -> void:
 				var expected := Rect2(Vector2(previous.pos-story.rooms.j2_jungle_falls.pos)*8,Vector2(previous.level.w,previous.level.h)*8)
 				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "leaf") and sw.leaving_rect == expected
 	Game.settings.invincible = false
-	check(story_seen == ["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "c2_cave_teeth", "c3_cove_tunnel", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	check(story_seen == ["m1_meadow", "m2_big_jump", "m3_the_hole", "c1_lake_cave", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (the Lake Caves maze skipped (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
 	# the hazards past The Hole can be crossed with plain jumps: the Ape's planner finds a spike-free run across
 	# each room that is crossed left to right
-	for rn in ["m1_meadow", "c2_cave_teeth", "c3_cove_tunnel", "j1_jungle_edge", "j3_jungle_hills", "s2_shore"]:
+	for rn in ["m1_meadow", "j1_jungle_edge", "j3_jungle_hills", "s2_shore"]:  # the Lake Caves maze: tests/test_lake_caves.py
 		Game.level = story.rooms[rn].level
 		var pw = load("res://scripts/world.gd").new()
 		add_child(pw)

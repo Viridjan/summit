@@ -54,6 +54,7 @@ Design: `docs/STORY_DESIGN.md`. Systems first, since the rooms depend on them.
 - [ ] Treetop Village: decide where the player goes after it (exits, next area, whether the two branches meet again)
 
 ### Boss: the Ape
+- [ ] `ape-trueform`: revisit the approved charcoal/silverback transformation for phase two. Artwork, source and animated preview are saved in `pixel-art/ape-phase2/`; keep it deferred. For now phase two uses the original Ape sprites with a pulsing red light.
 - [x] Ape boss (`boss_ape`), 4 units (32x32), 3 hits; arena `a1_ape_arena`; tests in `check_ape()`
 - [x] Stone throw (far): parabolic, 2x2-unit stone (sprite = hitbox, per the exact-hitbox rule)
 - [x] Slam (mid): a leap that lands 3 units past the player; safe when moving toward the Ape; the landing sends a shockwave 2 units out along the ground (jump it)

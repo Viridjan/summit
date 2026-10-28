@@ -81,36 +81,63 @@ hole = Room("m3_the_hole", "The Hole", 40, 23, "cavern_deep", fill="1")
 hole.open(13, 0, 26, 22)
 hole.ent("note", 20, 3, text="Down you go. From here on, things can hurt")
 
-# 3. Lake caves: one long tunnel, never more than 4 tiles tall (rows 15..18 over the floor at G), from the roar on the
-#    left, under the shaft from the big jump, across a lake on stepping stones, through the teeth to Cove Town. A gap
-#    in the lake drops into the Deep Lake below (a tunnel of pools, a star, a ladder back up). Inside 4 tiles a jump
-#    rises only ~2 before the ceiling, so gaps are 3 wide. Cut into rooms below; ceiling rows above 14 stay rock.
+# 3. Lake caves: a maze of tunnels never more than 4 tiles tall, on three levels: the main tunnel M (rows 15..18,
+#    floor G), an upper tunnel U (rows 9..12, floor row 13) and the Deep Lake D under the lake (rows 26..29). The
+#    way through is forced up and down between them. Inside 4 tiles a jump rises only ~2 before the roof, so gaps
+#    are 3 wide; ceiling spikes hang only over flat floor (they punish jumping, never a needed jump). Ladders between
+#    levels are jump-throughs 3 rows apart (the top one flush with the upper floor: down + jump drops through).
 c = Room("c1_lake_cave", "Lake Cave", 200, 46, "cavern_deep", fill="1")
-c.open(1, 15, 198, 18)                       # the tunnel (4 tall)
-c.open(53, 0, 66, 14)                        # shaft from the big jump, down into the tunnel
-c.solid(18, 15, 21, 15)                      # Roar Tunnel: a low rock in the roof
+# Place a two-way ladder between the main and the upper tunnel over columns x0..x1.
+def lake_ladder(x0, x1):
+    c.open(x0, 13, x1, 14)
+    for y in (16, 13):
+        c.ents.append({"t": "jumpthru", "x": x0 * T, "y": y * T, "w": (x1 - x0 + 1) * T, "h": 8})
+# Hang a run of ceiling spikes from the roof row above `row`.
+def roof_spikes(x0, x1, row):
+    for x in range(x0, x1 + 1): c.ent("spikes_down", x, row)
+c.open(1, 15, 198, 18)                       # M, the main tunnel
+c.open(53, 0, 66, 14)                        # shaft from the big jump, down into M
+c.open(199, 16, 199, 18)                     # right edge: rows 16..18 lead into Cove Town
+# Roar Tunnel: M is a dead end on the left; an upper side tunnel loops back to it, with the star
+c.solid(18, 15, 21, 15)                      # a low rock in M's roof
+c.open(4, 9, 36, 12)
+lake_ladder(33, 35)                          # up from M
+c.open(20, 13, 22, 13); c.spikes_up(20, 22, 13)  # a spike pit in the upper floor
+roof_spikes(12, 15, 9)
+c.open(8, 13, 10, 14)                        # a hole back down into M
+c.ent("strawberry", 5, 12)
+# Lake Cave: under the shaft, across the lake on stepping stones; a wall then blocks M, so the way on is down a
+# gap in the lake into the Deep Lake and up its ladder on the far side of the wall
+roof_spikes(44, 48, 15)
 c.open(70, G, 96, 21); c.water(70, G, 96, 21)  # the lake, in a 3-deep dip
 for x in (73, 78, 83, 88, 93):
     c.solid(x, G, x + 1, 21)                 # stepping stones, 3-tile gaps
-c.open(85, 22, 87, 25); c.water(85, 22, 87, 25, top=False)  # under the gap at 85..87: the way down to the Deep Lake
-c.open(99, G, 101, 20); c.spikes_up(99, 101, 20)          # spike pit past the lake
-c.solid(130, 15, 133, 15); c.solid(144, 15, 147, 15)      # Cave Teeth: the roof bites down to 3 tiles
-c.open(126, G, 128, 20); c.spikes_up(126, 128, 20)
-c.open(136, G, 138, 20); c.spikes_up(136, 138, 20)
-c.solid(150, 18, 151, 18)                    # a rock to hop
-c.solid(165, 15, 168, 15)                    # Cove Tunnel: low roof
-c.open(174, G, 176, 20); c.spikes_up(174, 176, 20)
-c.open(189, G, 191, 20); c.spikes_up(189, 191, 20)
-c.open(199, 16, 199, 18)                     # right edge: rows 16..18 lead into Cove Town
-# Deep Lake (cols 80..119, rows 23..45): a 4-tall tunnel under the lake with pools to jump, a star, a ladder back up
-c.open(81, 26, 118, 29)
+c.open(85, 22, 87, 25); c.water(85, 22, 87, 25, top=False)  # under the gap at 85..87: down to the Deep Lake
+c.solid(100, 15, 101, 18)                    # the wall
+c.open(81, 26, 118, 29)                      # D
 for x in (91, 99, 106):
     c.open(x, 30, x + 2, 32); c.water(x, 30, x + 2, 32)
-c.open(114, G, 117, 25)                      # the ladder shaft up into the lake cave's floor
+c.open(114, G, 117, 25)                      # D's ladder up into M past the wall
 for y in (27, 24, 21):
     c.ents.append({"t": "jumpthru", "x": 114 * T, "y": y * T, "w": 4 * T, "h": 8})
-c.ents.append({"t": "jumpthru", "x": 114 * T, "y": G * T, "w": 4 * T, "h": 8})  # flush with the floor: down + jump
+c.ents.append({"t": "jumpthru", "x": 114 * T, "y": G * T, "w": 4 * T, "h": 8})  # flush with M's floor
 c.ent("strawberry", 110, 29)
+# Cave Teeth: the roof bites down to 3 tiles; a wall forces the way up into U (spike pits, roof spikes) and back down
+c.solid(130, 15, 133, 15); c.solid(144, 15, 147, 15)
+c.open(126, G, 128, 20); c.spikes_up(126, 128, 20)
+c.solid(140, 15, 141, 18)                    # the wall
+c.open(134, 9, 156, 12)                      # U over the teeth
+lake_ladder(135, 137)
+c.open(141, 13, 143, 13); c.spikes_up(141, 143, 13)
+roof_spikes(146, 149, 9)
+lake_ladder(152, 154)
+c.solid(150, 18, 151, 18)                    # a rock to hop in M
+# Cove Tunnel: a water pit bridged by a crumbling block, a low roof, spikes in the roof, a last spike pit
+c.solid(165, 15, 168, 15)
+c.open(170, G, 176, 21); c.water(170, G, 176, 21)
+c.ents.append({"t": "crumble", "x": 172 * T, "y": G * T, "w": 3 * T, "h": 8})
+roof_spikes(180, 186, 15)
+c.open(189, G, 191, 20); c.spikes_up(189, 191, 20)
 c.ent("spawn", 60, 18)
 c.ent("spawn", 196, 18)
 c.ent("note", 3, 18, text="A roar from the left", sound="cave_roar")

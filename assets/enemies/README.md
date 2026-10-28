@@ -21,3 +21,8 @@ highlight colours. Gameplay hitboxes, draw origins and enemy behaviour are uncha
 The arena boss and Sand Cave chase share original 32×32 side-view artwork from `scripts/ape_art.gd`. It faces its movement/attack direction and uses distinct idle, crouch, airborne, throw, scream and running silhouettes. Collision and attack areas retain their existing dimensions.
 
 Rebuild `ape.png` with `godot --headless --path . --script tools/export_ape.gd`. Rows follow the pose order above, four frames per row.
+
+The proposed silverback transformation is deferred as `ape-trueform` in
+[`TODO.md`](../../TODO.md). Its artwork and preview are preserved in
+[`pixel-art/ape-phase2`](../../pixel-art/ape-phase2/README.md).
+Current phase two keeps the original sprites and adds a pulsing red tint.

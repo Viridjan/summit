@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Summit · Ape phase two</title>
+<style>
+body{margin:0;background:#202432;color:#e2d8bb;font:16px system-ui,sans-serif}main{max-width:1100px;margin:40px auto;padding:24px}h1{font-size:36px}p{line-height:1.6;color:#bec5d1}button,select{font:inherit;padding:9px 14px;background:#343443;color:#e2d8bb;border:1px solid #747989;margin:4px}button{cursor:pointer}.controls{position:sticky;top:0;background:#202432;padding:12px 0;z-index:1}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}article{padding:18px;background:#2b303f;border:1px solid #505363}canvas{display:block;image-rendering:pixelated;width:192px;height:192px;max-width:100%}img{image-rendering:pixelated;max-width:100%;height:auto}a{color:#f6c75a}h2{font-size:18px}.captures{display:grid;grid-template-columns:1fr 1fr;gap:20px}figcaption{padding:8px}figure{margin:0}
+</style>
+<main>
+<h1>Ape · Phase two</h1>
+<p>A charcoal silverback with a raised pale mantle, copper knuckles and a scarred brow. Original 32×32 artwork, twelve colors. Deferred as ape-trueform in TODO.md. These sprites are preserved as a future concept; the game currently uses the original brown ape with a red pulse.</p>
+<div class="controls">
+<button id="pause">Pause</button><button id="facing">Face left</button>
+<label>Background <select id="background"><option value="#202432">Dark</option><option value="#254b35">Forest</option><option value="#171f30">Cave</option><option value="#bcb6a7">Light</option></select></label>
+<label>Scale <select id="scale"><option value="2">2×</option><option value="4">4×</option><option value="6" selected>6×</option></select></label>
+</div>
+<div class="grid" id="grid"></div>
+<h2>Pose transitions</h2><p>The jump preview shows authored pose continuity; the game chooses ascent, apex and descent from actual vertical speed. Only the run row loops through four frames, at 10 fps.</p>
+<img src="run.gif" width="192" height="192" alt="Phase two run cycle">
+<img src="jump.gif" width="192" height="192" alt="Windup, ascent, apex, descent and landing">
+<h2>Archived concept captures</h2>
+<div class="captures"><figure><img src="arena-phase1.png" alt="Original brown ape in the arena"><figcaption>Phase one</figcaption></figure><figure><img src="arena-phase2.png" alt="New silverback in the same arena"><figcaption>Phase two</figcaption></figure></div>
+<p><a href="ape-phase2.png">Native atlas</a> · <a href="preview.png">All frames</a> · <a href="manifest.json">Atlas metadata</a></p>
+</main>
+<script>
+const poses=['idle','crouch','air','throw','scream','run','land','launch','rise','apex','fall','hurt','dying','sleep'];
+const sheet=new Image();sheet.src='ape-phase2.png';
+const grid=document.getElementById('grid'),contexts=[];
+for(const pose of poses){const card=document.createElement('article'),title=document.createElement('h2'),canvas=document.createElement('canvas');title.textContent=pose;canvas.width=canvas.height=32;canvas.setAttribute('aria-label',pose+' pose');card.append(title,canvas);grid.append(card);contexts.push(canvas.getContext('2d'));}
+let paused=false,left=false,frame=0;
+function draw(){if(!sheet.complete||!sheet.naturalWidth)return;contexts.forEach((ctx,row)=>{ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=document.getElementById('background').value;ctx.fillRect(0,0,32,32);ctx.imageSmoothingEnabled=false;if(left)ctx.setTransform(-1,0,0,1,32,0);ctx.drawImage(sheet,poses[row]==='run'?frame*32:0,row*32,32,32,0,0,32,32);});}
+sheet.onload=draw;
+setInterval(()=>{if(!paused){frame=(frame+1)%4;draw();}},100);
+document.getElementById('pause').onclick=e=>{paused=!paused;e.target.textContent=paused?'Resume':'Pause';};
+document.getElementById('facing').onclick=e=>{left=!left;e.target.textContent=left?'Face right':'Face left';draw();};
+document.getElementById('background').onchange=draw;
+document.getElementById('scale').onchange=e=>{for(const ctx of contexts){ctx.canvas.style.width=ctx.canvas.style.height=32*Number(e.target.value)+'px';}};
+</script>
+</html>

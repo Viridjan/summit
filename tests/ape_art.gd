@@ -64,5 +64,29 @@ func _initialize() -> void:
 		check(art.jump_pose(-180.0) == "rise", "Upward movement extends the rising pose")
 		check(art.jump_pose(0.0) == "apex", "Jump peak uses the tucked pose")
 		check(art.jump_pose(180.0) == "fall", "Descent prepares the fists for landing")
+	var entities = load("res://scripts/entities.gd")
+	var boss = entities.Ape.new(null, {"t": "boss_ape", "x": 0, "y": 0})
+	check(boss.has_method("sprite_tint"), "Ape exposes its visible phase and hit-flash tint")
+	if boss.has_method("sprite_tint"):
+		boss.phase = "idle"
+		boss.hp = 3
+		boss.clock = 0.125
+		check(boss.sprite_tint() == Color.WHITE, "Phase one keeps the original colors")
+		boss.hp = 2
+		var bright: Color = boss.sprite_tint()
+		check(bright.r > bright.g * 2 and bright.r > 1.0, "Phase two pulses with a bright red tint")
+		boss.clock = 0.375
+		check(boss.sprite_tint().is_equal_approx(Color.WHITE), "The red pulse returns to original colors")
+		boss.clock = 0.125
+		boss.flash = 0.2
+		check(boss.sprite_tint().is_equal_approx(Color(1.8, 1.5, 1.3)), "Damage flash stays visible over the red pulse")
+		boss.flash = 0.0
+		boss.phase = "dying"
+		boss.timer = 0.6
+		check(boss.sprite_tint().is_equal_approx(Color(1, 1, 1, 0.5)), "Defeat fades normally without the enraged pulse")
+		var chase = entities.ApeChase.new(null, {"t": "ape_chase", "x": 0, "y": 0})
+		chase.hp = 1
+		chase.clock = 0.125
+		check(chase.sprite_tint() == Color.WHITE, "Chase Ape does not inherit the arena pulse")
 	print("APE ART OK" if failures == 0 else "APE ART FAILED")
 	quit(failures)

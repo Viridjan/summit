@@ -2501,6 +2501,16 @@ class Ape extends Ent:
 	# From 2 hits on.
 	func enraged() -> bool:
 		return hp <= ENRAGED_HP
+	# A gentle red light pulse marks phase two while preserving the original sprites.
+	func sprite_tint() -> Color:
+		var alpha := clampf(timer / 1.2, 0.0, 1.0) if phase == "dying" else 1.0
+		var tint := Color(1, 1, 1, alpha)
+		if not self is ApeChase and enraged() and phase not in ["dying", "gone"]:
+			var pulse := (sin(clock * TAU * 2.0) + 1.0) * 0.5
+			tint = tint.lerp(Color(1.5, 0.28, 0.22, alpha), pulse)
+		if flash > 0 and int(flash * 20) % 2 == 0:
+			tint = Color(1.8, 1.5, 1.3, alpha)
+		return tint
 	# A log shakes loose from the ceiling at a random spot across the arena, never overlapping a log still falling.
 	func _drop_log() -> void:
 		var r := leap_range()
@@ -2586,7 +2596,6 @@ class Ape extends Ent:
 			return
 		if w != null and Game.settings.hitboxes and not self is ApeChase:
 			_draw_ranges(ci)
-		var a := 1.0 if phase != "dying" else clampf(timer / 1.2, 0.0, 1.0)
 		var pose := phase
 		if phase in ["chase", "running"]:
 			pose = "run"
@@ -2600,11 +2609,8 @@ class Ape extends Ent:
 		if phase == "air" and slam_t <= 0:
 			pose = art.jump_pose(vel.y)
 		var o := Vector2(rect.position)
-		var tint := Color(1, 1, 1, a)
-		if flash > 0 and int(flash * 20) % 2 == 0:
-			tint = Color(1.8, 1.5, 1.3, a)
 		ci.draw_set_transform(o + Vector2(SIZE / 2.0, 0), 0.0, Vector2(facing, 1))
-		ci.draw_texture_rect(art.texture(pose, int(clock * 10.0)), Rect2(-SIZE / 2.0, 0, SIZE, SIZE), false, tint)
+		ci.draw_texture_rect(art.texture(pose, int(clock * 10.0)), Rect2(-SIZE / 2.0, 0, SIZE, SIZE), false, sprite_tint())
 		if phase == "throw":
 			ci.draw_rect(Rect2(3, -5, 8, 6), Color("8a8478"))
 			ci.draw_rect(Rect2(4, -4, 4, 2), Color("b0aa9c"))
