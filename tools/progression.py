@@ -22,6 +22,40 @@ from world_check import World, MODELS, explore, T
 
 EXPLOIT = dict(MODELS["generous"], jump=5, hover=3, dash=6, dash_carry=4)
 ABILITIES = ["dash", "climb", "attack"]  # Adventure.ABILITIES
+BOSSES = {"ape": "a1_ape_arena:ape_", "guardian": "i16_guardian_chamber:guardian_"}  # a boss beaten counts as a power:
+# its gates open (boss_gate: the arena's exit, or "until" its flag); reaching it offers "beat it" as a branch
+
+
+def power(key):  # "ability_dash:room:x,y" -> "dash", "boss_ape:..." -> "ape"
+    t = key.split(":")[0]
+    return t[len("ability_"):] if t.startswith("ability_") else t[len("boss_"):]
+
+
+# Boss gate cells, per boss: shut until it's beaten (gates that only close behind you count as open).
+def boss_gates(W):
+    out = {b: set() for b in BOSSES}
+    for name, (ox, oy, lvl) in W.rooms.items():
+        room_boss = next((e["t"][len("boss_"):] for e in lvl["entities"] if e["t"] in ("boss_ape", "boss_guardian")), None)
+        for e in lvl["entities"]:
+            if e["t"] != "boss_gate" or e.get("closes_behind"):
+                continue
+            b = next((b for b, flag in BOSSES.items() if str(e.get("until", "")).startswith(flag)), None) if e.get("until") else room_boss
+            if b:
+                for i in range(int(e["w"]) // T):
+                    for j in range(int(e["h"]) // T):
+                        out[b].add((ox + int(e["x"]) // T + i, oy + int(e["y"]) // T + j))
+    return out
+
+
+def blocked(abilities):  # the rock for this set of powers: breakable walls without attack, gates of bosses not beaten
+    extra = set() if "attack" in abilities else _WALLS
+    for b, cells in _GATES.items():
+        if b not in abilities:
+            extra = extra | cells
+    return _BASE | extra
+
+
+_BASE, _WALLS, _GATES = set(), set(), {}
 TIERS = [("g", MODELS["cautious"]), ("o", MODELS["generous"]), ("p", EXPLOIT)]
 
 
@@ -46,15 +80,15 @@ def _pool():
 
 def _survey_one(job):
     abilities, tier = job
-    _W.solid = _SOLID[0] if "attack" in abilities else _SOLID[1]
+    _W.solid = blocked(abilities)
     ground, touched = explore(_W, dict(TIERS)[tier], set(abilities), [_W.spawn])
-    return ground, [k for k in touched if k.startswith("ability_")]
+    return ground, [k for k in touched if k.startswith("ability_") or k.startswith("boss_")]
 
 
 # Explore several ability sets under every model at once; per set: {cell: tier} (best tier wins), pickups per tier.
 def survey_many(W, base_solid, walls, sets):
-    global _W, _SOLID
-    _W, _SOLID = W, (base_solid, base_solid | walls)
+    global _W, _BASE, _WALLS, _GATES
+    _W, _BASE, _WALLS, _GATES = W, base_solid, walls, boss_gates(W)
     jobs = [(sorted(ab), tier) for ab in sets for tier, _ in TIERS]
     with _pool() as pool:
         found = list(pool.map(_survey_one, jobs))
@@ -97,7 +131,9 @@ def seals(W):
 # way that doesn't lead back (a drop, a one-way door, a cave-in). A zone with two arrows out is a choice. Entrances
 # behind a cave-in search with its rock down.
 def zones(W, base_solid, walls, abilities):
-    W.solid = base_solid if "attack" in abilities else base_solid | walls
+    global _BASE, _WALLS, _GATES
+    _BASE, _WALLS, _GATES = base_solid, walls, boss_gates(W)
+    W.solid = blocked(abilities)
     global _W
     _W = W
     cave = seals(W)
@@ -186,8 +222,8 @@ def _node(W, base, walls, ab, survey_result, nodes, order, unplaced):
             r = W.room_of.get(c)
             if r and (r not in rooms or "gop".index(tier) < "gop".index(rooms[r])):
                 rooms[r] = tier
-        choices = sorted({k.split(":")[0][len("ability_"):] for k, tier in pickups.items() if tier == "g"} - ab)
-        skill = sorted({k.split(":")[0][len("ability_"):] for k, tier in pickups.items() if tier != "g"} - ab)
+        choices = sorted({power(k) for k, tier in pickups.items() if tier == "g"} - ab)
+        skill = sorted({power(k) for k, tier in pickups.items() if tier != "g"} - ab)
         zl, first = zones(W, base, walls, ab)
         nodes[ab] = dict(abilities=sorted(ab), rooms=rooms, cells=cells, choices=choices, skill=skill,
                          unplaced=[a for a in unplaced if a not in ab], zones=zl, first=first)
@@ -246,7 +282,7 @@ svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
 #info{margin-top:8px;color:var(--dim)} #info b{color:var(--fg)}
 </style></head><body><main>
-<section class="card"><h1>Progression <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Each line is an order of picking up abilities; each stop, the abilities you have. Faded: an ability with no pickup in the world yet. Dashed: the same stop on several lines. Hover a stop, click it for the map.</p><svg id="graph"></svg></section>
+<section class="card"><h1>Progression <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Each line is an order of picking up abilities and beating bosses (a boss opens its gates); each stop, what you have. Dashed: the same stop on several lines. Hover a stop, click it for the map.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
 <section class="card"><h1>Choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><svg id="zgraph"></svg></section>
@@ -289,15 +325,31 @@ function metro(sv,N,first,o){sv.innerHTML="";const boxes={};
 const mark=(boxes,i)=>{Object.values(boxes).forEach(b=>b.querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#fff")));if(boxes[i])boxes[i].querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#5fa8ff"))};
 // top: ability sets (stops) and the order you pick abilities up (lines)
 const AN=D.nodes.map(n=>({kids:D.nodes.map((q,k)=>q.parents.includes(n.id)?k:-1).filter(k=>k>=0),depth:n.depth}));
+const BOSS={ape:"the Ape",guardian:"the Guardian"},nm=a=>BOSS[a]?BOSS[a].replace("the ","")+" beaten":a,act=a=>BOSS[a]?"beat "+BOSS[a]:"pick up "+a;
 const greenOf=n=>Object.values(n.rooms).filter(v=>v=="g").length;
 const gainOf=(a,b)=>D.nodes[b].abilities.filter(x=>!D.nodes[a].abilities.includes(x));
 function atip(i){const n=D.nodes[i],k=AN[i].kids;
- let s=`<b>${n.id=="start"?"Start: no abilities":"With "+n.abilities.join(" + ")}</b><br>${greenOf(n)}/${D.rooms.length} rooms reachable normally.`;
- if(k.length)s+=`<br>${k.length>1?"<b>Choice</b>, pick up ":"Next: "}`+k.map(j=>{const g=gainOf(i,j)[0],d=greenOf(D.nodes[j])-greenOf(n);
-  return `<b>${g}</b> (${d>0?"+"+d+" rooms":"no new rooms"}${n.unplaced.includes(g)?", no pickup placed yet":""})`}).join(k.length>1?" or ":"");
+ let s=`<b>${n.id=="start"?"Start: no abilities":"With "+n.abilities.map(nm).join(" + ")}</b><br>${greenOf(n)}/${D.rooms.length} rooms reachable normally.`;
+ if(k.length)s+=`<br>${k.length>1?"<b>Choice</b>: ":"Next: "}`+k.map(j=>{const g=gainOf(i,j)[0],d=greenOf(D.nodes[j])-greenOf(n);
+  return `<b>${act(g)}</b> (${d>0?"+"+d+" rooms":"no new rooms"}${n.unplaced.includes(g)?", no pickup placed yet":""})`}).join(k.length>1?" or ":"");
  else s+="<br>All abilities.";return s}
-const [boxes]=metro(svg,AN,0,{label:i=>{const n=D.nodes[i];return (n.id=="start"?"no abilities":n.abilities.join(" + "))+" · "+greenOf(n)+" rooms"},
- tip:atip,click:i=>show(D.nodes[i]),faded:(a,b)=>D.nodes[a].unplaced.includes(gainOf(a,b)[0])});
+// abilities with no pickup in the world can't be a real choice yet: they're assumed with the checkboxes, and the
+// lines show only real choices (placed pickups, bosses) on top of them
+const FREE=D.nodes[0].unplaced,ASSUME=new Set(FREE);
+const part=n=>n.abilities.filter(a=>FREE.includes(a)).sort().join("+");
+let boxes={},shown=[];
+function drawTop(){const want=[...ASSUME].sort().join("+");
+ shown=D.nodes.map((n,k)=>k).filter(k=>part(D.nodes[k])==want);
+ const N=D.nodes.map((n,k)=>({kids:AN[k].kids.filter(j=>shown.includes(j)),depth:n.abilities.filter(a=>!FREE.includes(a)).length}));
+ const first=shown.find(k=>N[k].depth==0);
+ [boxes]=metro(svg,N,first,{label:i=>{const n=D.nodes[i],real=n.abilities.filter(a=>!FREE.includes(a));
+   return (real.length?real.map(nm).join(" + "):"start")+" · "+greenOf(n)+" rooms"},tip:atip,click:i=>show(D.nodes[i])});
+ show(D.nodes[first])}
+const box=document.getElementById("assume");
+FREE.forEach(a=>{const l=document.createElement("label");l.style.cssText="margin-right:12px;cursor:pointer";
+ const c=document.createElement("input");c.type="checkbox";c.checked=true;c.onchange=()=>{c.checked?ASSUME.add(a):ASSUME.delete(a);drawTop()};
+ l.append(c," "+a);box.append(l)});
+if(!FREE.length)box.style.display="none";
 const cv=document.getElementById("map"),cx=cv.getContext("2d");
 let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;D.rooms.forEach(r=>{minx=Math.min(minx,r.x);miny=Math.min(miny,r.y);maxx=Math.max(maxx,r.x+r.w);maxy=Math.max(maxy,r.y+r.h)});
 const S=3;cv.width=(maxx-minx)*S;cv.height=(maxy-miny)*S;
@@ -335,7 +387,9 @@ function zshow(n,i){mark(zboxes,i);const z=n.zones[i];
  document.getElementById("zinfo").innerHTML=`<b>${z.rooms.map(title).join(", ")}</b><br>`+(behind.length?`<span style="color:${C.r}">left behind:</span> ${behind.join(", ")}<br>`:"")+(partly.length?`only part of: ${partly.map(title).join(", ")} (the rest is in another zone)<br>`:"")+
   (z.kids.length?`ways on: `+z.kids.map(j=>title(n.zones[j].rooms[0])).join(" | "):"no way on")}
 const show0=show;show=function(n){show0(n);zones(n)};
-show(D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)))||D.nodes[0]);  // e.g. progression.html#dash
+drawTop();
+const fromHash=D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)));  // e.g. progression.html#ape+dash
+if(fromHash){ASSUME.clear();fromHash.abilities.filter(a=>FREE.includes(a)).forEach(a=>ASSUME.add(a));box.querySelectorAll("input").forEach((c,k)=>c.checked=ASSUME.has(FREE[k]));drawTop();show(fromHash)}
 </script></body></html>"""
 
 

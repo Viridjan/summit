@@ -48,6 +48,11 @@ class World:
                         self.plat.add((ex + i, base))
                 elif t.startswith("spikes_"):
                     self.spike.add((ex, ey))
+                elif t in ("boss_ape", "boss_guardian"):  # touching any cell of the boss = reaching the fight
+                    w_, h_ = int(e.get("w", 24)), int(e.get("h", 32))
+                    for i in range(max(1, w_ // T)):
+                        for j in range(max(1, h_ // T)):
+                            self.items.setdefault((ex + i, ey + j), []).append((t, name, e))
                 elif t in ("ability_dash", "ability_climb", "ability_attack", "goal", "strawberry", "refill", "energy_fragment", "discovery_npc"):
                     self.items.setdefault((ex, ey), []).append((t, name, e))
                 elif t == "spawn" and name == self.start and not hasattr(self, "spawn"):

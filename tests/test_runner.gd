@@ -382,7 +382,7 @@ func check_shipped_world() -> void:
 	Game.adv = {}
 	# story world (docs/STORY_DESIGN.md): jump only at the start, the first stretch of rooms
 	var story := Adventure.load_world(Game.WORLDS_DIR + "story/world.json")
-	check(story.start == "hub_landing" and story.rooms.size() >= 4 and Adventure.overlaps(story).is_empty() and Adventure.new_run(story).abilities.is_empty(), "story world loads, starts at the Landing with jump only (%d rooms)" % story.rooms.size())
+	check(story.start == "m1_meadow" and story.rooms.size() >= 4 and Adventure.overlaps(story).is_empty() and Adventure.new_run(story).abilities.is_empty(), "story world loads, starts in the meadow with jump only (%d rooms)" % story.rooms.size())
 	var story_ents := []
 	for rn in story.rooms:
 		story_ents += story.rooms[rn].level.entities.map(func(e): return e.t)
@@ -444,11 +444,11 @@ func check_shipped_world() -> void:
 				var expected := Rect2(Vector2(previous.pos-story.rooms.j2_jungle_falls.pos)*8,Vector2(previous.level.w,previous.level.h)*8)
 				kept_old = sw.leaving_ents.any(func(e): return e.d.t == "jumpthru" and e.look() == "forest") and sw.leaving_rect == expected
 	Game.settings.invincible = false
-	check(story_seen == ["hub_landing", "m1_meadow", "m2_big_jump", "c1_lake_cave", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (the Lake Caves maze skipped (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
+	check(story_seen == ["m1_meadow", "m2_big_jump", "c1_lake_cave", "t1_cove_town", "j1_jungle_edge", "j2_jungle_falls", "j3_jungle_hills"] and sw.deaths == 0, "story bot reaches the end of the jungle with jump only (the Lake Caves maze skipped (%s, deaths %d, at tile %s)" % [story_seen, sw.deaths, (p().pos / 8).floor()])
 	check(kept_old, "entering a room keeps drawing the old room's objects, in place, during the transition")
 	# the hazards past The Hole can be crossed with plain jumps: the Ape's planner finds a spike-free run across
 	# each room that is crossed left to right
-	for rn in ["m1_meadow", "j1_jungle_edge", "j3_jungle_hills", "s2_shore"]:  # the Lake Caves maze: tests/test_lake_caves.py
+	for rn in ["j1_jungle_edge", "j3_jungle_hills", "s2_shore"]:  # the Lake Caves maze: tests/test_lake_caves.py
 		Game.level = story.rooms[rn].level
 		var pw = load("res://scripts/world.gd").new()
 		add_child(pw)
