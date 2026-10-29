@@ -145,6 +145,8 @@ Offline tools have different effects:
 | `tools/export_*.gd` | Rewrite generated/reference artwork |
 | `tools/story/gen_first_stretch.py` | Rewrite generated story rooms/layout |
 | `tools/world_fixups.py` | Repair and rewrite world room JSON |
+| `tools/prune_respawns.py` | Preview/apply redundant checkpoint cleanup; see [Respawn points](RESPAWN_POINTS.md) |
+| `tools/checkpoint_ground.py` | Shared permanent-ground validation for checkpoint placement |
 | `tools/world_accessibility.py`, `world_check.py`, `check_*.py` | Analyze data; some options also write reports/maps |
 | `tools/test_room_safety.gd` | Simulate diagnostic arrivals and write a findings report |
 | `tools/install-dev-skills.sh` | Install external developer instructions outside normal game data |

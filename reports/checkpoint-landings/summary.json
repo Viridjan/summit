@@ -1,0 +1,11 @@
+{
+  "applied": true,
+  "before": 73,
+  "after": 70,
+  "merge_distance": 48,
+  "rooms": [
+    "c6_wall_cave",
+    "i04_foothills",
+    "i14_vent_shaft"
+  ]
+}

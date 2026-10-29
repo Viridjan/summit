@@ -133,9 +133,12 @@ def seals(W):
 def room_links(W, entrances, found):
     """Keep direct room exits, including reversible branches; never merge a fork."""
     links = set()
-    for (source, _), (_, exits) in zip(entrances, found):
+    cave = seals(W)
+    for (source, cell), (_, exits) in zip(entrances, found):
         for target, _, _ in exits:
             if source == target or target not in W.rooms: continue
+            if source in cave and cell[0] < cave[source][0]:
+                continue  # a cave-in room: its chase starts on entering, so there's no going back the way you came
             ax, ay, _ = W.rooms[source]
             bx, by, _ = W.rooms[target]
             direction = "right" if bx > ax else "left" if bx < ax else "down" if by > ay else "up"
@@ -157,8 +160,10 @@ def zones(W, base_solid, walls, abilities):
     ents = []  # (room, cell)
     for name, (ox, oy, lvl) in W.rooms.items():
         for e in lvl["entities"]:
-            if e["t"] == "spawn":
+            if e["t"] in ("spawn", "respawn"):  # room entrances (respawn slabs) and the start
                 ents.append((name, (ox + int(e["x"]) // T, oy + int(e["y"]) // T)))
+            elif e["t"] in ("door", "house_door"):  # where you stand arriving through a door
+                ents.append((name, (ox + (int(e["x"]) + int(e.get("w", T)) // 2) // T, oy + (int(e["y"]) + int(e.get("h", T))) // T - 1)))
     if W.spawn not in [c for _, c in ents]:
         ents.append((W.room_of[W.spawn], W.spawn))
     jobs = [(n, c, sorted(abilities), sorted(cave[n][1]) if n in cave and c[0] >= cave[n][0] else []) for n, c in ents]
@@ -313,7 +318,7 @@ canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;borde
 <section class="card"><h1>Graph 1 · Unlocks <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Bosses beaten and powerups collected determine all accessible rooms. Both branches after a gate count as accessible, regardless of which route you take. Select a state to inspect its accessible rooms. This graph has its own selection and map.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
-<section class="card" id="route-card"><h1>Graph 2 · Route choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><div class="route-controls"><button id="route-fit">Fit graph</button> <button id="route-in">Zoom +</button> <button id="route-out">Zoom −</button></div><div id="route-viewport"><svg id="zgraph"></svg></div></section>
+<section class="card" id="route-card"><h1>Graph 2 · Route choices</h1><p id="zhead"></p><div class="route-controls"><button id="route-fit">Fit graph</button> <button id="route-in">Zoom +</button> <button id="route-out">Zoom −</button></div><div id="route-viewport"><svg id="zgraph"></svg></div></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
 <canvas id="zmap"></canvas><div id="zinfo"></div></section></main>
 <script>
@@ -392,7 +397,8 @@ function show(n){mark(boxes,D.nodes.indexOf(n));
  document.getElementById("info").innerHTML=`<b>${n.id}</b> &middot; available bosses / powerups: ${n.choices.map(act).join(", ")||"none"}${n.skill.length?" &middot; only with skill: "+n.skill.join(", "):""}<br>`+
   ["g","o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{g:"accessible rooms",o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].join(", ")}`:"").filter(Boolean).join("<br>")}
 const zsvg=document.getElementById("zgraph"),zcv=document.getElementById("zmap"),zcx=zcv.getContext("2d");zcv.width=cv.width;zcv.height=cv.height;
-const title=n=>(D.rooms.find(r=>r.name==n)||{title:n}).title;
+let routeGroupData;
+const title=n=>routeGroupData?.groups[n]?.title||(D.rooms.find(r=>r.name==n)||{title:n}).title;
 
 function routeTree(names,links,start,choiceRooms=[]){
  const children=Object.fromEntries(names.map(r=>[r,[]])),parent={},depth={},queue=[];
@@ -417,54 +423,107 @@ function routeTree(names,links,start,choiceRooms=[]){
  const extra=links.filter(e=>pos[e.from]&&pos[e.to]&&parent[e.to]!==e.from);
  return {children,parent,pos,extra,aliases,links:displayLinks,names:queue,width:Math.max(500,leaf*230+40)};
 }
+function groupRoutes(roomData,regions,n,start){
+ const names=Object.keys(n.rooms),bosses=new Set(roomData.filter(r=>r.bosses?.length).map(r=>r.name));
+ const groupOf={},groups={},neighbors=Object.fromEntries(names.map(r=>[r,[]]));
+ n.links.forEach(e=>{if(neighbors[e.from]&&neighbors[e.to]){neighbors[e.from].push(e.to);neighbors[e.to].push(e.from)}});
+ names.forEach(seed=>{if(groupOf[seed])return;const id='group:'+seed,region=regions[seed]||seed,members=[],todo=[seed];groupOf[seed]=id;
+  while(todo.length){const r=todo.pop();members.push(r);
+   if(!bosses.has(seed))neighbors[r].forEach(next=>{if(!groupOf[next]&&!bosses.has(next)&&(regions[next]||next)===region){groupOf[next]=id;todo.push(next)}})
+  }
+  const boss=roomData.find(r=>r.name===seed);
+  groups[id]={title:bosses.has(seed)?boss.title||seed:region,rooms:members,boss:bosses.has(seed)};
+ });
+ const seen=new Set(),links=[];
+ n.links.forEach(e=>{const from=groupOf[e.from],to=groupOf[e.to],key=from+'|'+to;
+  if(from&&to&&from!==to&&!seen.has(key)){seen.add(key);links.push({...e,from,to})}
+ });
+ return {groups,groupOf,rooms:Object.fromEntries(Object.keys(groups).map(g=>[g,'g'])),links,start:groupOf[start]};
+}
+function compactRoutes(original,start,keepRooms=[],all=false){
+ const visible=new Set(original.names.filter(r=>all||r===start||original.children[r].length!==1||keepRooms.includes(r)||original.aliases[r]||Object.values(original.aliases).includes(r)));
+ const children=Object.fromEntries([...visible].map(r=>[r,[]])),parent={},links=[],pos={},names=[];
+ function connect(r,depth){names.push(r);
+  original.children[r].forEach(first=>{let target=first;const via=[];
+   while(!visible.has(target)){via.push(target);target=original.children[target][0]}
+   children[r].push(target);parent[target]=r;
+   const edge=original.links.find(e=>e.from===r&&e.to===first);
+   links.push({from:r,to:target,direction:edge?.direction||'route',via});connect(target,depth+1);
+  });
+ }
+ if(original.pos[start])connect(start,0);
+ let leaf=0;
+ function place(r,depth){children[r].forEach(c=>place(c,depth+1));const kids=children[r];
+  pos[r]={x:kids.length?(pos[kids[0]].x+pos[kids[kids.length-1]].x)/2:30+230*leaf++,y:30+90*depth};
+ }
+ if(names.length)place(start,0);
+ Object.entries(original.aliases).forEach(([copy,real])=>{if(pos[copy]&&pos[real])links.push({from:copy,to:real,sameStation:true,direction:'same station'})});
+ return {...original,names,children,parent,links,pos,width:Math.max(500,leaf*230+40)};
+}
 let routeZoom=1;
 function fitRoutes(){routeZoom=1;resizeRoutes()}
 function resizeRoutes(){
  const bounds=zsvg.getAttribute("viewBox").split(" ").map(Number);
- const width=Math.max(1,document.getElementById("route-viewport").clientWidth)*routeZoom;
- zsvg.style.width=width+"px";zsvg.style.height=(width*bounds[3]/bounds[2])+"px";
+ const availableWidth=Math.max(1,document.getElementById("route-viewport").clientWidth);
+ const availableHeight=Math.max(260,Math.min(640,window.innerHeight*.65));
+ const scale=Math.min(availableWidth/bounds[2],availableHeight/bounds[3])*routeZoom;
+ zsvg.style.width=(bounds[2]*scale)+"px";zsvg.style.height=(bounds[3]*scale)+"px";
+ zsvg.style.margin="0 auto";
 }
 document.getElementById("route-fit").onclick=fitRoutes;
 document.getElementById("route-in").onclick=()=>{routeZoom=Math.min(6,routeZoom*1.4);resizeRoutes()};
 document.getElementById("route-out").onclick=()=>{routeZoom=Math.max(1,routeZoom/1.4);resizeRoutes()};
 window.addEventListener("resize",()=>{if(zsvg.hasAttribute("viewBox"))resizeRoutes()});
-function zones(n){zsvg.innerHTML="";
+function zones(raw){zsvg.innerHTML="";
+ routeGroupData=groupRoutes(D.rooms,D.regions,raw,D.start);
+ const n=routeGroupData,root=n.start;
  const names=Object.keys(n.rooms).filter(r=>n.rooms[r]==="g").sort();
  const links=n.links.filter(e=>names.includes(e.from)&&names.includes(e.to));
- const choiceRooms=D.rooms.filter(r=>r.bosses?.length).map(r=>r.name);
- const tree=routeTree(names,links,D.start,choiceRooms),pos=tree.pos,width=tree.width;
+ const choiceRooms=Object.keys(n.groups).filter(g=>n.groups[g].boss);
+ const original=routeTree(names,links,root,choiceRooms);
+ const tree=compactRoutes(original,root,choiceRooms,true),pos=tree.pos,width=tree.width;
  zsvg.setAttribute("width",width);zsvg.setAttribute("height",Math.max(120,...Object.values(pos).map(p=>p.y+80)));
  const lineColors={};let nextColor=1;
  function colorBranch(r,color){lineColors[r]=color;tree.children[r].forEach((child,i)=>colorBranch(child,i===0?color:LINE_COLORS[nextColor++%LINE_COLORS.length]))}
- if(pos[D.start])colorBranch(D.start,LINE_COLORS[0]);
+ if(pos[root])colorBranch(root,LINE_COLORS[0]);
  const defs=el("defs",{},zsvg),marker=el("marker",{id:"arrow",viewBox:"0 0 10 10",refX:9,refY:5,markerWidth:6,markerHeight:6,orient:"auto"},defs);
  el("path",{d:"M0 0 L10 5 L0 10 z",fill:"#8a8a99"},marker);
- tree.links.filter(e=>pos[e.from]&&pos[e.to]).forEach(e=>{const a=pos[e.from],b=pos[e.to],back=tree.parent[e.to]!==e.from;
- const path=el("path",{class:back?"metro-return":"metro-route",d:back?`M${a.x+90},${a.y+20} C${a.x+200},${a.y-24} ${b.x+200},${b.y-24} ${b.x+90},${b.y+20}`:`M${a.x+90},${a.y+20} V${a.y+48} L${b.x+90},${b.y-8} V${b.y+20}`,fill:"none",stroke:back?"#a0a0b0":lineColors[e.to],"stroke-width":back?1.5:8,"stroke-linecap":"round","stroke-linejoin":"round","stroke-dasharray":back?"4 5":"none",opacity:back?.4:1},zsvg);
- const t=el("title",{},path);t.textContent=`${title(e.from)} → ${title(e.to)} (${e.direction})`});
+ tree.links.filter(e=>pos[e.from]&&pos[e.to]).forEach(e=>{const a=pos[e.from],b=pos[e.to],back=e.sameStation===true;
+ const path=el("path",{class:back?"metro-same-station":"metro-route","data-from":tree.aliases[e.from]||e.from,"data-to":tree.aliases[e.to]||e.to,d:back?`M${a.x+90},${a.y+20} C${a.x+200},${a.y-24} ${b.x+200},${b.y-24} ${b.x+90},${b.y+20}`:`M${a.x+90},${a.y+20} V${a.y+48} L${b.x+90},${b.y-8} V${b.y+20}`,fill:"none",stroke:back?"#a0a0b0":lineColors[e.to],"stroke-width":back?1.5:8,"stroke-linecap":"round","stroke-linejoin":"round","stroke-dasharray":back?"4 5":"none",opacity:back?.4:1},zsvg);
+ const t=el("title",{},path);t.textContent=back?`Same station: ${title(e.to)}`:`${title(e.from)} → ${(e.via||[]).map(title).concat([title(tree.aliases[e.to]||e.to)]).join(" → ")} (${e.direction})`});
+ // a choice is irreversible: one of its ways out can't reach another afterwards (taking it loses the other)
+ const reachOf={},reach=a=>{if(reachOf[a])return reachOf[a];const s=new Set([a]),todo=[a];
+  while(todo.length){const x=todo.pop();links.filter(e=>e.from===x).forEach(e=>{if(!s.has(e.to)){s.add(e.to);todo.push(e.to)}})}return reachOf[a]=s};
+ const real=x=>tree.aliases[x]||x;  // "↩ existing route" stubs stand for the room they point to
+ const isChoice=(kids)=>kids.some(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to))));
  tree.names.forEach(r=>{const p=pos[r],kids=tree.links.filter(e=>e.from===r&&tree.parent[e.to]===r),g=el("g",{style:"cursor:pointer"},zsvg);
- el("circle",{class:"metro-station","data-room":tree.aliases[r]||r,cx:p.x+90,cy:p.y+20,r:kids.length>1?9:7,fill:"#fff",stroke:kids.length>1?"#16161c":lineColors[r],"stroke-width":kids.length>1?4:3},g);
+ const choice=kids.length>1&&isChoice(kids);
+ el("circle",{class:"metro-station","data-room":tree.aliases[r]||r,cx:p.x+90,cy:p.y+20,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":lineColors[r],"stroke-width":choice?4:3},g);
  const t=el("text",{x:p.x+105,y:p.y+17,fill:"#eee",style:"font-size:11px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);t.textContent=title(tree.aliases[r]||r);
- const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:10px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);sub.textContent=tree.aliases[r]?"↩ existing route":kids.length>1?`${kids.length} route choices`:"";
- g.onclick=()=>zshow(n,tree.aliases[r]||r);const tt=el("title",{},g);tt.textContent=kids.map(e=>e.direction+": "+title(e.to)).join("\n")});
- document.getElementById("zhead").textContent=`World route choices, independent of Graph 1. Shows routes with gates open; it does not filter by boss or powerup selection. Choose which connected room to visit. Start at the root and follow colored metro lines, branching at each choice. Dashed links are returns or connections to an existing branch. Hover arrows for direction.`;
+ const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:10px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);const lost=kids.filter(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to)))).map(a=>title(real(a.to)));
+ sub.textContent=tree.aliases[r]?"same station":choice?`◆ ${kids.length} irreversible choices`:kids.length>1?`${kids.length} ways`:"";
+ g.onclick=()=>zshow(raw,tree.aliases[r]||r);const tt=el("title",{},g);tt.textContent="Rooms: "+n.groups[tree.aliases[r]||r].rooms.map(title).join(", ")+"\n"+kids.map(e=>e.direction+": "+title(tree.aliases[e.to]||e.to)).join("\n")});
+ document.getElementById("zhead").textContent=`Rooms are grouped by connected region; bosses remain separate to preserve their choices. ${tree.names.length} metro stops. Hover a stop for its rooms. Dashed lines connect duplicate appearances of the SAME group on distant branches—not travel or return routes. Graph 1 remains independent.`;
  // Include labels and return curves, not just station coordinates, in the fitted bounds.
  const bounds=zsvg.getBBox(),pad=20;
  zsvg.setAttribute("viewBox",[bounds.x-pad,bounds.y-pad,bounds.width+pad*2,bounds.height+pad*2].join(" "));
  fitRoutes();
- zshow(n,names.includes(D.start)?D.start:names[0]);
+ zshow(raw,root);
 }
 function zshow(n,room){
+ const members=new Set(routeGroupData?.groups[room]?.rooms||[room]);
  zsvg.querySelectorAll(".metro-station").forEach(c=>c.setAttribute("fill",c.getAttribute("data-room")===room?"#5fa8ff":"#fff"));
- const links=n.links.filter(e=>n.rooms[e.from]==="g"&&n.rooms[e.to]==="g"),ahead=new Set([room]),todo=[room];
+ const links=n.links.filter(e=>n.rooms[e.from]==="g"&&n.rooms[e.to]==="g"),ahead=new Set(members),todo=[...members];
  while(todo.length){const r=todo.pop();links.filter(e=>e.from===r).forEach(e=>{if(!ahead.has(e.to)){ahead.add(e.to);todo.push(e.to)}})}
  zcx.clearRect(0,0,zcv.width,zcv.height);
- D.rooms.forEach(r=>{const col=r.name===room?"#5fa8ff":ahead.has(r.name)?C.g:n.rooms[r.name]==="g"?C.r:"#44444f",ox=(r.x-minx)*S,oy=(r.y-miny)*S;
+ D.rooms.forEach(r=>{const col=members.has(r.name)?"#5fa8ff":ahead.has(r.name)?C.g:n.rooms[r.name]==="g"?C.r:"#44444f",ox=(r.x-minx)*S,oy=(r.y-miny)*S;
  zcx.globalAlpha=.35;zcx.fillStyle=col;zcx.fillRect(ox,oy,r.w*S,r.h*S);zcx.globalAlpha=1;
  for(let y=0;y<r.h;y++)for(let x=0;x<r.w;x++)if(r.tiles[y][x]==="1"){zcx.fillStyle="#2c2c36";zcx.fillRect(ox+x*S,oy+y*S,S,S)}
  zcx.strokeStyle=col;zcx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
  const info=document.getElementById("zinfo");info.replaceChildren();const head=document.createElement("b");head.textContent=title(room);info.append(head);
- links.filter(e=>e.from===room).forEach(e=>{const b=document.createElement("button");b.textContent=e.direction+" → "+title(e.to);b.style.cssText="display:block;margin:6px 0;padding:6px;cursor:pointer";b.onclick=()=>zshow(n,e.to);info.append(b)})}
+ const list=document.createElement("p");list.textContent=[...members].map(title).join(", ");info.append(list);
+ const destinations=new Set();
+ links.filter(e=>members.has(e.from)&&!members.has(e.to)).forEach(e=>{const target=routeGroupData.groupOf[e.to]||e.to;if(destinations.has(target))return;destinations.add(target);const b=document.createElement("button");b.textContent=e.direction+" → "+title(target);b.style.cssText="display:block;margin:6px 0;padding:6px;cursor:pointer";b.onclick=()=>zshow(n,target);info.append(b)})}
 drawTop();
 zones(D.routes);
 const fromHash=D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)));  // e.g. progression.html#ape+dash

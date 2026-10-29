@@ -24,6 +24,11 @@ func _ready() -> void:
 			check(screen.safe_spawn(screen.player.pos), mode + " playtest starts on safe ground")
 			var checkpoint = load("res://scripts/entities.gd").make(screen, {"t":"respawn","x":24,"y":160})
 			check(load("res://scripts/entities.gd").TYPES.spawn[3] == load("res://scripts/entities.gd").TYPES.respawn[3], "Spawn and legacy Respawn use identical checkpoint behavior")
+			var suspended = load("res://scripts/entities.gd").make(screen, {"t":"jumpthru","x":80,"y":80,"w":24,"h":8})
+			screen._register(suspended)
+			var previous_spawn: Vector2 = screen.spawn
+			screen.set_respawn(Vector2(84,80))
+			check(screen.spawn == previous_spawn and not screen.safe_spawn(Vector2(84,80)), "Suspended platforms cannot become checkpoint ground")
 			var particles_before: int = screen.parts.size()
 			screen.set_respawn(Vector2(60,168))
 			check(screen.parts.size() == particles_before, "Checkpoint activation creates no particle animation")

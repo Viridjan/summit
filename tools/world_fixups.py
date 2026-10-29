@@ -456,8 +456,8 @@ def add_respawns(world_dir):
                 plat |= {(ex + i, ey) for i in range(ew)}
             if e["t"] in HAZARD or e["t"] in SOLID_ENTS:
                 bad |= {(xx, yy) for yy in range(ey, ey + eh) for xx in range(ex, ex + ew)}
-        floor = lambda tx, ty: is_open(tx, ty) and is_open(tx, ty - 1) and (not is_open(tx, ty + 1) or (tx, ty + 1) in plat) \
-            and (tx, ty + 1) != (tx, h) and (tx, ty) not in bad and (tx, ty - 1) not in bad
+        from checkpoint_ground import solid_ground
+        floor = lambda tx, ty: solid_ground(L, tx*T, ty*T)
         runs = []
         for side in "lrtb":
             run = []
@@ -477,7 +477,7 @@ def add_respawns(world_dir):
             if side in "lr":
                 x = 1 if side == "l" else w - 2
                 y = max(ty for _, ty in run)  # the entry's lowest open row
-                spot = (x, y) if floor(x, y) else None
+                spot = next(((x, cy) for cy in range(y, h) if floor(x, cy)), None)
                 where = "%s entry, rows %d..%d" % ({"l": "left", "r": "right"}[side], run[0][1], run[-1][1])
             else:
                 x = run[len(run) // 2][0] if len(run) % 2 else run[len(run) // 2 - 1][0]

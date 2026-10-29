@@ -36,3 +36,37 @@ console.log(JSON.stringify(routeTree(['start','ape','left','right'],links,'start
         self.assertGreater(pos['right']['x'], pos['ape']['x'])
         self.assertEqual(pos['start']['x'], pos['ape']['x'])
         self.assertEqual(len(result['extra']), 3)
+
+    def test_compact_graph_collapses_chains_and_dashes_only_identical_stations(self):
+        source=Path('tools/progression.py').read_text()
+        tree=re.search(r'function routeTree\([^)]*\)\{.*?\n\}',source,re.S).group(0)
+        compact=re.search(r'function compactRoutes\([^)]*\)\{.*?\n\}',source,re.S)
+        self.assertIsNotNone(compact)
+        code=tree+'\n'+compact.group(0)+'''
+const links=[['start','hall'],['hall','fork'],['fork','left'],['fork','right'],['left','fork'],['right','fork']].map(([from,to])=>({from,to,direction:'right'}));
+const original=routeTree(['start','hall','fork','left','right'],links,'start',['left']);
+const result=compactRoutes(original,'start',['fork']);
+console.log(JSON.stringify(result));
+'''
+        result=json.loads(subprocess.check_output(['node','-e',code],text=True))
+        self.assertNotIn('hall',result['names'])
+        self.assertIn('start',result['names'])
+        self.assertIn('fork',result['names'])
+        for edge in result['links']:
+            if edge.get('sameStation'):
+                self.assertEqual(result['aliases'][edge['from']],edge['to'])
+
+    def test_grouping_combines_regions_but_preserves_boss_choice(self):
+        source=Path('tools/progression.py').read_text()
+        fn=re.search(r'function groupRoutes\([^)]*\)\{.*?\n\}',source,re.S)
+        self.assertIsNotNone(fn)
+        code=fn.group(0)+'''
+const rooms=[{name:'a'},{name:'b'},{name:'ape',bosses:['ape']},{name:'sand'}];
+const links=[['a','b'],['b','ape'],['ape','b'],['ape','sand']].map(([from,to])=>({from,to,direction:'right'}));
+const result=groupRoutes(rooms,{a:'Jungle',b:'Jungle',ape:'Jungle',sand:'Sand'}, {rooms:{a:'g',b:'g',ape:'g',sand:'g'},links},'a');
+console.log(JSON.stringify(result));
+'''
+        result=json.loads(subprocess.check_output(['node','-e',code],text=True))
+        self.assertEqual(result['groupOf']['a'],result['groupOf']['b'])
+        self.assertNotEqual(result['groupOf']['ape'],result['groupOf']['b'])
+        self.assertEqual(len(result['groups']),3)

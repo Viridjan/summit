@@ -305,3 +305,16 @@ world start is preserved. `tools/prune_respawns.py` previews changes by default,
 with `--apply` saving originals in `reports/respawn-cleanup/backup.json`. Entrance
 generation respects existing authored checkpoint sets rather than adding a
 second set, and new rooms use entrance coverage instead of a fixed room cap.
+
+**Solid-ground checkpoints (2026-10-30):** Suspended jump-through platforms
+do not count as checkpoint ground. Twelve affected points were moved onto safe
+terrain. Placement skips platforms and searches for permanent floor; runtime
+checkpoint activation requires solid terrain below the full standing footprint.
+
+**Shared checkpoint landings (2026-10-30):** Nearby entrances may share one
+checkpoint when a flat, hazard-free walk of at most six tiles connects them.
+Both endpoint checkpoints must have permanent terrain support; fixed bridges
+may support the walk. C6 retains its right `(160,48)` and distant left `(8,48)`
+points; the intermediate `(120,48)` point is removed. This supersedes the
+earlier fixed room caps. See [Respawn placement](RESPAWN_POINTS.md) for the
+automation command, conservative merge rules and backup behavior.

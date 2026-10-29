@@ -25,3 +25,23 @@ class PruneRespawns(unittest.TestCase):
         room={'entities':[{'t':'respawn','x':8,'y':80},{'t':'spawn','x':160,'y':80}]}
         prune(room,[(0,80)],keep_start=True)
         self.assertEqual(len(room['entities']),2)
+
+    def test_nearby_entrances_share_right_checkpoint_across_safe_bridge(self):
+        import json
+        room=json.loads(Path('worlds/story/c6_wall_cave.json').read_text())
+        room['entities'].append({'t':'respawn','x':120,'y':48})
+        prune(room,[(0,40),(168,40),(136,80)])
+        points=[(e['x'],e['y']) for e in room['entities'] if e['t'] in ('spawn','respawn')]
+        self.assertIn((160,48),points)
+        self.assertNotIn((120,48),points)
+        self.assertIn((8,48),points)
+
+    def test_bridge_with_hazard_or_gap_keeps_both_points(self):
+        import json
+        from prune_respawns import shared_landing
+        for blocked in ('water','gap'):
+            room=json.loads(Path('worlds/story/c6_wall_cave.json').read_text())
+            a={'t':'respawn','x':120,'y':48};b={'t':'respawn','x':160,'y':48}
+            if blocked=='water':room['entities'].append({'t':'water','x':136,'y':40,'w':8,'h':16})
+            else:room['entities']=[e for e in room['entities'] if not (e['t']=='jumpthru' and e['y']==56)]
+            self.assertFalse(shared_landing(room,a,b),blocked)

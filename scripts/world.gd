@@ -697,6 +697,7 @@ func update_stamina(dt: float) -> void:
 
 # Walking onto a Respawn slab: it becomes the respawn point (and the save's).
 func set_respawn(p: Vector2) -> void:
+	if not safe_spawn(p): return
 	spawn = p
 	if adventure():
 		spawn_room = room
@@ -707,10 +708,15 @@ func set_respawn(p: Vector2) -> void:
 # A respawn point is safe when the player standing there is out of water and acid, clear of spikes and on ground.
 func safe_spawn(p: Vector2) -> bool:
 	var body := Rect2i(int(p.x) - 4, int(p.y) - 11, 8, 11)
-	if liquid_at(body, "water") or liquid_at(body, "acid") or touching_spikes(body.grow(1)):
+	if collide_solid(body) != null or liquid_at(body, "water") or liquid_at(body, "acid") or touching_spikes(body.grow(1)):
 		return false
 	var feet := Rect2i(int(p.x) - 3, int(p.y), 6, 1)
-	return collide_solid(feet) != null or collide_jumpthru(feet) != null
+	var row := floori(p.y / T)
+	if row < 0 or row >= gh: return false
+	for x in range(feet.position.x, feet.end.x):
+		var column := floori(float(x) / T)
+		if column < 0 or column >= gw or tiles[row][column] != "1": return false
+	return true
 
 # Check whether the player centre is inside a water entity.
 func in_water() -> bool:

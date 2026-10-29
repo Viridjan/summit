@@ -130,3 +130,19 @@ Run audio checks with `godot --headless --path . --script tests/sfx.gd`.
 Start with [the beginner code guide](docs/CODE_GUIDE.md) for the file map, execution flow, Godot vocabulary, coordinate conventions and safe editing/testing workflow. First-party scripts, tests, tools and artwork previews include purpose and function comments.
 
 Development-assistant setup and installed skills are documented in [the skills installation report](docs/DEVELOPMENT_SKILLS.md).
+
+## Respawn checkpoints
+
+Use the room editor's **Respawn** tool on solid terrain. Checkpoints are invisible
+during play; suspended platforms do not count as ground. Nearby entrances can
+share a checkpoint when connected by a short, safe walk.
+
+Preview redundant-point cleanup with:
+
+```sh
+python3 tools/prune_respawns.py worlds/story --output reports/checkpoint-review
+```
+
+Add `--apply` to save changes with a backup. Use `--rooms c6_wall_cave` for one
+room. See [Respawn placement and automated cleanup](docs/RESPAWN_POINTS.md) for
+merge rules, report files and validation commands.
