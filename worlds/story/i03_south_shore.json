@@ -68,18 +68,20 @@
 		},
 		{
 			"attacks": [
-				"charge",
-				"leap"
+				"shoot"
 			],
-			"facing": 1,
-			"look": "enemy_mosstrot",
-			"move": "patrol",
+			"facing": -1,
+			"look": "enemy_bat",
+			"move": "hover",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 1,
-			"traits": [],
-			"x": 167,
-			"y": 126
+			"tier": 2,
+			"traits": [
+				"brood",
+				"venom"
+			],
+			"x": 103,
+			"y": 54
 		},
 		{
 			"attacks": [
@@ -92,8 +94,8 @@
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 119,
-			"y": 54
+			"x": 151,
+			"y": 110
 		}
 	],
 	"environment": "island_shore",

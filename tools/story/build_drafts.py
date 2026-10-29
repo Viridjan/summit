@@ -3,7 +3,8 @@
 
     python3 tools/story/build_drafts.py [world_dir] [--seed N] [--extra K] [--dry]
 
-A draft is a room whose file has "draft": true (World Editor > Add > empty room). Place drafts where you want them;
+A draft is a room whose file has "draft": true (World Editor > Add > empty room). "attach": [room, ...] lets it open a
+doorway into a finished neighbour whose shared edge is closed. Place drafts where you want them;
 rooms that touch along an edge (3+ tiles) can be linked. Then:
 
 1. Maze: a random spanning tree over the drafts, so there is exactly one way into each (the base pattern). A
@@ -20,7 +21,7 @@ rooms that touch along an edge (3+ tiles) can be linked. Then:
 It finishes with world_fixups' edge sealing and entrance spawns (not its unreachable-room sweep). The World Editor's
 "Build drafts" button runs it on the open world.
 """
-import json, os, random, sys, tempfile
+import json, os, random, sys, tempfile, zlib
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from world_check import World, MODELS, explore
 
@@ -69,6 +70,47 @@ def open_cells(W, rooms, name, edge):
     return out
 
 
+# Open a DOOR-wide doorway in finished room `name` on border e, carving rock only until open space (at most 5
+# cells deep) and only where the way in has a floor; returns the span or None. Used for a draft's "attach" list.
+def open_doorway(W, rooms, name, e, rng):
+    ox, oy = W["rooms"][name]
+    lvl = rooms[name]
+    t = [list(row) for row in lvl["tiles"]]
+    kind, at, lo, hi, first = e
+    inward = -1 if first == name else 1  # direction from the border into the finished room
+    best = []
+    for s in range(lo + 1, hi - DOOR - 1):
+        depth = None
+        for k in range(5):
+            if kind == "x":
+                x = (at - 1 - k if first == name else at + k) - ox
+                rows = [v - oy for v in range(s, s + DOOR)]
+                if all(t[y][x] == "0" for y in rows) and t[rows[-1] + 1][x] == "1":
+                    depth = k
+                    break
+            else:
+                y = (at - 1 - k if first == name else at + k) - oy
+                cols = [v - ox for v in range(s, s + DOOR)]
+                if all(t[y][x] == "0" for x in cols):
+                    depth = k
+                    break
+        if depth is not None:
+            best.append((depth, s))
+    if not best:
+        return None
+    depth = min(b[0] for b in best)
+    s = rng.choice([b[1] for b in best if b[0] == depth])
+    for k in range(depth):
+        for v in range(s, s + DOOR):
+            if kind == "x":
+                t[v - oy][(at - 1 - k if first == name else at + k) - ox] = "0"
+            else:
+                t[(at - 1 - k if first == name else at + k) - oy][v - ox] = "0"
+    lvl["tiles"] = ["".join(row) for row in t]
+    lvl["_changed"] = True
+    return (s, s + DOOR)
+
+
 def maze(W, rooms, drafts, rng, extra):
     links = {}  # frozenset(a, b) -> {"edge", "gate", "span": (lo, hi) world cells of the doorway}
     finished_exits = []
@@ -79,8 +121,22 @@ def maze(W, rooms, drafts, rng, extra):
             e = border(W, rooms, d, n)
             if e:
                 cells = open_cells(W, rooms, n, e)
-                if len(cells) >= 2:
-                    finished_exits.append((d, n, e, (min(cells), max(cells) + 1)))
+                runs, run = [], []
+                for c in cells:  # contiguous runs of open cells; a doorway uses up to 5 of the longest
+                    if run and c != run[-1] + 1:
+                        runs.append(run)
+                        run = []
+                    run.append(c)
+                if run:
+                    runs.append(run)
+                run = max(runs, key=len) if runs else []
+                if len(run) >= 2:
+                    a = run[0] + max(0, (len(run) - 5) // 2)
+                    finished_exits.append((d, n, e, (a, min(run[-1] + 1, a + 5))))
+                elif n in rooms[d].get("attach", []):
+                    span = open_doorway(W, rooms, n, e, rng)
+                    if span:
+                        finished_exits.append((d, n, e, span))
     pairs = [(a, b, border(W, rooms, a, b)) for i, a in enumerate(drafts) for b in drafts[i + 1:]]
     pairs = [p for p in pairs if p[2]]
     rng.shuffle(pairs)
@@ -175,12 +231,12 @@ def build_room(name, lvl, pos, doors, rng):
                 else:
                     for yy in range(floor + 1, h):
                         carve(t, x, yy)
-            targets.append((lo + 1, 1 if side == "T" else h - 1, gate))
+            targets.append((lo + 1, 0 if side == "T" else h - 1, gate))
             if gate == "attack":  # plug the shaft with a breakable wall (in the lower room's roof)
                 if side == "T":
                     ents.append({"t": "breakwall", "x": lo * T, "y": 0, "w": (hi - lo) * T, "h": 2 * T})
             if side == "T":  # a one-way ledge under a doorway in the roof
-                plats.append((lo, hi, 2))
+                plats.append((lo, hi, 1))  # standing on it, the floor of the room above is a 3-tile jump
     # stepping platforms up to every raised target: a staircase of 3-wide ledges, rising 3 at a time
     for tx, ty, gate in targets:
         if gate == "climb" or ty >= floor - 2:
@@ -262,7 +318,7 @@ def main():
             else:
                 doors.append(("B" if first == name else "T", s0 - ox, s1 - ox, v["gate"]))
         for tries in range(20):
-            tiles, ents, targets = build_room(name, lvl, (ox, oy), doors, random.Random(seed * 1000 + tries + hash(name) % 997))
+            tiles, ents, targets = build_room(name, lvl, (ox, oy), doors, random.Random(seed * 1000 + tries + zlib.crc32(name.encode()) % 997))
             trial = dict(lvl, tiles=tiles, entities=ents)
             if check_room(name, trial, targets):
                 break
@@ -285,7 +341,12 @@ def main():
         print("dry run: nothing written")
         return
     for name in drafts:
+        rooms[name].pop("attach", None)
         json.dump(rooms[name], open(os.path.join(d, name + ".json"), "w"), indent="\t")
+    for name, lvl in rooms.items():  # finished rooms that got a doorway for an attached draft
+        if lvl.pop("_changed", False):
+            json.dump(lvl, open(os.path.join(d, name + ".json"), "w"), indent="\t")
+            print("opened a doorway in", name)
     json.dump(W, open(os.path.join(d, "world.json"), "w"), indent="\t")
     import world_fixups  # close edges that lead nowhere and add entrance spawns (not the unreachable-room sweep)
     world_fixups.seal_edges(d)

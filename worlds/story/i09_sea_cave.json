@@ -64,17 +64,19 @@
 		},
 		{
 			"attacks": [
-				"lob"
+				"dive"
 			],
-			"facing": -1,
-			"look": "enemy_murkspore",
-			"move": "hop",
+			"facing": 1,
+			"look": "enemy_fuzzbob",
+			"move": "hover",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
+			"tier": 1,
+			"traits": [
+				"venom"
+			],
 			"x": 79,
-			"y": 150
+			"y": 134
 		}
 	],
 	"environment": "volcanic_cave",

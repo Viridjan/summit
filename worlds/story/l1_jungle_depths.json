@@ -80,8 +80,8 @@
 			"attacks": [
 				"charge"
 			],
-			"facing": 1,
-			"look": "enemy_thornmite",
+			"facing": -1,
+			"look": "enemy_cragjaw",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
@@ -92,7 +92,7 @@
 		},
 		{
 			"attacks": [
-				"charge"
+				"leap"
 			],
 			"facing": -1,
 			"look": "enemy_cragjaw",
@@ -101,22 +101,22 @@
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 215,
-			"y": 142
+			"x": 271,
+			"y": 102
 		},
 		{
 			"attacks": [
 				"charge"
 			],
-			"facing": 1,
-			"look": "enemy_cragjaw",
+			"facing": -1,
+			"look": "enemy_thornmite",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 311,
-			"y": 102
+			"x": 215,
+			"y": 142
 		}
 	],
 	"environment": "forest",

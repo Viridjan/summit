@@ -34,17 +34,19 @@
 		},
 		{
 			"attacks": [
-				"dive"
+				"charge"
 			],
-			"facing": -1,
-			"look": "enemy_skree",
-			"move": "hover",
+			"facing": 1,
+			"look": "enemy_murkspore",
+			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
+			"tier": 1,
+			"traits": [
+				"swift"
+			],
 			"x": 255,
-			"y": 14
+			"y": 30
 		}
 	],
 	"environment": "volcanic_cave",

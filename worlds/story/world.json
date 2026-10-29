@@ -2,6 +2,27 @@
 	"abilities": [],
 	"regions": [
 		{
+			"name": "Landing",
+			"color": "#e0d070",
+			"rooms": [
+				"hub_landing"
+			],
+			"sign": "Virgo",
+			"peaceful": true
+		},
+		{
+			"name": "Western Wilds",
+			"color": "#c06040",
+			"rooms": [
+				"w1_wilds_gate",
+				"w2_wilds_hollow",
+				"w3_wilds_roots",
+				"w4_wilds_den",
+				"w5_wilds_drop"
+			],
+			"sign": "Sagittarius"
+		},
+		{
 			"color": "#7fc4e8",
 			"name": "Meadow",
 			"rooms": [
@@ -110,7 +131,8 @@
 				"i14_vent_shaft",
 				"i15_quiet_refuge",
 				"i16_guardian_chamber",
-				"i17_crystal_pocket"
+				"i17_crystal_pocket",
+				"x1_serpent_lair"
 			],
 			"sign": "Scorpio"
 		}
@@ -275,9 +297,37 @@
 		"t1_cove_town": [
 			240,
 			53
+		],
+		"hub_landing": [
+			-40,
+			0
+		],
+		"w1_wilds_gate": [
+			-80,
+			0
+		],
+		"w2_wilds_hollow": [
+			-120,
+			0
+		],
+		"w3_wilds_roots": [
+			-80,
+			23
+		],
+		"w4_wilds_den": [
+			-120,
+			23
+		],
+		"w5_wilds_drop": [
+			-40,
+			23
+		],
+		"x1_serpent_lair": [
+			740,
+			131
 		]
 	},
-	"start": "m1_meadow",
+	"start": "hub_landing",
 	"variants": {
 		"a1_ape_arena": [
 			{

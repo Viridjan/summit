@@ -28,17 +28,17 @@
 		},
 		{
 			"attacks": [
-				"dive"
+				"leap"
 			],
 			"facing": 1,
-			"look": "enemy_skree",
-			"move": "hover",
+			"look": "enemy_cragjaw",
+			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 167,
-			"y": 38
+			"x": 175,
+			"y": 54
 		}
 	],
 	"environment": "island_shore",

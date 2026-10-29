@@ -70,16 +70,16 @@
 		},
 		{
 			"attacks": [
-				"charge"
+				"shoot"
 			],
 			"facing": 1,
-			"look": "enemy_mosstrot",
+			"look": "enemy_skeleton",
 			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 143,
+			"x": 151,
 			"y": 86
 		}
 	],

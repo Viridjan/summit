@@ -22,18 +22,17 @@
 		},
 		{
 			"attacks": [
-				"dive",
-				"lob"
+				"leap"
 			],
-			"facing": 1,
-			"look": "enemy_skree",
-			"move": "hover",
+			"facing": -1,
+			"look": "enemy_hornback",
+			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 1,
+			"tier": 0,
 			"traits": [],
-			"x": 135,
-			"y": 78
+			"x": 223,
+			"y": 94
 		},
 		{
 			"attacks": [
@@ -46,7 +45,7 @@
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 55,
+			"x": 143,
 			"y": 94
 		}
 	],

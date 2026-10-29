@@ -28,32 +28,19 @@
 		},
 		{
 			"attacks": [
-				"charge"
+				"shoot"
 			],
-			"facing": -1,
-			"look": "enemy_thornmite",
-			"move": "hop",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
-			"x": 87,
-			"y": 94
-		},
-		{
-			"attacks": [
-				"charge",
-				"leap"
-			],
-			"facing": -1,
-			"look": "enemy_mosstrot",
-			"move": "patrol",
+			"facing": 1,
+			"look": "enemy_bat",
+			"move": "hover",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 1,
-			"traits": [],
-			"x": 167,
-			"y": 70
+			"traits": [
+				"brood"
+			],
+			"x": 143,
+			"y": 78
 		}
 	],
 	"environment": "island_shore",

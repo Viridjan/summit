@@ -27,8 +27,7 @@ class BuildDrafts(unittest.TestCase):
                 self.assertNotIn("draft", json.load(open(os.path.join(d, n + ".json"))))
             W = World(d)
             ox, oy = rooms["r00"]
-            start = next((ox + x, oy + y) for y in range(22, 0, -1) for x in range(1, 39)
-                         if not W.S(ox + x, oy + y) and W.S(ox + x, oy + y + 1))
+            start = W.spawn  # an entrance spawn of the start room (world_fixups)
             ground, _ = explore(W, MODELS["cautious"], set(), [start])
             self.assertEqual(set(rooms_of(W, ground)), set(rooms))  # no abilities: every room reachable
 

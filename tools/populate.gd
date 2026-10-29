@@ -153,6 +153,8 @@ func solid(lvl: Dictionary, x: int, y: int) -> bool:
 # Floor cells (the open cell just above solid ground) where a monster can stand: a flat run of 3, two open rows
 # above, away from the edges (doorways) and 3 tiles from liquids, spikes, spawn points and other enemies; spaced 8 apart.
 func spots_in(lvl: Dictionary) -> Array:
+	if lvl.get("arena", false):
+		return []  # a boss arena waiting for its boss
 	for e in lvl.entities:
 		if e.t.begins_with("boss") or e.t.begins_with("ape") or e.t in ["auto_walk", "building", "house_door"]:
 			return []  # boss arenas and towns: none

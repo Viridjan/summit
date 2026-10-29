@@ -73,14 +73,16 @@
 				"shoot"
 			],
 			"facing": -1,
-			"look": "enemy_skeleton",
-			"move": "patrol",
+			"look": "enemy_bat",
+			"move": "hover",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
+			"tier": 1,
+			"traits": [
+				"brood"
+			],
 			"x": 103,
-			"y": 326
+			"y": 310
 		}
 	],
 	"environment": "cavern_deep",

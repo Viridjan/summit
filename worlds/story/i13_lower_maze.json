@@ -116,46 +116,44 @@
 		},
 		{
 			"attacks": [
-				"dive",
-				"lob"
+				"leap"
 			],
-			"facing": -1,
-			"look": "enemy_skree",
-			"move": "hover",
+			"facing": 1,
+			"look": "enemy_cragjaw",
+			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 1,
+			"tier": 0,
 			"traits": [],
-			"x": 255,
-			"y": 102
+			"x": 103,
+			"y": 150
+		},
+		{
+			"attacks": [
+				"leap"
+			],
+			"facing": -1,
+			"look": "enemy_hornback",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 263,
+			"y": 118
 		},
 		{
 			"attacks": [
 				"lob"
 			],
-			"facing": 1,
+			"facing": -1,
 			"look": "enemy_thornmite",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 55,
-			"y": 150
-		},
-		{
-			"attacks": [
-				"charge",
-				"shoot"
-			],
-			"facing": -1,
-			"look": "enemy_thornmite",
-			"move": "hop",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 1,
-			"traits": [],
-			"x": 159,
+			"x": 199,
 			"y": 118
 		}
 	],

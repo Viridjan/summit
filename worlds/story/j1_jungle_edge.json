@@ -76,16 +76,16 @@
 		},
 		{
 			"attacks": [
-				"charge"
+				"shoot"
 			],
 			"facing": 1,
-			"look": "enemy_thornmite",
-			"move": "hop",
+			"look": "enemy_skeleton",
+			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 71,
+			"x": 95,
 			"y": 118
 		}
 	],

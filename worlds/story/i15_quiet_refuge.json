@@ -19,19 +19,17 @@
 		},
 		{
 			"attacks": [
-				"dive"
+				"lob"
 			],
 			"facing": 1,
-			"look": "enemy_skree",
-			"move": "hover",
+			"look": "enemy_thornmite",
+			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 1,
-			"traits": [
-				"giant"
-			],
-			"x": 82,
-			"y": 68
+			"tier": 0,
+			"traits": [],
+			"x": 103,
+			"y": 94
 		}
 	],
 	"environment": "volcanic_cave",

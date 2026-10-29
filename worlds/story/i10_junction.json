@@ -14,19 +14,16 @@
 		},
 		{
 			"attacks": [
-				"charge",
-				"shoot"
+				"lob"
 			],
 			"facing": -1,
-			"look": "enemy_thornmite",
+			"look": "enemy_murkspore",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 2,
-			"traits": [
-				"armored"
-			],
-			"x": 95,
+			"tier": 0,
+			"traits": [],
+			"x": 167,
 			"y": 94
 		}
 	],
