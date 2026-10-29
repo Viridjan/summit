@@ -45,18 +45,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 56,
-			"y": 224,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 48,
-			"y": 152,
-			"entrance": true
-		},
-		{
 			"t": "jumpthru",
 			"x": 72,
 			"y": 208,

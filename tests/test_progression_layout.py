@@ -7,6 +7,18 @@ import unittest
 
 
 class BranchLayout(unittest.TestCase):
+    def test_route_graph_is_independent_of_unlock_selection(self):
+        import sys
+        sys.path.insert(0, str(Path('tools').resolve()))
+        import progression
+        nodes = [{"abilities": [], "links": []},
+                 {"abilities": ["ape"], "links": [{"from": "start", "to": "sand", "direction": "right"}]}]
+        routes = progression.route_graph([{"name":"start"}, {"name":"sand"}], nodes)
+        self.assertEqual(set(routes["rooms"]), {"start", "sand"})
+        self.assertEqual(routes["links"], nodes[1]["links"])
+        self.assertNotIn("abilities", routes)
+        self.assertNotIn('show=function(n){show0(n);zones(n)}', progression.TEMPLATE)
+
     def test_start_is_root_and_choices_split_without_return_branches(self):
         source = Path('tools/progression.py').read_text()
         match = re.search(r'function routeTree\(names,links,start[^)]*\)\{.*?\n\}', source, re.S)

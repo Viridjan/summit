@@ -7,12 +7,6 @@
 			"y": 32
 		},
 		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 16,
-			"y": 96
-		},
-		{
 			"h": 8,
 			"t": "jumpthru",
 			"w": 32,

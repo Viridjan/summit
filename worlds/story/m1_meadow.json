@@ -3,12 +3,6 @@
 		{
 			"entrance": true,
 			"t": "spawn",
-			"x": 8,
-			"y": 88
-		},
-		{
-			"entrance": true,
-			"t": "spawn",
 			"x": 624,
 			"y": 88
 		},

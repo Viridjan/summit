@@ -8,6 +8,8 @@ import itertools
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from world_fixups import prune_spawns
 
 SHORES = {"west":"i01_west_shore","north":"i02_north_shore",
           "south":"i03_south_shore","east":"i08_east_shore"}
@@ -84,6 +86,7 @@ def apply(directory):
                 to=SHORES[target]+":"+panel_id(target,side),direction=target,label=target.title()+" Shore"))
             spawn=dict(t="spawn",x=x*8+4,y=(floor-1)*8,entrance=True,shore_panel=True)
             room["entities"].append(spawn)
+        prune_spawns(room)
         changed.add(name)
     # Preserve the mountain link at West Shore's new eastern edge. Its complete
     # volcano/maze block moves together, retaining the existing tunnel and routes.

@@ -12,24 +12,6 @@
 			"y": 136
 		},
 		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 8,
-			"y": 32
-		},
-		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 304,
-			"y": 144
-		},
-		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 56,
-			"y": 160
-		},
-		{
 			"h": 8,
 			"t": "jumpthru",
 			"w": 24,

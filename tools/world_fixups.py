@@ -14,8 +14,8 @@
 #    turn back to acid. Door links count as connections; a pool covering a door is always water.
 # 4. drop_unreachable: rooms the player can't reach from the start (through open space and doors, acid counts as
 #    a wall) are deleted, with any doors leading into them.
-# 5. add_spawns: a spawn marker near every entrance of every room, so dying or pressing Retry puts the
-#    player back at the way they came in (World.enter_room picks the spawn closest to the entry point).
+# 5. add_spawns: safe entrance candidates, pruned to one point per ordinary room or two for long/tall rooms.
+#    Authored checkpoints are retained; World.enter_room picks the closest safe point.
 # An entrance is an open stretch of a room's edge that continues into another room, or a door.
 # The spawn is the nearest spot inside the room, by path through open tiles, where the player stands on ground with
 # 2 tiles of headroom, away from hazards. Generated markers carry "entrance": true and are replaced on every run.
@@ -337,6 +337,20 @@ def drop_unreachable(world_dir):
     print(f"{world_dir}: {len(gone)} rooms that can't be reached removed {gone}")
 
 
+def prune_spawns(level):
+    """Preserve authored checkpoints; cap generated points and keep them apart."""
+    authored = [e for e in level["entities"] if e["t"] == "spawn" and not e.get("entrance")]
+    candidates = [e for e in level["entities"] if e["t"] == "spawn" and e.get("entrance")]
+    budget = 2 if level["w"] >= 80 or level["h"] >= 40 else 1
+    kept = list(authored)
+    distance = lambda a,b: abs(a["x"]-b["x"]) + abs(a["y"]-b["y"])
+    while candidates and len(kept) < budget:
+        pick = max(candidates, key=lambda e: min(distance(e,k) for k in kept)) if kept else candidates[0]
+        candidates.remove(pick)
+        if all(distance(pick,k) >= 64 for k in kept): kept.append(pick)
+    level["entities"] = [e for e in level["entities"] if e["t"] != "spawn" or not e.get("entrance") or any(e is k for k in kept)]
+
+
 # Add room entry spawn markers derived from the available passages.
 def add_spawns(world_dir):
     W = json.load(open(os.path.join(world_dir, "world.json")), parse_float=unit)
@@ -403,7 +417,8 @@ def add_spawns(world_dir):
                 spots.append(found)
         # before any hand-placed spawn: the world uses the last spawn in the list as the level start
         L["entities"] = [{"t": "spawn", "x": sx * T, "y": sy * T, "entrance": True} for sx, sy in spots] + L["entities"]
-        total += len(spots)
+        prune_spawns(L)
+        total += sum(e["t"] == "spawn" and e.get("entrance", False) for e in L["entities"])
         with open(os.path.join(world_dir, n + ".json"), "w") as f:
             json.dump(L, f, indent="\t" if pretty else None, separators=None if pretty else (",", ":"))
     print(f"{world_dir}: {total} entrance spawns in {len(rooms)} rooms")

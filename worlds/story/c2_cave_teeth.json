@@ -7,12 +7,6 @@
 			"y": 104
 		},
 		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 304,
-			"y": 104
-		},
-		{
 			"t": "spikes_up",
 			"x": 48,
 			"y": 120

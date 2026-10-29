@@ -259,3 +259,19 @@ choice without duplicating whole routes or creating infinite loops.
 
 The rooted choices graph retains metro styling: thick colored routes, circular
 stations and dark interchange rings at forks; return links stay dashed.
+
+**Independent progression graphs:** Graph 1 selects boss/powerup accessibility
+states. Graph 2 independently displays world route topology with modeled gates
+open. Neither graph’s selection changes the other graph or its map. Both retain
+metro styling and Graph 2 retains the rooted branching layout.
+
+The route metro graph uses the full page width and fits its actual SVG content
+bounds, including labels and return curves. Fit/zoom controls and a dedicated
+scrolling viewport keep branches accessible on smaller screens.
+
+**Respawn density (2026-10-29):** Generated entrance markers are capped at one
+per ordinary room, two in rooms at least 80 tiles wide or 40 tiles tall. Authored
+checkpoints are preserved and count toward the cap. Generated points stay at
+least eight tiles apart; the second favors the far end. Both `add_spawns` and
+the shore-link generator apply this policy. The cleanup backup and safety audit
+are in `reports/respawn-review/`; room terrain and other objects were retained.

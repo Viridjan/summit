@@ -248,6 +248,13 @@ def _node(W, base, walls, ab, survey_result, nodes, order, unplaced):
         return [ab | {a} for a in choices + nodes[ab]["unplaced"]]
 
 
+def route_graph(rooms, nodes):
+    """Static route topology, with all modeled gates open; no selected unlock state."""
+    links = {(e["from"], e["to"], e["direction"]) for node in nodes for e in node["links"]}
+    return dict(rooms={r["name"]: "g" for r in rooms},
+                links=[dict(zip(("from", "to", "direction"), edge)) for edge in sorted(links)])
+
+
 def page(W, nodes, order):
     room_list = []
     for name, (ox, oy, lvl) in W.rooms.items():
@@ -280,7 +287,7 @@ def page(W, nodes, order):
                               parents=["+".join(sorted(p)) or "start" for p in order if p < ab and len(p) == len(ab) - 1],
                               rooms=n["rooms"], marks=marks, choices=n["choices"], skill=n["skill"], opened=opened,
                               unplaced=n["unplaced"], zones=n["zones"], first=n["first"], links=n["links"]))
-    data = json.dumps(dict(rooms=room_list, regions=regions, nodes=out_nodes, start=W.room_of.get(W.spawn)))
+    data = json.dumps(dict(rooms=room_list, regions=regions, nodes=out_nodes, routes=route_graph(room_list, out_nodes), start=W.room_of.get(W.spawn)))
     return TEMPLATE.replace("/*DATA*/", data)
 
 
@@ -296,13 +303,17 @@ h1{font-size:18px;margin:0 0 4px} p{color:var(--dim);margin:0 0 12px}
 svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2a2a38;stroke:var(--line)}
 .node.sel rect{stroke:var(--fg);stroke-width:2} .edge{stroke:var(--line);stroke-width:2;fill:none}
 .legend span{display:inline-block;margin-right:12px} .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+#route-card{grid-column:1 / -1}
+#route-viewport{overflow:auto;max-height:80vh;margin-top:10px}
+#zgraph{display:block;max-width:none}
+.route-controls button{cursor:pointer;padding:5px 10px}
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
 #info{margin-top:8px;color:var(--dim)} #info b{color:var(--fg)}
 </style></head><body><main>
-<section class="card"><h1>Graph 1 · Unlocks <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Bosses beaten and powerups collected determine all accessible rooms. Both branches after a gate count as accessible, regardless of which route you take. Select a state to inspect its rooms and update Graph 2.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
+<section class="card"><h1>Graph 1 · Unlocks <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Bosses beaten and powerups collected determine all accessible rooms. Both branches after a gate count as accessible, regardless of which route you take. Select a state to inspect its accessible rooms. This graph has its own selection and map.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
-<section class="card"><h1>Graph 2 · Route choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><svg id="zgraph"></svg></section>
+<section class="card" id="route-card"><h1>Graph 2 · Route choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><div class="route-controls"><button id="route-fit">Fit graph</button> <button id="route-in">Zoom +</button> <button id="route-out">Zoom −</button></div><div id="route-viewport"><svg id="zgraph"></svg></div></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
 <canvas id="zmap"></canvas><div id="zinfo"></div></section></main>
 <script>
@@ -382,7 +393,7 @@ function show(n){mark(boxes,D.nodes.indexOf(n));
   ["g","o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{g:"accessible rooms",o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].join(", ")}`:"").filter(Boolean).join("<br>")}
 const zsvg=document.getElementById("zgraph"),zcv=document.getElementById("zmap"),zcx=zcv.getContext("2d");zcv.width=cv.width;zcv.height=cv.height;
 const title=n=>(D.rooms.find(r=>r.name==n)||{title:n}).title;
-let selectedState;
+
 function routeTree(names,links,start,choiceRooms=[]){
  const children=Object.fromEntries(names.map(r=>[r,[]])),parent={},depth={},queue=[];
  if(names.includes(start)){depth[start]=0;queue.push(start)}
@@ -406,10 +417,21 @@ function routeTree(names,links,start,choiceRooms=[]){
  const extra=links.filter(e=>pos[e.from]&&pos[e.to]&&parent[e.to]!==e.from);
  return {children,parent,pos,extra,aliases,links:displayLinks,names:queue,width:Math.max(500,leaf*230+40)};
 }
-function zones(n){selectedState=n;zsvg.innerHTML="";
+let routeZoom=1;
+function fitRoutes(){routeZoom=1;resizeRoutes()}
+function resizeRoutes(){
+ const bounds=zsvg.getAttribute("viewBox").split(" ").map(Number);
+ const width=Math.max(1,document.getElementById("route-viewport").clientWidth)*routeZoom;
+ zsvg.style.width=width+"px";zsvg.style.height=(width*bounds[3]/bounds[2])+"px";
+}
+document.getElementById("route-fit").onclick=fitRoutes;
+document.getElementById("route-in").onclick=()=>{routeZoom=Math.min(6,routeZoom*1.4);resizeRoutes()};
+document.getElementById("route-out").onclick=()=>{routeZoom=Math.max(1,routeZoom/1.4);resizeRoutes()};
+window.addEventListener("resize",()=>{if(zsvg.hasAttribute("viewBox"))resizeRoutes()});
+function zones(n){zsvg.innerHTML="";
  const names=Object.keys(n.rooms).filter(r=>n.rooms[r]==="g").sort();
  const links=n.links.filter(e=>names.includes(e.from)&&names.includes(e.to));
- const choiceRooms=D.rooms.filter(r=>r.bosses?.some(b=>n.abilities.includes(b))).map(r=>r.name);
+ const choiceRooms=D.rooms.filter(r=>r.bosses?.length).map(r=>r.name);
  const tree=routeTree(names,links,D.start,choiceRooms),pos=tree.pos,width=tree.width;
  zsvg.setAttribute("width",width);zsvg.setAttribute("height",Math.max(120,...Object.values(pos).map(p=>p.y+80)));
  const lineColors={};let nextColor=1;
@@ -425,7 +447,11 @@ function zones(n){selectedState=n;zsvg.innerHTML="";
  const t=el("text",{x:p.x+105,y:p.y+17,fill:"#eee",style:"font-size:11px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);t.textContent=title(tree.aliases[r]||r);
  const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:10px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);sub.textContent=tree.aliases[r]?"↩ existing route":kids.length>1?`${kids.length} route choices`:"";
  g.onclick=()=>zshow(n,tree.aliases[r]||r);const tt=el("title",{},g);tt.textContent=kids.map(e=>e.direction+": "+title(e.to)).join("\n")});
- document.getElementById("zhead").textContent=`With ${n.abilities.map(nm).join(" + ")||"no unlocks"}: choose which connected room to visit. Start at the root and follow colored metro lines, branching at each choice. Dashed links are returns or connections to an existing branch. Hover arrows for direction.`;
+ document.getElementById("zhead").textContent=`World route choices, independent of Graph 1. Shows routes with gates open; it does not filter by boss or powerup selection. Choose which connected room to visit. Start at the root and follow colored metro lines, branching at each choice. Dashed links are returns or connections to an existing branch. Hover arrows for direction.`;
+ // Include labels and return curves, not just station coordinates, in the fitted bounds.
+ const bounds=zsvg.getBBox(),pad=20;
+ zsvg.setAttribute("viewBox",[bounds.x-pad,bounds.y-pad,bounds.width+pad*2,bounds.height+pad*2].join(" "));
+ fitRoutes();
  zshow(n,names.includes(D.start)?D.start:names[0]);
 }
 function zshow(n,room){
@@ -439,8 +465,8 @@ function zshow(n,room){
  zcx.strokeStyle=col;zcx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
  const info=document.getElementById("zinfo");info.replaceChildren();const head=document.createElement("b");head.textContent=title(room);info.append(head);
  links.filter(e=>e.from===room).forEach(e=>{const b=document.createElement("button");b.textContent=e.direction+" → "+title(e.to);b.style.cssText="display:block;margin:6px 0;padding:6px;cursor:pointer";b.onclick=()=>zshow(n,e.to);info.append(b)})}
-const show0=show;show=function(n){show0(n);zones(n)};
 drawTop();
+zones(D.routes);
 const fromHash=D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)));  // e.g. progression.html#ape+dash
 if(fromHash){ASSUME.clear();fromHash.abilities.filter(a=>FREE.includes(a)).forEach(a=>ASSUME.add(a));box.querySelectorAll("input").forEach((c,k)=>c.checked=ASSUME.has(FREE[k]));drawTop();show(fromHash)}
 </script></body></html>"""

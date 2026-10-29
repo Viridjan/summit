@@ -1684,11 +1684,15 @@ func check_editor_flow() -> void:
 		ev.ctrl_pressed = true
 		ed._unhandled_input(ev)
 	var right_arrow: bool = ed.arrows.any(func(a): return a.name == "m2_big_jump" and a.dir == Vector2i.RIGHT)
+	var ed_lv: Dictionary = ed.level
+	ed.level = {"w": 10, "h": 5, "entities": [{"t": "house_door", "x": 16, "y": 16, "w": 16, "h": 24, "to": "h1_villager_house:x"}]}
+	var door_arrow: bool = ed._edge_arrows(["h1_villager_house"]).any(func(a): return a.get("door", false) and a.at == Vector2(24, 8))
+	ed.level = ed_lv
 	key.call(KEY_RIGHT)
 	var went: String = Game.editor_file
 	key.call(KEY_LEFT)
-	check(right_arrow and went == "m2_big_jump" and Game.editor_file == "m1_meadow" and ed.level.name == Game.load_level("m1_meadow", "res://worlds/story/").name,
-		"room editor: edge arrows to the touching rooms; Ctrl + arrow key opens the room on that side (%s)" % went)
+	check(right_arrow and door_arrow and went == "m2_big_jump" and Game.editor_file == "m1_meadow" and ed.level.name == Game.load_level("m1_meadow", "res://worlds/story/").name,
+		"room editor: edge arrows to the touching rooms, door arrows to linked ones; Ctrl + arrow key opens the room on that side (%s)" % went)
 	ed.level.tiles[0] = "1".repeat(4) + ed.level.tiles[0].substr(4)  # cut/paste: a 4x1 strip of rock and an object on it
 	ed.level.tiles[1] = "0".repeat(4) + ed.level.tiles[1].substr(4)
 	ed.level.entities.append({"t": "strawberry", "x": 8, "y": 8})

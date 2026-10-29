@@ -666,7 +666,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_copy(event.keycode == KEY_X)
 		elif event.ctrl_pressed and event.keycode in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]:  # Ctrl + arrow: next room
 			var dir: Vector2i = {KEY_LEFT: Vector2i.LEFT, KEY_RIGHT: Vector2i.RIGHT, KEY_UP: Vector2i.UP, KEY_DOWN: Vector2i.DOWN}[event.keycode]
-			var options := arrows.filter(func(a): return a.dir == dir)
+			var options := arrows.filter(func(a): return a.dir == dir and not a.get("door", false))
 			if not options.is_empty():  # several on one side: the one nearest the middle of the view
 				options.sort_custom(func(a, b): return a.at.distance_to(cam.position) < b.at.distance_to(cam.position))
 				get_viewport().set_input_as_handled()
@@ -872,7 +872,7 @@ func _draw() -> void:
 		var d := Vector2(a.dir)
 		var side := Vector2(-d.y, d.x)
 		var tip: Vector2 = a.at + d * k
-		var col := Color("ffe070") if a == hover else Color("d0a030")
+		var col := (Color("9ff4ff") if a == hover else Color("40c8e0")) if a.get("door", false) else (Color("ffe070") if a == hover else Color("d0a030"))
 		draw_colored_polygon(PackedVector2Array([tip, a.at - d * k * 0.4 + side * k, a.at - d * k * 0.4 - side * k]), col)
 	if zip_pending != null:
 		var from := Vector2(zip_pending.x, zip_pending.y) + Vector2(zip_pending.w, zip_pending.h) / 2.0
@@ -902,7 +902,7 @@ func _connected_rooms() -> Array:
 	return result
 
 # Arrows just outside the room's edges, one per connected room that touches that edge, at the middle of the
-# shared stretch. Click one (or Ctrl + arrow key) to edit that room.
+# shared stretch (yellow; click one or press Ctrl + arrow key), and over each door to another room (cyan; click).
 func _edge_arrows(names: Array) -> Array:
 	var out: Array = []
 	if Game.editor_return != "world_editor": return out
@@ -923,6 +923,11 @@ func _edge_arrows(names: Array) -> Array:
 			out.append({"name": name, "dir": Vector2i.DOWN, "at": Vector2(mid_x, level.h * T + 10)})
 		elif o.end.y == me.position.y and xs.y > xs.x:
 			out.append({"name": name, "dir": Vector2i.UP, "at": Vector2(mid_x, -10)})
+	for e in level.entities:  # doors to another room: a cyan arrow over the door
+		var to := str(e.get("to", ""))
+		if e.t in E.DOOR_TYPES and to.contains(":") and to.get_slice(":", 0) in names:
+			out.append({"name": to.get_slice(":", 0), "dir": Vector2i.UP, "door": true,
+				"at": Vector2(int(e.x) + int(e.get("w", T)) / 2.0, int(e.y) - 8)})
 	return out
 
 func _arrow_at(p: Vector2):

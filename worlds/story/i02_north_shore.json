@@ -49,13 +49,6 @@
 			"y": 80
 		},
 		{
-			"entrance": true,
-			"shore_panel": true,
-			"t": "spawn",
-			"x": 92,
-			"y": 96
-		},
-		{
 			"direction": "east",
 			"h": 24,
 			"id": "to_east",

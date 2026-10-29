@@ -7,12 +7,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 280,
-			"y": 40,
-			"entrance": true
-		},
-		{
 			"t": "strawberry",
 			"x": 240,
 			"y": 48

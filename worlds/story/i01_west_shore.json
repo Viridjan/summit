@@ -36,12 +36,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 32,
-			"y": 152,
-			"entrance": true
-		},
-		{
 			"t": "house_door",
 			"x": 32,
 			"y": 136,
@@ -78,13 +72,6 @@
 			"to": "i02_north_shore:coast_path",
 			"direction": "north",
 			"label": "North Shore"
-		},
-		{
-			"t": "spawn",
-			"x": 324,
-			"y": 152,
-			"entrance": true,
-			"shore_panel": true
 		},
 		{
 			"t": "house_door",

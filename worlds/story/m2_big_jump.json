@@ -24,18 +24,6 @@
 	"entities": [
 		{
 			"t": "spawn",
-			"x": 8,
-			"y": 88,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 96,
-			"y": 56,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
 			"x": 16,
 			"y": 88
 		},

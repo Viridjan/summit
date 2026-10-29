@@ -29,18 +29,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 368,
-			"y": 48,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 136,
-			"y": 32,
-			"entrance": true
-		},
-		{
 			"t": "jumpthru",
 			"x": 160,
 			"y": 56,

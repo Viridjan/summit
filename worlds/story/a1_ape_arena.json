@@ -36,12 +36,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 232,
-			"y": 144,
-			"entrance": true
-		},
-		{
 			"t": "boss_gate",
 			"x": 0,
 			"y": 120,

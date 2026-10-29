@@ -473,3 +473,12 @@ choices. Reversible forks stay visible, and both unlocked branches count in
 accessibility. Hypothetical unplaced powerups are unchecked by default.
 - 2026-10-29: Upgraded library monsters: no red marks; tier 1 is 1.25x and amber, tier 2 is 1.5x and magenta (sprite tint, EnemyArt.draw tint). They grow from the spot they're placed at (feet and middle kept); populate places every monster at the base size. Repopulated.
 - 2026-10-29: Room editor (editing a world room): yellow arrows just outside the edges, one per connected room touching that edge; click one or press Ctrl + arrow key to edit that room (asks to save unsaved changes first). Builds on the Connected rooms list.
+
+2026-10-29 — Unlock and route-choice graphs are independent. Route choices use
+the full modeled topology with gates open; selecting either graph leaves the
+other graph and map untouched.
+
+2026-10-29 — Reduced excessive entrance respawns: one point per ordinary room,
+two for long/tall rooms, preserving authored checkpoints. Fixup and shore
+generators enforce sparse placement so excess markers do not return.
+- 2026-10-29: Room editor: rooms linked only by a door get a cyan arrow over that door (click to edit the room it leads to).

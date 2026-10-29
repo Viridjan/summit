@@ -1,18 +1,6 @@
 {
 	"entities": [
 		{
-			"t": "spawn",
-			"x": 8,
-			"y": 88,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 304,
-			"y": 88,
-			"entrance": true
-		},
-		{
 			"h": 8,
 			"t": "crumble",
 			"w": 24,

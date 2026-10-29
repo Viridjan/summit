@@ -29,12 +29,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 304,
-			"y": 24,
-			"entrance": true
-		},
-		{
 			"t": "acid",
 			"x": 128,
 			"y": 88,

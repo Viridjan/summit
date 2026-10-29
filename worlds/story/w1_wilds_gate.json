@@ -7,18 +7,6 @@
 			"y": 160
 		},
 		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 304,
-			"y": 32
-		},
-		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 232,
-			"y": 160
-		},
-		{
 			"t": "spikes_up",
 			"x": 24,
 			"y": 168

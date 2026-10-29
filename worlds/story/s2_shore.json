@@ -42,12 +42,6 @@
 			"entrance": true
 		},
 		{
-			"t": "spawn",
-			"x": 352,
-			"y": 144,
-			"entrance": true
-		},
-		{
 			"t": "building",
 			"x": 352,
 			"y": 0,
