@@ -146,3 +146,11 @@ python3 tools/prune_respawns.py worlds/story --output reports/checkpoint-review
 Add `--apply` to save changes with a backup. Use `--rooms c6_wall_cave` for one
 room. See [Respawn placement and automated cleanup](docs/RESPAWN_POINTS.md) for
 merge rules, report files and validation commands.
+
+## Progression report
+
+[The progression visualization](reports/progression.html) has two independent
+metro graphs: unlock progression and grouped route choices. The route graph
+combines connected rooms by region, retaining boss arenas as choice points.
+Hover a stop to see its rooms. Dashed lines link repeated appearances of the
+**same group**, rather than travel routes. Fit and zoom controls keep it compact.

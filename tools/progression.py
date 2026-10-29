@@ -118,7 +118,7 @@ def _from_entrance(job):  # one entrance (spawn point): the room's ground it rea
 def seals(W):
     out = {}
     for name, (ox, oy, lvl) in W.rooms.items():
-        for e in lvl["entities"]:
+        for e in lvl.get("entities", []):
             if e["t"] == "ape_chase" and e.get("seal"):
                 x, y, w, h = (int(v) for v in e["seal"])
                 out[name] = (ox + x // T, {(ox + x // T + i, oy + y // T + j) for i in range(w // T) for j in range(h // T)})
@@ -499,8 +499,8 @@ function zones(raw){zsvg.innerHTML="";
  tree.names.forEach(r=>{const p=pos[r],kids=tree.links.filter(e=>e.from===r&&tree.parent[e.to]===r),g=el("g",{style:"cursor:pointer"},zsvg);
  const choice=kids.length>1&&isChoice(kids);
  el("circle",{class:"metro-station","data-room":tree.aliases[r]||r,cx:p.x+90,cy:p.y+20,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":lineColors[r],"stroke-width":choice?4:3},g);
- const t=el("text",{x:p.x+105,y:p.y+17,fill:"#eee",style:"font-size:11px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);t.textContent=title(tree.aliases[r]||r);
- const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:10px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);const lost=kids.filter(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to)))).map(a=>title(real(a.to)));
+ const t=el("text",{x:p.x+105,y:p.y+17,fill:"#eee",style:"font-size:16px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);t.textContent=title(tree.aliases[r]||r);
+ const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:14px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);const lost=kids.filter(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to)))).map(a=>title(real(a.to)));
  sub.textContent=tree.aliases[r]?"same station":choice?`◆ ${kids.length} irreversible choices`:kids.length>1?`${kids.length} ways`:"";
  g.onclick=()=>zshow(raw,tree.aliases[r]||r);const tt=el("title",{},g);tt.textContent="Rooms: "+n.groups[tree.aliases[r]||r].rooms.map(title).join(", ")+"\n"+kids.map(e=>e.direction+": "+title(tree.aliases[e.to]||e.to)).join("\n")});
  document.getElementById("zhead").textContent=`Rooms are grouped by connected region; bosses remain separate to preserve their choices. ${tree.names.length} metro stops. Hover a stop for its rooms. Dashed lines connect duplicate appearances of the SAME group on distant branches—not travel or return routes. Graph 1 remains independent.`;

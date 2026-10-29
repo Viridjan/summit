@@ -318,3 +318,12 @@ may support the walk. C6 retains its right `(160,48)` and distant left `(8,48)`
 points; the intermediate `(120,48)` point is removed. This supersedes the
 earlier fixed room caps. See [Respawn placement](RESPAWN_POINTS.md) for the
 automation command, conservative merge rules and backup behavior.
+
+**Grouped metro graph (2026-10-30):** Graph 2 now groups connected non-boss
+rooms within each named region into one stop, with the room list on hover and
+in the selected-group map details. Boss arenas remain distinct so their route
+choices remain visible. The default view has 14 stops for the 47-room dataset
+and fits both width and height. Dashed lines ONLY join repeated appearances of
+the same group; they are identity links, never travel/return routes. Both
+graphs remain independent. This supersedes the earlier per-room rendering and
+return-link dash notation.
