@@ -1677,6 +1677,18 @@ func check_editor_flow() -> void:
 	we._gui_input(click)
 	var ed = Game.main.get_child(-1)
 	var opened: bool = ed.has_method("_leave") and Game.editor_file == "m1_meadow" and Game.editor_return == "world_editor"
+	var key := func(k: Key):
+		var ev := InputEventKey.new()
+		ev.keycode = k
+		ev.pressed = true
+		ev.ctrl_pressed = true
+		ed._unhandled_input(ev)
+	var right_arrow: bool = ed.arrows.any(func(a): return a.name == "m2_big_jump" and a.dir == Vector2i.RIGHT)
+	key.call(KEY_RIGHT)
+	var went: String = Game.editor_file
+	key.call(KEY_LEFT)
+	check(right_arrow and went == "m2_big_jump" and Game.editor_file == "m1_meadow" and ed.level.name == Game.load_level("m1_meadow", "res://worlds/story/").name,
+		"room editor: edge arrows to the touching rooms; Ctrl + arrow key opens the room on that side (%s)" % went)
 	ed.level.tiles[0] = "1".repeat(4) + ed.level.tiles[0].substr(4)  # cut/paste: a 4x1 strip of rock and an object on it
 	ed.level.tiles[1] = "0".repeat(4) + ed.level.tiles[1].substr(4)
 	ed.level.entities.append({"t": "strawberry", "x": 8, "y": 8})

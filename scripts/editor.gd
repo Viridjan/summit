@@ -51,6 +51,7 @@ var h_spin: SpinBox
 var enemy_spin: SpinBox
 var navigation_box: VBoxContainer
 var navigation_dialog: ConfirmationDialog
+var arrows: Array = []  # [{name, dir: Vector2i, at: Vector2 (room px)}]: connected rooms touching an edge
 var status: Label
 var load_menu: MenuButton
 var tool_group := ButtonGroup.new()
@@ -663,6 +664,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			_save()
 		elif event.keycode in [KEY_C, KEY_X] and event.ctrl_pressed and sel.has_area():
 			_copy(event.keycode == KEY_X)
+		elif event.ctrl_pressed and event.keycode in [KEY_LEFT, KEY_RIGHT, KEY_UP, KEY_DOWN]:  # Ctrl + arrow: next room
+			var dir: Vector2i = {KEY_LEFT: Vector2i.LEFT, KEY_RIGHT: Vector2i.RIGHT, KEY_UP: Vector2i.UP, KEY_DOWN: Vector2i.DOWN}[event.keycode]
+			var options := arrows.filter(func(a): return a.dir == dir)
+			if not options.is_empty():  # several on one side: the one nearest the middle of the view
+				options.sort_custom(func(a, b): return a.at.distance_to(cam.position) < b.at.distance_to(cam.position))
+				get_viewport().set_input_as_handled()
+				_request_room(options[0].name)
 		elif event.keycode == KEY_V and event.ctrl_pressed and not clip.is_empty():
 			_paste(_cell_at_mouse())
 		elif event.keycode == KEY_F5:
@@ -710,6 +718,9 @@ func _unhandled_input(event: InputEvent) -> void:
 # Begin or finish a left-button placement gesture, including sized objects and moving-platform targets.
 func _left(pressed: bool) -> void:
 	var c := _cell_at_mouse()
+	if pressed and _arrow_at(get_global_mouse_position()) != null:  # an edge arrow: edit that room
+		_request_room(_arrow_at(get_global_mouse_position()).name)
+		return
 	if pressed and Input.is_key_pressed(KEY_SHIFT):  # Shift+drag: select an area
 		sel_start = c
 		sel = Rect2i(c, Vector2i.ONE)
@@ -789,12 +800,15 @@ func _zoom(f: float) -> void:
 # Update temporary messages and editor hover/drag visuals between input events.
 func _process(dt: float) -> void:
 	var v := Vector2(Input.get_axis("ui_left", "ui_right"), Input.get_axis("ui_up", "ui_down"))
-	if v != Vector2.ZERO and not (get_viewport().gui_get_focus_owner() is LineEdit):
+	if v != Vector2.ZERO and not Input.is_key_pressed(KEY_CTRL) and not (get_viewport().gui_get_focus_owner() is LineEdit):
 		cam.position += v * 400 * dt / cam.zoom.x
 		_redraw()
 	var c := _cell_at_mouse()
 	msg_t -= dt
-	if zip_pending != null:
+	var over = _arrow_at(get_global_mouse_position())
+	if over != null:
+		status.text = "Click: edit %s (Ctrl + arrow key)" % over.name
+	elif zip_pending != null:
 		status.text = "Zip mover: click where it should travel to"
 	elif msg_t > 0:
 		status.text = msg
@@ -852,6 +866,14 @@ func _draw() -> void:
 		var sr: Rect2i = Rect2i(Vector2i(mini(sel_start.x, c.x), mini(sel_start.y, c.y)), (sel_start - c).abs() + Vector2i.ONE) if sel_start != null else sel
 		draw_rect(Rect2(sr.position * T, sr.size * T), Color(0.4, 0.8, 1.0, 0.15))
 		draw_rect(Rect2(sr.position * T, sr.size * T), Color(0.4, 0.8, 1.0), false, 1.0 / cam.zoom.x)
+	var hover = _arrow_at(get_global_mouse_position())
+	for a in arrows:  # edge arrows to the connected rooms
+		var k := 9.0 / cam.zoom.x + 3
+		var d := Vector2(a.dir)
+		var side := Vector2(-d.y, d.x)
+		var tip: Vector2 = a.at + d * k
+		var col := Color("ffe070") if a == hover else Color("d0a030")
+		draw_colored_polygon(PackedVector2Array([tip, a.at - d * k * 0.4 + side * k, a.at - d * k * 0.4 - side * k]), col)
 	if zip_pending != null:
 		var from := Vector2(zip_pending.x, zip_pending.y) + Vector2(zip_pending.w, zip_pending.h) / 2.0
 		draw_line(from, Vector2(c * T) + Vector2(4, 4), Color("d0b040"), 1.0 / cam.zoom.x)
@@ -879,7 +901,39 @@ func _connected_rooms() -> Array:
 	result.sort()
 	return result
 
+# Arrows just outside the room's edges, one per connected room that touches that edge, at the middle of the
+# shared stretch. Click one (or Ctrl + arrow key) to edit that room.
+func _edge_arrows(names: Array) -> Array:
+	var out: Array = []
+	if Game.editor_return != "world_editor": return out
+	var world: Dictionary = Game.Adventure.load_world(Game.world_path)
+	if not world.get("rooms", {}).has(Game.editor_file): return out
+	var me := Rect2i(world.rooms[Game.editor_file].pos, Vector2i(level.w, level.h))
+	for name in names:
+		var o := Rect2i(world.rooms[name].pos, Vector2i(world.rooms[name].level.w, world.rooms[name].level.h))
+		var ys := Vector2(maxi(me.position.y, o.position.y), mini(me.end.y, o.end.y))  # shared rows / columns
+		var xs := Vector2(maxi(me.position.x, o.position.x), mini(me.end.x, o.end.x))
+		var mid_y := ((ys.x + ys.y) / 2.0 - me.position.y) * T
+		var mid_x := ((xs.x + xs.y) / 2.0 - me.position.x) * T
+		if o.position.x == me.end.x and ys.y > ys.x:
+			out.append({"name": name, "dir": Vector2i.RIGHT, "at": Vector2(level.w * T + 10, mid_y)})
+		elif o.end.x == me.position.x and ys.y > ys.x:
+			out.append({"name": name, "dir": Vector2i.LEFT, "at": Vector2(-10, mid_y)})
+		elif o.position.y == me.end.y and xs.y > xs.x:
+			out.append({"name": name, "dir": Vector2i.DOWN, "at": Vector2(mid_x, level.h * T + 10)})
+		elif o.end.y == me.position.y and xs.y > xs.x:
+			out.append({"name": name, "dir": Vector2i.UP, "at": Vector2(mid_x, -10)})
+	return out
+
+func _arrow_at(p: Vector2):
+	for a in arrows:
+		if p.distance_to(a.at) <= 9.0 / cam.zoom.x + 4:
+			return a
+	return null
+
 func _refresh_navigation() -> void:
+	arrows = _edge_arrows(_connected_rooms())
+	queue_redraw()
 	if navigation_box == null: return
 	for child in navigation_box.get_children():
 		navigation_box.remove_child(child)
