@@ -2175,6 +2175,10 @@ func check_monster_library() -> void:
 	step(2)
 	var kids: int = w.ents.filter(func(e): return e.d.t == "enemy_monster" and e.collidable and e.d.get("brood_child", false)).size()
 	check(hp0 == 4 and kids == 2, "traits stack: armored adds hit points (%d), brood splits into two on death (%d)" % [hp0, kids])
+	var m0 = E.make(null, {"t": "enemy_monster", "x": 40, "y": 40, "move": "patrol", "attacks": ["charge"], "traits": [], "tier": 0, "look": "enemy_hornback"})
+	var m2 = E.make(null, {"t": "enemy_monster", "x": 40, "y": 40, "move": "patrol", "attacks": ["charge", "leap"], "traits": ["swift"], "tier": 2, "look": "enemy_hornback"})
+	check(m2.rect.size.x > m0.rect.size.x and m2.rect.end.y == m0.rect.end.y and absi(m2.rect.get_center().x - m0.rect.get_center().x) <= 1 and m2.tint != m0.tint,
+		"upgraded monsters are bigger (same feet, same middle) and coloured (%s vs %s)" % [m2.rect, m0.rect])
 	# migration (tools/populate.gd): 30% kept, 20% upgraded, 50% natives; tier 2 never moves on
 	var Pop = load("res://tools/populate.gd").new()
 	Pop.rng.seed = 3

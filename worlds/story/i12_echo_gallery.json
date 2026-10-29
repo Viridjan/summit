@@ -34,18 +34,16 @@
 		},
 		{
 			"attacks": [
-				"charge"
+				"lob"
 			],
-			"facing": 1,
-			"look": "enemy_murkspore",
+			"facing": -1,
+			"look": "enemy_thornmite",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 1,
-			"traits": [
-				"swift"
-			],
-			"x": 255,
+			"tier": 0,
+			"traits": [],
+			"x": 247,
 			"y": 30
 		}
 	],

@@ -662,6 +662,7 @@ class CombatEnemy extends Ent:
 	var warning_multiplier := 1.0
 	var recovery_multiplier := 1.0
 	var scale := 1.0  # body and sprite size (giant 2, brood children 0.5)
+	var tint := Color.WHITE  # sprite colour (upgraded library monsters)
 	var hp := 1
 	var facing := -1
 	var clock := 0.0
@@ -891,7 +892,7 @@ class CombatEnemy extends Ent:
 			ci.draw_rect(Rect2(pd[0]), Color(0.55, 0.85, 0.3, minf(1.0, pd[1]) * 0.45))  # fades as it dries
 		if not collidable:
 			return
-		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0, scale)
+		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0, scale, tint)
 		if has_trait("shielded"):  # bright edge on the guarded side
 			var f := front()
 			var edge := center() + f * (rect.size.x * 0.5 + 1)
@@ -1189,6 +1190,8 @@ class HornbackEnemy extends CombatEnemy:
 # A monster assembled from the action library (scripts/monster_library.gd): one move, its attacks, its traits.
 # Placed without a build (a fresh editor placement), it rolls one, seeded by its position, and keeps it in its data.
 class ActionMonster extends CombatEnemy:
+	const TIER_SCALE := [1.0, 1.25, 1.5]  # upgraded once / twice
+	const TIER_TINT := [Color.WHITE, Color(1.0, 0.7, 0.25), Color(1.0, 0.35, 0.7)]  # amber, then magenta
 	var orbs: Array = []  # its bolts, straight: [position, velocity, seconds left] (CombatEnemy.update_shots)
 	var bones: Array = []  # its lobbed globs, falling (named like the Ossling's so damage_boxes sees them)
 	var velocity := Vector2.ZERO
@@ -1215,6 +1218,11 @@ class ActionMonster extends CombatEnemy:
 			variant = t
 			hp = variant_hp(hp)
 		variant = ""
+		var tier := clampi(int(d.get("tier", 0)), 0, 2)
+		scale *= TIER_SCALE[tier]  # upgraded: a bit bigger and coloured
+		tint = TIER_TINT[tier]
+		var grow := Vector2i((Vector2(rect.size) * scale).round()) - rect.size  # CombatEnemy grows it from the top-left:
+		rect.position -= Vector2i(grow.x / 2, grow.y)  # keep it standing on the same spot
 		facing = -1 if int(d.get("facing", -1)) < 0 else 1
 		home = Vector2(rect.position)
 	func has_trait(t: String) -> bool:
@@ -1323,8 +1331,6 @@ class ActionMonster extends CombatEnemy:
 		d.t = d.get("look", "enemy_mosstrot")  # wears a family's art
 		super.draw(ci)
 		d.t = keep_t
-		for i in int(d.get("tier", 0)):  # upgrades: a small mark per tier over the head
-			ci.draw_rect(Rect2(center().x - 3 + i * 4, rect.position.y - 7, 2, 2), Color("ff6060"))
 
 
 # Ground walker that turns at walls and unsafe floor edges instead of wandering into hazards.

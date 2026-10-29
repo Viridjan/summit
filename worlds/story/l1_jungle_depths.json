@@ -80,43 +80,47 @@
 			"attacks": [
 				"charge"
 			],
-			"facing": -1,
+			"facing": 1,
 			"look": "enemy_cragjaw",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 135,
+			"x": 223,
 			"y": 142
 		},
 		{
 			"attacks": [
-				"leap"
+				"shoot"
 			],
 			"facing": -1,
-			"look": "enemy_cragjaw",
-			"move": "hop",
+			"look": "enemy_bat",
+			"move": "hover",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
-			"x": 271,
-			"y": 102
+			"tier": 1,
+			"traits": [
+				"brood"
+			],
+			"x": 311,
+			"y": 86
 		},
 		{
 			"attacks": [
 				"charge"
 			],
 			"facing": -1,
-			"look": "enemy_thornmite",
-			"move": "hop",
+			"look": "enemy_hornback",
+			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
-			"x": 215,
-			"y": 142
+			"tier": 1,
+			"traits": [
+				"venom"
+			],
+			"x": 247,
+			"y": 102
 		}
 	],
 	"environment": "forest",

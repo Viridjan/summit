@@ -1,0 +1,9 @@
+topology   41/47 rooms; 0 partial; spawn OK
+  Unreached: hub_landing, w1_wilds_gate, w2_wilds_hollow, w3_wilds_roots, w4_wilds_den, w5_wilds_drop
+acid       41/47 rooms; 0 partial; spawn OK
+  Unreached: hub_landing, w1_wilds_gate, w2_wilds_hollow, w3_wilds_roots, w4_wilds_den, w5_wilds_drop
+hazards    41/47 rooms; 0 partial; spawn OK
+  Unreached: hub_landing, w1_wilds_gate, w2_wilds_hollow, w3_wilds_roots, w4_wilds_den, w5_wilds_drop
+standing   41/47 rooms; 1 partial; spawn OK
+  Unreached: hub_landing, w1_wilds_gate, w2_wilds_hollow, w3_wilds_roots, w4_wilds_den, w5_wilds_drop
+Reports: reports/quality-review-2026-10-29/accessibility.{md,json,png}

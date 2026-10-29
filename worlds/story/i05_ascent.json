@@ -56,16 +56,17 @@
 		},
 		{
 			"attacks": [
-				"leap"
+				"charge",
+				"shoot"
 			],
 			"facing": -1,
 			"look": "enemy_cragjaw",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
+			"tier": 1,
 			"traits": [],
-			"x": 55,
+			"x": 47,
 			"y": 310
 		},
 		{
@@ -73,30 +74,28 @@
 				"charge"
 			],
 			"facing": -1,
-			"look": "enemy_murkspore",
-			"move": "hop",
+			"look": "enemy_skeleton",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 143,
+			"y": 334
+		},
+		{
+			"attacks": [
+				"charge"
+			],
+			"facing": 1,
+			"look": "enemy_skeleton",
+			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
 			"x": 63,
-			"y": 214
-		},
-		{
-			"attacks": [
-				"dive"
-			],
-			"facing": 1,
-			"look": "enemy_fuzzbob",
-			"move": "hover",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 1,
-			"traits": [
-				"brood"
-			],
-			"x": 143,
-			"y": 318
+			"y": 262
 		}
 	],
 	"environment": "volcano",

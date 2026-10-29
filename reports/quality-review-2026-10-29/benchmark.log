@@ -1,0 +1,442 @@
+Godot Engine v4.7.2.stable.arch_linux.ed1daf0bf (2026-08-17 01:18:38 UTC) - https://godotengine.org
+
+WARNING: ApeChase: no path found to x 496
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] _next (res://scripts/entities.gd:3106)
+         [1] _tick (res://scripts/entities.gd:3145)
+         [2] run (res://scripts/entities.gd:3125)
+         [3] update (res://scripts/entities.gd:2951)
+         [4] _physics_process (res://scripts/world.gd:1044)
+         [5] _world_bench (res://tests/bench.gd:278)
+normal physics med 452.0 p95 681 | draw med 153.5 p95 254
+dense physics med 2530.0 p95 6204 | draw med 43757.5 p95 100812
+moving physics med 4841.0 p95 9412 | draw med 182.0 p95 1238
+large_blocks physics med 321.0 p95 437 | draw med 80.0 p95 122
+{
+	"dense": {
+		"counts": {
+			"jumpthru_outside_per_tick": 0.98,
+			"jumpthru_outside_scan_per_tick": 244.44,
+			"jumpthru_per_tick": 0.39,
+			"jumpthru_scan_per_tick": 97.22,
+			"solid_per_tick": 4.27,
+			"solid_scan_per_tick": 3204.17,
+			"spikes_per_tick": 0.21,
+			"spikes_scan_per_tick": 39.69,
+			"touch_per_tick": 0.96,
+			"touch_scan_per_tick": 1433.33
+		},
+		"draw_us": {
+			"max": 189138,
+			"median": 43757.5,
+			"n": 708,
+			"p95": 100812
+		},
+		"entities": 2500,
+		"frame_us": {
+			"max": 382098,
+			"median": 90419.0,
+			"n": 360,
+			"p95": 199949
+		},
+		"lists": {
+			"jumpthrus": 250,
+			"solids": 750,
+			"spikes": 188,
+			"touchables": 1500
+		},
+		"physics_us": {
+			"max": 19282,
+			"median": 2530.0,
+			"n": 360,
+			"p95": 6204
+		},
+		"player_end": [
+			"(104.0, 304.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 36557,
+					"median": 22960.0,
+					"n": 10,
+					"p95": 36557
+				},
+				"draw_us": {
+					"max": 189138,
+					"median": 37258.0,
+					"n": 354,
+					"p95": 91618
+				},
+				"frame_us": {
+					"max": 382098,
+					"median": 77786.0,
+					"n": 180,
+					"p95": 175828
+				},
+				"physics_us": {
+					"max": 19282,
+					"median": 2267.5,
+					"n": 180,
+					"p95": 5087
+				}
+			},
+			{
+				"build_us": {
+					"max": 19748,
+					"median": 19526.5,
+					"n": 10,
+					"p95": 19748
+				},
+				"draw_us": {
+					"max": 180685,
+					"median": 52704.5,
+					"n": 354,
+					"p95": 105718
+				},
+				"frame_us": {
+					"max": 364473,
+					"median": 109313.5,
+					"n": 180,
+					"p95": 212955
+				},
+				"physics_us": {
+					"max": 12839,
+					"median": 3018.0,
+					"n": 180,
+					"p95": 6574
+				}
+			}
+		],
+		"size": [
+			240,
+			40
+		]
+	},
+	"large_blocks": {
+		"counts": {
+			"jumpthru_outside_per_tick": 0.98,
+			"jumpthru_outside_scan_per_tick": 0.0,
+			"jumpthru_per_tick": 0.39,
+			"jumpthru_scan_per_tick": 0.0,
+			"solid_per_tick": 4.27,
+			"solid_scan_per_tick": 136.71,
+			"spikes_per_tick": 0.21,
+			"spikes_scan_per_tick": 0.0,
+			"touch_per_tick": 0.96,
+			"touch_scan_per_tick": 0.0
+		},
+		"draw_us": {
+			"max": 2034,
+			"median": 80.0,
+			"n": 708,
+			"p95": 122
+		},
+		"entities": 32,
+		"frame_us": {
+			"max": 12824,
+			"median": 6928.5,
+			"n": 360,
+			"p95": 8345
+		},
+		"lists": {
+			"jumpthrus": 0,
+			"solids": 32,
+			"spikes": 0,
+			"touchables": 0
+		},
+		"physics_us": {
+			"max": 2805,
+			"median": 321.0,
+			"n": 360,
+			"p95": 437
+		},
+		"player_end": [
+			"(104.0, 624.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 20157,
+					"median": 18205.5,
+					"n": 10,
+					"p95": 20157
+				},
+				"draw_us": {
+					"max": 1414,
+					"median": 81.5,
+					"n": 354,
+					"p95": 123
+				},
+				"frame_us": {
+					"max": 12824,
+					"median": 6978.0,
+					"n": 180,
+					"p95": 8554
+				},
+				"physics_us": {
+					"max": 2021,
+					"median": 315.0,
+					"n": 180,
+					"p95": 437
+				}
+			},
+			{
+				"build_us": {
+					"max": 4614,
+					"median": 4025.5,
+					"n": 10,
+					"p95": 4614
+				},
+				"draw_us": {
+					"max": 2034,
+					"median": 77.5,
+					"n": 354,
+					"p95": 122
+				},
+				"frame_us": {
+					"max": 9654,
+					"median": 6901.0,
+					"n": 180,
+					"p95": 7788
+				},
+				"physics_us": {
+					"max": 2805,
+					"median": 326.0,
+					"n": 180,
+					"p95": 431
+				}
+			}
+		],
+		"size": [
+			400,
+			80
+		]
+	},
+	"meta": {
+		"cores": 16,
+		"cpu": "13th Gen Intel(R) Core(TM) i5-13400F",
+		"display": "headless",
+		"engine": "4.7.2-stable (arch_linux)",
+		"os": "Linux",
+		"renderer": "gl_compatibility",
+		"runs": 2,
+		"seed": 12345,
+		"ticks": 180,
+		"time": "2026-10-29T21:16:57",
+		"video_adapter": "",
+		"viewport": "(1280.0, 1280.0)",
+		"warmup": 60
+	},
+	"moving": {
+		"counts": {
+			"jumpthru_outside_per_tick": 0.98,
+			"jumpthru_outside_scan_per_tick": 0.0,
+			"jumpthru_per_tick": 0.39,
+			"jumpthru_scan_per_tick": 0.0,
+			"solid_per_tick": 49.34,
+			"solid_scan_per_tick": 9868.89,
+			"spikes_per_tick": 0.21,
+			"spikes_scan_per_tick": 0.0,
+			"touch_per_tick": 0.96,
+			"touch_scan_per_tick": 0.0
+		},
+		"draw_us": {
+			"max": 3656,
+			"median": 182.0,
+			"n": 708,
+			"p95": 1238
+		},
+		"entities": 200,
+		"frame_us": {
+			"max": 22624,
+			"median": 7178.5,
+			"n": 360,
+			"p95": 12360
+		},
+		"lists": {
+			"jumpthrus": 0,
+			"solids": 200,
+			"spikes": 0,
+			"touchables": 0
+		},
+		"physics_us": {
+			"max": 15453,
+			"median": 4841.0,
+			"n": 360,
+			"p95": 9412
+		},
+		"player_end": [
+			"(104.0, 1584.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 9321,
+					"median": 6743.5,
+					"n": 10,
+					"p95": 9321
+				},
+				"draw_us": {
+					"max": 2375,
+					"median": 182.0,
+					"n": 354,
+					"p95": 1452
+				},
+				"frame_us": {
+					"max": 22624,
+					"median": 7065.5,
+					"n": 180,
+					"p95": 11805
+				},
+				"physics_us": {
+					"max": 15453,
+					"median": 4481.5,
+					"n": 180,
+					"p95": 8773
+				}
+			},
+			{
+				"build_us": {
+					"max": 10341,
+					"median": 7098.5,
+					"n": 10,
+					"p95": 10341
+				},
+				"draw_us": {
+					"max": 3656,
+					"median": 181.0,
+					"n": 354,
+					"p95": 1237
+				},
+				"frame_us": {
+					"max": 15743,
+					"median": 7245.0,
+					"n": 180,
+					"p95": 12937
+				},
+				"physics_us": {
+					"max": 14023,
+					"median": 5267.5,
+					"n": 180,
+					"p95": 9990
+				}
+			}
+		],
+		"size": [
+			120,
+			200
+		]
+	},
+	"normal": {
+		"counts": {
+			"dream_per_tick": 0.01,
+			"dream_scan_per_tick": 0.01,
+			"jumpthru_outside_per_tick": 1.08,
+			"jumpthru_outside_scan_per_tick": 1.08,
+			"jumpthru_per_tick": 0.41,
+			"jumpthru_scan_per_tick": 0.41,
+			"solid_per_tick": 4.02,
+			"solid_scan_per_tick": 28.12,
+			"spikes_per_tick": 0.02,
+			"spikes_scan_per_tick": 0.07,
+			"touch_per_tick": 0.98,
+			"touch_scan_per_tick": 71.38
+		},
+		"draw_us": {
+			"max": 1473,
+			"median": 153.5,
+			"n": 716,
+			"p95": 254
+		},
+		"entities": 81,
+		"frame_us": {
+			"max": 9028,
+			"median": 6898.5,
+			"n": 360,
+			"p95": 7409
+		},
+		"lists": {
+			"jumpthrus": 1,
+			"solids": 7,
+			"spikes": 4,
+			"touchables": 73
+		},
+		"physics_us": {
+			"max": 947,
+			"median": 452.0,
+			"n": 360,
+			"p95": 681
+		},
+		"player_end": [
+			"(12.0, 198.0)",
+			false,
+			0
+		],
+		"runs": [
+			{
+				"build_us": {
+					"max": 2273,
+					"median": 1492.5,
+					"n": 10,
+					"p95": 2273
+				},
+				"draw_us": {
+					"max": 1473,
+					"median": 159.0,
+					"n": 358,
+					"p95": 263
+				},
+				"frame_us": {
+					"max": 8967,
+					"median": 6892.0,
+					"n": 180,
+					"p95": 7444
+				},
+				"physics_us": {
+					"max": 947,
+					"median": 478.0,
+					"n": 180,
+					"p95": 687
+				}
+			},
+			{
+				"build_us": {
+					"max": 2574,
+					"median": 1214.0,
+					"n": 10,
+					"p95": 2574
+				},
+				"draw_us": {
+					"max": 831,
+					"median": 150.0,
+					"n": 358,
+					"p95": 241
+				},
+				"frame_us": {
+					"max": 9028,
+					"median": 6905.0,
+					"n": 180,
+					"p95": 7364
+				},
+				"physics_us": {
+					"max": 772,
+					"median": 427.5,
+					"n": 180,
+					"p95": 647
+				}
+			}
+		],
+		"size": [
+			60,
+			30
+		]
+	}
+}

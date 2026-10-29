@@ -1,4 +1,5 @@
 {
+	"enemy_count": 2,
 	"entities": [
 		{
 			"entrance": true,
@@ -79,8 +80,22 @@
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 151,
+			"x": 63,
 			"y": 86
+		},
+		{
+			"attacks": [
+				"shoot"
+			],
+			"facing": -1,
+			"look": "enemy_skree",
+			"move": "hover",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 151,
+			"y": 70
 		}
 	],
 	"environment": "cavern_deep",

@@ -116,6 +116,8 @@
 		},
 		{
 			"attacks": [
+				"charge",
+				"shoot",
 				"leap"
 			],
 			"facing": 1,
@@ -123,23 +125,23 @@
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
-			"tier": 0,
+			"tier": 2,
 			"traits": [],
 			"x": 103,
 			"y": 150
 		},
 		{
 			"attacks": [
-				"leap"
+				"charge"
 			],
 			"facing": -1,
-			"look": "enemy_hornback",
+			"look": "enemy_skeleton",
 			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 263,
+			"x": 175,
 			"y": 118
 		},
 		{
@@ -147,13 +149,13 @@
 				"lob"
 			],
 			"facing": -1,
-			"look": "enemy_thornmite",
+			"look": "enemy_murkspore",
 			"move": "hop",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 199,
+			"x": 263,
 			"y": 118
 		}
 	],

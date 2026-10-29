@@ -1,0 +1,63 @@
+{
+  "room_count": 47,
+  "starting_abilities": [],
+  "entities": {
+    "spawn": 106,
+    "boss_gate": 4,
+    "spikes_right": 4,
+    "spikes_left": 5,
+    "boss_ape": 1,
+    "jumpthru": 151,
+    "spikes_up": 69,
+    "spikes_down": 20,
+    "strawberry": 10,
+    "note": 15,
+    "enemy_monster": 47,
+    "crumble": 9,
+    "water": 45,
+    "house_door": 18,
+    "energy_fragment": 3,
+    "rockfall": 2,
+    "acid": 2,
+    "enemy_mosstrot": 9,
+    "stamina_orb": 2,
+    "boss_guardian": 1,
+    "vent_plug": 3,
+    "discovery_npc": 2,
+    "waterfall": 1,
+    "ape_chase": 2,
+    "door": 2,
+    "village_elf": 5,
+    "breakwall": 7,
+    "building": 4,
+    "island_prop": 2,
+    "village_mage": 5,
+    "stamina_block": 1
+  },
+  "pending_notes": [
+    [
+      "h1_villager_house",
+      "Villager (NPC, not built yet)"
+    ],
+    [
+      "h2_quest_house",
+      "Quest giver (NPC, not built yet): the quest rewards a skill point"
+    ],
+    [
+      "l2_net_trap",
+      "Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in"
+    ],
+    [
+      "l3_treetop_village",
+      "Moving, oddly behaving bridges (not built): these jump-throughs stand in"
+    ],
+    [
+      "l3_treetop_village",
+      "Reward: wall grab (not built yet)"
+    ],
+    [
+      "s1_sand_cave",
+      "Reward: the sword (not built yet; needs 2 stamina blocks to use)"
+    ]
+  ]
+}

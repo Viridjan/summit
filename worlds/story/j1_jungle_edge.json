@@ -79,14 +79,14 @@
 				"shoot"
 			],
 			"facing": 1,
-			"look": "enemy_skeleton",
-			"move": "patrol",
+			"look": "enemy_skree",
+			"move": "hover",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
 			"x": 95,
-			"y": 118
+			"y": 102
 		}
 	],
 	"environment": "forest",

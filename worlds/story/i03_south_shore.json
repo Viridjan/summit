@@ -25,91 +25,60 @@
 			"y": 136
 		},
 		{
-			"attacks": [
-				"shoot"
-			],
-			"facing": -1,
-			"look": "enemy_bat",
-			"move": "hover",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 2,
-			"traits": [
-				"brood",
-				"venom"
-			],
-			"x": 103,
-			"y": 54
-		},
-		{
-			"attacks": [
-				"dive"
-			],
-			"facing": -1,
-			"look": "enemy_fuzzbob",
-			"move": "hover",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
-			"x": 151,
-			"y": 110
-		},
-		{
+			"h": 16,
+			"shore_extension": true,
 			"t": "water",
+			"w": 24,
 			"x": 368,
-			"y": 136,
-			"w": 24,
-			"h": 16,
-			"shore_extension": true
+			"y": 136
 		},
 		{
+			"h": 16,
+			"shore_extension": true,
 			"t": "water",
-			"x": 688,
-			"y": 136,
 			"w": 24,
-			"h": 16,
-			"shore_extension": true
+			"x": 688,
+			"y": 136
 		},
 		{
-			"t": "house_door",
-			"skin": "signpost",
-			"shore_panel": true,
-			"x": 240,
-			"y": 112,
-			"w": 16,
+			"direction": "west",
 			"h": 24,
 			"id": "to_west",
+			"label": "West Shore",
+			"shore_panel": true,
+			"skin": "signpost",
+			"t": "house_door",
 			"to": "i01_west_shore:to_south",
-			"direction": "west",
-			"label": "West Shore"
+			"w": 16,
+			"x": 240,
+			"y": 112
 		},
 		{
+			"entrance": true,
+			"shore_panel": true,
 			"t": "spawn",
 			"x": 244,
-			"y": 128,
-			"entrance": true,
-			"shore_panel": true
+			"y": 128
 		},
 		{
-			"t": "house_door",
-			"skin": "signpost",
-			"shore_panel": true,
-			"x": 880,
-			"y": 112,
-			"w": 16,
+			"direction": "east",
 			"h": 24,
 			"id": "to_east",
+			"label": "East Shore",
+			"shore_panel": true,
+			"skin": "signpost",
+			"t": "house_door",
 			"to": "i08_east_shore:to_south",
-			"direction": "east",
-			"label": "East Shore"
+			"w": 16,
+			"x": 880,
+			"y": 112
 		},
 		{
+			"entrance": true,
+			"shore_panel": true,
 			"t": "spawn",
 			"x": 884,
-			"y": 128,
-			"entrance": true,
-			"shore_panel": true
+			"y": 128
 		}
 	],
 	"environment": "island_shore",

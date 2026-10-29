@@ -20,76 +20,60 @@
 			"y": 104
 		},
 		{
-			"attacks": [
-				"shoot"
-			],
-			"facing": 1,
-			"look": "enemy_bat",
-			"move": "hover",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 1,
-			"traits": [
-				"brood"
-			],
-			"x": 143,
-			"y": 78
-		},
-		{
+			"h": 16,
+			"shore_extension": true,
 			"t": "water",
+			"w": 24,
 			"x": 368,
-			"y": 104,
-			"w": 24,
-			"h": 16,
-			"shore_extension": true
+			"y": 104
 		},
 		{
+			"h": 16,
+			"shore_extension": true,
 			"t": "water",
-			"x": 688,
-			"y": 104,
 			"w": 24,
-			"h": 16,
-			"shore_extension": true
+			"x": 688,
+			"y": 104
 		},
 		{
-			"t": "house_door",
-			"skin": "signpost",
-			"shore_panel": true,
-			"x": 480,
-			"y": 80,
-			"w": 16,
+			"direction": "north",
 			"h": 24,
 			"id": "to_north",
+			"label": "North Shore",
+			"shore_panel": true,
+			"skin": "signpost",
+			"t": "house_door",
 			"to": "i02_north_shore:to_east",
-			"direction": "north",
-			"label": "North Shore"
+			"w": 16,
+			"x": 480,
+			"y": 80
 		},
 		{
+			"entrance": true,
+			"shore_panel": true,
 			"t": "spawn",
 			"x": 484,
-			"y": 96,
-			"entrance": true,
-			"shore_panel": true
+			"y": 96
 		},
 		{
-			"t": "house_door",
-			"skin": "signpost",
-			"shore_panel": true,
-			"x": 880,
-			"y": 80,
-			"w": 16,
+			"direction": "south",
 			"h": 24,
 			"id": "to_south",
+			"label": "South Shore",
+			"shore_panel": true,
+			"skin": "signpost",
+			"t": "house_door",
 			"to": "i03_south_shore:to_east",
-			"direction": "south",
-			"label": "South Shore"
+			"w": 16,
+			"x": 880,
+			"y": 80
 		},
 		{
+			"entrance": true,
+			"shore_panel": true,
 			"t": "spawn",
 			"x": 884,
-			"y": 96,
-			"entrance": true,
-			"shore_panel": true
+			"y": 96
 		}
 	],
 	"environment": "island_shore",

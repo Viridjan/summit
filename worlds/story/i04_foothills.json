@@ -21,39 +21,39 @@
 			"y": 8
 		},
 		{
-			"attacks": [
-				"leap"
-			],
-			"facing": -1,
-			"look": "enemy_hornback",
-			"move": "patrol",
-			"populated": true,
-			"t": "enemy_monster",
-			"tier": 0,
-			"traits": [],
-			"x": 223,
-			"y": 94
+			"h": 8,
+			"t": "jumpthru",
+			"w": 32,
+			"x": 48,
+			"y": 104
 		},
 		{
 			"attacks": [
-				"leap"
+				"charge"
 			],
 			"facing": 1,
-			"look": "enemy_hornback",
+			"look": "enemy_skeleton",
 			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 143,
-			"y": 94
+			"x": 247,
+			"y": 78
 		},
 		{
-			"t": "jumpthru",
-			"x": 48,
-			"y": 104,
-			"w": 32,
-			"h": 8
+			"attacks": [
+				"shoot"
+			],
+			"facing": 1,
+			"look": "enemy_skree",
+			"move": "hover",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 135,
+			"y": 78
 		}
 	],
 	"environment": "volcano",

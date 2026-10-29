@@ -192,12 +192,12 @@ func spots_in(lvl: Dictionary) -> Array:
 			out.append(c)
 	return out
 
-# Put monster m standing on floor cell c (flyers float two tiles higher).
+# Put monster m standing on floor cell c (flyers float two tiles higher). ActionMonster grows giant / upgraded
+# ones upward and to both sides from this spot.
 func place(lvl: Dictionary, c: Vector2i, m: Dictionary) -> void:
-	var size := 20 if "giant" in m.traits else 10
-	var e: Dictionary = m.duplicate(true)
-	e.x = c.x * T - size / 2 + T / 2
-	e.y = (c.y + 1) * T - size - (2 * T if m.move == "hover" else 0)
+	var e: Dictionary = m.duplicate(true)  # placed at the base 10 px size: bigger ones grow up and out from it
+	e.x = c.x * T - 5 + T / 2
+	e.y = (c.y + 1) * T - 10 - (2 * T if m.move == "hover" else 0)
 	e.facing = -1 if rng.randf() < 0.5 else 1
 	e.populated = true
 	lvl.entities.append(e)

@@ -92,17 +92,17 @@
 		},
 		{
 			"attacks": [
-				"shoot"
+				"charge"
 			],
-			"facing": -1,
-			"look": "enemy_skree",
-			"move": "hover",
+			"facing": 1,
+			"look": "enemy_hornback",
+			"move": "patrol",
 			"populated": true,
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
 			"x": 191,
-			"y": 86
+			"y": 102
 		}
 	],
 	"environment": "cavern_deep",

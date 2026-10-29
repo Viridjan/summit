@@ -243,3 +243,19 @@ with its own filename, clears undo/selection and centers the camera.
 connected-room button fits the entire room inside the workspace beside the
 palette. Outside-room scenery and terrain fringes are masked with the plain
 editor backdrop, including while panning or zooming.
+
+**Progression report graphs (2026-10-29):** Graph 1 enumerates boss/powerup
+states and the union of rooms reachable with each state, including all route
+alternatives. Graph 2 preserves direct room exits and return links instead of
+merging reversible rooms into zones: a left/right fork remains a choice even
+when both branches are accessible. Selecting an unlock state updates the route
+graph. Unplaced powerups are optional unchecked assumptions.
+
+**Rooted route visualization:** Graph 2 keeps the starting room as its root,
+centers shared approaches above their branches, and splits solid paths at
+choices. Return/cross-links are faint dashed arrows. Defeated-boss forks can
+reference an earlier room as a branch leaf, preserving the Ape’s left/right
+choice without duplicating whole routes or creating infinite loops.
+
+The rooted choices graph retains metro styling: thick colored routes, circular
+stations and dark interchange rings at forks; return links stay dashed.

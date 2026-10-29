@@ -72,7 +72,7 @@
 			"attacks": [
 				"shoot"
 			],
-			"facing": -1,
+			"facing": 1,
 			"look": "enemy_bat",
 			"move": "hover",
 			"populated": true,

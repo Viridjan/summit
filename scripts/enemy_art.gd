@@ -128,10 +128,10 @@ static func texture() -> Texture2D:
 	return _texture
 
 # Choose a family/variant atlas frame and draw it centred on the collision body with facing and scale.
-static func draw(ci: CanvasItem, kind: String, at: Vector2, facing: int, clock: float, flash := false, scale := 1.0) -> void:
+static func draw(ci: CanvasItem, kind: String, at: Vector2, facing: int, clock: float, flash := false, scale := 1.0, tint := Color.WHITE) -> void:
 	var frame := int(clock * 8) % 4
 	var source := Rect2(frame * SIZE, KINDS.find(kind) * SIZE, SIZE, SIZE)
 	# Negative width flips the texture in-place; both facings share the same origin.
 	var half := SIZE * scale / 2.0
 	var dest := Rect2(at.round() - Vector2(half, half), Vector2(-SIZE * scale if facing < 0 else SIZE * scale, SIZE * scale))
-	ci.draw_texture_rect_region(texture(), dest, source, Color(1.8, 1.6, 1.4) if flash else Color.WHITE)
+	ci.draw_texture_rect_region(texture(), dest, source, Color(1.8, 1.6, 1.4) if flash else tint)

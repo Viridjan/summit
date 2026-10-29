@@ -23,13 +23,24 @@
 			"t": "enemy_monster",
 			"tier": 0,
 			"traits": [],
-			"x": 167,
+			"x": 143,
 			"y": 94
 		}
 	],
 	"environment": "volcanic_cave",
 	"h": 16,
 	"name": "Junction",
+	"terrain_morph": {
+		"intensity": 0.45,
+		"origin": [
+			780,
+			99
+		],
+		"result_tiles": "ac30b52147fbc04a70523b1dabcd82dc9c14deabf916d34b01a21dd22a646cc0",
+		"seed": 42,
+		"terrain": "cavern",
+		"version": 1
+	},
 	"tiles": [
 		"1111111111111111111111111111111111111111",
 		"1000000000000000001111000000000000000001",
@@ -49,16 +60,5 @@
 		"1111111111111111111111111111111111111111"
 	],
 	"vertical_trim": 7,
-	"w": 40,
-	"terrain_morph": {
-		"version": 1,
-		"terrain": "cavern",
-		"seed": 42,
-		"intensity": 0.45,
-		"origin": [
-			780,
-			99
-		],
-		"result_tiles": "ac30b52147fbc04a70523b1dabcd82dc9c14deabf916d34b01a21dd22a646cc0"
-	}
+	"w": 40
 }

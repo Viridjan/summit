@@ -108,7 +108,7 @@ def survey_many(W, base_solid, walls, sets):
 # way that doesn't lead back (a drop, a one-way door, a collapse): a zone with two arrows out is a choice.
 def _from_entrance(job):  # one entrance (spawn point): the room's ground it reaches and where it steps out
     name, start, abilities, extra = job
-    _W.solid = _W.solid | set(extra)  # a forked copy: the cave-in rock only in this search
+    _W.solid = blocked(abilities) | set(extra)  # a forked copy: the cave-in rock only in this search
     out = set()
     ground, _ = explore(_W, MODELS["cautious"], set(abilities), [start], room=name, exits=out)
     return ground, out
@@ -130,6 +130,23 @@ def seals(W):
 # lands at the nearest entrance there). Entrances that reach each other form a zone; an arrow between zones is a
 # way that doesn't lead back (a drop, a one-way door, a cave-in). A zone with two arrows out is a choice. Entrances
 # behind a cave-in search with its rock down.
+def room_links(W, entrances, found):
+    """Keep direct room exits, including reversible branches; never merge a fork."""
+    links = set()
+    for (source, _), (_, exits) in zip(entrances, found):
+        for target, _, _ in exits:
+            if source == target or target not in W.rooms: continue
+            ax, ay, _ = W.rooms[source]
+            bx, by, _ = W.rooms[target]
+            direction = "right" if bx > ax else "left" if bx < ax else "down" if by > ay else "up"
+            # Explicit long-distance doors/panels are travel links, not physical adjacency.
+            level = W.rooms[source][2]
+            if any(str(e.get("to", "")).startswith(target + ":") for e in level.get("entities", [])):
+                direction = "panel / door"
+            links.add((source, target, direction))
+    return [dict(zip(("from", "to", "direction"), link)) for link in sorted(links)]
+
+
 def zones(W, base_solid, walls, abilities):
     global _BASE, _WALLS, _GATES
     _BASE, _WALLS, _GATES = base_solid, walls, boss_gates(W)
@@ -195,7 +212,7 @@ def zones(W, base_solid, walls, abilities):
                 depth[j] = depth[i] + 1
                 stack.append(j)
     rooms_of_z = lambda z: sorted({ents[j][0] for j in z})
-    return [dict(rooms=rooms_of_z(z), kids=kids[i], depth=depth[i], ahead=rooms_of_z(ahead[i])) for i, z in enumerate(zl)], first
+    return [dict(rooms=rooms_of_z(z), kids=kids[i], depth=depth[i], ahead=rooms_of_z(ahead[i])) for i, z in enumerate(zl)], first, room_links(W, ents, found)
 
 
 def build(world_dir):
@@ -224,9 +241,9 @@ def _node(W, base, walls, ab, survey_result, nodes, order, unplaced):
                 rooms[r] = tier
         choices = sorted({power(k) for k, tier in pickups.items() if tier == "g"} - ab)
         skill = sorted({power(k) for k, tier in pickups.items() if tier != "g"} - ab)
-        zl, first = zones(W, base, walls, ab)
+        zl, first, links = zones(W, base, walls, ab)
         nodes[ab] = dict(abilities=sorted(ab), rooms=rooms, cells=cells, choices=choices, skill=skill,
-                         unplaced=[a for a in unplaced if a not in ab], zones=zl, first=first)
+                         unplaced=[a for a in unplaced if a not in ab], zones=zl, first=first, links=links)
         order.append(ab)
         return [ab | {a} for a in choices + nodes[ab]["unplaced"]]
 
@@ -234,7 +251,7 @@ def _node(W, base, walls, ab, survey_result, nodes, order, unplaced):
 def page(W, nodes, order):
     room_list = []
     for name, (ox, oy, lvl) in W.rooms.items():
-        room_list.append(dict(name=name, title=lvl.get("name", name), x=ox, y=oy, w=lvl["w"], h=lvl["h"], tiles=lvl["tiles"]))
+        room_list.append(dict(name=name, title=lvl.get("name", name), x=ox, y=oy, w=lvl["w"], h=lvl["h"], tiles=lvl["tiles"], bosses=[e["t"][5:] for e in lvl["entities"] if e["t"] in ("boss_ape", "boss_guardian")]))
     regions = {}
     try:
         for g in json.load(open(os.path.join(W.dir, "world.json"))).get("regions", []):
@@ -262,8 +279,8 @@ def page(W, nodes, order):
         out_nodes.append(dict(id="+".join(n["abilities"]) or "start", abilities=n["abilities"], depth=len(ab),
                               parents=["+".join(sorted(p)) or "start" for p in order if p < ab and len(p) == len(ab) - 1],
                               rooms=n["rooms"], marks=marks, choices=n["choices"], skill=n["skill"], opened=opened,
-                              unplaced=n["unplaced"], zones=n["zones"], first=n["first"]))
-    data = json.dumps(dict(rooms=room_list, regions=regions, nodes=out_nodes))
+                              unplaced=n["unplaced"], zones=n["zones"], first=n["first"], links=n["links"]))
+    data = json.dumps(dict(rooms=room_list, regions=regions, nodes=out_nodes, start=W.room_of.get(W.spawn)))
     return TEMPLATE.replace("/*DATA*/", data)
 
 
@@ -282,11 +299,11 @@ svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
 #info{margin-top:8px;color:var(--dim)} #info b{color:var(--fg)}
 </style></head><body><main>
-<section class="card"><h1>Progression <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Each line is an order of picking up abilities and beating bosses (a boss opens its gates); each stop, what you have. Dashed: the same stop on several lines. Hover a stop, click it for the map.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
+<section class="card"><h1>Graph 1 · Unlocks <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Bosses beaten and powerups collected determine all accessible rooms. Both branches after a gate count as accessible, regardless of which route you take. Select a state to inspect its rooms and update Graph 2.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
-<section class="card"><h1>Choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><svg id="zgraph"></svg></section>
-<section class="card"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>this zone</span><span><i class="sw" style="background:var(--g)"></i>still ahead</span><span><i class="sw" style="background:var(--r)"></i>left behind (no way back)</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
+<section class="card"><h1>Graph 2 · Route choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><svg id="zgraph"></svg></section>
+<section class="card"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
 <canvas id="zmap"></canvas><div id="zinfo"></div></section></main>
 <script>
 const D=/*DATA*/;
@@ -316,7 +333,7 @@ function metro(sv,N,first,o){sv.innerHTML="";const boxes={};
   const g=el("g",{style:"cursor:pointer"},stops);boxes[i]=g;
   ls.forEach(li=>el("circle",{cx:col(li),cy:y,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":LINE_COLORS[li%LINE_COLORS.length],"stroke-width":choice?4:3},g));
   el("line",{x1:col(ls[ls.length-1])+10,y1:y,x2:LX-6,y2:y,stroke:"#3a3a48","stroke-width":1},links);
-  const t=el("text",{x:LX,y:y+4,style:"font-size:12px"},labels);t.textContent=o.label(i)+(choice?"  ◆ choice":"");
+  const t=el("text",{x:LX,y:y+4,style:"font-size:12px"},labels);t.textContent=o.label(i)+(choice && o.choices!==false?"  ◆ choice":"");
   g.onmouseenter=()=>{tip.innerHTML=o.tip(i);tip.style.display="block"};
   g.onmousemove=e=>{tip.style.left=(e.pageX+14)+"px";tip.style.top=(e.pageY+14)+"px"};
   g.onmouseleave=()=>tip.style.display="none";
@@ -335,19 +352,19 @@ function atip(i){const n=D.nodes[i],k=AN[i].kids;
  else s+="<br>All abilities.";return s}
 // abilities with no pickup in the world can't be a real choice yet: they're assumed with the checkboxes, and the
 // lines show only real choices (placed pickups, bosses) on top of them
-const FREE=D.nodes[0].unplaced,ASSUME=new Set(FREE);
+const FREE=D.nodes[0].unplaced,ASSUME=new Set();
 const part=n=>n.abilities.filter(a=>FREE.includes(a)).sort().join("+");
 let boxes={},shown=[];
 function drawTop(){const want=[...ASSUME].sort().join("+");
  shown=D.nodes.map((n,k)=>k).filter(k=>part(D.nodes[k])==want);
  const N=D.nodes.map((n,k)=>({kids:AN[k].kids.filter(j=>shown.includes(j)),depth:n.abilities.filter(a=>!FREE.includes(a)).length}));
  const first=shown.find(k=>N[k].depth==0);
- [boxes]=metro(svg,N,first,{label:i=>{const n=D.nodes[i],real=n.abilities.filter(a=>!FREE.includes(a));
+ [boxes]=metro(svg,N,first,{choices:false,label:i=>{const n=D.nodes[i],real=n.abilities.filter(a=>!FREE.includes(a));
    return (real.length?real.map(nm).join(" + "):"start")+" · "+greenOf(n)+" rooms"},tip:atip,click:i=>show(D.nodes[i])});
  show(D.nodes[first])}
 const box=document.getElementById("assume");
 FREE.forEach(a=>{const l=document.createElement("label");l.style.cssText="margin-right:12px;cursor:pointer";
- const c=document.createElement("input");c.type="checkbox";c.checked=true;c.onchange=()=>{c.checked?ASSUME.add(a):ASSUME.delete(a);drawTop()};
+ const c=document.createElement("input");c.type="checkbox";c.checked=false;c.onchange=()=>{c.checked?ASSUME.add(a):ASSUME.delete(a);drawTop()};
  l.append(c," "+a);box.append(l)});
 if(!FREE.length)box.style.display="none";
 const cv=document.getElementById("map"),cx=cv.getContext("2d");
@@ -361,31 +378,67 @@ function show(n){mark(boxes,D.nodes.indexOf(n));
    const k=m[y*r.w+x];if(k!="."){cx.fillStyle=C[k];cx.fillRect(ox+x*S,oy+y*S,S,S)}}
   cx.strokeStyle=C[tier];cx.lineWidth=1;cx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
  const by={g:[],o:[],p:[],r:[]};D.rooms.forEach(r=>by[n.rooms[r.name]||"r"].push(r.title));
- document.getElementById("info").innerHTML=`<b>${n.id}</b> &middot; choices here: ${n.choices.join(", ")||"none"}${n.skill.length?" &middot; only with skill: "+n.skill.join(", "):""}<br>`+
-  ["o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].join(", ")}`:"").filter(Boolean).join("<br>")}
+ document.getElementById("info").innerHTML=`<b>${n.id}</b> &middot; available bosses / powerups: ${n.choices.map(act).join(", ")||"none"}${n.skill.length?" &middot; only with skill: "+n.skill.join(", "):""}<br>`+
+  ["g","o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{g:"accessible rooms",o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].join(", ")}`:"").filter(Boolean).join("<br>")}
 const zsvg=document.getElementById("zgraph"),zcv=document.getElementById("zmap"),zcx=zcv.getContext("2d");zcv.width=cv.width;zcv.height=cv.height;
-const base=n=>n,title=n=>(D.rooms.find(r=>r.name==n)||{title:n}).title;
-let zboxes={};
-const zname=(n,i)=>{const z=n.zones[i];return title(z.rooms[0])+(z.rooms.length>1?" +"+(z.rooms.length-1):"")};
-function decision(n,i){const z=n.zones[i],k=z.kids;
- const list=z.rooms.map(title).join(", ");
- if(k.length>1)return `<b>Choice</b> &middot; ${list}<br>${k.length} ways on: `+k.map(j=>"<b>"+zname(n,j)+"</b>").join(" or ")+`.<br>Whichever you take, you can't come back here.`;
- if(k.length==1)return `<b>One way on</b> &middot; ${list}<br>Next: <b>${zname(n,k[0])}</b>. Once you go, you can't return.`;
- return `<b>End of the line</b> &middot; ${list}<br>No way on from here.`}
-function zones(n){const Z=n.zones;
- let lines;[zboxes,lines]=metro(zsvg,Z,n.first,{label:i=>zname(n,i),tip:i=>decision(n,i),click:i=>zshow(n,i)});
- document.getElementById("zhead").textContent=`With ${n.id=="start"?"no abilities":n.id}: ${Z.length} zones, ${lines} lines. A stop is a zone you can move around freely; going down a line there is no way back. Dashed: the same stop on several lines. Hover a stop.`;
- zshow(n,n.first)}
-function zshow(n,i){mark(zboxes,i);const z=n.zones[i];
- const here=new Set(z.rooms.map(base)),ahead=new Set(z.ahead.map(base)),seen=new Set(n.zones.flatMap(q=>q.rooms).map(base));
+const title=n=>(D.rooms.find(r=>r.name==n)||{title:n}).title;
+let selectedState;
+function routeTree(names,links,start,choiceRooms=[]){
+ const children=Object.fromEntries(names.map(r=>[r,[]])),parent={},depth={},queue=[];
+ if(names.includes(start)){depth[start]=0;queue.push(start)}
+ for(let i=0;i<queue.length;i++){
+  const r=queue[i];
+  links.filter(e=>e.from===r).sort((a,b)=>{
+   const rank={left:0,up:1,down:2,right:3};return (rank[a.direction]??2)-(rank[b.direction]??2)||a.to.localeCompare(b.to)
+  }).forEach(e=>{if(depth[e.to]===undefined){parent[e.to]=r;depth[e.to]=depth[r]+1;children[r].push(e.to);queue.push(e.to)}})
+ }
+ const aliases={},displayLinks=links.slice();
+ links.forEach(e=>{if(choiceRooms.includes(e.from)&&parent[e.to]!==e.from&&depth[e.from]!==undefined&&depth[e.to]!==undefined){
+  const ref=e.from+"::"+e.to;aliases[ref]=e.to;children[ref]=[];parent[ref]=e.from;depth[ref]=depth[e.from]+1;children[e.from].unshift(ref);queue.push(ref);
+  displayLinks[displayLinks.indexOf(e)]={...e,to:ref};displayLinks.push({...e,from:ref});
+ }});
+ let leaf=0;const pos={};
+ function place(r){const kids=children[r];kids.forEach(place);
+  const x=kids.length?(pos[kids[0]].x+pos[kids[kids.length-1]].x)/2:30+leaf++*230;
+  pos[r]={x,y:30+depth[r]*110};
+ }
+ if(queue.length)place(start);
+ const extra=links.filter(e=>pos[e.from]&&pos[e.to]&&parent[e.to]!==e.from);
+ return {children,parent,pos,extra,aliases,links:displayLinks,names:queue,width:Math.max(500,leaf*230+40)};
+}
+function zones(n){selectedState=n;zsvg.innerHTML="";
+ const names=Object.keys(n.rooms).filter(r=>n.rooms[r]==="g").sort();
+ const links=n.links.filter(e=>names.includes(e.from)&&names.includes(e.to));
+ const choiceRooms=D.rooms.filter(r=>r.bosses?.some(b=>n.abilities.includes(b))).map(r=>r.name);
+ const tree=routeTree(names,links,D.start,choiceRooms),pos=tree.pos,width=tree.width;
+ zsvg.setAttribute("width",width);zsvg.setAttribute("height",Math.max(120,...Object.values(pos).map(p=>p.y+80)));
+ const lineColors={};let nextColor=1;
+ function colorBranch(r,color){lineColors[r]=color;tree.children[r].forEach((child,i)=>colorBranch(child,i===0?color:LINE_COLORS[nextColor++%LINE_COLORS.length]))}
+ if(pos[D.start])colorBranch(D.start,LINE_COLORS[0]);
+ const defs=el("defs",{},zsvg),marker=el("marker",{id:"arrow",viewBox:"0 0 10 10",refX:9,refY:5,markerWidth:6,markerHeight:6,orient:"auto"},defs);
+ el("path",{d:"M0 0 L10 5 L0 10 z",fill:"#8a8a99"},marker);
+ tree.links.filter(e=>pos[e.from]&&pos[e.to]).forEach(e=>{const a=pos[e.from],b=pos[e.to],back=tree.parent[e.to]!==e.from;
+ const path=el("path",{class:back?"metro-return":"metro-route",d:back?`M${a.x+90},${a.y+20} C${a.x+200},${a.y-24} ${b.x+200},${b.y-24} ${b.x+90},${b.y+20}`:`M${a.x+90},${a.y+20} V${a.y+48} L${b.x+90},${b.y-8} V${b.y+20}`,fill:"none",stroke:back?"#a0a0b0":lineColors[e.to],"stroke-width":back?1.5:8,"stroke-linecap":"round","stroke-linejoin":"round","stroke-dasharray":back?"4 5":"none",opacity:back?.4:1},zsvg);
+ const t=el("title",{},path);t.textContent=`${title(e.from)} → ${title(e.to)} (${e.direction})`});
+ tree.names.forEach(r=>{const p=pos[r],kids=tree.links.filter(e=>e.from===r&&tree.parent[e.to]===r),g=el("g",{style:"cursor:pointer"},zsvg);
+ el("circle",{class:"metro-station","data-room":tree.aliases[r]||r,cx:p.x+90,cy:p.y+20,r:kids.length>1?9:7,fill:"#fff",stroke:kids.length>1?"#16161c":lineColors[r],"stroke-width":kids.length>1?4:3},g);
+ const t=el("text",{x:p.x+105,y:p.y+17,fill:"#eee",style:"font-size:11px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);t.textContent=title(tree.aliases[r]||r);
+ const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:10px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);sub.textContent=tree.aliases[r]?"↩ existing route":kids.length>1?`${kids.length} route choices`:"";
+ g.onclick=()=>zshow(n,tree.aliases[r]||r);const tt=el("title",{},g);tt.textContent=kids.map(e=>e.direction+": "+title(e.to)).join("\n")});
+ document.getElementById("zhead").textContent=`With ${n.abilities.map(nm).join(" + ")||"no unlocks"}: choose which connected room to visit. Start at the root and follow colored metro lines, branching at each choice. Dashed links are returns or connections to an existing branch. Hover arrows for direction.`;
+ zshow(n,names.includes(D.start)?D.start:names[0]);
+}
+function zshow(n,room){
+ zsvg.querySelectorAll(".metro-station").forEach(c=>c.setAttribute("fill",c.getAttribute("data-room")===room?"#5fa8ff":"#fff"));
+ const links=n.links.filter(e=>n.rooms[e.from]==="g"&&n.rooms[e.to]==="g"),ahead=new Set([room]),todo=[room];
+ while(todo.length){const r=todo.pop();links.filter(e=>e.from===r).forEach(e=>{if(!ahead.has(e.to)){ahead.add(e.to);todo.push(e.to)}})}
  zcx.clearRect(0,0,zcv.width,zcv.height);
- D.rooms.forEach(r=>{const col=here.has(r.name)?"#5fa8ff":ahead.has(r.name)?C.g:seen.has(r.name)?C.r:"#44444f",ox=(r.x-minx)*S,oy=(r.y-miny)*S;
-  zcx.globalAlpha=0.35;zcx.fillStyle=col;zcx.fillRect(ox,oy,r.w*S,r.h*S);zcx.globalAlpha=1;
-  for(let y=0;y<r.h;y++)for(let x=0;x<r.w;x++)if(r.tiles[y][x]=="1"){zcx.fillStyle="#2c2c36";zcx.fillRect(ox+x*S,oy+y*S,S,S)}
-  zcx.strokeStyle=col;zcx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
- const behind=[...seen].filter(r=>!ahead.has(r)&&!here.has(r)).map(title),partly=z.rooms.filter(r=>n.zones.filter(q=>q.rooms.includes(r)).length>1);
- document.getElementById("zinfo").innerHTML=`<b>${z.rooms.map(title).join(", ")}</b><br>`+(behind.length?`<span style="color:${C.r}">left behind:</span> ${behind.join(", ")}<br>`:"")+(partly.length?`only part of: ${partly.map(title).join(", ")} (the rest is in another zone)<br>`:"")+
-  (z.kids.length?`ways on: `+z.kids.map(j=>title(n.zones[j].rooms[0])).join(" | "):"no way on")}
+ D.rooms.forEach(r=>{const col=r.name===room?"#5fa8ff":ahead.has(r.name)?C.g:n.rooms[r.name]==="g"?C.r:"#44444f",ox=(r.x-minx)*S,oy=(r.y-miny)*S;
+ zcx.globalAlpha=.35;zcx.fillStyle=col;zcx.fillRect(ox,oy,r.w*S,r.h*S);zcx.globalAlpha=1;
+ for(let y=0;y<r.h;y++)for(let x=0;x<r.w;x++)if(r.tiles[y][x]==="1"){zcx.fillStyle="#2c2c36";zcx.fillRect(ox+x*S,oy+y*S,S,S)}
+ zcx.strokeStyle=col;zcx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
+ const info=document.getElementById("zinfo");info.replaceChildren();const head=document.createElement("b");head.textContent=title(room);info.append(head);
+ links.filter(e=>e.from===room).forEach(e=>{const b=document.createElement("button");b.textContent=e.direction+" → "+title(e.to);b.style.cssText="display:block;margin:6px 0;padding:6px;cursor:pointer";b.onclick=()=>zshow(n,e.to);info.append(b)})}
 const show0=show;show=function(n){show0(n);zones(n)};
 drawTop();
 const fromHash=D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)));  // e.g. progression.html#ape+dash

@@ -1,0 +1,2532 @@
+{
+  "world": "worlds/story",
+  "start_room": "m1_meadow",
+  "spawn_tile": [
+    1,
+    18
+  ],
+  "abilities": [],
+  "room_count": 47,
+  "door_count": 20,
+  "errors": [],
+  "kind": "static_tile_connectivity_not_physics",
+  "models": {
+    "topology": {
+      "body_rows": 1,
+      "excluded_hazards": [],
+      "spawn_valid": true,
+      "rooms_reached": 41,
+      "unreached_rooms": [
+        "hub_landing",
+        "w1_wilds_gate",
+        "w2_wilds_hollow",
+        "w3_wilds_roots",
+        "w4_wilds_den",
+        "w5_wilds_drop"
+      ],
+      "partial_rooms": [],
+      "rooms": {
+        "a1_ape_arena": {
+          "position_tiles": [
+            440,
+            69
+          ],
+          "name": "Ape Arena",
+          "open_tiles": 501,
+          "eligible_feet_cells": 501,
+          "reached_feet_cells": 501,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c0_roar_tunnel": {
+          "position_tiles": [
+            40,
+            53
+          ],
+          "name": "Roar Tunnel",
+          "open_tiles": 317,
+          "eligible_feet_cells": 317,
+          "reached_feet_cells": 317,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "A roar from the left"
+          ]
+        },
+        "c1_lake_cave": {
+          "position_tiles": [
+            80,
+            23
+          ],
+          "name": "Lake Cave",
+          "open_tiles": 664,
+          "eligible_feet_cells": 664,
+          "reached_feet_cells": 664,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Down you go. From here on, things can hurt"
+          ]
+        },
+        "c2_cave_teeth": {
+          "position_tiles": [
+            160,
+            51
+          ],
+          "name": "Cave Teeth",
+          "open_tiles": 268,
+          "eligible_feet_cells": 268,
+          "reached_feet_cells": 268,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c3_cove_tunnel": {
+          "position_tiles": [
+            200,
+            53
+          ],
+          "name": "Cove Tunnel",
+          "open_tiles": 199,
+          "eligible_feet_cells": 199,
+          "reached_feet_cells": 199,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c4_deep_lake": {
+          "position_tiles": [
+            120,
+            69
+          ],
+          "name": "Deep Lake",
+          "open_tiles": 194,
+          "eligible_feet_cells": 194,
+          "reached_feet_cells": 194,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c5_lake_crossing": {
+          "position_tiles": [
+            110,
+            59
+          ],
+          "name": "Lake Crossing",
+          "open_tiles": 164,
+          "eligible_feet_cells": 164,
+          "reached_feet_cells": 164,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c6_wall_cave": {
+          "position_tiles": [
+            138,
+            58
+          ],
+          "name": "Wall Cave",
+          "open_tiles": 111,
+          "eligible_feet_cells": 111,
+          "reached_feet_cells": 111,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "h1_villager_house": {
+          "position_tiles": [
+            240,
+            123
+          ],
+          "name": "Villager's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 308,
+          "reached_feet_cells": 308,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Villager (NPC, not built yet)"
+          ]
+        },
+        "h2_quest_house": {
+          "position_tiles": [
+            280,
+            123
+          ],
+          "name": "Quest Giver's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 308,
+          "reached_feet_cells": 308,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Quest giver (NPC, not built yet): the quest rewards a skill point"
+          ]
+        },
+        "hub_landing": {
+          "position_tiles": [
+            -40,
+            0
+          ],
+          "name": "Landing",
+          "open_tiles": 664,
+          "eligible_feet_cells": 664,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            0,
+            2
+          ],
+          "markers": [
+            "You land here. Left: the Western Wilds. Right: the meadow."
+          ]
+        },
+        "i01_west_shore": {
+          "position_tiles": [
+            700,
+            46
+          ],
+          "name": "West Shore",
+          "open_tiles": 2120,
+          "eligible_feet_cells": 2120,
+          "reached_feet_cells": 2120,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i02_north_shore": {
+          "position_tiles": [
+            900,
+            148
+          ],
+          "name": "North Shore",
+          "open_tiles": 1378,
+          "eligible_feet_cells": 1378,
+          "reached_feet_cells": 1378,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i03_south_shore": {
+          "position_tiles": [
+            849,
+            -173
+          ],
+          "name": "South Shore",
+          "open_tiles": 1760,
+          "eligible_feet_cells": 1760,
+          "reached_feet_cells": 1760,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i04_foothills": {
+          "position_tiles": [
+            820,
+            53
+          ],
+          "name": "Foothills",
+          "open_tiles": 447,
+          "eligible_feet_cells": 447,
+          "reached_feet_cells": 447,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i05_ascent": {
+          "position_tiles": [
+            860,
+            23
+          ],
+          "name": "Volcano Ascent",
+          "open_tiles": 856,
+          "eligible_feet_cells": 856,
+          "reached_feet_cells": 856,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i06_crater": {
+          "position_tiles": [
+            884,
+            30
+          ],
+          "name": "Crater",
+          "open_tiles": 271,
+          "eligible_feet_cells": 271,
+          "reached_feet_cells": 271,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i07_east_slope": {
+          "position_tiles": [
+            924,
+            23
+          ],
+          "name": "East Slope",
+          "open_tiles": 868,
+          "eligible_feet_cells": 868,
+          "reached_feet_cells": 868,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i08_east_shore": {
+          "position_tiles": [
+            948,
+            53
+          ],
+          "name": "East Shore",
+          "open_tiles": 1429,
+          "eligible_feet_cells": 1429,
+          "reached_feet_cells": 1429,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i09_sea_cave": {
+          "position_tiles": [
+            820,
+            69
+          ],
+          "name": "Ash Passage",
+          "open_tiles": 684,
+          "eligible_feet_cells": 684,
+          "reached_feet_cells": 684,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i10_junction": {
+          "position_tiles": [
+            780,
+            99
+          ],
+          "name": "Junction",
+          "open_tiles": 396,
+          "eligible_feet_cells": 396,
+          "reached_feet_cells": 396,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i11_flooded_hall": {
+          "position_tiles": [
+            732,
+            99
+          ],
+          "name": "Flooded Hall",
+          "open_tiles": 443,
+          "eligible_feet_cells": 443,
+          "reached_feet_cells": 443,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i12_echo_gallery": {
+          "position_tiles": [
+            692,
+            99
+          ],
+          "name": "Echo Gallery",
+          "open_tiles": 389,
+          "eligible_feet_cells": 389,
+          "reached_feet_cells": 389,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i13_lower_maze": {
+          "position_tiles": [
+            692,
+            115
+          ],
+          "name": "Lower Maze",
+          "open_tiles": 762,
+          "eligible_feet_cells": 762,
+          "reached_feet_cells": 762,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i14_vent_shaft": {
+          "position_tiles": [
+            740,
+            115
+          ],
+          "name": "Vent Shaft",
+          "open_tiles": 386,
+          "eligible_feet_cells": 386,
+          "reached_feet_cells": 386,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i15_quiet_refuge": {
+          "position_tiles": [
+            756,
+            131
+          ],
+          "name": "Quiet Refuge",
+          "open_tiles": 250,
+          "eligible_feet_cells": 250,
+          "reached_feet_cells": 250,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i16_guardian_chamber": {
+          "position_tiles": [
+            780,
+            115
+          ],
+          "name": "Guardian Chamber",
+          "open_tiles": 1490,
+          "eligible_feet_cells": 1490,
+          "reached_feet_cells": 1490,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i17_crystal_pocket": {
+          "position_tiles": [
+            700,
+            138
+          ],
+          "name": "Crystal Pocket",
+          "open_tiles": 259,
+          "eligible_feet_cells": 259,
+          "reached_feet_cells": 259,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j1_jungle_edge": {
+          "position_tiles": [
+            280,
+            49
+          ],
+          "name": "Jungle Edge",
+          "open_tiles": 576,
+          "eligible_feet_cells": 576,
+          "reached_feet_cells": 576,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j2_jungle_falls": {
+          "position_tiles": [
+            280,
+            69
+          ],
+          "name": "Jungle Falls",
+          "open_tiles": 1220,
+          "eligible_feet_cells": 1220,
+          "reached_feet_cells": 1220,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j3_jungle_hills": {
+          "position_tiles": [
+            360,
+            73
+          ],
+          "name": "Jungle Hills",
+          "open_tiles": 848,
+          "eligible_feet_cells": 848,
+          "reached_feet_cells": 848,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "l1_jungle_depths": {
+          "position_tiles": [
+            396,
+            92
+          ],
+          "name": "Jungle Depths",
+          "open_tiles": 1265,
+          "eligible_feet_cells": 1265,
+          "reached_feet_cells": 1265,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The Ape screams behind you; cross the jungle again"
+          ]
+        },
+        "l2_net_trap": {
+          "position_tiles": [
+            316,
+            99
+          ],
+          "name": "Net Trap",
+          "open_tiles": 874,
+          "eligible_feet_cells": 874,
+          "reached_feet_cells": 874,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in"
+          ]
+        },
+        "l3_treetop_village": {
+          "position_tiles": [
+            360,
+            26
+          ],
+          "name": "Treetop Village",
+          "open_tiles": 1092,
+          "eligible_feet_cells": 1092,
+          "reached_feet_cells": 1092,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Treetop village: platforming first, and you can't fall",
+            "Moving, oddly behaving bridges (not built): these jump-throughs stand in",
+            "Reward: wall grab (not built yet)",
+            "Where the village leads: still open"
+          ]
+        },
+        "lh1_lighthouse_stairs": {
+          "position_tiles": [
+            593,
+            -14
+          ],
+          "name": "Lighthouse Stairs",
+          "open_tiles": 774,
+          "eligible_feet_cells": 774,
+          "reached_feet_cells": 774,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Up the stairs to the lamp"
+          ]
+        },
+        "m1_meadow": {
+          "position_tiles": [
+            0,
+            7
+          ],
+          "name": "Meadow",
+          "open_tiles": 931,
+          "eligible_feet_cells": 931,
+          "reached_feet_cells": 931,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Chapter 1 (work in progress): head right"
+          ]
+        },
+        "m2_big_jump": {
+          "position_tiles": [
+            80,
+            7
+          ],
+          "name": "The Big Jump",
+          "open_tiles": 484,
+          "eligible_feet_cells": 484,
+          "reached_feet_cells": 484,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The big jump: needs a wavedash (dash comes from a later level). Drop in to go on."
+          ]
+        },
+        "s1_sand_cave": {
+          "position_tiles": [
+            471,
+            46
+          ],
+          "name": "Sand Cave",
+          "open_tiles": 920,
+          "eligible_feet_cells": 920,
+          "reached_feet_cells": 920,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Reward: the sword (not built yet; needs 2 stamina blocks to use)"
+          ]
+        },
+        "s2_shore": {
+          "position_tiles": [
+            591,
+            46
+          ],
+          "name": "Shore",
+          "open_tiles": 1410,
+          "eligible_feet_cells": 1410,
+          "reached_feet_cells": 1410,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "s3_lighthouse_top": {
+          "position_tiles": [
+            631,
+            23
+          ],
+          "name": "Lighthouse Top",
+          "open_tiles": 406,
+          "eligible_feet_cells": 406,
+          "reached_feet_cells": 406,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "t1_cove_town": {
+          "position_tiles": [
+            240,
+            53
+          ],
+          "name": "Cove Town",
+          "open_tiles": 479,
+          "eligible_feet_cells": 479,
+          "reached_feet_cells": 479,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "w1_wilds_gate": {
+          "position_tiles": [
+            -80,
+            0
+          ],
+          "name": "Wilds Gate",
+          "open_tiles": 675,
+          "eligible_feet_cells": 675,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            2
+          ],
+          "markers": []
+        },
+        "w2_wilds_hollow": {
+          "position_tiles": [
+            -120,
+            0
+          ],
+          "name": "Wilds Hollow",
+          "open_tiles": 660,
+          "eligible_feet_cells": 660,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            2
+          ],
+          "markers": []
+        },
+        "w3_wilds_roots": {
+          "position_tiles": [
+            -80,
+            23
+          ],
+          "name": "Wilds Roots",
+          "open_tiles": 648,
+          "eligible_feet_cells": 648,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            26,
+            0
+          ],
+          "markers": []
+        },
+        "w4_wilds_den": {
+          "position_tiles": [
+            -120,
+            23
+          ],
+          "name": "Wilds Den",
+          "open_tiles": 716,
+          "eligible_feet_cells": 716,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            15,
+            0
+          ],
+          "markers": []
+        },
+        "w5_wilds_drop": {
+          "position_tiles": [
+            -40,
+            23
+          ],
+          "name": "Wilds Drop",
+          "open_tiles": 662,
+          "eligible_feet_cells": 662,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            8,
+            0
+          ],
+          "markers": []
+        },
+        "x1_serpent_lair": {
+          "position_tiles": [
+            692,
+            154
+          ],
+          "name": "Serpent Lair",
+          "open_tiles": 1555,
+          "eligible_feet_cells": 1555,
+          "reached_feet_cells": 1555,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        }
+      }
+    },
+    "acid": {
+      "body_rows": 1,
+      "excluded_hazards": [
+        "acid"
+      ],
+      "spawn_valid": true,
+      "rooms_reached": 41,
+      "unreached_rooms": [
+        "hub_landing",
+        "w1_wilds_gate",
+        "w2_wilds_hollow",
+        "w3_wilds_roots",
+        "w4_wilds_den",
+        "w5_wilds_drop"
+      ],
+      "partial_rooms": [],
+      "rooms": {
+        "a1_ape_arena": {
+          "position_tiles": [
+            440,
+            69
+          ],
+          "name": "Ape Arena",
+          "open_tiles": 501,
+          "eligible_feet_cells": 501,
+          "reached_feet_cells": 501,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c0_roar_tunnel": {
+          "position_tiles": [
+            40,
+            53
+          ],
+          "name": "Roar Tunnel",
+          "open_tiles": 317,
+          "eligible_feet_cells": 317,
+          "reached_feet_cells": 317,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "A roar from the left"
+          ]
+        },
+        "c1_lake_cave": {
+          "position_tiles": [
+            80,
+            23
+          ],
+          "name": "Lake Cave",
+          "open_tiles": 664,
+          "eligible_feet_cells": 664,
+          "reached_feet_cells": 664,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Down you go. From here on, things can hurt"
+          ]
+        },
+        "c2_cave_teeth": {
+          "position_tiles": [
+            160,
+            51
+          ],
+          "name": "Cave Teeth",
+          "open_tiles": 268,
+          "eligible_feet_cells": 268,
+          "reached_feet_cells": 268,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c3_cove_tunnel": {
+          "position_tiles": [
+            200,
+            53
+          ],
+          "name": "Cove Tunnel",
+          "open_tiles": 199,
+          "eligible_feet_cells": 199,
+          "reached_feet_cells": 199,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c4_deep_lake": {
+          "position_tiles": [
+            120,
+            69
+          ],
+          "name": "Deep Lake",
+          "open_tiles": 194,
+          "eligible_feet_cells": 194,
+          "reached_feet_cells": 194,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c5_lake_crossing": {
+          "position_tiles": [
+            110,
+            59
+          ],
+          "name": "Lake Crossing",
+          "open_tiles": 164,
+          "eligible_feet_cells": 164,
+          "reached_feet_cells": 164,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c6_wall_cave": {
+          "position_tiles": [
+            138,
+            58
+          ],
+          "name": "Wall Cave",
+          "open_tiles": 111,
+          "eligible_feet_cells": 111,
+          "reached_feet_cells": 111,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "h1_villager_house": {
+          "position_tiles": [
+            240,
+            123
+          ],
+          "name": "Villager's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 308,
+          "reached_feet_cells": 308,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Villager (NPC, not built yet)"
+          ]
+        },
+        "h2_quest_house": {
+          "position_tiles": [
+            280,
+            123
+          ],
+          "name": "Quest Giver's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 308,
+          "reached_feet_cells": 308,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Quest giver (NPC, not built yet): the quest rewards a skill point"
+          ]
+        },
+        "hub_landing": {
+          "position_tiles": [
+            -40,
+            0
+          ],
+          "name": "Landing",
+          "open_tiles": 664,
+          "eligible_feet_cells": 664,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            0,
+            2
+          ],
+          "markers": [
+            "You land here. Left: the Western Wilds. Right: the meadow."
+          ]
+        },
+        "i01_west_shore": {
+          "position_tiles": [
+            700,
+            46
+          ],
+          "name": "West Shore",
+          "open_tiles": 2120,
+          "eligible_feet_cells": 2120,
+          "reached_feet_cells": 2120,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i02_north_shore": {
+          "position_tiles": [
+            900,
+            148
+          ],
+          "name": "North Shore",
+          "open_tiles": 1378,
+          "eligible_feet_cells": 1378,
+          "reached_feet_cells": 1378,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i03_south_shore": {
+          "position_tiles": [
+            849,
+            -173
+          ],
+          "name": "South Shore",
+          "open_tiles": 1760,
+          "eligible_feet_cells": 1760,
+          "reached_feet_cells": 1760,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i04_foothills": {
+          "position_tiles": [
+            820,
+            53
+          ],
+          "name": "Foothills",
+          "open_tiles": 447,
+          "eligible_feet_cells": 447,
+          "reached_feet_cells": 447,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i05_ascent": {
+          "position_tiles": [
+            860,
+            23
+          ],
+          "name": "Volcano Ascent",
+          "open_tiles": 856,
+          "eligible_feet_cells": 856,
+          "reached_feet_cells": 856,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i06_crater": {
+          "position_tiles": [
+            884,
+            30
+          ],
+          "name": "Crater",
+          "open_tiles": 271,
+          "eligible_feet_cells": 255,
+          "reached_feet_cells": 255,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i07_east_slope": {
+          "position_tiles": [
+            924,
+            23
+          ],
+          "name": "East Slope",
+          "open_tiles": 868,
+          "eligible_feet_cells": 868,
+          "reached_feet_cells": 868,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i08_east_shore": {
+          "position_tiles": [
+            948,
+            53
+          ],
+          "name": "East Shore",
+          "open_tiles": 1429,
+          "eligible_feet_cells": 1429,
+          "reached_feet_cells": 1429,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i09_sea_cave": {
+          "position_tiles": [
+            820,
+            69
+          ],
+          "name": "Ash Passage",
+          "open_tiles": 684,
+          "eligible_feet_cells": 684,
+          "reached_feet_cells": 684,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i10_junction": {
+          "position_tiles": [
+            780,
+            99
+          ],
+          "name": "Junction",
+          "open_tiles": 396,
+          "eligible_feet_cells": 396,
+          "reached_feet_cells": 396,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i11_flooded_hall": {
+          "position_tiles": [
+            732,
+            99
+          ],
+          "name": "Flooded Hall",
+          "open_tiles": 443,
+          "eligible_feet_cells": 443,
+          "reached_feet_cells": 443,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i12_echo_gallery": {
+          "position_tiles": [
+            692,
+            99
+          ],
+          "name": "Echo Gallery",
+          "open_tiles": 389,
+          "eligible_feet_cells": 389,
+          "reached_feet_cells": 389,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i13_lower_maze": {
+          "position_tiles": [
+            692,
+            115
+          ],
+          "name": "Lower Maze",
+          "open_tiles": 762,
+          "eligible_feet_cells": 762,
+          "reached_feet_cells": 762,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i14_vent_shaft": {
+          "position_tiles": [
+            740,
+            115
+          ],
+          "name": "Vent Shaft",
+          "open_tiles": 386,
+          "eligible_feet_cells": 386,
+          "reached_feet_cells": 386,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i15_quiet_refuge": {
+          "position_tiles": [
+            756,
+            131
+          ],
+          "name": "Quiet Refuge",
+          "open_tiles": 250,
+          "eligible_feet_cells": 250,
+          "reached_feet_cells": 250,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i16_guardian_chamber": {
+          "position_tiles": [
+            780,
+            115
+          ],
+          "name": "Guardian Chamber",
+          "open_tiles": 1490,
+          "eligible_feet_cells": 1490,
+          "reached_feet_cells": 1490,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i17_crystal_pocket": {
+          "position_tiles": [
+            700,
+            138
+          ],
+          "name": "Crystal Pocket",
+          "open_tiles": 259,
+          "eligible_feet_cells": 259,
+          "reached_feet_cells": 259,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j1_jungle_edge": {
+          "position_tiles": [
+            280,
+            49
+          ],
+          "name": "Jungle Edge",
+          "open_tiles": 576,
+          "eligible_feet_cells": 576,
+          "reached_feet_cells": 576,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j2_jungle_falls": {
+          "position_tiles": [
+            280,
+            69
+          ],
+          "name": "Jungle Falls",
+          "open_tiles": 1220,
+          "eligible_feet_cells": 1220,
+          "reached_feet_cells": 1220,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j3_jungle_hills": {
+          "position_tiles": [
+            360,
+            73
+          ],
+          "name": "Jungle Hills",
+          "open_tiles": 848,
+          "eligible_feet_cells": 848,
+          "reached_feet_cells": 848,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "l1_jungle_depths": {
+          "position_tiles": [
+            396,
+            92
+          ],
+          "name": "Jungle Depths",
+          "open_tiles": 1265,
+          "eligible_feet_cells": 1265,
+          "reached_feet_cells": 1265,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The Ape screams behind you; cross the jungle again"
+          ]
+        },
+        "l2_net_trap": {
+          "position_tiles": [
+            316,
+            99
+          ],
+          "name": "Net Trap",
+          "open_tiles": 874,
+          "eligible_feet_cells": 874,
+          "reached_feet_cells": 874,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in"
+          ]
+        },
+        "l3_treetop_village": {
+          "position_tiles": [
+            360,
+            26
+          ],
+          "name": "Treetop Village",
+          "open_tiles": 1092,
+          "eligible_feet_cells": 1092,
+          "reached_feet_cells": 1092,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Treetop village: platforming first, and you can't fall",
+            "Moving, oddly behaving bridges (not built): these jump-throughs stand in",
+            "Reward: wall grab (not built yet)",
+            "Where the village leads: still open"
+          ]
+        },
+        "lh1_lighthouse_stairs": {
+          "position_tiles": [
+            593,
+            -14
+          ],
+          "name": "Lighthouse Stairs",
+          "open_tiles": 774,
+          "eligible_feet_cells": 774,
+          "reached_feet_cells": 774,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Up the stairs to the lamp"
+          ]
+        },
+        "m1_meadow": {
+          "position_tiles": [
+            0,
+            7
+          ],
+          "name": "Meadow",
+          "open_tiles": 931,
+          "eligible_feet_cells": 931,
+          "reached_feet_cells": 931,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Chapter 1 (work in progress): head right"
+          ]
+        },
+        "m2_big_jump": {
+          "position_tiles": [
+            80,
+            7
+          ],
+          "name": "The Big Jump",
+          "open_tiles": 484,
+          "eligible_feet_cells": 484,
+          "reached_feet_cells": 484,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The big jump: needs a wavedash (dash comes from a later level). Drop in to go on."
+          ]
+        },
+        "s1_sand_cave": {
+          "position_tiles": [
+            471,
+            46
+          ],
+          "name": "Sand Cave",
+          "open_tiles": 920,
+          "eligible_feet_cells": 920,
+          "reached_feet_cells": 920,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Reward: the sword (not built yet; needs 2 stamina blocks to use)"
+          ]
+        },
+        "s2_shore": {
+          "position_tiles": [
+            591,
+            46
+          ],
+          "name": "Shore",
+          "open_tiles": 1410,
+          "eligible_feet_cells": 1410,
+          "reached_feet_cells": 1410,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "s3_lighthouse_top": {
+          "position_tiles": [
+            631,
+            23
+          ],
+          "name": "Lighthouse Top",
+          "open_tiles": 406,
+          "eligible_feet_cells": 406,
+          "reached_feet_cells": 406,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "t1_cove_town": {
+          "position_tiles": [
+            240,
+            53
+          ],
+          "name": "Cove Town",
+          "open_tiles": 479,
+          "eligible_feet_cells": 479,
+          "reached_feet_cells": 479,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "w1_wilds_gate": {
+          "position_tiles": [
+            -80,
+            0
+          ],
+          "name": "Wilds Gate",
+          "open_tiles": 675,
+          "eligible_feet_cells": 675,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            2
+          ],
+          "markers": []
+        },
+        "w2_wilds_hollow": {
+          "position_tiles": [
+            -120,
+            0
+          ],
+          "name": "Wilds Hollow",
+          "open_tiles": 660,
+          "eligible_feet_cells": 660,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            2
+          ],
+          "markers": []
+        },
+        "w3_wilds_roots": {
+          "position_tiles": [
+            -80,
+            23
+          ],
+          "name": "Wilds Roots",
+          "open_tiles": 648,
+          "eligible_feet_cells": 648,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            26,
+            0
+          ],
+          "markers": []
+        },
+        "w4_wilds_den": {
+          "position_tiles": [
+            -120,
+            23
+          ],
+          "name": "Wilds Den",
+          "open_tiles": 716,
+          "eligible_feet_cells": 716,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            15,
+            0
+          ],
+          "markers": []
+        },
+        "w5_wilds_drop": {
+          "position_tiles": [
+            -40,
+            23
+          ],
+          "name": "Wilds Drop",
+          "open_tiles": 662,
+          "eligible_feet_cells": 662,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            8,
+            0
+          ],
+          "markers": []
+        },
+        "x1_serpent_lair": {
+          "position_tiles": [
+            692,
+            154
+          ],
+          "name": "Serpent Lair",
+          "open_tiles": 1555,
+          "eligible_feet_cells": 1555,
+          "reached_feet_cells": 1555,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        }
+      }
+    },
+    "hazards": {
+      "body_rows": 1,
+      "excluded_hazards": [
+        "acid",
+        "spikes"
+      ],
+      "spawn_valid": true,
+      "rooms_reached": 41,
+      "unreached_rooms": [
+        "hub_landing",
+        "w1_wilds_gate",
+        "w2_wilds_hollow",
+        "w3_wilds_roots",
+        "w4_wilds_den",
+        "w5_wilds_drop"
+      ],
+      "partial_rooms": [],
+      "rooms": {
+        "a1_ape_arena": {
+          "position_tiles": [
+            440,
+            69
+          ],
+          "name": "Ape Arena",
+          "open_tiles": 501,
+          "eligible_feet_cells": 492,
+          "reached_feet_cells": 492,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c0_roar_tunnel": {
+          "position_tiles": [
+            40,
+            53
+          ],
+          "name": "Roar Tunnel",
+          "open_tiles": 317,
+          "eligible_feet_cells": 310,
+          "reached_feet_cells": 310,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "A roar from the left"
+          ]
+        },
+        "c1_lake_cave": {
+          "position_tiles": [
+            80,
+            23
+          ],
+          "name": "Lake Cave",
+          "open_tiles": 664,
+          "eligible_feet_cells": 659,
+          "reached_feet_cells": 659,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Down you go. From here on, things can hurt"
+          ]
+        },
+        "c2_cave_teeth": {
+          "position_tiles": [
+            160,
+            51
+          ],
+          "name": "Cave Teeth",
+          "open_tiles": 268,
+          "eligible_feet_cells": 258,
+          "reached_feet_cells": 258,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c3_cove_tunnel": {
+          "position_tiles": [
+            200,
+            53
+          ],
+          "name": "Cove Tunnel",
+          "open_tiles": 199,
+          "eligible_feet_cells": 189,
+          "reached_feet_cells": 189,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c4_deep_lake": {
+          "position_tiles": [
+            120,
+            69
+          ],
+          "name": "Deep Lake",
+          "open_tiles": 194,
+          "eligible_feet_cells": 194,
+          "reached_feet_cells": 194,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c5_lake_crossing": {
+          "position_tiles": [
+            110,
+            59
+          ],
+          "name": "Lake Crossing",
+          "open_tiles": 164,
+          "eligible_feet_cells": 164,
+          "reached_feet_cells": 164,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c6_wall_cave": {
+          "position_tiles": [
+            138,
+            58
+          ],
+          "name": "Wall Cave",
+          "open_tiles": 111,
+          "eligible_feet_cells": 111,
+          "reached_feet_cells": 111,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "h1_villager_house": {
+          "position_tiles": [
+            240,
+            123
+          ],
+          "name": "Villager's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 308,
+          "reached_feet_cells": 308,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Villager (NPC, not built yet)"
+          ]
+        },
+        "h2_quest_house": {
+          "position_tiles": [
+            280,
+            123
+          ],
+          "name": "Quest Giver's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 308,
+          "reached_feet_cells": 308,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Quest giver (NPC, not built yet): the quest rewards a skill point"
+          ]
+        },
+        "hub_landing": {
+          "position_tiles": [
+            -40,
+            0
+          ],
+          "name": "Landing",
+          "open_tiles": 664,
+          "eligible_feet_cells": 664,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            0,
+            2
+          ],
+          "markers": [
+            "You land here. Left: the Western Wilds. Right: the meadow."
+          ]
+        },
+        "i01_west_shore": {
+          "position_tiles": [
+            700,
+            46
+          ],
+          "name": "West Shore",
+          "open_tiles": 2120,
+          "eligible_feet_cells": 2120,
+          "reached_feet_cells": 2120,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i02_north_shore": {
+          "position_tiles": [
+            900,
+            148
+          ],
+          "name": "North Shore",
+          "open_tiles": 1378,
+          "eligible_feet_cells": 1378,
+          "reached_feet_cells": 1378,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i03_south_shore": {
+          "position_tiles": [
+            849,
+            -173
+          ],
+          "name": "South Shore",
+          "open_tiles": 1760,
+          "eligible_feet_cells": 1760,
+          "reached_feet_cells": 1760,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i04_foothills": {
+          "position_tiles": [
+            820,
+            53
+          ],
+          "name": "Foothills",
+          "open_tiles": 447,
+          "eligible_feet_cells": 447,
+          "reached_feet_cells": 447,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i05_ascent": {
+          "position_tiles": [
+            860,
+            23
+          ],
+          "name": "Volcano Ascent",
+          "open_tiles": 856,
+          "eligible_feet_cells": 856,
+          "reached_feet_cells": 856,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i06_crater": {
+          "position_tiles": [
+            884,
+            30
+          ],
+          "name": "Crater",
+          "open_tiles": 271,
+          "eligible_feet_cells": 255,
+          "reached_feet_cells": 255,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i07_east_slope": {
+          "position_tiles": [
+            924,
+            23
+          ],
+          "name": "East Slope",
+          "open_tiles": 868,
+          "eligible_feet_cells": 868,
+          "reached_feet_cells": 868,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i08_east_shore": {
+          "position_tiles": [
+            948,
+            53
+          ],
+          "name": "East Shore",
+          "open_tiles": 1429,
+          "eligible_feet_cells": 1429,
+          "reached_feet_cells": 1429,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i09_sea_cave": {
+          "position_tiles": [
+            820,
+            69
+          ],
+          "name": "Ash Passage",
+          "open_tiles": 684,
+          "eligible_feet_cells": 684,
+          "reached_feet_cells": 684,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i10_junction": {
+          "position_tiles": [
+            780,
+            99
+          ],
+          "name": "Junction",
+          "open_tiles": 396,
+          "eligible_feet_cells": 396,
+          "reached_feet_cells": 396,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i11_flooded_hall": {
+          "position_tiles": [
+            732,
+            99
+          ],
+          "name": "Flooded Hall",
+          "open_tiles": 443,
+          "eligible_feet_cells": 443,
+          "reached_feet_cells": 443,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i12_echo_gallery": {
+          "position_tiles": [
+            692,
+            99
+          ],
+          "name": "Echo Gallery",
+          "open_tiles": 389,
+          "eligible_feet_cells": 389,
+          "reached_feet_cells": 389,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i13_lower_maze": {
+          "position_tiles": [
+            692,
+            115
+          ],
+          "name": "Lower Maze",
+          "open_tiles": 762,
+          "eligible_feet_cells": 759,
+          "reached_feet_cells": 759,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i14_vent_shaft": {
+          "position_tiles": [
+            740,
+            115
+          ],
+          "name": "Vent Shaft",
+          "open_tiles": 386,
+          "eligible_feet_cells": 386,
+          "reached_feet_cells": 386,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i15_quiet_refuge": {
+          "position_tiles": [
+            756,
+            131
+          ],
+          "name": "Quiet Refuge",
+          "open_tiles": 250,
+          "eligible_feet_cells": 250,
+          "reached_feet_cells": 250,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i16_guardian_chamber": {
+          "position_tiles": [
+            780,
+            115
+          ],
+          "name": "Guardian Chamber",
+          "open_tiles": 1490,
+          "eligible_feet_cells": 1490,
+          "reached_feet_cells": 1490,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i17_crystal_pocket": {
+          "position_tiles": [
+            700,
+            138
+          ],
+          "name": "Crystal Pocket",
+          "open_tiles": 259,
+          "eligible_feet_cells": 259,
+          "reached_feet_cells": 259,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j1_jungle_edge": {
+          "position_tiles": [
+            280,
+            49
+          ],
+          "name": "Jungle Edge",
+          "open_tiles": 576,
+          "eligible_feet_cells": 573,
+          "reached_feet_cells": 573,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j2_jungle_falls": {
+          "position_tiles": [
+            280,
+            69
+          ],
+          "name": "Jungle Falls",
+          "open_tiles": 1220,
+          "eligible_feet_cells": 1217,
+          "reached_feet_cells": 1217,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j3_jungle_hills": {
+          "position_tiles": [
+            360,
+            73
+          ],
+          "name": "Jungle Hills",
+          "open_tiles": 848,
+          "eligible_feet_cells": 845,
+          "reached_feet_cells": 845,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "l1_jungle_depths": {
+          "position_tiles": [
+            396,
+            92
+          ],
+          "name": "Jungle Depths",
+          "open_tiles": 1265,
+          "eligible_feet_cells": 1259,
+          "reached_feet_cells": 1259,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The Ape screams behind you; cross the jungle again"
+          ]
+        },
+        "l2_net_trap": {
+          "position_tiles": [
+            316,
+            99
+          ],
+          "name": "Net Trap",
+          "open_tiles": 874,
+          "eligible_feet_cells": 868,
+          "reached_feet_cells": 868,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in"
+          ]
+        },
+        "l3_treetop_village": {
+          "position_tiles": [
+            360,
+            26
+          ],
+          "name": "Treetop Village",
+          "open_tiles": 1092,
+          "eligible_feet_cells": 1092,
+          "reached_feet_cells": 1092,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Treetop village: platforming first, and you can't fall",
+            "Moving, oddly behaving bridges (not built): these jump-throughs stand in",
+            "Reward: wall grab (not built yet)",
+            "Where the village leads: still open"
+          ]
+        },
+        "lh1_lighthouse_stairs": {
+          "position_tiles": [
+            593,
+            -14
+          ],
+          "name": "Lighthouse Stairs",
+          "open_tiles": 774,
+          "eligible_feet_cells": 774,
+          "reached_feet_cells": 774,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Up the stairs to the lamp"
+          ]
+        },
+        "m1_meadow": {
+          "position_tiles": [
+            0,
+            7
+          ],
+          "name": "Meadow",
+          "open_tiles": 931,
+          "eligible_feet_cells": 931,
+          "reached_feet_cells": 931,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Chapter 1 (work in progress): head right"
+          ]
+        },
+        "m2_big_jump": {
+          "position_tiles": [
+            80,
+            7
+          ],
+          "name": "The Big Jump",
+          "open_tiles": 484,
+          "eligible_feet_cells": 484,
+          "reached_feet_cells": 484,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The big jump: needs a wavedash (dash comes from a later level). Drop in to go on."
+          ]
+        },
+        "s1_sand_cave": {
+          "position_tiles": [
+            471,
+            46
+          ],
+          "name": "Sand Cave",
+          "open_tiles": 920,
+          "eligible_feet_cells": 902,
+          "reached_feet_cells": 902,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Reward: the sword (not built yet; needs 2 stamina blocks to use)"
+          ]
+        },
+        "s2_shore": {
+          "position_tiles": [
+            591,
+            46
+          ],
+          "name": "Shore",
+          "open_tiles": 1410,
+          "eligible_feet_cells": 1407,
+          "reached_feet_cells": 1407,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "s3_lighthouse_top": {
+          "position_tiles": [
+            631,
+            23
+          ],
+          "name": "Lighthouse Top",
+          "open_tiles": 406,
+          "eligible_feet_cells": 406,
+          "reached_feet_cells": 406,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "t1_cove_town": {
+          "position_tiles": [
+            240,
+            53
+          ],
+          "name": "Cove Town",
+          "open_tiles": 479,
+          "eligible_feet_cells": 479,
+          "reached_feet_cells": 479,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "w1_wilds_gate": {
+          "position_tiles": [
+            -80,
+            0
+          ],
+          "name": "Wilds Gate",
+          "open_tiles": 675,
+          "eligible_feet_cells": 669,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            2
+          ],
+          "markers": []
+        },
+        "w2_wilds_hollow": {
+          "position_tiles": [
+            -120,
+            0
+          ],
+          "name": "Wilds Hollow",
+          "open_tiles": 660,
+          "eligible_feet_cells": 654,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            2
+          ],
+          "markers": []
+        },
+        "w3_wilds_roots": {
+          "position_tiles": [
+            -80,
+            23
+          ],
+          "name": "Wilds Roots",
+          "open_tiles": 648,
+          "eligible_feet_cells": 648,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            26,
+            0
+          ],
+          "markers": []
+        },
+        "w4_wilds_den": {
+          "position_tiles": [
+            -120,
+            23
+          ],
+          "name": "Wilds Den",
+          "open_tiles": 716,
+          "eligible_feet_cells": 716,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            15,
+            0
+          ],
+          "markers": []
+        },
+        "w5_wilds_drop": {
+          "position_tiles": [
+            -40,
+            23
+          ],
+          "name": "Wilds Drop",
+          "open_tiles": 662,
+          "eligible_feet_cells": 662,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            8,
+            0
+          ],
+          "markers": []
+        },
+        "x1_serpent_lair": {
+          "position_tiles": [
+            692,
+            154
+          ],
+          "name": "Serpent Lair",
+          "open_tiles": 1555,
+          "eligible_feet_cells": 1555,
+          "reached_feet_cells": 1555,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        }
+      }
+    },
+    "standing": {
+      "body_rows": 2,
+      "excluded_hazards": [
+        "acid",
+        "spikes"
+      ],
+      "spawn_valid": true,
+      "rooms_reached": 41,
+      "unreached_rooms": [
+        "hub_landing",
+        "w1_wilds_gate",
+        "w2_wilds_hollow",
+        "w3_wilds_roots",
+        "w4_wilds_den",
+        "w5_wilds_drop"
+      ],
+      "partial_rooms": [
+        "c5_lake_crossing"
+      ],
+      "rooms": {
+        "a1_ape_arena": {
+          "position_tiles": [
+            440,
+            69
+          ],
+          "name": "Ape Arena",
+          "open_tiles": 501,
+          "eligible_feet_cells": 459,
+          "reached_feet_cells": 459,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c0_roar_tunnel": {
+          "position_tiles": [
+            40,
+            53
+          ],
+          "name": "Roar Tunnel",
+          "open_tiles": 317,
+          "eligible_feet_cells": 242,
+          "reached_feet_cells": 242,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "A roar from the left"
+          ]
+        },
+        "c1_lake_cave": {
+          "position_tiles": [
+            80,
+            23
+          ],
+          "name": "Lake Cave",
+          "open_tiles": 664,
+          "eligible_feet_cells": 637,
+          "reached_feet_cells": 637,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Down you go. From here on, things can hurt"
+          ]
+        },
+        "c2_cave_teeth": {
+          "position_tiles": [
+            160,
+            51
+          ],
+          "name": "Cave Teeth",
+          "open_tiles": 268,
+          "eligible_feet_cells": 193,
+          "reached_feet_cells": 193,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c3_cove_tunnel": {
+          "position_tiles": [
+            200,
+            53
+          ],
+          "name": "Cove Tunnel",
+          "open_tiles": 199,
+          "eligible_feet_cells": 149,
+          "reached_feet_cells": 149,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c4_deep_lake": {
+          "position_tiles": [
+            120,
+            69
+          ],
+          "name": "Deep Lake",
+          "open_tiles": 194,
+          "eligible_feet_cells": 163,
+          "reached_feet_cells": 163,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "c5_lake_crossing": {
+          "position_tiles": [
+            110,
+            59
+          ],
+          "name": "Lake Crossing",
+          "open_tiles": 164,
+          "eligible_feet_cells": 133,
+          "reached_feet_cells": 132,
+          "unreached_sample_local_tile": [
+            1,
+            8
+          ],
+          "markers": []
+        },
+        "c6_wall_cave": {
+          "position_tiles": [
+            138,
+            58
+          ],
+          "name": "Wall Cave",
+          "open_tiles": 111,
+          "eligible_feet_cells": 87,
+          "reached_feet_cells": 87,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "h1_villager_house": {
+          "position_tiles": [
+            240,
+            123
+          ],
+          "name": "Villager's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 280,
+          "reached_feet_cells": 280,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Villager (NPC, not built yet)"
+          ]
+        },
+        "h2_quest_house": {
+          "position_tiles": [
+            280,
+            123
+          ],
+          "name": "Quest Giver's House",
+          "open_tiles": 308,
+          "eligible_feet_cells": 280,
+          "reached_feet_cells": 280,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Quest giver (NPC, not built yet): the quest rewards a skill point"
+          ]
+        },
+        "hub_landing": {
+          "position_tiles": [
+            -40,
+            0
+          ],
+          "name": "Landing",
+          "open_tiles": 664,
+          "eligible_feet_cells": 613,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            0,
+            3
+          ],
+          "markers": [
+            "You land here. Left: the Western Wilds. Right: the meadow."
+          ]
+        },
+        "i01_west_shore": {
+          "position_tiles": [
+            700,
+            46
+          ],
+          "name": "West Shore",
+          "open_tiles": 2120,
+          "eligible_feet_cells": 2001,
+          "reached_feet_cells": 2001,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i02_north_shore": {
+          "position_tiles": [
+            900,
+            148
+          ],
+          "name": "North Shore",
+          "open_tiles": 1378,
+          "eligible_feet_cells": 1260,
+          "reached_feet_cells": 1260,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i03_south_shore": {
+          "position_tiles": [
+            849,
+            -173
+          ],
+          "name": "South Shore",
+          "open_tiles": 1760,
+          "eligible_feet_cells": 1631,
+          "reached_feet_cells": 1631,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i04_foothills": {
+          "position_tiles": [
+            820,
+            53
+          ],
+          "name": "Foothills",
+          "open_tiles": 447,
+          "eligible_feet_cells": 407,
+          "reached_feet_cells": 407,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i05_ascent": {
+          "position_tiles": [
+            860,
+            23
+          ],
+          "name": "Volcano Ascent",
+          "open_tiles": 856,
+          "eligible_feet_cells": 796,
+          "reached_feet_cells": 796,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i06_crater": {
+          "position_tiles": [
+            884,
+            30
+          ],
+          "name": "Crater",
+          "open_tiles": 271,
+          "eligible_feet_cells": 215,
+          "reached_feet_cells": 215,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i07_east_slope": {
+          "position_tiles": [
+            924,
+            23
+          ],
+          "name": "East Slope",
+          "open_tiles": 868,
+          "eligible_feet_cells": 803,
+          "reached_feet_cells": 803,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i08_east_shore": {
+          "position_tiles": [
+            948,
+            53
+          ],
+          "name": "East Shore",
+          "open_tiles": 1429,
+          "eligible_feet_cells": 1310,
+          "reached_feet_cells": 1310,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i09_sea_cave": {
+          "position_tiles": [
+            820,
+            69
+          ],
+          "name": "Ash Passage",
+          "open_tiles": 684,
+          "eligible_feet_cells": 646,
+          "reached_feet_cells": 646,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i10_junction": {
+          "position_tiles": [
+            780,
+            99
+          ],
+          "name": "Junction",
+          "open_tiles": 396,
+          "eligible_feet_cells": 356,
+          "reached_feet_cells": 356,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i11_flooded_hall": {
+          "position_tiles": [
+            732,
+            99
+          ],
+          "name": "Flooded Hall",
+          "open_tiles": 443,
+          "eligible_feet_cells": 395,
+          "reached_feet_cells": 395,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i12_echo_gallery": {
+          "position_tiles": [
+            692,
+            99
+          ],
+          "name": "Echo Gallery",
+          "open_tiles": 389,
+          "eligible_feet_cells": 350,
+          "reached_feet_cells": 350,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i13_lower_maze": {
+          "position_tiles": [
+            692,
+            115
+          ],
+          "name": "Lower Maze",
+          "open_tiles": 762,
+          "eligible_feet_cells": 699,
+          "reached_feet_cells": 699,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i14_vent_shaft": {
+          "position_tiles": [
+            740,
+            115
+          ],
+          "name": "Vent Shaft",
+          "open_tiles": 386,
+          "eligible_feet_cells": 367,
+          "reached_feet_cells": 367,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i15_quiet_refuge": {
+          "position_tiles": [
+            756,
+            131
+          ],
+          "name": "Quiet Refuge",
+          "open_tiles": 250,
+          "eligible_feet_cells": 226,
+          "reached_feet_cells": 226,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i16_guardian_chamber": {
+          "position_tiles": [
+            780,
+            115
+          ],
+          "name": "Guardian Chamber",
+          "open_tiles": 1490,
+          "eligible_feet_cells": 1417,
+          "reached_feet_cells": 1417,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "i17_crystal_pocket": {
+          "position_tiles": [
+            700,
+            138
+          ],
+          "name": "Crystal Pocket",
+          "open_tiles": 259,
+          "eligible_feet_cells": 241,
+          "reached_feet_cells": 241,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j1_jungle_edge": {
+          "position_tiles": [
+            280,
+            49
+          ],
+          "name": "Jungle Edge",
+          "open_tiles": 576,
+          "eligible_feet_cells": 534,
+          "reached_feet_cells": 534,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j2_jungle_falls": {
+          "position_tiles": [
+            280,
+            69
+          ],
+          "name": "Jungle Falls",
+          "open_tiles": 1220,
+          "eligible_feet_cells": 1128,
+          "reached_feet_cells": 1128,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "j3_jungle_hills": {
+          "position_tiles": [
+            360,
+            73
+          ],
+          "name": "Jungle Hills",
+          "open_tiles": 848,
+          "eligible_feet_cells": 750,
+          "reached_feet_cells": 750,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "l1_jungle_depths": {
+          "position_tiles": [
+            396,
+            92
+          ],
+          "name": "Jungle Depths",
+          "open_tiles": 1265,
+          "eligible_feet_cells": 1173,
+          "reached_feet_cells": 1173,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The Ape screams behind you; cross the jungle again"
+          ]
+        },
+        "l2_net_trap": {
+          "position_tiles": [
+            316,
+            99
+          ],
+          "name": "Net Trap",
+          "open_tiles": 874,
+          "eligible_feet_cells": 789,
+          "reached_feet_cells": 789,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Net trap (not built): spear-carriers snare you and carry you up into the trees. The door stands in"
+          ]
+        },
+        "l3_treetop_village": {
+          "position_tiles": [
+            360,
+            26
+          ],
+          "name": "Treetop Village",
+          "open_tiles": 1092,
+          "eligible_feet_cells": 1014,
+          "reached_feet_cells": 1014,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Treetop village: platforming first, and you can't fall",
+            "Moving, oddly behaving bridges (not built): these jump-throughs stand in",
+            "Reward: wall grab (not built yet)",
+            "Where the village leads: still open"
+          ]
+        },
+        "lh1_lighthouse_stairs": {
+          "position_tiles": [
+            593,
+            -14
+          ],
+          "name": "Lighthouse Stairs",
+          "open_tiles": 774,
+          "eligible_feet_cells": 756,
+          "reached_feet_cells": 756,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Up the stairs to the lamp"
+          ]
+        },
+        "m1_meadow": {
+          "position_tiles": [
+            0,
+            7
+          ],
+          "name": "Meadow",
+          "open_tiles": 931,
+          "eligible_feet_cells": 842,
+          "reached_feet_cells": 842,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Chapter 1 (work in progress): head right"
+          ]
+        },
+        "m2_big_jump": {
+          "position_tiles": [
+            80,
+            7
+          ],
+          "name": "The Big Jump",
+          "open_tiles": 484,
+          "eligible_feet_cells": 445,
+          "reached_feet_cells": 445,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "The big jump: needs a wavedash (dash comes from a later level). Drop in to go on."
+          ]
+        },
+        "s1_sand_cave": {
+          "position_tiles": [
+            471,
+            46
+          ],
+          "name": "Sand Cave",
+          "open_tiles": 920,
+          "eligible_feet_cells": 781,
+          "reached_feet_cells": 781,
+          "unreached_sample_local_tile": null,
+          "markers": [
+            "Reward: the sword (not built yet; needs 2 stamina blocks to use)"
+          ]
+        },
+        "s2_shore": {
+          "position_tiles": [
+            591,
+            46
+          ],
+          "name": "Shore",
+          "open_tiles": 1410,
+          "eligible_feet_cells": 1323,
+          "reached_feet_cells": 1323,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "s3_lighthouse_top": {
+          "position_tiles": [
+            631,
+            23
+          ],
+          "name": "Lighthouse Top",
+          "open_tiles": 406,
+          "eligible_feet_cells": 368,
+          "reached_feet_cells": 368,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "t1_cove_town": {
+          "position_tiles": [
+            240,
+            53
+          ],
+          "name": "Cove Town",
+          "open_tiles": 479,
+          "eligible_feet_cells": 439,
+          "reached_feet_cells": 439,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        },
+        "w1_wilds_gate": {
+          "position_tiles": [
+            -80,
+            0
+          ],
+          "name": "Wilds Gate",
+          "open_tiles": 675,
+          "eligible_feet_cells": 615,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            3
+          ],
+          "markers": []
+        },
+        "w2_wilds_hollow": {
+          "position_tiles": [
+            -120,
+            0
+          ],
+          "name": "Wilds Hollow",
+          "open_tiles": 660,
+          "eligible_feet_cells": 605,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            1,
+            3
+          ],
+          "markers": []
+        },
+        "w3_wilds_roots": {
+          "position_tiles": [
+            -80,
+            23
+          ],
+          "name": "Wilds Roots",
+          "open_tiles": 648,
+          "eligible_feet_cells": 611,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            26,
+            0
+          ],
+          "markers": []
+        },
+        "w4_wilds_den": {
+          "position_tiles": [
+            -120,
+            23
+          ],
+          "name": "Wilds Den",
+          "open_tiles": 716,
+          "eligible_feet_cells": 680,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            15,
+            0
+          ],
+          "markers": []
+        },
+        "w5_wilds_drop": {
+          "position_tiles": [
+            -40,
+            23
+          ],
+          "name": "Wilds Drop",
+          "open_tiles": 662,
+          "eligible_feet_cells": 626,
+          "reached_feet_cells": 0,
+          "unreached_sample_local_tile": [
+            8,
+            0
+          ],
+          "markers": []
+        },
+        "x1_serpent_lair": {
+          "position_tiles": [
+            692,
+            154
+          ],
+          "name": "Serpent Lair",
+          "open_tiles": 1555,
+          "eligible_feet_cells": 1489,
+          "reached_feet_cells": 1489,
+          "unreached_sample_local_tile": null,
+          "markers": []
+        }
+      }
+    }
+  }
+}
