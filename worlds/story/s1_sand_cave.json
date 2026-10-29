@@ -1,16 +1,14 @@
 {
 	"entities": [
 		{
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
-			"y": 304,
-			"entrance": true
+			"y": 304
 		},
 		{
-			"t": "spawn",
+			"t": "respawn",
 			"x": 944,
-			"y": 64,
-			"entrance": true
+			"y": 64
 		},
 		{
 			"t": "spikes_up",

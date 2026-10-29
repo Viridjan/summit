@@ -1,10 +1,14 @@
 {
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
 			"y": 336
+		},
+		{
+			"t": "respawn",
+			"x": 56,
+			"y": 16
 		},
 		{
 			"h": 8,
@@ -117,12 +121,6 @@
 			"w": 48,
 			"x": 48,
 			"y": 168
-		},
-		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 32,
-			"y": 40
 		},
 		{
 			"attacks": [

@@ -1,12 +1,6 @@
 {
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 248,
-			"y": 96
-		},
-		{
 			"id": "north_cliff",
 			"t": "energy_fragment",
 			"x": 168,
@@ -60,13 +54,6 @@
 			"w": 16,
 			"x": 880,
 			"y": 80
-		},
-		{
-			"entrance": true,
-			"shore_panel": true,
-			"t": "spawn",
-			"x": 884,
-			"y": 96
 		}
 	],
 	"environment": "island_shore",

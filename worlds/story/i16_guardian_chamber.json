@@ -53,10 +53,9 @@
 	],
 	"entities": [
 		{
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
-			"y": 224,
-			"entrance": true
+			"y": 224
 		},
 		{
 			"t": "jumpthru",

@@ -1,9 +1,13 @@
 {
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
+			"y": 96
+		},
+		{
+			"t": "respawn",
+			"x": 176,
 			"y": 96
 		},
 		{

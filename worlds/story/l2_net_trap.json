@@ -1,15 +1,8 @@
 {
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
+			"t": "respawn",
 			"x": 624,
-			"y": 88
-		},
-		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 160,
 			"y": 88
 		},
 		{

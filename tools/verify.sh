@@ -30,6 +30,8 @@ run '^MUSIC OK' --script tests/music.gd
 run '^ENVIRONMENT MUSIC OK' --script tests/environment_music.gd
 run '^APE ART OK' --script tests/ape_art.gd
 run '^DISCOVERIES OK' --script tests/discoveries.gd
+run '^EDITOR PLAYTEST OK' res://tests/editor_playtest.tscn
+run '^EDITOR SCROLL OK' res://tests/editor_scroll.tscn
 run '^EDITOR NAVIGATION OK' res://tests/editor_navigation.tscn
 run '^ISLAND ROUTES OK' res://tests/island_routes.tscn
 run '^CHARACTER STYLE OK' --script tests/character_style.gd

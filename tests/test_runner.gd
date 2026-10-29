@@ -331,14 +331,15 @@ func check_shipped_world() -> void:
 		for rn in wd.rooms:
 			var lv: Dictionary = wd.rooms[rn].level
 			for e in lv.entities:
-				if e.t == "spawn" and e.get("entrance", false):
+				if e.t == "respawn":
 					n_spawns += 1
 					var tx := int(e.x) / 8
 					var ty := int(e.y) / 8
-					var ok: bool = ty >= 1 and ty + 1 < lv.h and lv.tiles[ty][tx] == "0" and lv.tiles[ty - 1][tx] == "0" and lv.tiles[ty + 1][tx] == "1"
+					var on_rail: bool = lv.entities.any(func(j): return j.t == "jumpthru" and int(j.y) / 8 == ty + 1 and int(j.x) / 8 <= tx and tx < (int(j.x) + int(j.w)) / 8)
+					var ok: bool = ty >= 1 and ty + 1 < lv.h and lv.tiles[ty][tx] == "0" and lv.tiles[ty - 1][tx] == "0" and (lv.tiles[ty + 1][tx] == "1" or on_rail)
 					if not ok:
 						bad_spawns.append(rn)
-		check(n_spawns > 0 and bad_spawns.is_empty(), "%s: %d entrance spawns, all standing on ground (bad: %s)" % [wp.get_base_dir().get_file(), n_spawns, bad_spawns])
+		check(n_spawns > 0 and bad_spawns.is_empty(), "%s: %d respawn slabs, all standing on ground (bad: %s)" % [wp.get_base_dir().get_file(), n_spawns, bad_spawns])
 		# water and acid (tools/world_fixups.py settle_liquids): every row open, with rock just left and right of it
 		var bad_liquid := []
 		for rn in wd.rooms.keys().filter(func(n): return n not in ["c1_lake_cave", "c5_lake_crossing", "m1_meadow"]):  # hand-shaped pools (World Editor)
@@ -454,7 +455,7 @@ func check_shipped_world() -> void:
 		add_child(pw)
 		pw.set_physics_process(false)
 		var lv: Dictionary = story.rooms[rn].level
-		var starts: Array = lv.entities.filter(func(e): return e.t == "spawn")
+		var starts: Array = lv.entities.filter(func(e): return e.t == "spawn" or e.t == "respawn")
 		starts.sort_custom(func(a, b): return a.x < b.x)
 		var sx: int = int(starts[0].x)
 		var sy: int = int(starts[0].y) + 8
@@ -1834,7 +1835,7 @@ func check_guardian() -> void:
 # Respawning in the Ape arena (spawn right next to the entrance gate) shuts the gate behind the player.
 func check_arena_respawn_gate() -> void:
 	var arena := Game.load_level("a1_ape_arena", "res://worlds/story/")
-	var sp: Dictionary = arena.entities.filter(func(e): return e.t == "spawn").reduce(func(a, e): return e if a == null or e.x < a.x else a)
+	var sp: Dictionary = arena.entities.filter(func(e): return e.t == "respawn").reduce(func(a, e): return e if a == null or e.x < a.x else a)
 	Game.level = arena
 	if w:
 		w.queue_free()
@@ -2148,6 +2149,24 @@ func check_background_parallax() -> void:
 		smooth = smooth and absf(s.y - last.y) < 0.1 and absf(s.y) <= 18.0 and s.x == 0
 		last = s
 	check(smooth and is_equal_approx(last.y, -18.0), "background perspective shifts smoothly with vertical camera moves, within the overscan")
+
+# Respawn slabs: walking onto one makes it the respawn point; until then a death returns to the old one.
+func check_respawn_slabs() -> void:
+	make_world([{"t": "respawn", "x": 200, "y": 27 * 8}])
+	var start: Vector2 = w.spawn
+	var slab = w.ents.filter(func(e): return e is E.Respawn and e.d.x == 200)[0]
+	var idle: bool = not slab.active()
+	p().pos = Vector2(204, 28 * 8)
+	step(3)
+	var lit: bool = slab.active() and w.spawn == slab.point()
+	p().die(Vector2.UP)
+	for k in 200:
+		step()
+		if not p().dead and w.respawn_timer <= 0:
+			break
+	check(idle and lit and start != slab.point() and p().pos.distance_to(slab.point()) < 2,
+		"a respawn checkpoint activates silently when walked on, and a death brings the player back to it (%s)" % p().pos)
+	make_world([])  # leave a plain room for the tests after
 
 # Library monsters: random builds from moves, attacks and traits; upgrades add one; each attack happens in play.
 func check_monster_library() -> void:
@@ -2954,8 +2973,8 @@ func _ready() -> void:
 		var fresh = E.make(null, ed.level.entities[i])
 		types.append(ed.level.entities[i].t)
 		same = same and is_same(ed.preview[i].d, ed.level.entities[i]) and ed.preview[i].rect == fresh.rect and ed.preview[i].vis_rect() == fresh.vis_rect()
-	check(same and types == ["spawn", "refill", "zip", "strawberry"], "incremental editor previews match a full rebuild %s" % [types])
-	check(ed.preview[2].target == Vector2(40, 40), "zip preview picks up its target click")
+	check(same and types == ["spawn", "spawn", "refill", "zip", "strawberry"], "incremental editor previews match a full rebuild %s" % [types])
+	check(ed.preview[3].target == Vector2(40, 40), "zip preview picks up its target click")
 	ed._set_level(Game.new_level("large", 100, 70))
 	check_editor_tiles(ed, "load")
 	ed._push_undo()
@@ -3035,6 +3054,7 @@ func _ready() -> void:
 	check_bugfixes()
 	check_bestiary()
 	check_monster_library()
+	check_respawn_slabs()
 	check_ape_hitbox_shapes()
 	check_ape()
 	check_arena_respawn_gate()

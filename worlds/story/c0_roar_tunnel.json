@@ -2,8 +2,7 @@
 	"enemy_count": 2,
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
+			"t": "respawn",
 			"x": 304,
 			"y": 88
 		},

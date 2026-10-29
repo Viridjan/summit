@@ -30,10 +30,9 @@
 	],
 	"entities": [
 		{
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
-			"y": 144,
-			"entrance": true
+			"y": 144
 		},
 		{
 			"t": "boss_gate",

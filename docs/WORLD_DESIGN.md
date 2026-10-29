@@ -275,3 +275,33 @@ checkpoints are preserved and count toward the cap. Generated points stay at
 least eight tiles apart; the second favors the far end. Both `add_spawns` and
 the shore-link generator apply this policy. The cleanup backup and safety audit
 are in `reports/respawn-review/`; room terrain and other objects were retained.
+
+**C1 respawns (2026-10-30):** Lake Cave has three authored floor respawns,
+covering its left, right and central entrances: (8,328), (224,328), (160,328).
+The intermediate upper marker is removed. Authored status preserves these
+three points through entrance regeneration and density pruning.
+
+**Editor input and hover help (2026-10-30):** Palette, toolbar and map-menu
+panels consume wheel input so menu scrolling cannot zoom the underlying canvas.
+Room-editor controls and palette tools have hover explanations. Manually placed
+and pasted Spawn markers preserve other markers in the room; right-click removes
+one, and Undo restores edits.
+
+**Playtest and checkpoint visibility (2026-10-30):** Room Playtest accepts a
+Spawn or Respawn marker. Without either, it uses a temporary safe floor start
+that is never added to the editable/saved room; if none exists it explains what
+to place. Respawn slabs retain their touch behavior but draw and describe
+themselves only in editor previews, remaining invisible during play.
+
+**Unified respawn tool (2026-10-30):** The room editor exposes a single Respawn
+tool with the original white player outline and red head. Both saved `spawn`
+and legacy `respawn` types use the same checkpoint behavior. Walking onto one
+updates the respawn silently, without particles, hover text or in-game artwork.
+
+**Checkpoint cleanup (2026-10-30):** Unified `spawn`/`respawn` markers are
+reviewed together. Overlapping aliases and points not needed by distinct
+entrances are removed; c1 retains exactly its three floor checkpoints. The
+world start is preserved. `tools/prune_respawns.py` previews changes by default,
+with `--apply` saving originals in `reports/respawn-cleanup/backup.json`. Entrance
+generation respects existing authored checkpoint sets rather than adding a
+second set, and new rooms use entrance coverage instead of a fixed room cap.

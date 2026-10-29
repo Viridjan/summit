@@ -482,3 +482,15 @@ other graph and map untouched.
 two for long/tall rooms, preserving authored checkpoints. Fixup and shore
 generators enforce sparse placement so excess markers do not return.
 - 2026-10-29: Room editor: rooms linked only by a door get a cyan arrow over that door (click to edit the room it leads to).
+
+2026-10-30 — Editor menus isolate wheel scrolling from room/map zoom. Room
+controls and tools explain themselves on hover. Spawn placement and paste keep
+existing markers so multi-entrance rooms can be authored manually.
+
+2026-10-30 — Room Playtest supports respawn-only and markerless rooms with a
+temporary safe floor start. Respawn checkpoints are invisible during gameplay
+and remain visible in the editor.
+
+2026-10-30 — Unified Spawn and walk-on Respawn under one editor tool using the
+original icon. Both activate checkpoints invisibly without particle bursts.
+- 2026-10-30: Respawns: entity "respawn", one per room-to-room entry (doors excluded), placed by tools/world_fixups.py add_respawns (--respawns, or World Editor > Place respawns, which lists errors): side entry 1 tile in from the edge on the floor under the entry's lowest row; top/bottom entry on its middle column, first floor below/above; no valid floor = an error, no respawn (8 today, mostly fall-through holes). Walking onto one makes it the respawn point (and the save's); entering a room no longer moves it. Old entrance spawns removed; a room without a start marker starts at its first respawn. (Codex: invisible in game, original spawn marker in the editor, prune pass.)

@@ -361,11 +361,15 @@ func _build(keep_player := false) -> void:
 	jumpthru_cols.clear()
 	touch_by_type.clear()
 	total_berries = 0
-	spawn = Vector2(gw * T / 2.0, 16)
+	var keep_spawn := adventure() and keep_player  # a room change: the respawn point stays where it was (spawn_room)
+	if not keep_spawn:
+		spawn = Vector2(gw * T / 2.0, 16)
+	var has_start: bool = data.entities.any(func(d): return d.t == "spawn")
 	for d in data.entities:
-		if d.t == "spawn":
-			spawn = Vector2(float(d.x) + 4, float(d.y) + 8)
-			continue
+		if d.t == "spawn" or (d.t == "respawn" and not has_start):  # no start marker: the first respawn slab
+			if not keep_spawn:
+				spawn = Vector2(float(d.x) + 4, float(d.y) + 8)
+				has_start = true
 		var e = E.make(self, d)
 		if e == null:
 			continue
@@ -544,22 +548,8 @@ func enter_room(next: String, at = null) -> void:
 		walk_target_x = T * 1.5 if in_dir > 0 else (gw - 1.5) * T
 		player.force_move_x = in_dir
 		player.force_move_x_timer = 0.6
-	# Respawn at the safe spawn marker closest to where we came in, else the entry point if it's safe.
-	# Fundamental rule: never in a hazard (docs/WORLD_DESIGN.md). With no safe point here (a flooded room,
-	# mid-air), the last safe respawn stays, even in the previous room; the save keeps it too.
-	var points: Array = []
-	for d in data.entities:
-		if d.t == "spawn":
-			points.append(Vector2(float(d.x) + 4, float(d.y) + 8))
-	points.sort_custom(func(a, b): return a.distance_to(player.pos) < b.distance_to(player.pos))
-	points.append(player.pos)  # markers first; the entry point is the fallback
-	for sp in points:
-		if safe_spawn(sp):
-			spawn = sp
-			spawn_room = room
-			Game.adv.room = room
-			Game.adv.spawn = [spawn.x, spawn.y]
-			break
+	# The respawn point doesn't move on entering a room: only walking onto a Respawn slab sets it (set_respawn),
+	# so it can stay in the previous room until then; the save keeps it.
 	if not Game.adv.visited.has(room):
 		Game.adv.visited.append(room)
 	_save_run()
@@ -705,6 +695,15 @@ func update_stamina(dt: float) -> void:
 	if Game.adv.stamina != was:
 		_tally(why, Game.adv.stamina - was, dt)
 
+# Walking onto a Respawn slab: it becomes the respawn point (and the save's).
+func set_respawn(p: Vector2) -> void:
+	spawn = p
+	if adventure():
+		spawn_room = room
+		Game.adv.room = room
+		Game.adv.spawn = [p.x, p.y]
+		_save_run()
+
 # A respawn point is safe when the player standing there is out of water and acid, clear of spikes and on ground.
 func safe_spawn(p: Vector2) -> bool:
 	var body := Rect2i(int(p.x) - 4, int(p.y) - 11, 8, 11)
@@ -771,7 +770,7 @@ func hover_lines() -> Array:
 		var hit: bool = Rect2(e.rect).grow(1).has_point(at) or Rect2(e.touch_rect()).grow(1).has_point(at)
 		for b in e.damage_boxes():
 			hit = hit or Rect2(b).grow(1).has_point(at)
-		if hit and not e is E.Building and not e is E.SpawnMarker:
+		if hit and not e is E.Building and not e is E.SpawnMarker and not e is E.Respawn:
 			out.append(e.describe())
 	return out
 

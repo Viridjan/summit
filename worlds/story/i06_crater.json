@@ -23,10 +23,14 @@
 	],
 	"entities": [
 		{
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
-			"y": 16,
-			"entrance": true
+			"y": 16
+		},
+		{
+			"t": "respawn",
+			"x": 304,
+			"y": 24
 		},
 		{
 			"t": "acid",

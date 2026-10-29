@@ -39,10 +39,19 @@
 	],
 	"entities": [
 		{
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
-			"y": 152,
-			"entrance": true
+			"y": 152
+		},
+		{
+			"t": "respawn",
+			"x": 112,
+			"y": 224
+		},
+		{
+			"t": "respawn",
+			"x": 104,
+			"y": 32
 		},
 		{
 			"t": "jumpthru",

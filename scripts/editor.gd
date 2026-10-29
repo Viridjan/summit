@@ -102,18 +102,22 @@ func _build_ui() -> void:
 	ui.add_child(root)
 
 	var top := PanelContainer.new()
+	top.mouse_force_pass_scroll_events = false
 	top.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
 	root.add_child(top)
 	var bar := HBoxContainer.new()
 	top.add_child(bar)
 	name_edit = LineEdit.new()
 	name_edit.custom_minimum_size = Vector2(180, 0)
+	name_edit.tooltip_text = "Room display name. Renaming a world room keeps its file and connections intact."
 	name_edit.text = level.name
 	name_edit.text_changed.connect(func(t: String): level.name = t)
 	bar.add_child(_lbl("Name"))
 	bar.add_child(name_edit)
 	w_spin = _spin(10, 400, level.w)
 	h_spin = _spin(6, 400, level.h)
+	w_spin.tooltip_text = "Room width in tiles. Click Resize to apply; shrinking removes objects outside the new bounds."
+	h_spin.tooltip_text = "Room height in tiles. Click Resize to apply; shrinking removes objects outside the new bounds."
 	bar.add_child(_lbl("W"))
 	bar.add_child(w_spin)
 	bar.add_child(_lbl("H"))
@@ -124,6 +128,7 @@ func _build_ui() -> void:
 	bar.add_child(_btn("Save", _save))
 	load_menu = MenuButton.new()
 	load_menu.text = "Load"
+	load_menu.tooltip_text = "Open a saved custom level in the room editor."
 	load_menu.flat = false
 	load_menu.about_to_popup.connect(_fill_load_menu)
 	load_menu.get_popup().index_pressed.connect(_load_index)
@@ -134,12 +139,14 @@ func _build_ui() -> void:
 	bar.add_child(_btn("Menu" if Game.editor_return == "menu" else "World", _leave))
 
 	var side := PanelContainer.new()
+	side.mouse_force_pass_scroll_events = false
 	side.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
 	side.offset_top = 48
 	side.offset_bottom = -32
 	side.custom_minimum_size = Vector2(190, 0)
 	root.add_child(side)
 	var scroll := ScrollContainer.new()
+	scroll.mouse_force_pass_scroll_events = false
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	side.add_child(scroll)
 	var tools := VBoxContainer.new()
@@ -156,6 +163,7 @@ func _build_ui() -> void:
 	var groups := {}  # group -> [ids], in registry order (enemies sorted by family below)
 	var order: Array = []
 	for t in ["tile"] + E.TYPES.keys():
+		if t == "respawn": continue  # legacy saved type; one shared Respawn tool
 		var g := palette_group(t)
 		if not groups.has(g):
 			groups[g] = []
@@ -168,6 +176,7 @@ func _build_ui() -> void:
 	for g in order:
 		var box := VBoxContainer.new()
 		var head := Button.new()  # click to fold/unfold the group
+		head.tooltip_text = "Show or hide the " + g.replace(":", ": ") + " tools."
 		head.text = "%s %s" % ["v" if g == "Terrain" else ">", g.replace(":", ": ")]
 		head.flat = true
 		head.focus_mode = Control.FOCUS_NONE
@@ -194,6 +203,7 @@ func _build_ui() -> void:
 				_tool_button(parent, t, E.TYPES[t][0].trim_suffix(" ^") if not rotations_of(t).is_empty() else E.TYPES[t][0], E.TYPES[t][2])
 
 	var bottom := PanelContainer.new()
+	bottom.mouse_force_pass_scroll_events = false
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	bottom.offset_top = -32
 	root.add_child(bottom)
@@ -218,7 +228,7 @@ static func palette_group(t: String) -> String:
 		return "Triggers"
 	if t.begins_with("ability") or t.begins_with("stamina") or t in ["strawberry", "goal", "energy_fragment"]:
 		return "Pickups"
-	if t in ["spawn", "door", "house_door", "building", "note", "island_prop", "discovery_npc"] or t.begins_with("village"):
+	if t in ["spawn", "respawn", "door", "house_door", "building", "note", "island_prop", "discovery_npc"] or t.begins_with("village"):
 		return "Doors & people"
 	return "Other"
 
@@ -226,6 +236,7 @@ static func palette_group(t: String) -> String:
 func _fold(parent: Control, title: String, col: Color) -> VBoxContainer:
 	var head := Button.new()
 	head.text = "   > " + title
+	head.tooltip_text = "Show or hide tools for " + title + "."
 	head.flat = true
 	head.focus_mode = Control.FOCUS_NONE
 	head.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -267,6 +278,14 @@ func _lbl(t: String) -> Label:
 func _btn(t: String, cb: Callable) -> Button:
 	var b := Game.button(t, cb)
 	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = str({
+		"Resize":"Apply the width and height fields. Objects outside the new bounds are removed.",
+		"New":"Create a blank custom level.", "Save":"Save this room. Shortcut: Ctrl+S.",
+		"Undo":"Undo the last terrain or object edit. Shortcut: Ctrl+Z.",
+		"Playtest":"Try the current room, including unsaved edits. Starts at a Respawn checkpoint or safe floor position. Shortcut: F5.",
+		"World":"Return to the map editor. Unsaved changes prompt Save, Don't save or Cancel.",
+		"Menu":"Return to the menu. Unsaved changes prompt Save, Don't save or Cancel."
+	}.get(t, "Open " + t + "."))
 	return b
 
 # Create a numeric field with the supplied limits and initial value.
@@ -281,6 +300,7 @@ func _spin(lo: int, hi: int, v: int) -> SpinBox:
 func _tool_button(parent: Control, id: String, text: String, col: Color) -> void:
 	var b := Button.new()
 	b.text = text
+	b.tooltip_text = _tool_help(id)
 	b.toggle_mode = true
 	b.button_group = tool_group
 	b.focus_mode = Control.FOCUS_NONE
@@ -406,13 +426,37 @@ func _resize() -> void:
 	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
 
-# Require a spawn, copy the current edit and start gameplay without losing the editor copy.
+# Play from a start marker, a respawn slab, or a temporary safe floor position.
 func _playtest() -> void:
-	if level.entities.filter(func(e): return e.t == "spawn").is_empty():
-		_status("Place a Spawn first")
-		return
+	var trial := level.duplicate(true)
+	if not trial.entities.any(func(e): return e.t in ["spawn", "respawn"]):
+		var point := _playtest_floor()
+		if point.x < 0:
+			_status("No safe floor found. Place a Respawn on safe ground first.")
+			return
+		trial.entities.append({"t":"spawn", "x":point.x, "y":point.y})
 	Game.editor_level = level.duplicate(true)
-	Game.play(level.duplicate(true), true)
+	Game.play(trial, true)
+
+# Choose clear grounded space without adding a permanent marker to the room.
+func _playtest_floor() -> Vector2i:
+	var best := Vector2i(-1,-1)
+	var distance := INF
+	for y in range(1, level.h-1):
+		for x in range(1, level.w-1):
+			if level.tiles[y][x] != "0" or level.tiles[y-1][x] != "0" or level.tiles[y+1][x] != "1": continue
+			var body := Rect2i(x*T, y*T-4, T, 12)
+			var blocked := false
+			for e in level.entities:
+				if e.t in ["water", "acid", "breakwall", "crumble", "falling", "zip", "dream", "boss_gate"] or str(e.t).begins_with("spikes") or str(e.t).begins_with("enemy") or str(e.t).begins_with("boss_"):
+					var rect := Rect2i(int(e.x), int(e.y), int(e.get("w",T)), int(e.get("h",T)))
+					if rect.grow(4).intersects(body): blocked = true
+			if blocked: continue
+			var score := Vector2(x,y).distance_squared_to(Vector2(level.w,level.h)/2)
+			if score < distance:
+				distance = score
+				best = Vector2i(x*T,y*T)
+	return best
 
 # Full rebuild: load, undo, new, resize.
 # Recreate all preview objects after a structural edit such as load, resize or undo.
@@ -481,7 +525,7 @@ func _copy(cut: bool) -> void:
 		_refresh()
 	_status("%s %dx%d, %d objects (Ctrl+V pastes at the mouse)" % ["Cut" if cut else "Copied", sel.size.x, sel.size.y, clip.entities.size()])
 
-# Paste the clipboard with its top-left at cell c: tiles overwrite, objects are added (one spawn per room).
+# Paste the clipboard with its top-left at cell c: tiles overwrite, objects are added without replacing existing spawn markers.
 func _paste(c: Vector2i) -> void:
 	_push_undo()
 	for y in int(clip.h):
@@ -493,8 +537,6 @@ func _paste(c: Vector2i) -> void:
 		_shift(d, c * T)
 		if not bounds.has_point(Vector2i(int(d.x), int(d.y))):
 			continue
-		if d.t == "spawn":
-			level.entities = level.entities.filter(func(o): return o.t != "spawn")
 		level.entities.append(d)
 	sel = Rect2i(c, Vector2i(clip.w, clip.h)).intersection(Rect2i(0, 0, level.w, level.h))
 	_refresh()
@@ -518,7 +560,7 @@ func _entity_at(c: Vector2i) -> int:
 			return i
 	return -1
 
-# Place a single-cell object, avoid duplicates and handle spawn uniqueness or note editing.
+# Place a single-cell object, avoid duplicates and handle note editing.
 # Rotatable objects: one palette entry each (the first id); placing faces away from the wall it touches,
 # clicking a placed one turns it to the next direction.
 const ROTATIONS := {"spikes": ["spikes_up", "spikes_right", "spikes_down", "spikes_left"], "spring": ["spring_up", "spring_right", "spring_left"]}
@@ -560,20 +602,15 @@ func _place_point(c: Vector2i, click := false) -> void:
 		return
 	for e in level.entities:
 		if int(e.x) == x and int(e.y) == y and not E.TYPES[e.t][1]:
-			if e.t == tool:
+			if e.t == tool or (tool == "spawn" and e.t == "respawn"):
 				if tool == "note":
 					_ask_note(e)
 				return  # already there
-	if tool == "spawn":
-		level.entities = level.entities.filter(func(e): return e.t != "spawn")
 	level.entities.append({"t": tool, "x": x, "y": y})
 	if tool == "note":
 		level.entities[-1].text = ""
 		_ask_note(level.entities[-1])
-	if tool == "spawn":  # removed the old spawn: rare, so rebuild everything
-		_refresh()
-	else:
-		_refresh_one(level.entities.size() - 1)
+	_refresh_one(level.entities.size() - 1)
 
 # Design note text (e.g. "Needs double jump"). Click a placed note with the Note tool to edit it.
 # Open a text dialog linked to this note dictionary and refresh the preview after confirmation.
@@ -1002,3 +1039,41 @@ func _frame_room() -> void:
 	cam.position = room_size / 2.0 - (workspace.get_center() - screen / 2.0) / cam.zoom
 	cam.reset_smoothing()
 	_redraw()
+
+# Palette help includes the effect and the gesture used to place the selected object.
+func _tool_help(id: String) -> String:
+	var help := {
+		"tile":"Paint solid ground with the left mouse button; erase with the right mouse button.",
+		"spawn":"Starting point and checkpoint: walking onto it updates the respawn location silently. Invisible during play. Multiple points are allowed; place on a safe floor with clear headroom.",
+		"respawn":"Walk onto this checkpoint to update the player's respawn point. Place on a safe floor.",
+		"jumpthru":"One-way platform: jump through from below, stand on top, or drop through with Down + Jump.",
+		"crumble":"Temporary block that crumbles after the player stands on it.",
+		"falling":"Block that falls after activation.",
+		"zip":"Moving platform: drag its size, then click its destination.",
+		"dream":"Block the player can travel through with a dash.",
+		"door":"Automatic doorway. Set its ID and target as room:door_id after placing it.",
+		"house_door":"Door activated by Interact. Set its ID and target as room:door_id after placing it.",
+		"building":"Background scenery that the player can walk through.",
+		"water":"Swimmable water. Drag to cover its basin.", "acid":"Deadly liquid. Drag to cover its basin.",
+		"breakwall":"Breakable barrier opened by the attack ability.",
+		"energy_fragment":"Interactable energy fragment. Three fragments grant one capacity upgrade.",
+		"discovery_npc":"Character the player can speak to with Interact.",
+		"stamina_block":"Permanent stamina capacity upgrade, collected once per run.",
+		"stamina_orb":"Collectible that restores stamina.",
+		"refill":"Restores a dash when collected.", "refill_two":"Grants two dashes when collected.",
+		"goal":"Level goal: touching it completes the level.",
+		"strawberry":"Legacy star collectible.",
+		"note":"Design note: enter its text after placing it.",
+		"camera_zone":"Camera framing region. Drag to define its bounds.",
+		"boss_gate":"Arena barrier controlled by its boss or configured boss flag."
+	}
+	var description: String = str(help.get(id, ""))
+	if description.is_empty():
+		if id.begins_with("spikes_"): description = "Deadly spikes. Click an already placed spike again to rotate it."
+		elif id.begins_with("spring_"): description = "Launches the player in its facing direction. Click it again to rotate."
+		elif id.begins_with("ability_"): description = "Unlocks the " + id.trim_prefix("ability_") + " ability when collected."
+		elif id.begins_with("enemy_"): description = str(E.TYPES[id][0]) + ". Places this enemy or variant in the room."
+		else: description = str(E.TYPES[id][0]) + ": select to place this " + palette_group(id).to_lower() + " object."
+	if id != "tile":
+		description += "\n" + ("Left-drag to set its size." if E.TYPES[id][1] else "Left-click to place.") + " Right-click to remove."
+	return description

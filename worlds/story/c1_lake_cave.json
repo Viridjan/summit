@@ -2,18 +2,6 @@
 	"enemy_count": 0,
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
-			"x": 96,
-			"y": 224
-		},
-		{
-			"t": "note",
-			"text": "Down you go. From here on, things can hurt",
-			"x": 160,
-			"y": 24
-		},
-		{
 			"t": "spikes_down",
 			"x": 32,
 			"y": 304
@@ -39,11 +27,6 @@
 			"y": 304
 		},
 		{
-			"t": "spawn",
-			"x": 160,
-			"y": 328
-		},
-		{
 			"h": 24,
 			"t": "crumble",
 			"w": 16,
@@ -56,6 +39,21 @@
 			"w": 8,
 			"x": 232,
 			"y": 240
+		},
+		{
+			"t": "spawn",
+			"x": 8,
+			"y": 328
+		},
+		{
+			"t": "spawn",
+			"x": 224,
+			"y": 328
+		},
+		{
+			"t": "spawn",
+			"x": 160,
+			"y": 328
 		}
 	],
 	"environment": "cavern_deep",

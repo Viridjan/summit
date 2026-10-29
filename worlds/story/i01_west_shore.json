@@ -30,10 +30,9 @@
 	],
 	"entities": [
 		{
-			"t": "spawn",
-			"x": 224,
-			"y": 152,
-			"entrance": true
+			"t": "respawn",
+			"x": 944,
+			"y": 152
 		},
 		{
 			"t": "house_door",
@@ -85,13 +84,6 @@
 			"to": "i03_south_shore:to_west",
 			"direction": "south",
 			"label": "South Shore"
-		},
-		{
-			"t": "spawn",
-			"x": 484,
-			"y": 152,
-			"entrance": true,
-			"shore_panel": true
 		}
 	]
 }

@@ -26,7 +26,8 @@ const MonsterLib := preload("res://scripts/monster_library.gd")
 # Registry row layout: [editor label, can drag to size, representative color, implementation class].
 # JSON uses the string key (for example refill), not the class name.
 const TYPES := {
-	"spawn": ["Spawn", false, Color("ffffff"), SpawnMarker],
+	"respawn": ["Respawn", false, Color("ffffff"), Respawn],
+	"spawn": ["Respawn", false, Color("ffffff"), Respawn],
 	"spikes_up": ["Spikes ^", false, Color("dddddd"), Spikes],
 	"spikes_down": ["Spikes v", false, Color("dddddd"), Spikes],
 	"spikes_left": ["Spikes <", false, Color("dddddd"), Spikes],
@@ -485,6 +486,25 @@ class StaminaBlock extends Ent:  # adventure: +1 stamina block, once per run
 
 # ponytail: refills all stamina; collectibles that restore part of it come with the stamina design
 # Reusable adventure stamina refill with a delay before it becomes available again.
+class Respawn extends Ent:  # invisible walk-on checkpoint; original marker drawn only in the editor
+	func setup() -> void:
+		rect = Rect2i(int(d.x), int(d.y), T, T)
+	func point() -> Vector2:
+		return Vector2(float(d.x) + 4, float(d.y) + 8)
+	func active() -> bool:
+		return w != null and w.spawn == point() and (not w.adventure() or w.spawn_room == w.room)
+	func describe() -> String:
+		return "Respawn: walk onto it to come back here" if w == null else ""
+	func touch(p) -> void:
+		if w != null and p.on_ground and not active():
+			w.set_respawn(point())
+	func draw(ci: CanvasItem) -> void:
+		if w != null: return
+		# Original editor marker: player-sized outline with a red head.
+		ci.draw_rect(Rect2(rect.position.x, rect.position.y - 3, 8, 11), Color(1, 1, 1, 0.6), false, 1.0)
+		ci.draw_rect(Rect2(rect.position.x + 2, rect.position.y - 1, 4, 3), Color("ac3232"))
+
+
 class StaminaOrb extends Ent:  # adventure: refills stamina, back after 2.5 s
 	var t := 0.0
 	# Initialize StaminaOrb dimensions, collision flags and starting data before World uses the object.

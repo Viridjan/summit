@@ -57,6 +57,17 @@ class World:
                     self.items.setdefault((ex, ey), []).append((t, name, e))
                 elif t == "spawn" and name == self.start and not hasattr(self, "spawn"):
                     self.spawn = (ex, ey)
+                elif t == "respawn" and name == self.start:  # no start marker: the first respawn slab
+                    self._first_respawn = getattr(self, "_first_respawn", (ex, ey))
+        # Unified checkpoint rooms can start at their first legacy respawn marker too.
+        if not hasattr(self, "spawn"):
+            ox, oy, level = self.rooms[self.start]
+            for entity in level["entities"]:
+                if entity["t"] == "respawn":
+                    self.spawn = (ox + int(entity["x"]) // T, oy + int(entity["y"]) // T)
+                    break
+        if not hasattr(self, "spawn") and hasattr(self, "_first_respawn"):
+            self.spawn = self._first_respawn
         # doors: every cell of a door leads to the feet cell at the bottom middle of the door it names
         self.doors = {}
         for name, (ox, oy, lvl) in self.rooms.items():

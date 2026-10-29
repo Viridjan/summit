@@ -424,10 +424,94 @@ def add_spawns(world_dir):
     print(f"{world_dir}: {total} entrance spawns in {len(rooms)} rooms")
 
 
+# Respawn slabs (entity "respawn"): one per room-to-room entry (doors don't count), on the floor nearest the entry.
+#   side entry: 1 tile in from the edge, standing on the floor under the entry's lowest open row;
+#   top / bottom entry: on the entry's middle column, on the first floor below (top) or above (bottom) it.
+# Where that spot has no floor (or a hazard), no slab: an error instead. Old entrance spawns are removed.
+# Returns the error lines.
+def add_respawns(world_dir):
+    W = json.load(open(os.path.join(world_dir, "world.json")), parse_float=unit)
+    rooms = {}
+    for n, (x, y) in W["rooms"].items():
+        path = os.path.join(world_dir, n + ".json")
+        text = open(path).read()
+        rooms[n] = (x, y, json.loads(text, parse_float=unit), "\n" in text.strip())
+    owner = {}
+    for n, (x, y, L, _) in rooms.items():
+        for ty, row in enumerate(L["tiles"]):
+            for tx, c in enumerate(row):
+                if c == "0":
+                    owner[(x + tx, y + ty)] = n
+    total, errors = 0, []
+    for n, (rx, ry, L, pretty) in rooms.items():
+        w, h, tiles = L["w"], L["h"], L["tiles"]
+        L["entities"] = [e for e in L["entities"] if e["t"] != "respawn" and not (e["t"] == "spawn" and e.get("entrance"))]
+        is_open = lambda tx, ty: 0 <= tx < w and 0 <= ty < h and tiles[ty][tx] == "0"
+        plat = set()
+        bad = set()
+        for e in L["entities"]:
+            ex, ey = int(e["x"]) // T, int(e["y"]) // T
+            ew, eh = max(1, int(e.get("w", T)) // T), max(1, int(e.get("h", T)) // T)
+            if e["t"] == "jumpthru":
+                plat |= {(ex + i, ey) for i in range(ew)}
+            if e["t"] in HAZARD or e["t"] in SOLID_ENTS:
+                bad |= {(xx, yy) for yy in range(ey, ey + eh) for xx in range(ex, ex + ew)}
+        floor = lambda tx, ty: is_open(tx, ty) and is_open(tx, ty - 1) and (not is_open(tx, ty + 1) or (tx, ty + 1) in plat) \
+            and (tx, ty + 1) != (tx, h) and (tx, ty) not in bad and (tx, ty - 1) not in bad
+        runs = []
+        for side in "lrtb":
+            run = []
+            for i in range(h if side in "lr" else w):
+                tx, ty = {"l": (0, i), "r": (w - 1, i), "t": (i, 0), "b": (i, h - 1)}[side]
+                ox, oy = {"l": (-1, 0), "r": (1, 0), "t": (0, -1), "b": (0, 1)}[side]
+                other = owner.get((rx + tx + ox, ry + ty + oy))
+                if is_open(tx, ty) and other is not None and other != n:
+                    run.append((tx, ty))
+                elif run:
+                    runs.append((side, run))
+                    run = []
+            if run:
+                runs.append((side, run))
+        made = []
+        for side, run in runs:
+            if side in "lr":
+                x = 1 if side == "l" else w - 2
+                y = max(ty for _, ty in run)  # the entry's lowest open row
+                spot = (x, y) if floor(x, y) else None
+                where = "%s entry, rows %d..%d" % ({"l": "left", "r": "right"}[side], run[0][1], run[-1][1])
+            else:
+                x = run[len(run) // 2][0] if len(run) % 2 else run[len(run) // 2 - 1][0]
+                ys = range(0, h) if side == "t" else range(h - 1, -1, -1)  # down from the roof / up from the floor
+                spot = next(((x, y) for y in ys if floor(x, y)), None)
+                where = "%s entry, columns %d..%d" % ({"t": "top", "b": "bottom"}[side], run[0][0], run[-1][0])
+            if spot is None:
+                errors.append("%s: %s: no floor for its respawn (%s)" % (n, where,
+                              "1 tile in from the edge, under its lowest row" if side in "lr" else "on its middle column"))
+            elif spot not in made:
+                made.append(spot)
+        L["entities"] = [{"t": "respawn", "x": sx * T, "y": sy * T} for sx, sy in made] + L["entities"]
+        from prune_respawns import prune, entrance_points
+        prune(L, entrance_points(W, {name: data[2] for name, data in rooms.items()}, n), n == W["start"])
+        total += len(made)
+        with open(os.path.join(world_dir, n + ".json"), "w") as f:
+            json.dump(L, f, indent="\t" if pretty else None, separators=None if pretty else (",", ":"))
+    print(f"{world_dir}: {total} respawns in {len(rooms)} rooms, {len(errors)} errors")
+    for e in errors:
+        print("  ERROR", e)
+    return errors
+
+
+add_spawns = add_respawns  # the old name (build_drafts.py and older notes)
+
+
 if __name__ == "__main__":
+    if sys.argv[1:2] == ["--respawns"]:  # only (re)place the respawn slabs (World Editor > Place respawns)
+        for d in sys.argv[2:]:
+            add_respawns(d)
+        sys.exit(0)
     for d in sys.argv[1:]:
         seal_edges(d)
         settle_liquids(d)
         unblock_acid(d)
         drop_unreachable(d)
-        add_spawns(d)
+        add_respawns(d)

@@ -1,10 +1,14 @@
 {
 	"entities": [
 		{
-			"t": "spawn",
-			"x": 40,
-			"y": 48,
-			"entrance": true
+			"t": "respawn",
+			"x": 48,
+			"y": 48
+		},
+		{
+			"t": "respawn",
+			"x": 280,
+			"y": 8
 		},
 		{
 			"t": "strawberry",

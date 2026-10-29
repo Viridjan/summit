@@ -44,6 +44,7 @@ func _ready() -> void:
 		thumbs[name] = MapView.terrain(world.rooms[name].level)
 	selected = world.start
 	var side := PanelContainer.new()
+	side.mouse_force_pass_scroll_events = false
 	side.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
 	side.offset_left = -260
 	add_child(side)
@@ -52,6 +53,7 @@ func _ready() -> void:
 	box.add_child(Game.label("World Editor", 24))
 	box.add_child(Game.button("+ Add empty room (draft)", func(): _add_index(0)))
 	box.add_child(Game.button("Build drafts", _build_drafts))
+	box.add_child(Game.button("Place respawns", _place_respawns))
 	add_menu = MenuButton.new()
 	add_menu.text = "+ Add copy of my level..."
 	add_menu.flat = false
@@ -302,6 +304,26 @@ func _build_drafts() -> void:
 			thumbs[name] = MapView.terrain(world.rooms[name].level)
 		_recalc()
 		queue_redraw()
+
+# One respawn slab per room entry (tools/world_fixups.py --respawns); entries with no floor for one are listed.
+func _place_respawns() -> void:
+	var out := []
+	var code := OS.execute("python3", [ProjectSettings.globalize_path("res://tools/world_fixups.py"), "--respawns",
+		ProjectSettings.globalize_path(Game.world_path.get_base_dir())], out, true)
+	var text: String = "".join(out).strip_edges()
+	world = Adventure.load_world(Game.world_path)
+	for name in world.rooms:
+		thumbs[name] = MapView.terrain(world.rooms[name].level)
+	queue_redraw()
+	var dlg := AcceptDialog.new()
+	dlg.title = "Respawns" if code == 0 else "Place respawns failed"
+	var lines := text.split("\n")
+	dlg.dialog_text = "\n".join(Array(lines).map(func(l): return l.strip_edges().trim_prefix("ERROR ")).slice(0, 40))
+	dlg.visibility_changed.connect(func():
+		if not dlg.visible:
+			dlg.queue_free())
+	add_child(dlg)
+	dlg.popup_centered()
 
 # Remove a room from the layout while deliberately retaining its JSON file on disk.
 func _remove() -> void:

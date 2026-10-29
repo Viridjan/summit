@@ -21,12 +21,6 @@
 	],
 	"entities": [
 		{
-			"t": "spawn",
-			"x": 16,
-			"y": 88,
-			"entrance": true
-		},
-		{
 			"t": "house_door",
 			"x": 16,
 			"y": 72,

@@ -1,8 +1,7 @@
 {
 	"entities": [
 		{
-			"entrance": true,
-			"t": "spawn",
+			"t": "respawn",
 			"x": 8,
 			"y": 96
 		},
@@ -60,13 +59,6 @@
 			"w": 16,
 			"x": 880,
 			"y": 80
-		},
-		{
-			"entrance": true,
-			"shore_panel": true,
-			"t": "spawn",
-			"x": 884,
-			"y": 96
 		}
 	],
 	"environment": "island_shore",
