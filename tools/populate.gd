@@ -24,6 +24,7 @@ const MAX_PER_ROOM := 3
 const NATIVES := 3  # kinds of native monster per region
 
 var rng := RandomNumberGenerator.new()
+var only_rooms: Array = []
 
 func _initialize() -> void:
 	call_deferred("run")
@@ -36,6 +37,8 @@ func run() -> void:
 	for i in args.size():
 		if args[i] == "--world" and i + 1 < args.size():
 			dir = args[i + 1].trim_suffix("/") + "/"
+		elif args[i] == "--rooms" and i + 1 < args.size():
+			only_rooms = Array(args[i + 1].split(",", false))
 		elif args[i] == "--seed" and i + 1 < args.size():
 			rng.seed = int(args[i + 1])
 	var game = root.get_node("Game")
@@ -65,6 +68,7 @@ func populate(world: Dictionary) -> Array:
 	var prev: Array = []  # the previous fighting region's monsters
 	for g in world.regions:
 		for name in g.rooms:
+			if not only_rooms.is_empty() and name not in only_rooms: continue
 			var lvl: Dictionary = world.rooms[name].level
 			lvl.entities = lvl.entities.filter(func(e): return not e.get("populated", false))
 		if g.get("peaceful", false) or not Lib.SIGNS.has(g.get("sign", "")):
@@ -72,6 +76,7 @@ func populate(world: Dictionary) -> Array:
 			continue
 		var spots: Array = []
 		for name in g.rooms:
+			if not only_rooms.is_empty() and name not in only_rooms: continue
 			for s in spots_in(world.rooms[name].level):
 				spots.append([name, s])
 		var pop := mix(prev, spots.size(), g.name, g.sign)
@@ -165,7 +170,8 @@ func spots_in(lvl: Dictionary) -> Array:
 	var open := 0
 	for row in lvl.tiles:
 		open += row.count("0")
-	var want := mini(MAX_PER_ROOM, open / PER_ROOM_CELLS)
+	var requested := int(lvl.get("enemy_count", -1))
+	var want := maxi(0, requested) if requested >= 0 else mini(MAX_PER_ROOM, open / PER_ROOM_CELLS)
 	var cand: Array = []
 	for y in range(3, lvl.h - 1):
 		for x in range(5, lvl.w - 6):

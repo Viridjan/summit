@@ -2,17 +2,17 @@
 	"abilities": [],
 	"regions": [
 		{
-			"name": "Landing",
 			"color": "#e0d070",
+			"name": "Landing",
+			"peaceful": true,
 			"rooms": [
 				"hub_landing"
 			],
-			"sign": "Virgo",
-			"peaceful": true
+			"sign": "Virgo"
 		},
 		{
-			"name": "Western Wilds",
 			"color": "#c06040",
+			"name": "Western Wilds",
 			"rooms": [
 				"w1_wilds_gate",
 				"w2_wilds_hollow",
@@ -25,12 +25,12 @@
 		{
 			"color": "#7fc4e8",
 			"name": "Meadow",
+			"peaceful": true,
 			"rooms": [
 				"m1_meadow",
 				"m2_big_jump"
 			],
-			"sign": "Taurus",
-			"peaceful": true
+			"sign": "Taurus"
 		},
 		{
 			"color": "#5a6fd0",
@@ -49,13 +49,13 @@
 		{
 			"color": "#e0b25a",
 			"name": "Cove Town",
+			"peaceful": true,
 			"rooms": [
 				"t1_cove_town",
 				"h1_villager_house",
 				"h2_quest_house"
 			],
-			"sign": "Libra",
-			"peaceful": true
+			"sign": "Libra"
 		},
 		{
 			"color": "#5cbf5a",
@@ -73,11 +73,11 @@
 		{
 			"color": "#a6d65a",
 			"name": "Treetop Village",
+			"peaceful": true,
 			"rooms": [
 				"l3_treetop_village"
 			],
-			"sign": "Gemini",
-			"peaceful": true
+			"sign": "Gemini"
 		},
 		{
 			"color": "#d9a066",
@@ -178,17 +178,21 @@
 			280,
 			123
 		],
+		"hub_landing": [
+			-40,
+			0
+		],
 		"i01_west_shore": [
 			700,
 			46
 		],
 		"i02_north_shore": [
-			1120,
-			46
+			654,
+			-179
 		],
 		"i03_south_shore": [
-			1280,
-			46
+			849,
+			-173
 		],
 		"i04_foothills": [
 			820,
@@ -298,10 +302,6 @@
 			240,
 			53
 		],
-		"hub_landing": [
-			-40,
-			0
-		],
 		"w1_wilds_gate": [
 			-80,
 			0
@@ -327,7 +327,7 @@
 			154
 		]
 	},
-	"start": "hub_landing",
+	"start": "m1_meadow",
 	"variants": {
 		"a1_ape_arena": [
 			{

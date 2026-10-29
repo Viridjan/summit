@@ -105,26 +105,6 @@
 			"y": 152,
 			"entrance": true,
 			"shore_panel": true
-		},
-		{
-			"t": "house_door",
-			"skin": "signpost",
-			"shore_panel": true,
-			"x": 880,
-			"y": 136,
-			"w": 16,
-			"h": 24,
-			"id": "to_east",
-			"to": "i08_east_shore:to_west",
-			"direction": "east",
-			"label": "East Shore"
-		},
-		{
-			"t": "spawn",
-			"x": 884,
-			"y": 152,
-			"entrance": true,
-			"shore_panel": true
 		}
 	]
 }

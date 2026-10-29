@@ -48,6 +48,9 @@ var ui: CanvasLayer
 var name_edit: LineEdit
 var w_spin: SpinBox
 var h_spin: SpinBox
+var enemy_spin: SpinBox
+var navigation_box: VBoxContainer
+var navigation_dialog: ConfirmationDialog
 var status: Label
 var load_menu: MenuButton
 var tool_group := ButtonGroup.new()
@@ -83,6 +86,7 @@ func _ready() -> void:
 	_create_tile_layer()
 	tile_layer.setup(level.tiles, level.w, level.h, level.get("environment", ""))
 	_refresh()
+	_frame_room()
 
 # ---------------- UI ----------------
 # Create the name/size controls, load/save actions, object palette and status bar.
@@ -140,6 +144,14 @@ func _build_ui() -> void:
 	var tools := VBoxContainer.new()
 	tools.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(tools)
+	tools.add_child(_lbl("Enemies (-1 = automatic)"))
+	enemy_spin = _spin(-1, 1000, int(level.get("enemy_count", -1)))
+	enemy_spin.tooltip_text = "Generated enemy budget when building; 0 disables population. Safe placement and peaceful regions still apply."
+	enemy_spin.value_changed.connect(func(v: float): level.enemy_count = int(v))
+	tools.add_child(enemy_spin)
+	navigation_box = VBoxContainer.new()
+	tools.add_child(navigation_box)
+	_refresh_navigation()
 	var groups := {}  # group -> [ids], in registry order (enemies sorted by family below)
 	var order: Array = []
 	for t in ["tile"] + E.TYPES.keys():
@@ -305,6 +317,7 @@ func _sync_fields() -> void:
 	name_edit.text = level.name
 	w_spin.value = level.w
 	h_spin.value = level.h
+	enemy_spin.set_value_no_signal(int(level.get("enemy_count", -1)))
 
 # Show a short temporary message in the editor status bar.
 func _status(t: String) -> void:
@@ -342,11 +355,15 @@ func _set_level(d: Dictionary) -> void:
 	_refresh()
 
 # Write the room to its correct custom-level or world-room filename, then remember the saved snapshot.
-func _save() -> void:
+func _save() -> bool:
 	var f := Game.save_level(level, Game.editor_dir, Game.editor_file)
 	_status("Saved as %s.json" % f if f != "" else "Save failed")
+	if f == "": return false
+	Game.editor_file = f
 	Game.editor_level = level.duplicate(true)
 	saved_level = level.duplicate(true)
+	_refresh_navigation()
+	return true
 
 # Go back to the menu or the World Editor; with unsaved edits, ask first: Save, Don't save, or Cancel (stay).
 func _leave() -> void:
@@ -360,8 +377,7 @@ func _leave() -> void:
 	dlg.ok_button_text = "Save"
 	dlg.add_button("Don't save", true, "discard")
 	dlg.confirmed.connect(func():
-		_save()
-		Game.goto(Game.editor_return))
+		if _save(): Game.goto(Game.editor_return))
 	dlg.custom_action.connect(func(action: StringName):
 		if action == "discard":
 			Game.goto(Game.editor_return))
@@ -400,6 +416,7 @@ func _playtest() -> void:
 # Full rebuild: load, undo, new, resize.
 # Recreate all preview objects after a structural edit such as load, resize or undo.
 func _refresh() -> void:
+	_refresh_navigation()
 	preview.clear()
 	for d in level.entities:
 		preview.append(E.make(null, d))
@@ -638,6 +655,7 @@ func _place_rect(a: Vector2i, b: Vector2i) -> void:
 
 # Translate keyboard/mouse gestures into undo, saving, playtesting, painting, erasing and panning.
 func _unhandled_input(event: InputEvent) -> void:
+	if is_instance_valid(navigation_dialog): return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_Z and event.ctrl_pressed:
 			_undo()
@@ -657,6 +675,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton:
 		var mb := event as InputEventMouseButton
+		if not mb.pressed and mb.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+			_refresh_navigation.call_deferred()
 		if mb.button_index == MOUSE_BUTTON_WHEEL_UP and mb.pressed:
 			_zoom(1.25)
 		elif mb.button_index == MOUSE_BUTTON_WHEEL_DOWN and mb.pressed:
@@ -812,6 +832,14 @@ func _draw() -> void:
 	for e in preview:
 		if e != null and e.vis_rect().intersects(cull):
 			e.draw(self)
+	# Hide scenery and edge artwork outside the authored room, even while panning.
+	var outside := Color("0c0c1e")
+	var visible := view.grow(2.0 / cam.zoom.x)
+	for strip in [Rect2(visible.position, Vector2(visible.size.x, maxf(0, b.position.y - visible.position.y))),
+		Rect2(Vector2(visible.position.x, b.end.y), Vector2(visible.size.x, maxf(0, visible.end.y - b.end.y))),
+		Rect2(Vector2(visible.position.x, b.position.y), Vector2(maxf(0, b.position.x - visible.position.x), b.size.y)),
+		Rect2(Vector2(b.end.x, b.position.y), Vector2(maxf(0, visible.end.x - b.end.x), b.size.y))]:
+		if strip.has_area(): draw_rect(strip, outside)
 	draw_rect(b, Color(1, 1, 1, 0.5), false, 1.0 / cam.zoom.x)
 	var c := _cell_at_mouse()
 	if rect_start != null:
@@ -827,3 +855,91 @@ func _draw() -> void:
 	if zip_pending != null:
 		var from := Vector2(zip_pending.x, zip_pending.y) + Vector2(zip_pending.w, zip_pending.h) / 2.0
 		draw_line(from, Vector2(c * T) + Vector2(4, 4), Color("d0b040"), 1.0 / cam.zoom.x)
+
+# Use live source geometry, saved neighboring rooms and valid explicit door targets.
+func _connected_rooms() -> Array:
+	var result: Array = []
+	if Game.editor_return != "world_editor": return result
+	var world: Dictionary = Game.Adventure.load_world(Game.world_path)
+	if not world.get("rooms", {}).has(Game.editor_file): return result
+	var source: Dictionary = world.rooms[Game.editor_file].duplicate(true)
+	source.level = level
+	for name in world.rooms:
+		if name == Game.editor_file: continue
+		var pair := {"rooms": {Game.editor_file: source, name: world.rooms[name]}}
+		var linked := not Game.Adventure.doorways(pair).is_empty()
+		for entity in level.entities:
+			if entity.t not in E.DOOR_TYPES: continue
+			var target := str(entity.get("to", ""))
+			if target.get_slice(":", 0) != name or not target.contains(":"): continue
+			for arrival in world.rooms[name].level.entities:
+				if arrival.t in E.DOOR_TYPES and str(arrival.get("id", "")) == target.get_slice(":", 1):
+					linked = true
+		if linked: result.append(name)
+	result.sort()
+	return result
+
+func _refresh_navigation() -> void:
+	if navigation_box == null: return
+	for child in navigation_box.get_children():
+		navigation_box.remove_child(child)
+		child.queue_free()
+	if Game.editor_return != "world_editor": return
+	navigation_box.add_child(_lbl("Connected rooms"))
+	for name in _connected_rooms():
+		var button := _btn(str(name), func(): _request_room(name))
+		button.tooltip_text = "Edit connected room " + str(name)
+		navigation_box.add_child(button)
+
+func _request_room(name: String) -> void:
+	if name not in _connected_rooms():
+		_status("Room is no longer connected")
+		return
+	if level == saved_level:
+		_open_connected_room(name)
+		return
+	if is_instance_valid(navigation_dialog): return
+	var dlg := ConfirmationDialog.new()
+	navigation_dialog = dlg
+	dlg.dialog_text = "Save your changes before opening %s?" % name
+	dlg.ok_button_text = "Save"
+	dlg.add_button("Don't save", true, "discard")
+	dlg.confirmed.connect(func():
+		if _save(): _open_connected_room(name)
+		dlg.queue_free())
+	dlg.custom_action.connect(func(action: StringName):
+		if action == "discard":
+			_open_connected_room(name)
+			dlg.queue_free())
+	dlg.canceled.connect(func(): dlg.queue_free())
+	add_child(dlg)
+	dlg.popup_centered()
+
+func _open_connected_room(name: String) -> void:
+	var data := Game.load_level(name, Game.world_path.get_base_dir() + "/")
+	if data.is_empty():
+		_status("Could not load connected room")
+		return
+	Game.editor_dir = Game.world_path.get_base_dir() + "/"
+	Game.editor_file = name
+	Game.editor_level = data.duplicate(true)
+	saved_level = data.duplicate(true)
+	undo_stack.clear()
+	sel = Rect2i()
+	sel_start = null
+	dragging_paint = 0
+	_set_level(data)
+	_frame_room()
+	_refresh_navigation()
+	_status("Opened " + str(level.name))
+
+# Fit the complete destination beside the palette, below the toolbar and above status.
+func _frame_room() -> void:
+	var screen := get_viewport_rect().size
+	var workspace := Rect2(Vector2(230, 50), Vector2(maxf(1, screen.x - 246), maxf(1, screen.y - 100)))
+	var room_size := Vector2(level.w * T, level.h * T)
+	var scale := minf(workspace.size.x / room_size.x, workspace.size.y / room_size.y)
+	cam.zoom = Vector2.ONE * minf(scale, 10.0)
+	cam.position = room_size / 2.0 - (workspace.get_center() - screen / 2.0) / cam.zoom
+	cam.reset_smoothing()
+	_redraw()

@@ -445,3 +445,23 @@ North Shore panel leads west; another leads south. North and South are separate
 map locations rather than vertically stacked rooms. Shallow pools and low stone
 shelves vary the beaches; volcano connections and the Guardian reward survive.
 - 2026-10-29: Progression page top graph also a metro map (shared metro() drawing): each line an order of picking up abilities, each stop an ability set (rooms reachable), faded segments = an ability with no pickup placed yet; hover a stop: what each next pickup opens.
+
+2026-10-29 — Shore travel correction: remove direct North–South and East–West
+panels. Each shore has two panels, forming North–East–South–West–North.
+
+2026-10-29 — Applied the cavern terrain morph to Volcanic Maze (seed 42,
+intensity 0.45). Safe shallow recesses in Ash Passage and Junction; remaining
+rooms protected. Existing maze layout, platforms and boss arenas retained.
+
+2026-10-29 — Per-room enemy_count in room editor and JSON: -1 automatic, 0 none,
+positive values request a generated population. Draft building populates only
+newly built rooms after entrance placement; safe placement and peaceful/boss
+exclusions remain, and hand-authored enemies are preserved.
+
+2026-10-29 — Room editor connected-room buttons follow physical passages and
+valid door/panel links. Unsaved edits prompt Save / Don't save / Cancel before
+switching; failed saves stay in the current room with edits intact.
+
+2026-10-29 — Editor room switches fit the destination inside the usable canvas;
+plain masking outside room bounds hides uncovered scenery. Manual pan/zoom stay
+available.

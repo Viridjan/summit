@@ -12,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1] / "worlds/story"
 SHORES = {"i01_west_shore", "i02_north_shore", "i03_south_shore", "i08_east_shore"}
 
 
+OPPOSITE = {"i01_west_shore":"i08_east_shore", "i08_east_shore":"i01_west_shore",
+            "i02_north_shore":"i03_south_shore", "i03_south_shore":"i02_north_shore"}
+
+
 class IslandConnections(unittest.TestCase):
     def test_foothills_reaches_maze_without_the_summit_or_east_coast(self):
         world = World(str(ROOT))
@@ -44,13 +48,13 @@ class IslandConnections(unittest.TestCase):
             x,y,_ = world.rooms[name]
             self.assertEqual((x-jx,y-jy),delta,name)
 
-    def test_each_long_shore_has_a_panel_for_every_other_shore(self):
+    def test_each_long_shore_has_panels_only_for_neighboring_shores(self):
         world = World(str(ROOT))
         for room in SHORES:
             self.assertGreaterEqual(world.rooms[room][2]["w"],120,room)
             signs = [e for e in world.rooms[room][2]["entities"] if e.get("skin") == "signpost"]
-            self.assertEqual({e["to"].split(":")[0] for e in signs},SHORES-{room})
-            self.assertEqual(len(signs),3,room)
+            self.assertEqual({e["to"].split(":")[0] for e in signs},SHORES-{room,OPPOSITE[room]})
+            self.assertEqual(len(signs),2,room)
             for sign in signs:
                 self.assertEqual(sign["t"],"house_door","Travel must require Interact")
                 target,did = sign["to"].split(":")
@@ -93,7 +97,7 @@ class IslandConnections(unittest.TestCase):
         import json
         variant = json.loads((ROOT/"i01_west_shore_after.json").read_text())
         self.assertGreaterEqual(variant["w"],120)
-        self.assertEqual(len([e for e in variant["entities"] if e.get("skin") == "signpost"]),3)
+        self.assertEqual(len([e for e in variant["entities"] if e.get("skin") == "signpost"]),2)
         self.assertTrue(any(e.get("id") == "home" for e in variant["entities"]))
         doors = [e for e in variant["entities"] if e["t"] == "house_door"]
         for panel in doors:

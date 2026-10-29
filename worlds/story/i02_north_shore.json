@@ -73,26 +73,6 @@
 			"t": "house_door",
 			"skin": "signpost",
 			"shore_panel": true,
-			"x": 480,
-			"y": 80,
-			"w": 16,
-			"h": 24,
-			"id": "to_south",
-			"to": "i03_south_shore:to_north",
-			"direction": "south",
-			"label": "South Shore"
-		},
-		{
-			"t": "spawn",
-			"x": 484,
-			"y": 96,
-			"entrance": true,
-			"shore_panel": true
-		},
-		{
-			"t": "house_door",
-			"skin": "signpost",
-			"shore_panel": true,
 			"x": 880,
 			"y": 80,
 			"w": 16,

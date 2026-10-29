@@ -260,7 +260,7 @@ static func new_level(level_name := "untitled", w := 40, h := 23) -> Dictionary:
 		for x in w:
 			row += "1" if (y >= h - 2 or x == 0 or x == w - 1) else "0"
 		rows.append(row)
-	return {"name": level_name, "w": w, "h": h, "tiles": rows,
+	return {"name": level_name, "w": w, "h": h, "tiles": rows, "enemy_count": -1,
 		"entities": [{"t": "spawn", "x": 16, "y": (h - 3) * 8}]}
 
 # List user-created level names in sorted order without their JSON file extension.

@@ -1,0 +1,4 @@
+[gd_scene load_steps=2 format=3]
+[ext_resource type="Script" path="res://reports/terrain-morph/volcanic-maze-cavern/capture.gd" id="1"]
+[node name="IslandConnectionPreview" type="Node"]
+script = ExtResource("1")

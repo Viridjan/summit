@@ -1,3 +1,4 @@
+from pathlib import Path
 import json, os, subprocess, sys, tempfile, unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "tools"))
@@ -10,6 +11,22 @@ def empty(w=40, h=23):  # like Game.new_level, marked as a draft
 
 
 class BuildDrafts(unittest.TestCase):
+    def test_build_uses_room_enemy_budget(self):
+        with tempfile.TemporaryDirectory() as d:
+            for name, count in [("fight", 5), ("quiet", 0)]:
+                level = empty(120, 23)
+                level["enemy_count"] = count
+                Path(d, name + ".json").write_text(json.dumps(level))
+            world = {"start": "fight", "rooms": {"fight": [0, 0], "quiet": [120, 0]},
+                     "regions": [{"name": "Test", "color": "#808080", "sign": "Leo", "rooms": ["fight", "quiet"]}]}
+            Path(d, "world.json").write_text(json.dumps(world))
+            subprocess.run([sys.executable, os.path.join(HERE, "..", "tools", "story", "build_drafts.py"),
+                            d, "--seed", "4"], capture_output=True, text=True, check=True)
+            for name, count in [("fight", 5), ("quiet", 0)]:
+                level = json.loads(Path(d, name + ".json").read_text())
+                self.assertEqual(level["enemy_count"], count)
+                self.assertEqual(len([e for e in level["entities"] if e.get("populated")]), count)
+
     def test_maze_of_drafts(self):
         with tempfile.TemporaryDirectory() as d:
             rooms = {}

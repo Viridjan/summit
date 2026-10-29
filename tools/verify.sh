@@ -30,6 +30,7 @@ run '^MUSIC OK' --script tests/music.gd
 run '^ENVIRONMENT MUSIC OK' --script tests/environment_music.gd
 run '^APE ART OK' --script tests/ape_art.gd
 run '^DISCOVERIES OK' --script tests/discoveries.gd
+run '^EDITOR NAVIGATION OK' res://tests/editor_navigation.tscn
 run '^ISLAND ROUTES OK' res://tests/island_routes.tscn
 run '^CHARACTER STYLE OK' --script tests/character_style.gd
 export BENCH_RUNS=1 BENCH_TICKS=120 BENCH_ONLY=normal

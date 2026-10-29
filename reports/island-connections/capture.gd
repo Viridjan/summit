@@ -3,7 +3,7 @@ func _ready() -> void:
 	Game.main = self
 	Game.settings.invincible = true
 	var story: Dictionary = Game.Adventure.load_world("res://worlds/story/world.json")
-	for sample in [["i02_north_shore", "west"], ["i02_north_shore", "south"], ["i01_west_shore", "east"], ["i03_south_shore", "north"], ["i08_east_shore", "south"], ["i09_sea_cave", "upper"], ["i09_sea_cave", "lower"]]:
+	for sample in [["i02_north_shore", "west"], ["i02_north_shore", "east"], ["i01_west_shore", "south"], ["i03_south_shore", "west"], ["i08_east_shore", "south"], ["i09_sea_cave", "upper"], ["i09_sea_cave", "lower"]]:
 		var name: String = sample[0]
 		Game.playtest_adventure(story, name)
 		await get_tree().process_frame

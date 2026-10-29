@@ -246,7 +246,7 @@ svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
 #info{margin-top:8px;color:var(--dim)} #info b{color:var(--fg)}
 </style></head><body><main>
-<section class="card"><h1>Progression</h1><p>Each line is an order of picking up abilities; each stop, the abilities you have. Faded: an ability with no pickup in the world yet. Dashed: the same stop on several lines. Hover a stop, click it for the map.</p><svg id="graph"></svg></section>
+<section class="card"><h1>Progression <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Each line is an order of picking up abilities; each stop, the abilities you have. Faded: an ability with no pickup in the world yet. Dashed: the same stop on several lines. Hover a stop, click it for the map.</p><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
 <section class="card"><h1>Choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><svg id="zgraph"></svg></section>

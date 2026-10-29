@@ -21,7 +21,7 @@ rooms that touch along an edge (3+ tiles) can be linked. Then:
 It finishes with world_fixups' edge sealing and entrance spawns (not its unreachable-room sweep). The World Editor's
 "Build drafts" button runs it on the open world.
 """
-import json, os, random, sys, tempfile, zlib
+import json, os, random, sys, tempfile, zlib, subprocess
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from world_check import World, MODELS, explore
 
@@ -351,6 +351,10 @@ def main():
     import world_fixups  # close edges that lead nowhere and add entrance spawns (not the unreachable-room sweep)
     world_fixups.seal_edges(d)
     world_fixups.add_spawns(d)
+    # Population runs after sealing/spawns, so enemies avoid entrances. Only built rooms change.
+    project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    subprocess.run(["godot", "--headless", "--path", project, "--script", "tools/populate.gd", "--",
+                    "--world", os.path.abspath(d), "--seed", str(seed), "--rooms", ",".join(drafts)], check=True)
     gated = sum(1 for v in links.values() if v["gate"])
     print("built %d drafts, %d links (%d behind an ability)" % (len(drafts), len(links), gated))
 

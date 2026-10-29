@@ -12,6 +12,8 @@ from pathlib import Path
 SHORES = {"west":"i01_west_shore","north":"i02_north_shore",
           "south":"i03_south_shore","east":"i08_east_shore"}
 
+OPPOSITE = {"north":"south", "south":"north", "east":"west", "west":"east"}
+
 
 def panel_id(source,target):
     return "coast_path" if (source,target) == ("north","west") else "to_"+target
@@ -76,6 +78,7 @@ def apply(directory):
         destinations=[target for target in SHORES if target != side]
         positions={"west":[40,60,110],"north":[11,60,110],"south":[30,60,110],"east":[10,60,110]}[side]
         for target,x in zip(destinations,positions):
+            if target == OPPOSITE[side]: continue
             room["entities"].append(dict(t="house_door",skin="signpost",shore_panel=True,
                 x=x*8,y=(floor-3)*8,w=16,h=24,id=panel_id(side,target),
                 to=SHORES[target]+":"+panel_id(target,side),direction=target,label=target.title()+" Shore"))
@@ -103,7 +106,7 @@ def apply(directory):
     post["entities"].extend(e for e in extras if e not in post["entities"])
     save(variant_name,post)
     save("world",world)
-    print("Extended all shores to 120 tiles; installed 12 destination panels; detached North/South; mountain and maze links retained")
+    print("Extended all shores to 120 tiles; installed 8 neighboring-shore panels; detached North/South; mountain and maze links retained")
 
 
 if __name__ == "__main__":

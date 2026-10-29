@@ -2178,6 +2178,14 @@ func check_monster_library() -> void:
 	# migration (tools/populate.gd): 30% kept, 20% upgraded, 50% natives; tier 2 never moves on
 	var Pop = load("res://tools/populate.gd").new()
 	Pop.rng.seed = 3
+	var counted := Game.new_level("Enemy budget", 120, 16)
+	counted.entities = []
+	counted.enemy_count = 0
+	check(Pop.spots_in(counted).is_empty(), "room enemy_count zero disables generated enemies")
+	counted.enemy_count = 5
+	check(Pop.spots_in(counted).size() == 5, "room enemy_count overrides the automatic three-enemy cap")
+	counted.enemy_count = 100
+	check(Pop.spots_in(counted).size() < 100, "enemy_count respects safe placement capacity")
 	var a0: Dictionary = Lib.native("Leo", rng)
 	var a2: Dictionary = Lib.upgrade(Lib.upgrade(a0, rng), rng)
 	var prev: Array = []

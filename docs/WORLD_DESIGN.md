@@ -13,9 +13,10 @@ Lair, moves with the tunnel while retaining its room-to-room offsets. The
 separate `i18_ash_passage` room is removed. East Shore's old downward opening is
 sealed, since the maze entrance is now below Foothills.
 
-All four shores are 120 tiles long. Each has three wooden direction panels,
-one for each other shore; North Shore's original `coast_path` points to West
-Shore. Stand nearby and press Interact to follow the named route. The panels
+All four shores are 120 tiles long. Each has two wooden direction panels,
+one for each neighboring shore; North Shore's original `coast_path` points to West
+Shore. Stand nearby and press Interact to follow the named route. Opposite shores (North–South and East–West) have no direct panel; travel
+through a neighboring shore. The panels
 show cardinal arrows and destination labels. North and South Shore sit apart
 on the world map rather than sharing vertical exits. West Shore still joins
 Foothills, and East Shore still joins the eastern volcano slope. The extended
@@ -213,3 +214,32 @@ including neighbouring rooms cached before a transition. The editor renders
 the same theme and invalidates neighbouring chunks for concave caps and props.
 The building theme depicts a rural settlement with timber/plaster walls,
 pitched-roof cottages, fences, barrels, wheat and signposts.
+
+**Volcanic Maze cavern pass (2026-10-29):** Applied `morph_terrain.py` with
+`--terrain cavern --region "Volcanic Maze" --seed 42` at default intensity 0.45.
+The protected contour pass carved 10 tiles in Ash Passage and 2 in Junction;
+the other eight rooms retained their protected geometry. Authored routes,
+room positions, objects and volcanic cave artwork are preserved. Before/after
+report and exact restore backup: `reports/terrain-morph/volcanic-maze-cavern/`.
+
+**Room enemy budgets (2026-10-29):** Room JSON supports `enemy_count`: `-1`
+(or omitted) uses automatic open-space density; `0` disables generated enemies;
+a positive integer requests that many generated enemies. Edit it under
+“Enemies (-1 = automatic)” in the room editor and save before building drafts.
+`build_drafts.py` runs population after terrain, edge sealing and entrance
+spawns, restricted to the newly built rooms. Direct `tools/populate.gd` runs
+also honor the setting (`--rooms room_a,room_b` restricts population).
+Safe spacing, available standing surfaces, peaceful regions and boss exclusions
+still limit placement. Hand-placed enemies are retained separately from this
+generated budget. Existing built rooms are not repopulated by Build drafts.
+
+**Connected-room editing (2026-10-29):** When editing a world room, the palette
+shows “Connected rooms” buttons for matching open borders and valid outgoing
+door/panel destinations. Switching a dirty room asks Save / Don't save / Cancel.
+Save failures retain the current room and edits. Switching loads the destination
+with its own filename, clears undo/selection and centers the camera.
+
+**Room editor framing (2026-10-29):** Opening the editor or following a
+connected-room button fits the entire room inside the workspace beside the
+palette. Outside-room scenery and terrain fringes are masked with the plain
+editor backdrop, including while panning or zooming.

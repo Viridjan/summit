@@ -30,10 +30,11 @@ func _ready() -> void:
 	Game.settings.invincible = true
 	var story: Dictionary = Game.Adventure.load_world("res://worlds/story/world.json")
 	var shores := ["i01_west_shore", "i02_north_shore", "i03_south_shore", "i08_east_shore"]
+	var opposite := {"i01_west_shore":"i08_east_shore", "i08_east_shore":"i01_west_shore", "i02_north_shore":"i03_south_shore", "i03_south_shore":"i02_north_shore"}
 	var world
 	for source in shores:
 		for target in shores:
-			if source == target: continue
+			if source == target or target == opposite[source]: continue
 			Game.playtest_adventure(story, source)
 			await get_tree().process_frame
 			world = get_child(get_child_count() - 1)
