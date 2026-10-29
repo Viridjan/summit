@@ -692,7 +692,9 @@ func update_stamina(dt: float) -> void:
 		return
 	var was: float = Game.adv.stamina
 	var why := "regen"
-	if player.state == player.ST_CLIMB:
+	if player.stun_blocks_regen():
+		why = "stunned"  # a hard landing: no regeneration until the second star
+	elif player.state == player.ST_CLIMB:
 		why = "climbing"  # on the wall: no regeneration (the climb drains it)
 	elif not in_water():
 		Adventure.regen_stamina(Game.adv, dt)

@@ -177,8 +177,8 @@ func _build_ui() -> void:
 				parent = sub_box
 			if t == "tile":
 				_tool_button(parent, "tile", "Ground Tiles", Color("7d84c4"))
-			else:
-				_tool_button(parent, t, E.TYPES[t][0], E.TYPES[t][2])
+			elif rotations_of(t).is_empty() or rotations_of(t)[0] == t:  # one entry per rotatable family
+				_tool_button(parent, t, E.TYPES[t][0].trim_suffix(" ^") if not rotations_of(t).is_empty() else E.TYPES[t][0], E.TYPES[t][2])
 
 	var bottom := PanelContainer.new()
 	bottom.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
@@ -501,11 +501,45 @@ func _entity_at(c: Vector2i) -> int:
 	return -1
 
 # Place a single-cell object, avoid duplicates and handle spawn uniqueness or note editing.
-func _place_point(c: Vector2i) -> void:
+# Rotatable objects: one palette entry each (the first id); placing faces away from the wall it touches,
+# clicking a placed one turns it to the next direction.
+const ROTATIONS := {"spikes": ["spikes_up", "spikes_right", "spikes_down", "spikes_left"], "spring": ["spring_up", "spring_right", "spring_left"]}
+# The wall each direction sits on: up = floor below, down = roof above, left = wall to the right, right = wall to the left.
+const MOUNT := {"up": Vector2i.DOWN, "down": Vector2i.UP, "left": Vector2i.RIGHT, "right": Vector2i.LEFT}
+
+func rotations_of(t: String) -> Array:
+	for k in ROTATIONS:
+		if t in ROTATIONS[k]:
+			return ROTATIONS[k]
+	return []
+
+func _solid(c: Vector2i) -> bool:
+	return not _in_level(c) or level.tiles[c.y][c.x] == "1"
+
+# The first direction of the family whose wall is next to cell c (the floor first), else the first.
+func oriented(fam: Array, c: Vector2i) -> String:
+	for t in fam:
+		if _solid(c + MOUNT[t.get_slice("_", t.get_slice_count("_") - 1)]):
+			return t
+	return fam[0]
+
+func _place_point(c: Vector2i, click := false) -> void:
 	if not _in_level(c):
 		return
 	var x := c.x * T
 	var y := c.y * T
+	var fam := rotations_of(tool)
+	if not fam.is_empty():
+		for i in level.entities.size():
+			var e: Dictionary = level.entities[i]
+			if int(e.x) == x and int(e.y) == y and e.t in fam:
+				if click:  # click again: rotate
+					e.t = fam[(fam.find(e.t) + 1) % fam.size()]
+					_refresh_one(i)
+				return
+		level.entities.append({"t": oriented(fam, c), "x": x, "y": y})
+		_refresh_one(level.entities.size() - 1)
+		return
 	for e in level.entities:
 		if int(e.x) == x and int(e.y) == y and not E.TYPES[e.t][1]:
 			if e.t == tool:
@@ -691,7 +725,7 @@ func _left(pressed: bool) -> void:
 			rect_start = c
 		else:
 			dragging_paint = 1
-			_place_point(c)
+			_place_point(c, true)
 		last_cell = c
 	else:
 		if rect_start != null:

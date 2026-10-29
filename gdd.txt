@@ -422,3 +422,6 @@ Phase 5 - Input and tooling (2026-10-21/22)
 - 2026-10-28: Room editor: Shift+drag selects an area; Ctrl+X / Ctrl+C cut or copy its tiles and objects (top-left inside), Ctrl+V pastes at the mouse, also into another room (clipboard kept across rooms; one spawn per room).
 - 2026-10-28: Ape logs never drop onto the player's column or an existing spike (no free spot: no log).
 - 2026-10-28: The Hole merged into the Lake Cave: one 30x46 room (the shaft on top of the landing; the Hole's solid right 10 columns dropped), at The Hole's place [80, 23]. m3_the_hole is gone; no freefall rooms remain, so falling in from The Big Jump fades into the Lake Caves region. Generator: under_hole() stacks them.
+- 2026-10-29: Base stamina 40 -> 32 (-20%: too much for the first part).
+- 2026-10-29: Hard landing (adventure): a fall of 10+ tiles (measured from speed, so it carries across rooms) sets stamina to 0 and stuns for 1 s (no control, crouched pose). Stars circle the head: one at once, the second after 0.5 s; regeneration restarts with the second star. F3 logs "hard landing" / "stunned".
+- 2026-10-29: Room editor: Spikes and Spring are one palette entry each; placing faces away from the wall touched (floor first, then roof, then walls), clicking a placed one rotates it (spikes up/right/down/left; spring up/right/left).

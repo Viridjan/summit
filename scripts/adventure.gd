@@ -16,9 +16,9 @@ const T := 8
 const ABILITIES := ["dash", "climb", "attack"]
 
 # Stamina is the player's health and ability fuel (docs/STORY_DESIGN.md section 3).
-# A run starts with a base of 40 that always regenerates; each stamina block picked up adds 20.
+# A run starts with a base of 32 that always regenerates; each stamina block picked up adds 20.
 # run.blocks counts the base as the first block (so 1 = just the base).
-const BASE_STAMINA := 40.0  # all stamina values doubled 2026-10-25: whole numbers (a jump costs 5)
+const BASE_STAMINA := 32.0  # 40 until 2026-10-29 (-20%: too much for the first part); whole numbers (a jump costs 5)
 const STAMINA_PER_BLOCK := 20.0  # what an stamina block pickup adds
 const STAMINA_REGEN_MAX := 12.0  # per second at half full (see regen_factor), only inside a partly spent block
 const STAMINA_REGEN_EMPTY := 3.0  # per second with the bar empty

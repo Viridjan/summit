@@ -1678,6 +1678,23 @@ func check_editor_flow() -> void:
 	ed._paste(Vector2i(10, 3))
 	var pasted: bool = ed.level.tiles[3].substr(10, 4) == "1111" and ed.level.entities.any(func(e): return e.t == "strawberry" and e.x == 88 and e.y == 32)
 	check(cleared and pasted, "editor: a cut clears the selected tiles and objects; paste puts both back at the mouse (%s, %s)" % [cleared, pasted])
+	var put := func(x: int, y: int, ch: String): ed.level.tiles[y] = ed.level.tiles[y].substr(0, x) + ch + ed.level.tiles[y].substr(x + 1)
+	for y in range(4, 9):  # rotatable objects: one entry, oriented by the wall, a click rotates
+		for x in range(18, 33):
+			put.call(x, y, "0")
+	put.call(20, 7, "1")
+	put.call(29, 5, "1")
+	ed.tool = "spikes_up"
+	ed._place_point(Vector2i(20, 6), true)
+	ed._place_point(Vector2i(30, 5), true)
+	var at := func(x: int, y: int) -> String:
+		var hit: Array = ed.level.entities.filter(func(e): return e.x == x * 8 and e.y == y * 8)
+		return hit[0].t if hit.size() == 1 else "none"
+	var placed: Array = [at.call(20, 6), at.call(30, 5)]
+	ed._place_point(Vector2i(20, 6), true)
+	ed._place_point(Vector2i(20, 6), false)  # a drag over it doesn't rotate
+	var turned: String = at.call(20, 6)
+	check(placed == ["spikes_up", "spikes_right"] and turned == "spikes_right", "editor: spikes face away from the wall they touch; a click turns them (%s, %s)" % [placed, turned])
 	ed.level.name = "changed"
 	var esc := InputEventKey.new()
 	esc.keycode = KEY_ESCAPE
@@ -2036,6 +2053,7 @@ func check_ape() -> void:
 	check(ape.logs.size() == 1, "a leap drops one log, from the first hit on (%d)" % ape.logs.size())
 	w.spawn_entity({"t": "spikes_up", "x": 296, "y": floor_y - 8})
 	step()
+	var sp: Rect2i = find.call(E.Spikes).filter(func(e): return e.rect.position.x >= 296 and e.rect.position.x < 304)[0].rect
 	var avoids := true
 	for k in 100:
 		ape.logs.clear()
@@ -2043,7 +2061,7 @@ func check_ape() -> void:
 		for l in ape.logs:
 			var lx: float = l[0].x
 			var hb: Rect2i = p().hitbox()
-			avoids = avoids and (lx + E.Ape.LOG.x <= hb.position.x or lx >= hb.end.x) and (lx + E.Ape.LOG.x <= 296 or lx >= 304)
+			avoids = avoids and (lx + E.Ape.LOG.x <= hb.position.x or lx >= hb.end.x) and (lx + E.Ape.LOG.x <= sp.position.x or lx >= sp.end.x)
 	check(avoids, "logs never fall onto the player's column or a spike already there")
 	for e in find.call(E.Spikes):
 		if e.rect.position.x == 296:
@@ -2145,10 +2163,10 @@ func check_stamina() -> void:
 	const Adventure := preload("res://scripts/adventure.gd")
 	var world := Adventure.load_world(FIXTURE_WORLD + "world.json")
 	var run := Adventure.new_run(world)
-	check(run.blocks == 1 and run.stamina == 40.0 and Adventure.stamina_max(run) == 40.0, "a run starts with the base: 40 stamina")
-	check(Adventure.spend_stamina(run, 20) and run.stamina == 20.0, "spending takes stamina")
+	check(run.blocks == 1 and run.stamina == 32.0 and Adventure.stamina_max(run) == 32.0, "a run starts with the base: 32 stamina")
+	check(Adventure.spend_stamina(run, 16) and run.stamina == 16.0, "spending takes stamina")
 	Adventure.regen_stamina(run, 0.01)
-	check(is_equal_approx(run.stamina, 20.0 + 0.12), "at half full stamina regenerates at the full 12 per second (%s)" % run.stamina)
+	check(is_equal_approx(run.stamina, 16.0 + 0.12), "at half full stamina regenerates at the full 12 per second (%s)" % run.stamina)
 	# Lambdas capture local variables, but cannot resolve this function's local script constant.
 	var regen_factor: Callable = Adventure.regen_factor
 	var regen_max: float = Adventure.STAMINA_REGEN_MAX
@@ -2156,24 +2174,24 @@ func check_stamina() -> void:
 	check(is_equal_approx(rate.call(0.0), 3.0) and is_equal_approx(rate.call(0.25), 7.5) and is_equal_approx(rate.call(0.5), 12.0)
 		and is_equal_approx(rate.call(0.75), 8.0) and is_equal_approx(rate.call(1.0), 4.0), "regen 3/s empty, 12/s at half, 4/s full")
 	Adventure.regen_stamina(run, 10.0)
-	check(run.stamina == 40.0, "regeneration stops at the top of the base")
+	check(run.stamina == 32.0, "regeneration stops at the top of the base")
 	run.stamina = 0.0
 	Adventure.regen_stamina(run, 0.01)
 	check(is_equal_approx(run.stamina, 0.03), "the base always regenerates, even from 0, at 3 per second (%s)" % run.stamina)
 	Adventure.regen_stamina(run, 100.0)
-	check(not Adventure.spend_stamina(run, 160) and run.stamina == 40.0, "can't spend more than you have")
+	check(not Adventure.spend_stamina(run, 160) and run.stamina == 32.0, "can't spend more than you have")
 	Adventure.add_stamina_block(run)
-	check(run.blocks == 2 and run.stamina == 60.0 and Adventure.stamina_max(run) == 60.0, "a new block adds a full 20")
-	Adventure.spend_stamina(run, 40)
+	check(run.blocks == 2 and run.stamina == 52.0 and Adventure.stamina_max(run) == 52.0, "a new block adds a full 20")
+	Adventure.spend_stamina(run, 32)
 	Adventure.regen_stamina(run, 10.0)
-	check(run.stamina == 40.0, "a fully spent block doesn't refill")
-	Adventure.spend_stamina(run, 40)
+	check(run.stamina == 32.0, "a fully spent block doesn't refill")
+	Adventure.spend_stamina(run, 32)
 	Adventure.regen_stamina(run, 100.0)
-	check(run.stamina == 40.0, "the base refills, but not the spent block above it")
+	check(run.stamina == 32.0, "the base refills, but not the spent block above it")
 	Adventure.refill_stamina(run)
 	Adventure.spend_stamina(run, 10)
 	Adventure.regen_stamina(run, 100.0)
-	check(run.stamina == 60.0, "a partly spent block refills to its top")
+	check(run.stamina == 52.0, "a partly spent block refills to its top")
 
 	# in the world: a block pickup (once per run), hits, the attack gate
 	Game.adv_world = world
@@ -2181,7 +2199,31 @@ func check_stamina() -> void:
 	Game.adv_temp = true
 	make_world([{"t": "stamina_block", "x": 80, "y": 26 * 8}])
 	step(3)
-	check(Game.adv.blocks == 2 and Game.adv.stamina == 60.0 and Game.adv.taken.size() == 1, "stamina block pickup adds a full block (20)")
+	check(Game.adv.blocks == 2 and Game.adv.stamina == 52.0 and Game.adv.taken.size() == 1, "stamina block pickup adds a full block (20)")
+	# hard landing: a fall of 10+ tiles empties the stamina and stuns 1 s; regen waits for the second star
+	var floor_y: float = p().pos.y
+	p().pos.y = floor_y - 6 * 8
+	p().on_ground = false
+	step(60)
+	var small_ok: bool = p().stun_t == 0.0 and Game.adv.stamina > 0.0
+	p().pos.y = floor_y - 12 * 8
+	p().on_ground = false
+	var stunned_at := -1
+	for k in 120:
+		step()
+		if p().stun_t > 0:
+			stunned_at = k
+			break
+	var hit_zero: bool = Game.adv.stamina == 0.0
+	p().hold = {"right": true, "jump": true}
+	step(20)
+	var held: bool = absf(p().pos.y - floor_y) < 0.5 and p().stun_t > 0 and Game.adv.stamina == 0.0
+	p().hold = {}
+	step(20)
+	var regen: bool = Game.adv.stamina > 0.0
+	step(30)
+	check(small_ok and stunned_at >= 0 and hit_zero and held and regen and p().stun_t == 0.0,
+		"a 6-tile fall is fine; a 12-tile fall empties stamina and stuns 1 s, regen starting at the second star (%s %s %s %s %s)" % [small_ok, stunned_at, hit_zero, held, regen])
 	make_world([{"t": "stamina_block", "x": 80, "y": 26 * 8}])
 	step(3)
 	check(Game.adv.blocks == 2, "an stamina block is taken once per run")
@@ -2243,13 +2285,13 @@ func check_stamina() -> void:
 	ep._process(0.0)
 	var vr := Rect2(Vector2.ZERO, ep.get_viewport_rect().size)
 	check(vr.encloses(ep.get_global_rect()) and ep.size.x > 100, "F3 panel is on screen (%s in %s)" % [ep.get_global_rect(), vr])
-	check(EP.regen_top(30.0) == 40.0 and EP.regen_top(50.0) == 60.0 and EP.regen_top(60.0) == 60.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
+	check(EP.regen_top(30.0) == 32.0 and EP.regen_top(40.0) == 52.0 and EP.regen_top(52.0) == 52.0 and ep.rate()[0] >= 0.0 and ep.history.size() == 1,
 		"F3 stamina panel: regen top per block, live rate and history")
 	ep.free()
 	Game.adv.stamina = 100.0
 
 	# HUD stamina bars: one per block, filled by its share of the stamina
-	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(50.0, 3)
+	var fills: Array = load("res://scripts/world.gd").Hud.block_fills(42.0, 3)
 	check(fills == [1.0, 0.5, 0.0], "HUD stamina bars: the base, then block by block (%s)" % [fills])
 	Game.adv.stamina = 0.19 * Adventure.stamina_max(Game.adv)
 	var grey: bool = p().hair_color() == p().HAIR_USED
@@ -2568,7 +2610,7 @@ func _ready() -> void:
 	# in the adventure the climb drains the one stamina bar (a full base bar = a full climb meter), and the
 	# ground doesn't refill it; no regeneration while on the wall
 	var keep_adv: Dictionary = Game.adv
-	Game.adv = {"stamina": 40.0, "blocks": 1, "abilities": ["dash", "climb", "attack"]}
+	Game.adv = {"stamina": 32.0, "blocks": 1, "abilities": ["dash", "climb", "attack"]}
 	p().hold = {"grab": true, "up": true}
 	step(30)
 	var climbed_to: float = Game.adv.stamina
@@ -2577,7 +2619,7 @@ func _ready() -> void:
 	step(40)
 	var after_landing: float = Game.adv.stamina
 	Game.adv = keep_adv
-	check(climbed_to < 35.0 and is_equal_approx(as_climb, climbed_to * 110.0 / 40.0) and after_landing <= climbed_to + 40 * 0.2,
+	check(climbed_to < 27.0 and is_equal_approx(as_climb, climbed_to * 110.0 / 32.0) and after_landing <= climbed_to + 32 * 0.2,
 		"adventure climbing drains the stamina bar, and landing doesn't refill it (%s, then %s)" % [climbed_to, after_landing])
 	# infinite stamina (assist option): hang on the same wall for 20 s
 	Game.settings.infinite_stamina = true

@@ -181,6 +181,13 @@ var bubble_t := 0.0
 var step_sfx_timer := 0.0
 var on_ground := false
 var was_on_ground := false
+# Hard landing (adventure): a fall of HARD_FALL px or more empties the stamina and stuns for STUN_TIME, with
+# stars circling the head (one at once, the second after STUN_STAR_GAP; regeneration restarts with the second).
+const HARD_FALL := 80.0  # 10 tiles
+const STUN_TIME := 1.0
+const STUN_STAR_GAP := 0.5
+var fall_dist := 0.0  # px fallen since the last rise or support (from speed, so room changes don't break it)
+var stun_t := 0.0  # stun time left
 var on_safe_ground := false
 var jump_grace_timer := 0.0
 var var_jump_timer := 0.0
@@ -659,6 +666,16 @@ func update(dt: float) -> void:
 			sfx("climb")
 			step_sfx_timer = 0.25
 	_read_input(dt)
+	if stun_t > 0:  # stunned: no control
+		stun_t = maxf(0.0, stun_t - dt)
+		in_x = 0
+		in_y = 0
+		jump_buf = 0
+		dash_buf = 0
+		attack_buf = 0
+		jump_check = false
+		grab_check = false
+		interact = false
 	# adventure: moves not picked up yet do nothing (Game.has_ability is always true elsewhere)
 	if not Game.has_ability("dash"):
 		dash_buf = 0
@@ -693,6 +710,12 @@ func update(dt: float) -> void:
 			stamina += CLIMB_JUMP_COST
 			wall_boost_timer = 0
 
+	if on_ground and not was_on_ground and fall_dist >= HARD_FALL and state == ST_NORMAL and w.adventure():
+		_hard_landing()
+	if on_ground or speed.y < 0 or state in [ST_CLIMB, ST_SWIM, ST_DREAM_DASH, ST_STAR_FLY, ST_BOOST]:
+		fall_dist = 0.0
+	else:
+		fall_dist += speed.y * dt
 	if on_ground and state != ST_CLIMB:
 		auto_jump = false
 		stamina = CLIMB_MAX_STAMINA
@@ -2002,6 +2025,18 @@ func camera_target() -> Vector2:
 		t += Vector2(signf(speed.x), signf(speed.y)) * 48
 	return t
 
+# Landing from a tall fall: stamina to zero, a 1 s stun (no control, no regeneration until the second star).
+func _hard_landing() -> void:
+	w.stamina_event("hard landing", -Game.adv.stamina)
+	Game.adv.stamina = 0.0
+	stun_t = STUN_TIME
+	speed.x = 0.0
+	scale = Vector2(1.3, 0.7)
+
+# Regeneration waits for the second star.
+func stun_blocks_regen() -> bool:
+	return stun_t > STUN_TIME - STUN_STAR_GAP
+
 # Choose and time the sprite animation independently from physical movement.
 func _update_visuals(dt: float) -> void:
 	scale.x = approach(scale.x, 1.0, 1.75 * dt)
@@ -2058,6 +2093,8 @@ func _update_hair(dt: float) -> void:
 
 # Select the animation name from movement mode, grounded state and velocity.
 func _animation() -> String:
+	if stun_t > 0:
+		return "duck"
 	if state == ST_STAR_FLY:
 		return "fly"
 	if state == ST_DASH or state == ST_RED_DASH or state == ST_DREAM_DASH:
@@ -2117,3 +2154,12 @@ func draw(ci: CanvasItem) -> void:
 	ci.draw_set_transform(Vector2.ZERO)
 	if attacking():
 		_draw_attack(ci)
+	if stun_t > 0:  # stars circling the head: the first at once, the second after STUN_STAR_GAP
+		var stars := 1 if stun_blocks_regen() else 2
+		for k in stars:
+			var a := anim_t * 6.0 + k * PI
+			var c := (pos + draw_off + Vector2(cos(a) * 6.0, -17.0 + sin(a) * 2.0)).round()
+			var col := Color("ffe070")
+			ci.draw_rect(Rect2(c, Vector2.ONE), Color.WHITE)
+			for d in [Vector2.LEFT, Vector2.RIGHT, Vector2.UP, Vector2.DOWN]:
+				ci.draw_rect(Rect2(c + d, Vector2.ONE), col)
