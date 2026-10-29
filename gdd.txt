@@ -466,3 +466,4 @@ switching; failed saves stay in the current room with edits intact.
 plain masking outside room bounds hides uncovered scenery. Manual pan/zoom stay
 available.
 - 2026-10-29: Progression counts bosses as powers: Ape / Guardian beaten opens their boss gates (the arena exit; "until" gates such as the Jungle Hills hole); reaching a boss offers "beat it" as a branch. Abilities with no pickup in the world are checkboxes ("assume") instead of lines, so the lines show only real choices. Today with dash+climb+attack assumed: start 16 rooms -> Ape beaten 41 -> Guardian beaten 41 (its after-room variants aren't modelled). Tests follow the World Editor's start change back to the meadow.
+- 2026-10-29: hub_landing's right doorway closed to match the meadow's left edge (closed in the World Editor).
