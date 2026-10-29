@@ -13,12 +13,16 @@ Lair, moves with the tunnel while retaining its room-to-room offsets. The
 separate `i18_ash_passage` room is removed. East Shore's old downward opening is
 sealed, since the maze entrance is now below Foothills.
 
-North Shore and South Shore retain paired wooden direction signs. Stand nearby
-and press Interact to follow the named coastal path to the opposite shore;
-walking into a sign does not travel. These reuse the existing `house_door`
-interaction with `skin: "signpost"`, destination `label`, and `direction` metadata.
-`tools/story/link_island_routes.py` reapplies the tunnel relocation and shore
-links without regenerating the maze's authored room contents.
+All four shores are 120 tiles long. Each has three wooden direction panels,
+one for each other shore; North Shore's original `coast_path` points to West
+Shore. Stand nearby and press Interact to follow the named route. The panels
+show cardinal arrows and destination labels. North and South Shore sit apart
+on the world map rather than sharing vertical exits. West Shore still joins
+Foothills, and East Shore still joins the eastern volcano slope. The extended
+beaches include shallow pools and low stone shelves, with safe panel arrivals.
+The post-Guardian West Shore retains all routes and its reward door.
+`tools/story/link_shores.py` reapplies this network idempotently;
+`tools/story/link_island_routes.py` also invokes it after maintaining the tunnel.
 
 For seeded terrain shaping of authored areas, use
 [`tools/morph_terrain.py`](../tools/morph_terrain.py). Presets include `cavern`,

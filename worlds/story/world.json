@@ -183,67 +183,67 @@
 			46
 		],
 		"i02_north_shore": [
-			700,
-			30
+			1120,
+			46
 		],
 		"i03_south_shore": [
-			700,
-			69
+			1280,
+			46
 		],
 		"i04_foothills": [
-			740,
+			820,
 			53
 		],
 		"i05_ascent": [
-			780,
+			860,
 			23
 		],
 		"i06_crater": [
-			804,
+			884,
 			30
 		],
 		"i07_east_slope": [
-			844,
+			924,
 			23
 		],
 		"i08_east_shore": [
-			868,
+			948,
 			53
 		],
 		"i09_sea_cave": [
-			740,
+			820,
 			69
 		],
 		"i10_junction": [
-			700,
+			780,
 			99
 		],
 		"i11_flooded_hall": [
-			652,
+			732,
 			99
 		],
 		"i12_echo_gallery": [
-			612,
+			692,
 			99
 		],
 		"i13_lower_maze": [
-			612,
+			692,
 			115
 		],
 		"i14_vent_shaft": [
-			660,
+			740,
 			115
 		],
 		"i15_quiet_refuge": [
-			676,
+			756,
 			131
 		],
 		"i16_guardian_chamber": [
-			700,
+			780,
 			115
 		],
 		"i17_crystal_pocket": [
-			620,
+			700,
 			138
 		],
 		"j1_jungle_edge": [
@@ -323,7 +323,7 @@
 			23
 		],
 		"x1_serpent_lair": [
-			612,
+			692,
 			154
 		]
 	},

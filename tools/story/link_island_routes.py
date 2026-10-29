@@ -80,13 +80,6 @@ def apply(directory):
         (e["t"] == "jumpthru" and e["x"] == 48 and e.get("w") == 32 and e["y"] == (east["h"]-3)*8)]
     rect(foothills,6,foothills["h"]-3,9,foothills["h"]-1)
     rail(foothills,6,foothills["h"]-3,4)
-    for room,target,x,y,direction,label in [
-        ("i02_north_shore","i03_south_shore",11,10,"south","South Shore"),
-        ("i03_south_shore","i02_north_shore",36,14,"north","North Shore"),
-    ]:
-        data[room]["entities"] = [e for e in data[room]["entities"] if e.get("id") != "coast_path"]
-        add(data[room],dict(t="house_door",skin="signpost",x=x*8,y=y*8,w=16,h=24,
-                            id="coast_path",to=target+":coast_path",direction=direction,label=label))
     # Validate the proposed layout before writing any room or manifest.
     for a,b in itertools.combinations(world["rooms"],2):
         ax,ay = world["rooms"][a]; bx,by = world["rooms"][b]
@@ -97,7 +90,9 @@ def apply(directory):
     save("world",world)
     old = directory/(obsolete+".json")
     if old.exists(): old.unlink()
-    print("Linked Foothills → i09 (Ash Passage) → Volcanic Maze; shifted the maze together; shore signs retained")
+    from link_shores import apply as link_shores
+    link_shores(directory)
+    print("Linked Foothills → i09 (Ash Passage) → Volcanic Maze; shore network updated")
 
 
 if __name__ == "__main__":

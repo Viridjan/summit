@@ -569,13 +569,17 @@ class HouseDoor extends Door:
 		ci.draw_rect(Rect2(at + Vector2(7, 8), Vector2(1, r.size.y - 8)), Color("b58d6b"))
 		ci.draw_rect(Rect2(at + Vector2(0, 3), Vector2(16, 9)), Color("4e3422"))
 		ci.draw_rect(Rect2(at + Vector2(1, 4), Vector2(14, 6)), Color("c8a875"))
-		var north: bool = d.get("direction", "north") == "north"
-		var tip := at + Vector2(8, 5 if north else 9)
-		var dy := 1 if north else -1
-		ci.draw_rect(Rect2(tip, Vector2(1, 1)), Color("4e3422"))
-		ci.draw_rect(Rect2(tip + Vector2(-1, dy), Vector2(3, 1)), Color("4e3422"))
-		ci.draw_rect(Rect2(tip + Vector2(-2, 2 * dy), Vector2(5, 1)), Color("4e3422"))
-		ci.draw_rect(Rect2(at + Vector2(8, 6), Vector2(1, 3)), Color("4e3422"))
+		var arrows := {
+			"north": ["00100", "01110", "11111", "00100", "00100"],
+			"south": ["00100", "00100", "11111", "01110", "00100"],
+			"east": ["00100", "00010", "11111", "00010", "00100"],
+			"west": ["00100", "01000", "11111", "01000", "00100"],
+		}
+		var glyph: Array = arrows.get(str(d.get("direction", "north")), arrows.north)
+		for y in 5:
+			for x in 5:
+				if glyph[y][x] == "1":
+					ci.draw_rect(Rect2(at + Vector2(6 + x, 5 + y), Vector2.ONE), Color("4e3422"))
 		if near > 0:
 			var label := "Follow path: " + str(d.get("label", "Coast"))
 			var font := ThemeDB.fallback_font

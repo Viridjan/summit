@@ -2233,18 +2233,18 @@ func check_stamina() -> void:
 	check(run.blocks == 1 and run.stamina == 32.0 and Adventure.stamina_max(run) == 32.0, "a run starts with the base: 32 stamina")
 	check(Adventure.spend_stamina(run, 16) and run.stamina == 16.0, "spending takes stamina")
 	Adventure.regen_stamina(run, 0.01)
-	check(is_equal_approx(run.stamina, 16.0 + 0.12), "at half full stamina regenerates at the full 12 per second (%s)" % run.stamina)
+	check(is_equal_approx(run.stamina, 16.0 + 0.09), "at half full stamina regenerates at the full 9 per second (%s)" % run.stamina)
 	# Lambdas capture local variables, but cannot resolve this function's local script constant.
 	var regen_factor: Callable = Adventure.regen_factor
 	var regen_max: float = Adventure.STAMINA_REGEN_MAX
 	var rate := func(f): return regen_max * regen_factor.call(f)
-	check(is_equal_approx(rate.call(0.0), 3.0) and is_equal_approx(rate.call(0.25), 7.5) and is_equal_approx(rate.call(0.5), 12.0)
-		and is_equal_approx(rate.call(0.75), 8.0) and is_equal_approx(rate.call(1.0), 4.0), "regen 3/s empty, 12/s at half, 4/s full")
+	check(is_equal_approx(rate.call(0.0), 2.0) and is_equal_approx(rate.call(0.25), 5.5) and is_equal_approx(rate.call(0.5), 9.0)
+		and is_equal_approx(rate.call(0.75), 6.0) and is_equal_approx(rate.call(1.0), 3.0), "regen 2/s empty, 9/s at half, 3/s full")
 	Adventure.regen_stamina(run, 10.0)
 	check(run.stamina == 32.0, "regeneration stops at the top of the base")
 	run.stamina = 0.0
 	Adventure.regen_stamina(run, 0.01)
-	check(is_equal_approx(run.stamina, 0.03), "the base always regenerates, even from 0, at 3 per second (%s)" % run.stamina)
+	check(is_equal_approx(run.stamina, 0.02), "the base always regenerates, even from 0, at 2 per second (%s)" % run.stamina)
 	Adventure.regen_stamina(run, 100.0)
 	check(not Adventure.spend_stamina(run, 160) and run.stamina == 32.0, "can't spend more than you have")
 	Adventure.add_stamina_block(run)

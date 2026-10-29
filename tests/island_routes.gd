@@ -29,28 +29,46 @@ func _ready() -> void:
 	Game.main = self
 	Game.settings.invincible = true
 	var story: Dictionary = Game.Adventure.load_world("res://worlds/story/world.json")
+	var shores := ["i01_west_shore", "i02_north_shore", "i03_south_shore", "i08_east_shore"]
+	var world
+	for source in shores:
+		for target in shores:
+			if source == target: continue
+			Game.playtest_adventure(story, source)
+			await get_tree().process_frame
+			world = get_child(get_child_count() - 1)
+			world.set_physics_process(false)
+			_use_panel(world, target)
+	# The post-Guardian West Shore variant must retain the travel network.
 	Game.playtest_adventure(story, "i02_north_shore")
 	await get_tree().process_frame
-	var world = get_child(get_child_count() - 1)
+	world = get_child(get_child_count() - 1)
 	world.set_physics_process(false)
-	for target in ["i03_south_shore", "i02_north_shore"]:
-		var sign
-		for entity in world.ents:
-			if entity.d.get("skin", "") == "signpost": sign = entity
-		check(sign != null, "Both shores have an interactable direction sign")
-		if sign == null: break
-		world.player.pos = Vector2(sign.rect.get_center().x, sign.rect.end.y)
-		world.player.on_ground = true
-		world.player.interact = false
-		world.player_touch(world.player)
-		world.after_player_move()
-		check(world.room != target, "Walking into a direction sign does not travel automatically")
-		world.player.interact = true
-		world.player_touch(world.player)
-		world.after_player_move()
-		check(world.room == target, "Interact follows the signed path to " + target)
-		check(world.collide_solid(world.player.hitbox()) == null, "Coastal arrival leaves the player clear of terrain")
-		check(world.collide_solid(world.player.hitbox().grow_individual(0, 0, 0, 1)) != null, "Coastal arrival has a safe standing surface")
+	world.broken["i16_guardian_chamber:guardian_112_16"] = true
+	_use_panel(world, "i01_west_shore")
+	check(world.data.w == 120 and world.ents.any(func(e): return e.d.get("id", "") == "home"), "Post-Guardian West Shore retains its long beach and reward door")
+	# Step away from the arrival panel before deliberately returning through it.
+	world.player.pos.x += 32
+	world.player.interact = false
+	world.player_touch(world.player)
+	world.after_player_move()
+	_use_panel(world, "i02_north_shore")
+	# Walk every new stretch with real movement, including the shallow pools.
+	for room in shores:
+		Game.playtest_adventure(story, room)
+		await get_tree().process_frame
+		world = get_child(get_child_count() - 1)
+		world.set_physics_process(false)
+		world.player = RouteBot.new(world, Vector2(320, (world.gh - 3) * 8))
+		Game.adv.blocks = 100
+		Game.adv.stamina = 5000.0
+		for tick in 1800:
+			var bot = world.player
+			bot.horizontal = 1
+			if tick % 15 == 0 and (bot.on_ground or bot.state == bot.ST_SWIM): bot.jump_now = true
+			world._physics_process(1.0 / 60.0)
+			if bot.pos.x >= 118 * 8 or world.room != room: break
+		check(world.room == room and world.player.pos.x >= 118 * 8 and not world.player.dead, "The extended " + room + " beach is traversable with jump/swim only")
 	# Traverse the actual tall i09 tunnel with production movement and jump only.
 	Game.playtest_adventure(story, "i04_foothills")
 	await get_tree().process_frame
@@ -81,3 +99,23 @@ func _ready() -> void:
 	check(world.room == "i04_foothills", "Player climbs i09 back to Foothills with jump only (room=%s, pos=%s)" % [world.room, world.player.pos])
 	print("ISLAND ROUTES OK" if failures == 0 else "ISLAND ROUTES FAILED")
 	Game.quit_game(failures)
+
+func _use_panel(world, target: String) -> void:
+	var sign
+	for entity in world.ents:
+		if entity.d.get("skin", "") == "signpost" and str(entity.d.get("to", "")).get_slice(":", 0) == target:
+			sign = entity
+	check(sign != null, "Shore has a separate direction panel for " + target)
+	if sign == null: return
+	world.player.pos = Vector2(sign.rect.get_center().x, sign.rect.end.y)
+	world.player.on_ground = true
+	world.player.interact = false
+	world.player_touch(world.player)
+	world.after_player_move()
+	check(world.room != target, "Approaching a panel does not travel automatically")
+	world.player.interact = true
+	world.player_touch(world.player)
+	world.after_player_move()
+	check(world.room == target, "Interact follows the selected shore panel to " + target)
+	check(world.collide_solid(world.player.hitbox()) == null, "Shore arrival leaves the player clear of terrain")
+	check(world.collide_solid(world.player.hitbox().grow_individual(0, 0, 0, 1)) != null, "Shore arrival has a safe standing surface")

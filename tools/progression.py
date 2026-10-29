@@ -246,7 +246,7 @@ svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
 #info{margin-top:8px;color:var(--dim)} #info b{color:var(--fg)}
 </style></head><body><main>
-<section class="card"><h1>Progression</h1><p>Top to bottom: progress. Left to right: choices. Click a node. Dashed: an ability with no pickup in the world yet.</p><svg id="graph"></svg></section>
+<section class="card"><h1>Progression</h1><p>Each line is an order of picking up abilities; each stop, the abilities you have. Faded: an ability with no pickup in the world yet. Dashed: the same stop on several lines. Hover a stop, click it for the map.</p><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
 <section class="card"><h1>Choices</h1><p id="zhead">Zones: rooms you can go back and forth between. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.</p><svg id="zgraph"></svg></section>
@@ -256,25 +256,52 @@ canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;borde
 const D=/*DATA*/;
 const C={g:"#3fbf5f",o:"#f0a030",p:"#b060e0",r:"#c04040"};
 const svg=document.getElementById("graph"),NS="http://www.w3.org/2000/svg";
-const rows={};D.nodes.forEach(n=>(rows[n.depth]=rows[n.depth]||[]).push(n));
-const W=120,H=34,GX=16,GY=56,pos={};let width=0;
-Object.keys(rows).forEach(d=>{rows[d].forEach((n,i)=>{pos[n.id]=[12+i*(W+GX),12+d*(H+GY)];width=Math.max(width,24+(i+1)*(W+GX))})});
-const height=24+Object.keys(rows).length*(H+GY);svg.setAttribute("width",width);svg.setAttribute("height",height);
 function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
-D.nodes.forEach(n=>n.parents.forEach((pid,i)=>{const [px,py]=pos[pid],[x,y]=pos[n.id];
- const par=D.nodes.find(q=>q.id==pid),dashed=par&&n.abilities.some(a=>par.unplaced.includes(a)&&!par.abilities.includes(a));
- el("path",{class:"edge",style:dashed?"stroke-dasharray:4 4":"",d:`M${px+W/2},${py+H} C${px+W/2},${py+H+GY/2} ${x+W/2},${y-GY/2} ${x+W/2},${y}`});
- const gained=n.abilities.filter(a=>!pid.split("+").includes(a)).join(",");
- const t=el("text",{x:x+4,y:y-6-13*i,style:"font-size:11px;fill:var(--dim)"});t.textContent="+"+gained+(n.opened.length?" ("+n.opened.length+" rooms)":"")}));
-const boxes={};
-D.nodes.forEach(n=>{const [x,y]=pos[n.id];const g=el("g",{class:"node",transform:`translate(${x},${y})`});
- el("rect",{width:W,height:H,rx:6},g);const t=el("text",{x:8,y:15},g);t.textContent=n.id;
- const s=el("text",{x:8,y:28,style:"fill:var(--dim);font-size:11px"},g);const cnt=Object.values(n.rooms).filter(v=>v=="g").length;s.textContent=cnt+"/"+D.rooms.length+" rooms";
- g.onclick=()=>show(n);boxes[n.id]=g});
+const LINE_COLORS=["#e8443a","#2f7fe0","#2fb35a","#f29b1d","#9b59d0","#17b3b0","#c0632d","#e05a9d","#7a8a99","#c8b400"];
+const tip=document.createElement("div");tip.style.cssText="position:absolute;display:none;max-width:320px;background:#0d0d12;border:1px solid #555566;border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;pointer-events:none;z-index:9";document.body.appendChild(tip);
+// A metro map: N = [{kids, depth}], one thick line per route from `first` to an end, one row per stop; a stop on
+// several lines is joined by a dashed link (arched over any other stop in between). o: label(i), tip(i), click(i),
+// faded(a, b) (segment drawn faint). Returns {stop index: <g>} and the number of lines.
+function metro(sv,N,first,o){sv.innerHTML="";const boxes={};
+ const routes=[],walk=(i,path)=>{path=path.concat([i]);if(!N[i].kids.length)routes.push(path);else N[i].kids.forEach(j=>walk(j,path))};walk(first,[]);
+ const at={};routes.forEach((r,li)=>r.forEach(i=>{(at[i]=at[i]||[]);if(!at[i].includes(li))at[i].push(li)}));
+ const order=Object.keys(at).map(Number).sort((a,b)=>N[a].depth-N[b].depth||at[a][0]-at[b][0]),rank={};order.forEach((i,k)=>rank[i]=k);
+ const CX=34,RY=58,X0=30,Y0=30,col=li=>X0+li*CX,row=i=>Y0+rank[i]*RY,LX=col(routes.length-1)+28;
+ sv.setAttribute("width",LX+260);sv.setAttribute("height",Y0+order.length*RY+10);
+ const lines=el("g",{},sv),links=el("g",{},sv),stops=el("g",{},sv),labels=el("g",{},sv);
+ routes.forEach((r,li)=>{const c=LINE_COLORS[li%LINE_COLORS.length],x=col(li);
+  for(let k=0;k<r.length-1;k++)el("line",{x1:x,y1:row(r[k]),x2:x,y2:row(r[k+1]),stroke:c,"stroke-width":9,"stroke-linecap":"round",opacity:o.faded&&o.faded(r[k],r[k+1])?0.3:1},lines);
+  const t=el("text",{x:x,y:row(r[r.length-1])+24,"text-anchor":"middle",style:`fill:${c};font-size:11px;font-weight:600`},labels);t.textContent=li+1});
+ const occupied=(y,li)=>routes[li].some(i=>row(i)==y);
+ order.forEach(i=>{const ls=at[i].slice().sort((a,b)=>a-b),y=row(i),choice=N[i].kids.length>1;
+  for(let a=0;a<ls.length-1;a++){const l1=ls[a],l2=ls[a+1],x1=col(l1),x2=col(l2);
+   let blocked=false;for(let k=l1+1;k<l2;k++)if(occupied(y,k))blocked=true;
+   el("path",{d:blocked?`M${x1},${y} C${x1},${y-34} ${x2},${y-34} ${x2},${y}`:`M${x1},${y} L${x2},${y}`,stroke:"#d8d8e0","stroke-width":2.5,"stroke-dasharray":"5 4",fill:"none"},links)}
+  const g=el("g",{style:"cursor:pointer"},stops);boxes[i]=g;
+  ls.forEach(li=>el("circle",{cx:col(li),cy:y,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":LINE_COLORS[li%LINE_COLORS.length],"stroke-width":choice?4:3},g));
+  el("line",{x1:col(ls[ls.length-1])+10,y1:y,x2:LX-6,y2:y,stroke:"#3a3a48","stroke-width":1},links);
+  const t=el("text",{x:LX,y:y+4,style:"font-size:12px"},labels);t.textContent=o.label(i)+(choice?"  ◆ choice":"");
+  g.onmouseenter=()=>{tip.innerHTML=o.tip(i);tip.style.display="block"};
+  g.onmousemove=e=>{tip.style.left=(e.pageX+14)+"px";tip.style.top=(e.pageY+14)+"px"};
+  g.onmouseleave=()=>tip.style.display="none";
+  g.onclick=()=>o.click(i)});
+ return [boxes,routes.length]}
+const mark=(boxes,i)=>{Object.values(boxes).forEach(b=>b.querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#fff")));if(boxes[i])boxes[i].querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#5fa8ff"))};
+// top: ability sets (stops) and the order you pick abilities up (lines)
+const AN=D.nodes.map(n=>({kids:D.nodes.map((q,k)=>q.parents.includes(n.id)?k:-1).filter(k=>k>=0),depth:n.depth}));
+const greenOf=n=>Object.values(n.rooms).filter(v=>v=="g").length;
+const gainOf=(a,b)=>D.nodes[b].abilities.filter(x=>!D.nodes[a].abilities.includes(x));
+function atip(i){const n=D.nodes[i],k=AN[i].kids;
+ let s=`<b>${n.id=="start"?"Start: no abilities":"With "+n.abilities.join(" + ")}</b><br>${greenOf(n)}/${D.rooms.length} rooms reachable normally.`;
+ if(k.length)s+=`<br>${k.length>1?"<b>Choice</b>, pick up ":"Next: "}`+k.map(j=>{const g=gainOf(i,j)[0],d=greenOf(D.nodes[j])-greenOf(n);
+  return `<b>${g}</b> (${d>0?"+"+d+" rooms":"no new rooms"}${n.unplaced.includes(g)?", no pickup placed yet":""})`}).join(k.length>1?" or ":"");
+ else s+="<br>All abilities.";return s}
+const [boxes]=metro(svg,AN,0,{label:i=>{const n=D.nodes[i];return (n.id=="start"?"no abilities":n.abilities.join(" + "))+" · "+greenOf(n)+" rooms"},
+ tip:atip,click:i=>show(D.nodes[i]),faded:(a,b)=>D.nodes[a].unplaced.includes(gainOf(a,b)[0])});
 const cv=document.getElementById("map"),cx=cv.getContext("2d");
 let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;D.rooms.forEach(r=>{minx=Math.min(minx,r.x);miny=Math.min(miny,r.y);maxx=Math.max(maxx,r.x+r.w);maxy=Math.max(maxy,r.y+r.h)});
 const S=3;cv.width=(maxx-minx)*S;cv.height=(maxy-miny)*S;
-function show(n){Object.values(boxes).forEach(b=>b.classList.remove("sel"));boxes[n.id].classList.add("sel");
+function show(n){mark(boxes,D.nodes.indexOf(n));
  cx.clearRect(0,0,cv.width,cv.height);
  D.rooms.forEach(r=>{const tier=n.rooms[r.name]||"r",ox=(r.x-minx)*S,oy=(r.y-miny)*S,m=n.marks[r.name];
   cx.globalAlpha=0.28;cx.fillStyle=C[tier];cx.fillRect(ox,oy,r.w*S,r.h*S);cx.globalAlpha=1;
@@ -287,44 +314,17 @@ function show(n){Object.values(boxes).forEach(b=>b.classList.remove("sel"));boxe
 const zsvg=document.getElementById("zgraph"),zcv=document.getElementById("zmap"),zcx=zcv.getContext("2d");zcv.width=cv.width;zcv.height=cv.height;
 const base=n=>n,title=n=>(D.rooms.find(r=>r.name==n)||{title:n}).title;
 let zboxes={};
-const tip=document.createElement("div");tip.style.cssText="position:absolute;display:none;max-width:320px;background:#0d0d12;border:1px solid #555566;border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;pointer-events:none;z-index:9";document.body.appendChild(tip);
-const LINE_COLORS=["#e8443a","#2f7fe0","#2fb35a","#f29b1d","#9b59d0","#17b3b0","#c0632d","#e05a9d","#7a8a99","#c8b400"];
 const zname=(n,i)=>{const z=n.zones[i];return title(z.rooms[0])+(z.rooms.length>1?" +"+(z.rooms.length-1):"")};
 function decision(n,i){const z=n.zones[i],k=z.kids;
  const list=z.rooms.map(title).join(", ");
  if(k.length>1)return `<b>Choice</b> &middot; ${list}<br>${k.length} ways on: `+k.map(j=>"<b>"+zname(n,j)+"</b>").join(" or ")+`.<br>Whichever you take, you can't come back here.`;
  if(k.length==1)return `<b>One way on</b> &middot; ${list}<br>Next: <b>${zname(n,k[0])}</b>. Once you go, you can't return.`;
  return `<b>End of the line</b> &middot; ${list}<br>No way on from here.`}
-function zones(n){zsvg.innerHTML="";zboxes={};const Z=n.zones;
- // routes: every path from the start zone down to a zone with no way on (a metro line each)
- const routes=[],walk=(i,path)=>{path=path.concat([i]);if(!Z[i].kids.length)routes.push(path);else Z[i].kids.forEach(j=>walk(j,path))};walk(n.first,[]);
- document.getElementById("zhead").textContent=`With ${n.id=="start"?"no abilities":n.id}: ${Z.length} zones, ${routes.length} lines. A stop is a zone you can move around freely; going down a line there is no way back. Dashed: the same stop on several lines. Hover a stop.`;
- const at={};routes.forEach((r,li)=>r.forEach(i=>(at[i]=at[i]||[]).push(li)));
- // one row per zone (by progress, then by line), so stops of different zones never share a row
- const order=Object.keys(at).map(Number).sort((a,b)=>Z[a].depth-Z[b].depth||at[a][0]-at[b][0]),rank={};order.forEach((i,k)=>rank[i]=k);
- const CX=34,RY=58,X0=30,Y0=30,col=li=>X0+li*CX,row=i=>Y0+rank[i]*RY,LX=col(routes.length-1)+28;
- const width=LX+260,height=Y0+order.length*RY+10;
- zsvg.setAttribute("width",width);zsvg.setAttribute("height",height);
- const lines=el("g",{},zsvg),links=el("g",{},zsvg),stops=el("g",{},zsvg),labels=el("g",{},zsvg);
- routes.forEach((r,li)=>{const c=LINE_COLORS[li%LINE_COLORS.length],x=col(li);
-  el("line",{x1:x,y1:row(r[0]),x2:x,y2:row(r[r.length-1]),stroke:c,"stroke-width":9,"stroke-linecap":"round"},lines);
-  const end=r[r.length-1],t=el("text",{x:x,y:row(end)+24,"text-anchor":"middle",style:`fill:${c};font-size:11px;font-weight:600`},labels);t.textContent=li+1});
- const occupied=(y,li)=>routes.some((r,k)=>k==li&&r.some(i=>row(i)==y));
- Object.keys(at).forEach(i=>{i=+i;const ls=at[i],y=row(i);
-  for(let a=0;a<ls.length-1;a++){const l1=ls[a],l2=ls[a+1],x1=col(l1),x2=col(l2);
-   let blocked=false;for(let k=l1+1;k<l2;k++)if(occupied(y,k))blocked=true;  // another line's stop in between: go over it
-   el("path",{d:blocked?`M${x1},${y} C${x1},${y-34} ${x2},${y-34} ${x2},${y}`:`M${x1},${y} L${x2},${y}`,stroke:"#d8d8e0","stroke-width":2.5,"stroke-dasharray":"5 4",fill:"none"},links)}
-  const g=el("g",{class:"stop",style:"cursor:pointer"},stops);zboxes[i]=g;
-  ls.forEach(li=>{el("circle",{cx:col(li),cy:y,r:Z[i].kids.length>1?9:7,fill:"#fff",stroke:Z[i].kids.length>1?"#16161c":LINE_COLORS[li%LINE_COLORS.length],"stroke-width":Z[i].kids.length>1?4:3},g)});
-  el("line",{x1:col(ls[ls.length-1])+10,y1:y,x2:LX-6,y2:y,stroke:"#3a3a48","stroke-width":1},links);  // leader to the label
-  const t=el("text",{x:LX,y:y+4,style:"font-size:12px"},labels);
-  t.textContent=zname(n,i)+(Z[i].kids.length>1?"  ◆ choice":"");
-  g.onmouseenter=e=>{tip.innerHTML=decision(n,i);tip.style.display="block"};
-  g.onmousemove=e=>{tip.style.left=(e.pageX+14)+"px";tip.style.top=(e.pageY+14)+"px"};
-  g.onmouseleave=()=>tip.style.display="none";
-  g.onclick=()=>zshow(n,i)});
+function zones(n){const Z=n.zones;
+ let lines;[zboxes,lines]=metro(zsvg,Z,n.first,{label:i=>zname(n,i),tip:i=>decision(n,i),click:i=>zshow(n,i)});
+ document.getElementById("zhead").textContent=`With ${n.id=="start"?"no abilities":n.id}: ${Z.length} zones, ${lines} lines. A stop is a zone you can move around freely; going down a line there is no way back. Dashed: the same stop on several lines. Hover a stop.`;
  zshow(n,n.first)}
-function zshow(n,i){Object.values(zboxes).forEach(b=>b.querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#fff")));if(zboxes[i])zboxes[i].querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#5fa8ff"));const z=n.zones[i];
+function zshow(n,i){mark(zboxes,i);const z=n.zones[i];
  const here=new Set(z.rooms.map(base)),ahead=new Set(z.ahead.map(base)),seen=new Set(n.zones.flatMap(q=>q.rooms).map(base));
  zcx.clearRect(0,0,zcv.width,zcv.height);
  D.rooms.forEach(r=>{const col=here.has(r.name)?"#5fa8ff":ahead.has(r.name)?C.g:seen.has(r.name)?C.r:"#44444f",ox=(r.x-minx)*S,oy=(r.y-miny)*S;

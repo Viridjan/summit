@@ -3,7 +3,7 @@ func _ready() -> void:
 	Game.main = self
 	Game.settings.invincible = true
 	var story: Dictionary = Game.Adventure.load_world("res://worlds/story/world.json")
-	for sample in [["i02_north_shore", "shore"], ["i03_south_shore", "shore"], ["i09_sea_cave", "upper"], ["i09_sea_cave", "lower"]]:
+	for sample in [["i02_north_shore", "west"], ["i02_north_shore", "south"], ["i01_west_shore", "east"], ["i03_south_shore", "north"], ["i08_east_shore", "south"], ["i09_sea_cave", "upper"], ["i09_sea_cave", "lower"]]:
 		var name: String = sample[0]
 		Game.playtest_adventure(story, name)
 		await get_tree().process_frame
@@ -11,7 +11,7 @@ func _ready() -> void:
 		world.set_physics_process(false)
 		world.set_process(false)
 		for e in world.ents:
-			if e.d.get("skin", "") == "signpost":
+			if e.d.get("skin", "") == "signpost" and e.d.get("direction", "") == sample[1]:
 				world.player.pos = Vector2(e.rect.get_center().x+10, e.rect.end.y)
 				e.near = 1.0
 		if name == "i09_sea_cave":

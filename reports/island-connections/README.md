@@ -1,26 +1,17 @@
 # Island connections · 2026-10-29
 
-Foothills now connects directly to **i09, Ash Passage**, a 24×46 tall tunnel.
-A ladder of overlapping rungs and an upper rest ledge support jump-only travel
-in both directions. The original lower chamber, pool and inhabitants remain,
-with its left exit connected to Junction.
+All four shores are now 120 tiles long, three times their original width.
+Each shore has three separate interactable direction panels leading to every
+other shore. North Shore’s original `coast_path` leads to West Shore; a separate
+panel leads south. North and South occupy separate map locations, with their
+old vertical exits sealed. West–Foothills and East–volcano side passages remain.
 
-The tunnel is now at [740,69]. The rest of the Volcanic Maze moves left by 128
-and down by 23 tiles, including Serpent Lair. Its internal room offsets and
-shapes remain intact. The extra i18 switchback room is removed. East Shore's
-former descent is sealed. The rejected Echo Gallery roof link is restored.
+Foothills connects directly to i09, Ash Passage, a 24×46 tall tunnel. The volcano
+and maze move together to retain their relative offsets beside the longer West
+Shore. The post-Guardian West Shore keeps its reward door and all three panels.
 
-North Shore ↔ South Shore uses paired direction signs: arrows, named destination,
-and bound Interact prompt. Walking into a sign does not cause travel. The South
-Shore sign stands near the eastern end, away from the initial monster placements.
-
-Validation: `tests/island_routes.tscn` descends from Foothills through i09 into
-Junction and climbs back using production player physics and jump only. It
-also checks both coastal signs, Interact gating and clear grounded arrivals.
-The cautious model independently checks the direct route with the summit and
-east coast blocked, the tall entrance placement and preserved maze offsets.
-`tools/check_entrances.py worlds/story` reports zero bad side entrances.
-
-The existing `test_island.Island.test_new_fragments_and_characters_are_reachable`
-fails on the unchanged baseline as well: its jump-only search from the new hub
-start misses five discoveries. It is not relaxed by this work.
+`tests/island_routes.tscn` checks all 12 panel routes, explicit Interact gating,
+safe arrivals, the post-Guardian variant, real jump/swim traversal of each new
+beach stretch, and the jump-only round trip through Ash Passage.
+`tests/test_island_connections.py` independently checks layout, connectivity and
+panel reachability. Both shore and island link tools are idempotent.
