@@ -1,8 +1,42 @@
 {
-	"name": "Quiet Refuge",
-	"w": 24,
-	"h": 16,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 8,
+			"y": 96
+		},
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 176,
+			"y": 96
+		},
+		{
+			"t": "stamina_orb",
+			"x": 96,
+			"y": 88
+		},
+		{
+			"attacks": [
+				"dive"
+			],
+			"facing": 1,
+			"look": "enemy_skree",
+			"move": "hover",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 1,
+			"traits": [
+				"giant"
+			],
+			"x": 82,
+			"y": 68
+		}
+	],
 	"environment": "volcanic_cave",
+	"h": 16,
+	"name": "Quiet Refuge",
 	"tiles": [
 		"111111111111111111111111",
 		"111111111111111111111111",
@@ -21,23 +55,5 @@
 		"111111111111111111111111",
 		"111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 8,
-			"y": 96,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 176,
-			"y": 96,
-			"entrance": true
-		},
-		{
-			"t": "stamina_orb",
-			"x": 96,
-			"y": 88
-		}
-	]
+	"w": 24
 }

@@ -19,6 +19,21 @@ const ATTACKS := {
 	"lob": {"label": "lobs an arcing glob", "ground": null, "range": 110},
 	"dive": {"label": "dives at you", "ground": false, "range": 100},
 }
+# Zodiac: each region has a sign; its own (native) monsters are built from the sign's moves and attacks.
+const SIGNS := {
+	"Aries": {"moves": ["patrol", "hop"], "attacks": ["charge", "leap"]},  # the ram
+	"Taurus": {"moves": ["patrol"], "attacks": ["charge"]},  # the bull
+	"Gemini": {"moves": ["hover", "hop"], "attacks": ["shoot"]},  # the twins
+	"Cancer": {"moves": ["patrol"], "attacks": ["shoot", "charge"]},  # the crab
+	"Leo": {"moves": ["hop"], "attacks": ["leap", "charge"]},  # the lion
+	"Virgo": {"moves": ["hover"], "attacks": ["shoot"]},
+	"Libra": {"moves": ["hover"], "attacks": ["lob"]},  # the scales
+	"Scorpio": {"moves": ["hop", "patrol"], "attacks": ["lob", "leap"]},  # the scorpion / serpent
+	"Sagittarius": {"moves": ["patrol", "hover"], "attacks": ["shoot"]},  # the archer
+	"Capricorn": {"moves": ["hop"], "attacks": ["leap"]},  # the goat
+	"Aquarius": {"moves": ["hover"], "attacks": ["lob", "dive"]},  # the water bearer
+	"Pisces": {"moves": ["hover"], "attacks": ["dive"]},  # the fish
+}
 # traits = CombatEnemy variants (speed, warning, recovery, size; hit points in CombatEnemy.variant_hp)
 const TRAITS := ["swift", "armored", "giant", "shielded", "brood", "venom"]
 
@@ -29,6 +44,17 @@ static func attacks_for(move: String) -> Array:
 static func build(rng: RandomNumberGenerator) -> Dictionary:
 	var move: String = MOVES.keys()[rng.randi() % MOVES.size()]
 	var pool := attacks_for(move)
+	var looks: Array = MOVES[move].looks
+	return {"t": "enemy_monster", "move": move, "attacks": [pool[rng.randi() % pool.size()]], "traits": [], "tier": 0,
+		"look": looks[rng.randi() % looks.size()]}
+
+# A native monster of a sign: one of its moves, one of its attacks that the move can do.
+static func native(sign: String, rng: RandomNumberGenerator) -> Dictionary:
+	var sg: Dictionary = SIGNS[sign]
+	var move: String = sg.moves[rng.randi() % sg.moves.size()]
+	var pool: Array = sg.attacks.filter(func(a): return a in attacks_for(move))
+	if pool.is_empty():
+		pool = attacks_for(move)
 	var looks: Array = MOVES[move].looks
 	return {"t": "enemy_monster", "move": move, "attacks": [pool[rng.randi() % pool.size()]], "traits": [], "tier": 0,
 		"look": looks[rng.randi() % looks.size()]}

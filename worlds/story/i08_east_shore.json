@@ -1,8 +1,64 @@
 {
-	"name": "East Shore",
-	"w": 40,
-	"h": 16,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 8,
+			"y": 96
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 32,
+			"x": 48,
+			"y": 104
+		},
+		{
+			"id": "east_coast",
+			"t": "energy_fragment",
+			"x": 168,
+			"y": 72
+		},
+		{
+			"h": 16,
+			"t": "water",
+			"w": 80,
+			"x": 224,
+			"y": 104
+		},
+		{
+			"attacks": [
+				"charge"
+			],
+			"facing": -1,
+			"look": "enemy_thornmite",
+			"move": "hop",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 87,
+			"y": 94
+		},
+		{
+			"attacks": [
+				"charge",
+				"leap"
+			],
+			"facing": -1,
+			"look": "enemy_mosstrot",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 1,
+			"traits": [],
+			"x": 167,
+			"y": 70
+		}
+	],
 	"environment": "island_shore",
+	"h": 16,
+	"name": "East Shore",
 	"tiles": [
 		"1111111111111111111111111111111111111111",
 		"1000000000000000000000000000000000000001",
@@ -21,33 +77,6 @@
 		"1111110000111111111111111111000000000011",
 		"1111110000111111111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 8,
-			"y": 96,
-			"entrance": true
-		},
-		{
-			"t": "jumpthru",
-			"x": 48,
-			"y": 104,
-			"w": 32,
-			"h": 8
-		},
-		{
-			"t": "energy_fragment",
-			"x": 168,
-			"y": 72,
-			"id": "east_coast"
-		},
-		{
-			"t": "water",
-			"x": 224,
-			"y": 104,
-			"w": 80,
-			"h": 16
-		}
-	],
-	"vertical_trim": 7
+	"vertical_trim": 7,
+	"w": 40
 }

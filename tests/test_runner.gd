@@ -386,7 +386,15 @@ func check_shipped_world() -> void:
 	var story_ents := []
 	for rn in story.rooms:
 		story_ents += story.rooms[rn].level.entities.map(func(e): return e.t)
-	check(story_ents.has("stamina_block") and story_ents.filter(func(t): return t.begins_with("enemy")).all(func(t): return t == "enemy_mosstrot"), "story has the town's stamina block, and its only enemies are calm Mosstrots")
+	var calm := true  # peaceful regions (meadow, town, village): no enemies but calm Mosstrots; others: library monsters
+	var fights := 0
+	for g in story.regions:
+		for rn in g.rooms:
+			for e in story.rooms[rn].level.entities:
+				if e.t.begins_with("enemy") and e.t != "enemy_mosstrot":
+					calm = calm and not g.peaceful
+					fights += 1
+	check(story_ents.has("stamina_block") and calm and fights > 0, "story has the town's stamina block; peaceful regions have only calm Mosstrots, the rest library monsters (%d)" % fights)
 	# a bot holding right and jumping (jump only) goes meadow -> big jump (falls in) -> lake cave (swims over the hole) -> cove town -> jungle
 	Game.adv_world = story
 	Game.adv = Adventure.new_run(story)
@@ -2167,6 +2175,22 @@ func check_monster_library() -> void:
 	step(2)
 	var kids: int = w.ents.filter(func(e): return e.d.t == "enemy_monster" and e.collidable and e.d.get("brood_child", false)).size()
 	check(hp0 == 4 and kids == 2, "traits stack: armored adds hit points (%d), brood splits into two on death (%d)" % [hp0, kids])
+	# migration (tools/populate.gd): 30% kept, 20% upgraded, 50% natives; tier 2 never moves on
+	var Pop = load("res://tools/populate.gd").new()
+	Pop.rng.seed = 3
+	var a0: Dictionary = Lib.native("Leo", rng)
+	var a2: Dictionary = Lib.upgrade(Lib.upgrade(a0, rng), rng)
+	var prev: Array = []
+	for i in 10:
+		prev.append(a0 if i < 8 else a2)  # 80% a plain kind, 20% a twice-upgraded one
+	var pop: Array = Pop.mix(prev, 20, "test region", "Pisces")
+	var kept := pop.filter(func(m): return Lib.key(m) == Lib.key(a0) and m.tier == 0).size()
+	var ups := pop.filter(func(m): return m.tier == 1).size()
+	var natives := pop.filter(func(m): return m.move == "hover" and m.tier == 0).size()
+	var leaked := pop.filter(func(m): return m.tier >= 2).size()
+	check(pop.size() == 20 and kept == 6 and ups == 4 and natives == 10 and leaked == 0,
+		"migration: of 20, 6 kept, 4 upgraded, 10 natives; twice-upgraded ones stay behind (%d, %d, %d, %d)" % [kept, ups, natives, leaked])
+	Pop.free()
 
 # Regression coverage for bestiary. The assertions below state the expected behavior of this case.
 func check_bestiary() -> void:

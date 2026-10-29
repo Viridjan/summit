@@ -1,8 +1,91 @@
 {
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 8,
+			"y": 328
+		},
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 224,
+			"y": 328
+		},
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 96,
+			"y": 224
+		},
+		{
+			"t": "note",
+			"text": "Down you go. From here on, things can hurt",
+			"x": 160,
+			"y": 24
+		},
+		{
+			"t": "spikes_down",
+			"x": 32,
+			"y": 304
+		},
+		{
+			"t": "spikes_down",
+			"x": 40,
+			"y": 304
+		},
+		{
+			"t": "spikes_down",
+			"x": 48,
+			"y": 304
+		},
+		{
+			"t": "spikes_down",
+			"x": 56,
+			"y": 304
+		},
+		{
+			"t": "spikes_down",
+			"x": 64,
+			"y": 304
+		},
+		{
+			"t": "spawn",
+			"x": 160,
+			"y": 328
+		},
+		{
+			"h": 24,
+			"t": "crumble",
+			"w": 16,
+			"x": 216,
+			"y": 232
+		},
+		{
+			"h": 16,
+			"t": "crumble",
+			"w": 8,
+			"x": 232,
+			"y": 240
+		},
+		{
+			"attacks": [
+				"shoot"
+			],
+			"facing": -1,
+			"look": "enemy_skeleton",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 103,
+			"y": 326
+		}
+	],
 	"environment": "cavern_deep",
 	"h": 46,
 	"name": "Lake Cave",
-	"w": 30,
 	"tiles": [
 		"111111111111100000000000000111",
 		"111111111111100000000000000111",
@@ -51,74 +134,5 @@
 		"111111111111111111111111111111",
 		"111111111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 8,
-			"y": 328,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 224,
-			"y": 328,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 96,
-			"y": 224,
-			"entrance": true
-		},
-		{
-			"t": "note",
-			"x": 160,
-			"y": 24,
-			"text": "Down you go. From here on, things can hurt"
-		},
-		{
-			"t": "spikes_down",
-			"x": 32,
-			"y": 304
-		},
-		{
-			"t": "spikes_down",
-			"x": 40,
-			"y": 304
-		},
-		{
-			"t": "spikes_down",
-			"x": 48,
-			"y": 304
-		},
-		{
-			"t": "spikes_down",
-			"x": 56,
-			"y": 304
-		},
-		{
-			"t": "spikes_down",
-			"x": 64,
-			"y": 304
-		},
-		{
-			"t": "spawn",
-			"x": 160,
-			"y": 328
-		},
-		{
-			"h": 24,
-			"t": "crumble",
-			"w": 16,
-			"x": 216,
-			"y": 232
-		},
-		{
-			"h": 16,
-			"t": "crumble",
-			"w": 8,
-			"x": 232,
-			"y": 240
-		}
-	]
+	"w": 30
 }

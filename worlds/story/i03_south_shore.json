@@ -1,8 +1,104 @@
 {
-	"name": "South Shore",
-	"w": 40,
-	"h": 20,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 240,
+			"y": 128
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 176,
+			"y": 120
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 232,
+			"y": 96
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 176,
+			"y": 72
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 232,
+			"y": 48
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 176,
+			"y": 24
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 232,
+			"y": 0
+		},
+		{
+			"id": "south_rocks",
+			"t": "energy_fragment",
+			"x": 40,
+			"y": 104
+		},
+		{
+			"t": "strawberry",
+			"x": 128,
+			"y": 72
+		},
+		{
+			"h": 16,
+			"t": "water",
+			"w": 48,
+			"x": 64,
+			"y": 136
+		},
+		{
+			"attacks": [
+				"charge",
+				"leap"
+			],
+			"facing": 1,
+			"look": "enemy_mosstrot",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 1,
+			"traits": [],
+			"x": 167,
+			"y": 126
+		},
+		{
+			"attacks": [
+				"dive"
+			],
+			"facing": -1,
+			"look": "enemy_fuzzbob",
+			"move": "hover",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 119,
+			"y": 54
+		}
+	],
 	"environment": "island_shore",
+	"h": 20,
+	"name": "South Shore",
 	"tiles": [
 		"1111111111111111111111111111110000111111",
 		"1111111111111111111111111111110000111111",
@@ -25,72 +121,5 @@
 		"1111111100000011111111111111111111111111",
 		"1111111111111111111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 240,
-			"y": 128,
-			"entrance": true
-		},
-		{
-			"t": "jumpthru",
-			"x": 176,
-			"y": 120,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 232,
-			"y": 96,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 176,
-			"y": 72,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 232,
-			"y": 48,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 176,
-			"y": 24,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 232,
-			"y": 0,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "energy_fragment",
-			"x": 40,
-			"y": 104,
-			"id": "south_rocks"
-		},
-		{
-			"t": "strawberry",
-			"x": 128,
-			"y": 72
-		},
-		{
-			"t": "water",
-			"x": 64,
-			"y": 136,
-			"w": 48,
-			"h": 16
-		}
-	]
+	"w": 40
 }

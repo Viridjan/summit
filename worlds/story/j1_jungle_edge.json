@@ -1,57 +1,57 @@
 {
 	"entities": [
 		{
+			"entrance": true,
 			"t": "spawn",
 			"x": 8,
-			"y": 120,
-			"entrance": true
+			"y": 120
 		},
 		{
+			"entrance": true,
 			"t": "spawn",
 			"x": 240,
-			"y": 120,
-			"entrance": true
+			"y": 120
 		},
 		{
 			"h": 8,
+			"look": "forest",
 			"t": "jumpthru",
 			"w": 32,
 			"x": 72,
-			"y": 104,
-			"look": "forest"
+			"y": 104
 		},
 		{
 			"h": 8,
+			"look": "forest",
 			"t": "jumpthru",
 			"w": 32,
 			"x": 32,
-			"y": 80,
-			"look": "forest"
+			"y": 80
 		},
 		{
 			"h": 8,
+			"look": "forest",
 			"t": "jumpthru",
 			"w": 32,
 			"x": 72,
-			"y": 56,
-			"look": "forest"
+			"y": 56
 		},
 		{
 			"h": 8,
+			"look": "forest",
 			"t": "jumpthru",
 			"w": 32,
 			"x": 32,
-			"y": 32,
-			"look": "forest"
+			"y": 32
 		},
 		{
-			"t": "discovery_npc",
-			"x": 36,
-			"y": 16,
-			"name": "Aerin",
 			"kind": "elf",
+			"name": "Aerin",
+			"t": "discovery_npc",
+			"text": "Leaf paths lead to places the main trail misses.",
 			"variant": 0,
-			"text": "Leaf paths lead to places the main trail misses."
+			"x": 36,
+			"y": 16
 		},
 		{
 			"facing": 1,
@@ -73,6 +73,20 @@
 			"t": "spikes_up",
 			"x": 176,
 			"y": 136
+		},
+		{
+			"attacks": [
+				"charge"
+			],
+			"facing": 1,
+			"look": "enemy_thornmite",
+			"move": "hop",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 71,
+			"y": 118
 		}
 	],
 	"environment": "forest",
@@ -100,6 +114,6 @@
 		"1111111111111111111111111111111000000001",
 		"1111111111111111111111111111111000000001"
 	],
-	"w": 40,
-	"vertical_trim": 3
+	"vertical_trim": 3,
+	"w": 40
 }

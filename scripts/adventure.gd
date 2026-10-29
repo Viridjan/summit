@@ -58,14 +58,15 @@ static func load_world(path: String) -> Dictionary:
 					push_warning("variant %s of %s skipped: missing or a different size" % [v, name])
 					continue
 				out.rooms[name].get_or_add("variants", []).append({"when": str(v.get("when", "")), "room": str(v.room), "level": lvl})
-	# Regions: named, coloured groups of rooms ("regions": [{"name", "color", "rooms": [...]}]), shown on the map
+	# Regions: named, coloured groups of rooms ("regions": [{"name", "color", "rooms": [...], "sign", "peaceful"}]), shown on the map
 	# and in the World Editor. A room belongs to at most one region (the first that lists it).
 	out.regions = []
 	var rg = json.data.get("regions", [])
 	for g in (rg if rg is Array else []):
 		if g is Dictionary and g.get("rooms") is Array:
 			var rooms: Array = g.rooms.filter(func(n): return out.rooms.has(n) and not out.regions.any(func(o): return o.rooms.has(n)))
-			out.regions.append({"name": str(g.get("name", "Region")), "color": Color.from_string(str(g.get("color", "")), Color("8090a0")), "rooms": rooms})
+			out.regions.append({"name": str(g.get("name", "Region")), "color": Color.from_string(str(g.get("color", "")), Color("8090a0")), "rooms": rooms,
+				"sign": str(g.get("sign", "")), "peaceful": g.get("peaceful", false) == true})  # zodiac sign: its monsters (tools/populate.gd)
 	var ab = json.data.get("abilities", [])
 	if ab is Array:
 		out.abilities = ab.filter(func(a): return a in ABILITIES)
@@ -109,7 +110,13 @@ static func save_world(path: String, world: Dictionary) -> bool:
 		return false
 	var out := {"start": world.start, "abilities": world.get("abilities", []), "rooms": rooms}
 	if not world.get("regions", []).is_empty():
-		out.regions = world.regions.map(func(g): return {"name": g.name, "color": "#" + g.color.to_html(false), "rooms": g.rooms})
+		out.regions = world.regions.map(func(g):
+			var o := {"name": g.name, "color": "#" + g.color.to_html(false), "rooms": g.rooms}
+			if g.get("sign", "") != "":
+				o.sign = g.sign
+			if g.get("peaceful", false):
+				o.peaceful = true
+			return o)
 	if not variants.is_empty():
 		out.variants = variants
 	f.store_string(JSON.stringify(out, "\t"))

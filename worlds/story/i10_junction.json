@@ -1,8 +1,38 @@
 {
-	"name": "Junction",
-	"w": 40,
-	"h": 16,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 8,
+			"y": 48
+		},
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 304,
+			"y": 96
+		},
+		{
+			"attacks": [
+				"charge",
+				"shoot"
+			],
+			"facing": -1,
+			"look": "enemy_thornmite",
+			"move": "hop",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 2,
+			"traits": [
+				"armored"
+			],
+			"x": 95,
+			"y": 94
+		}
+	],
 	"environment": "volcanic_cave",
+	"h": 16,
+	"name": "Junction",
 	"tiles": [
 		"1111111111111111111111111111111111111111",
 		"1000000000000000001111000000000000000001",
@@ -21,19 +51,6 @@
 		"1111111111111111111111111111111111111111",
 		"1111111111111111111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 8,
-			"y": 48,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 304,
-			"y": 96,
-			"entrance": true
-		}
-	],
-	"vertical_trim": 7
+	"vertical_trim": 7,
+	"w": 40
 }

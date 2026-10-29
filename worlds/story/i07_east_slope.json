@@ -1,8 +1,99 @@
 {
-	"name": "East Slope",
-	"w": 24,
-	"h": 46,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 8,
+			"y": 80
+		},
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 104,
+			"y": 336
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 56,
+			"x": 120,
+			"y": 136
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 56,
+			"x": 64,
+			"y": 184
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 56,
+			"x": 120,
+			"y": 232
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 56,
+			"x": 64,
+			"y": 280
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 56,
+			"x": 120,
+			"y": 328
+		},
+		{
+			"attacks": [
+				"leap"
+			],
+			"facing": 1,
+			"look": "enemy_hornback",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 95,
+			"y": 198
+		},
+		{
+			"attacks": [
+				"charge",
+				"shoot"
+			],
+			"facing": 1,
+			"look": "enemy_thornmite",
+			"move": "hop",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 1,
+			"traits": [],
+			"x": 135,
+			"y": 246
+		},
+		{
+			"attacks": [
+				"dive"
+			],
+			"facing": -1,
+			"look": "enemy_skree",
+			"move": "hover",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 103,
+			"y": 278
+		}
+	],
 	"environment": "volcano",
+	"h": 46,
+	"name": "East Slope",
 	"tiles": [
 		"111111111111111111111111",
 		"111111111111111111111111",
@@ -51,53 +142,5 @@
 		"111111111111111111111111",
 		"111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 8,
-			"y": 80,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 104,
-			"y": 336,
-			"entrance": true
-		},
-		{
-			"t": "jumpthru",
-			"x": 120,
-			"y": 136,
-			"w": 56,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 64,
-			"y": 184,
-			"w": 56,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 120,
-			"y": 232,
-			"w": 56,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 64,
-			"y": 280,
-			"w": 56,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 120,
-			"y": 328,
-			"w": 56,
-			"h": 8
-		}
-	]
+	"w": 24
 }

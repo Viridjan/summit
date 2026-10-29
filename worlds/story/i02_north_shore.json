@@ -1,8 +1,49 @@
 {
-	"name": "North Shore",
-	"w": 40,
-	"h": 16,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 248,
+			"y": 96
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 264,
+			"y": 104
+		},
+		{
+			"id": "north_cliff",
+			"t": "energy_fragment",
+			"x": 168,
+			"y": 56
+		},
+		{
+			"h": 16,
+			"t": "water",
+			"w": 48,
+			"x": 32,
+			"y": 104
+		},
+		{
+			"attacks": [
+				"dive"
+			],
+			"facing": 1,
+			"look": "enemy_skree",
+			"move": "hover",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 167,
+			"y": 38
+		}
+	],
 	"environment": "island_shore",
+	"h": 16,
+	"name": "North Shore",
 	"tiles": [
 		"1111111111111111111111111111111111111111",
 		"1000000000000000000000000000000000000001",
@@ -21,33 +62,6 @@
 		"1111000000111111111111111111111110000001",
 		"1111111111111111111111111111111110000001"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 248,
-			"y": 96,
-			"entrance": true
-		},
-		{
-			"t": "jumpthru",
-			"x": 264,
-			"y": 104,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "energy_fragment",
-			"x": 168,
-			"y": 56,
-			"id": "north_cliff"
-		},
-		{
-			"t": "water",
-			"x": 32,
-			"y": 104,
-			"w": 48,
-			"h": 16
-		}
-	],
-	"vertical_trim": 4
+	"vertical_trim": 4,
+	"w": 40
 }

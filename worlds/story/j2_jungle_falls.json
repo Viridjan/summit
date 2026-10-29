@@ -1,8 +1,156 @@
 {
-	"name": "Jungle Falls",
-	"w": 80,
-	"h": 23,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 624,
+			"y": 112
+		},
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 248,
+			"y": 144
+		},
+		{
+			"t": "strawberry",
+			"x": 48,
+			"y": 136
+		},
+		{
+			"facing": 1,
+			"t": "enemy_mosstrot",
+			"x": 112,
+			"y": 96
+		},
+		{
+			"facing": 1,
+			"t": "enemy_mosstrot",
+			"x": 224,
+			"y": 144
+		},
+		{
+			"t": "spikes_up",
+			"x": 264,
+			"y": 160
+		},
+		{
+			"t": "spikes_up",
+			"x": 272,
+			"y": 160
+		},
+		{
+			"t": "spikes_up",
+			"x": 280,
+			"y": 160
+		},
+		{
+			"h": 8,
+			"look": "forest",
+			"t": "jumpthru",
+			"w": 16,
+			"x": 328,
+			"y": 136
+		},
+		{
+			"h": 8,
+			"look": "forest",
+			"t": "jumpthru",
+			"w": 24,
+			"x": 392,
+			"y": 128
+		},
+		{
+			"h": 128,
+			"t": "waterfall",
+			"w": 32,
+			"x": 352,
+			"y": 24
+		},
+		{
+			"h": 8,
+			"look": "forest",
+			"t": "jumpthru",
+			"w": 32,
+			"x": 448,
+			"y": 128
+		},
+		{
+			"h": 8,
+			"look": "forest",
+			"t": "jumpthru",
+			"w": 32,
+			"x": 408,
+			"y": 104
+		},
+		{
+			"h": 8,
+			"look": "forest",
+			"t": "jumpthru",
+			"w": 32,
+			"x": 448,
+			"y": 80
+		},
+		{
+			"t": "strawberry",
+			"x": 464,
+			"y": 56
+		},
+		{
+			"h": 16,
+			"t": "water",
+			"w": 168,
+			"x": 320,
+			"y": 152
+		},
+		{
+			"attacks": [
+				"shoot"
+			],
+			"facing": -1,
+			"look": "enemy_skeleton",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 1,
+			"traits": [
+				"shielded"
+			],
+			"x": 151,
+			"y": 142
+		},
+		{
+			"attacks": [
+				"charge"
+			],
+			"facing": 1,
+			"look": "enemy_thornmite",
+			"move": "hop",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 159,
+			"y": 94
+		},
+		{
+			"attacks": [
+				"shoot"
+			],
+			"facing": 1,
+			"look": "enemy_skeleton",
+			"move": "patrol",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 79,
+			"y": 142
+		}
+	],
 	"environment": "forest",
+	"h": 23,
+	"name": "Jungle Falls",
 	"tiles": [
 		"11111111111111111111111111111110000000011111111111111111111111111111111111111111",
 		"11111111111111111111111111111110000000011111111111111111111111111111111111111111",
@@ -28,109 +176,5 @@
 		"11111111111111111111111111111111111111111111111111111111111111111111111111111111",
 		"11111111111111111111111111111111111111111111111111111111111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 624,
-			"y": 112,
-			"entrance": true
-		},
-		{
-			"t": "spawn",
-			"x": 248,
-			"y": 144,
-			"entrance": true
-		},
-		{
-			"t": "strawberry",
-			"x": 48,
-			"y": 136
-		},
-		{
-			"t": "enemy_mosstrot",
-			"x": 112,
-			"y": 96,
-			"facing": 1
-		},
-		{
-			"t": "enemy_mosstrot",
-			"x": 224,
-			"y": 144,
-			"facing": 1
-		},
-		{
-			"t": "spikes_up",
-			"x": 264,
-			"y": 160
-		},
-		{
-			"t": "spikes_up",
-			"x": 272,
-			"y": 160
-		},
-		{
-			"t": "spikes_up",
-			"x": 280,
-			"y": 160
-		},
-		{
-			"t": "jumpthru",
-			"x": 328,
-			"y": 136,
-			"w": 16,
-			"h": 8,
-			"look": "forest"
-		},
-		{
-			"t": "jumpthru",
-			"x": 392,
-			"y": 128,
-			"w": 24,
-			"h": 8,
-			"look": "forest"
-		},
-		{
-			"t": "waterfall",
-			"x": 352,
-			"y": 24,
-			"w": 32,
-			"h": 128
-		},
-		{
-			"t": "jumpthru",
-			"x": 448,
-			"y": 128,
-			"w": 32,
-			"h": 8,
-			"look": "forest"
-		},
-		{
-			"t": "jumpthru",
-			"x": 408,
-			"y": 104,
-			"w": 32,
-			"h": 8,
-			"look": "forest"
-		},
-		{
-			"t": "jumpthru",
-			"x": 448,
-			"y": 80,
-			"w": 32,
-			"h": 8,
-			"look": "forest"
-		},
-		{
-			"t": "strawberry",
-			"x": 464,
-			"y": 56
-		},
-		{
-			"t": "water",
-			"x": 320,
-			"y": 152,
-			"w": 168,
-			"h": 16
-		}
-	]
+	"w": 80
 }

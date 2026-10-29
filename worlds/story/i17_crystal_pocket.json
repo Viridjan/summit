@@ -1,8 +1,73 @@
 {
-	"name": "Crystal Pocket",
-	"w": 24,
-	"h": 16,
+	"entities": [
+		{
+			"entrance": true,
+			"t": "spawn",
+			"x": 72,
+			"y": 96
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 88,
+			"y": 96
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 32,
+			"y": 72
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 88,
+			"y": 48
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 32,
+			"y": 24
+		},
+		{
+			"h": 8,
+			"t": "jumpthru",
+			"w": 48,
+			"x": 88,
+			"y": 0
+		},
+		{
+			"kind": "mage",
+			"name": "Crystal Keeper",
+			"t": "discovery_npc",
+			"text": "Three energy fragments form one energy upgrade.",
+			"variant": 2,
+			"x": 28,
+			"y": 88
+		},
+		{
+			"attacks": [
+				"lob"
+			],
+			"facing": -1,
+			"look": "enemy_thornmite",
+			"move": "hop",
+			"populated": true,
+			"t": "enemy_monster",
+			"tier": 0,
+			"traits": [],
+			"x": 119,
+			"y": 94
+		}
+	],
 	"environment": "volcanic_cave",
+	"h": 16,
+	"name": "Crystal Pocket",
 	"tiles": [
 		"111111111111000011111111",
 		"111111111111000011111111",
@@ -21,56 +86,5 @@
 		"111111111111111111111111",
 		"111111111111111111111111"
 	],
-	"entities": [
-		{
-			"t": "spawn",
-			"x": 72,
-			"y": 96,
-			"entrance": true
-		},
-		{
-			"t": "jumpthru",
-			"x": 88,
-			"y": 96,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 32,
-			"y": 72,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 88,
-			"y": 48,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 32,
-			"y": 24,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "jumpthru",
-			"x": 88,
-			"y": 0,
-			"w": 48,
-			"h": 8
-		},
-		{
-			"t": "discovery_npc",
-			"x": 28,
-			"y": 88,
-			"name": "Crystal Keeper",
-			"kind": "mage",
-			"variant": 2,
-			"text": "Three energy fragments form one energy upgrade."
-		}
-	]
+	"w": 24
 }
