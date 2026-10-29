@@ -1004,7 +1004,7 @@ func check_enemy_facing_alignment() -> void:
 func check_combat_enemies() -> void:
 	var art = load("res://scripts/enemy_art.gd")
 	var atlas: Image = art.atlas()
-	var enemy_ids := E.TYPES.keys().filter(func(t): return t.begins_with("enemy_"))
+	var enemy_ids := E.TYPES.keys().filter(func(t): return t.begins_with("enemy_") and t != "enemy_monster")  # the library monster wears a family's art
 	check(art.KINDS == enemy_ids, "sprite atlas rows match the enemy registry, in order")
 	check(atlas.get_size() == Vector2i(4 * art.SIZE, art.SIZE * enemy_ids.size()), "every enemy type has a four-frame row in the atlas")
 	for row in enemy_ids.size():
@@ -1162,7 +1162,7 @@ func check_enemy_variants() -> void:
 		var ok: bool = {"swift": e.hp <= o.hp, "armored": e.hp > o.hp, "giant": e.hp > o.hp and e.rect.size == o.rect.size * 2,
 			"shielded": e.hp >= o.hp, "brood": e.hp >= o.hp, "venom": e.hp >= o.hp}[v]
 		check(ok and (v == "giant" or e.rect.size == o.rect.size), "%s: %s stats and size fit the variant (hp %d vs %d, %s)" % [t, v, e.hp, o.hp, e.rect.size])
-	check(E.TYPES.keys().filter(func(t): return t.begins_with("enemy_") and E.CombatEnemy.variant_of(t) == "").size() == 9, "nine enemy families")
+	check(E.TYPES.keys().filter(func(t): return t.begins_with("enemy_") and t != "enemy_monster" and E.CombatEnemy.variant_of(t) == "").size() == 9, "nine enemy families")
 
 	# Swift crawls faster, Giant slower
 	var crawlers := []
@@ -2125,11 +2125,54 @@ func check_background_parallax() -> void:
 		last = s
 	check(smooth and is_equal_approx(last.y, -18.0), "background perspective shifts smoothly with vertical camera moves, within the overscan")
 
+# Library monsters: random builds from moves, attacks and traits; upgrades add one; each attack happens in play.
+func check_monster_library() -> void:
+	var Lib = load("res://scripts/monster_library.gd")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var builds: Array = []
+	for i in 30:
+		builds.append(Lib.build(rng))
+	var valid := builds.all(func(m): return m.attacks.size() == 1 and m.attacks[0] in Lib.attacks_for(m.move) and m.look in Lib.MOVES[m.move].looks)
+	var moves := {}
+	for m in builds:
+		moves[m.move] = true
+	var up: Dictionary = Lib.upgrade(builds[0], rng)
+	var up2: Dictionary = Lib.upgrade(up, rng)
+	check(valid and moves.size() == 3 and up.tier == 1 and up2.tier == 2 and up2.attacks.size() + up2.traits.size() == 3 and builds[0].tier == 0,
+		"monster library: random builds use attacks their move allows; each upgrade adds an attack or a trait")
+	var placed = E.make(null, {"t": "enemy_monster", "x": 40, "y": 40})
+	var again = E.make(null, {"t": "enemy_monster", "x": 40, "y": 40})
+	check(placed.d.has("move") and Lib.key(placed.d) == Lib.key(again.d) and placed.describe().contains(Lib.MOVES[placed.d.move].label),
+		"a monster placed in the editor rolls a build from its spot and keeps it (%s)" % placed.describe())
+	var floor_y := 27 * 8
+	var seen := {}
+	for a in ["charge", "leap", "shoot", "lob", "dive"]:
+		var move := "hover" if a == "dive" else "patrol"
+		make_world([{"t": "enemy_monster", "x": 140, "y": (floor_y - 40) if move == "hover" else floor_y - 2, "move": move, "attacks": [a], "traits": [], "tier": 0, "look": Lib.MOVES[move].looks[0], "facing": -1}])
+		Game.settings.invincible = true
+		var m = w.ents.filter(func(e): return e.d.t == "enemy_monster")[0]
+		for k in 120:
+			step()
+			if m.phase == "attack" or m.orbs.size() + m.bones.size() > 0:
+				seen[a] = true
+				break
+		Game.settings.invincible = false
+	check(seen.size() == 5, "each library attack fires at a player in reach (%s)" % [seen.keys()])
+	make_world([{"t": "enemy_monster", "x": 300, "y": floor_y - 2, "move": "patrol", "attacks": ["charge"], "traits": ["armored", "brood"], "tier": 2, "look": "enemy_hornback"}])
+	var b = w.ents.filter(func(e): return e.d.t == "enemy_monster")[0]
+	var hp0: int = b.hp
+	b.hp = 1
+	b.hit(p())
+	step(2)
+	var kids: int = w.ents.filter(func(e): return e.d.t == "enemy_monster" and e.collidable and e.d.get("brood_child", false)).size()
+	check(hp0 == 4 and kids == 2, "traits stack: armored adds hit points (%d), brood splits into two on death (%d)" % [hp0, kids])
+
 # Regression coverage for bestiary. The assertions below state the expected behavior of this case.
 func check_bestiary() -> void:
 	var b = load("res://scripts/bestiary.gd").new()
 	add_child(b)
-	check(b.rows.size() == 9 and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy family once (%s)" % [b.rows])
+	check(b.rows.size() == 10 and b.rows[-1] == "enemy_monster" and b.rows[0] == "enemy_thornmite" and not b.rows.has("enemy"), "monsters page lists each enemy family once, library monsters as one row (%s)" % [b.rows])
 	check(b.hp.get("enemy_cragjaw", 0) == 6 and b.hp.has("enemy_hornback_giant") and not b.hp.has("enemy_hornback_brood"), "monsters page shows each family's own variants")
 	check(b.hp.get("enemy_thornmite", 0) == 2, "monsters page shows enemy HP")
 	var borrowed := ["Ripper", "Medusa", "Skree", "Bat ", "Skeleton", "Puffling"]
@@ -2939,6 +2982,7 @@ func _ready() -> void:
 	check_stamina()
 	check_bugfixes()
 	check_bestiary()
+	check_monster_library()
 	check_ape_hitbox_shapes()
 	check_ape()
 	check_arena_respawn_gate()

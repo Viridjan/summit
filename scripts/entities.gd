@@ -18,6 +18,7 @@ const EnemyArt := preload("res://scripts/enemy_art.gd")
 const BlockArt := preload("res://scripts/block_art.gd")
 const ButtonArt := preload("res://scripts/button_art.gd")
 const IslandArt := preload("res://scripts/island_art.gd")
+const MonsterLib := preload("res://scripts/monster_library.gd")
 
 # The entity registry: the one place a type is declared.
 # type id (saved in level JSON) -> [editor label, sized (drag a rect in the editor), palette color, class]
@@ -74,6 +75,7 @@ const TYPES := {
 	"enemy_cragjaw": ["Cragjaw · leaping brute", false, Color("a58a6a"), CragjawEnemy],
 	"enemy_murkspore": ["Murkspore · spore spitter", false, Color("8a6aa8"), MurksporeEnemy],
 	"enemy_mosstrot": ["Mosstrot · calm wanderer", false, Color("7fae4e"), MosstrotEnemy],
+	"enemy_monster": ["Monster · from the action library", false, Color("d070a0"), ActionMonster],
 	"enemy_thornmite_swift": ["Thornmite · Swift", false, Color("f08d87"), ThornmiteEnemy],
 	"enemy_thornmite_venom": ["Thornmite · Venom", false, Color("8fd14f"), ThornmiteEnemy],
 	"enemy_thornmite_brood": ["Thornmite · Brood", false, Color("c8d06a"), ThornmiteEnemy],
@@ -682,6 +684,10 @@ class CombatEnemy extends Ent:
 			"shielded": return base + 1
 		return base
 
+	# Variants are traits; an ActionMonster can have several.
+	func has_trait(t: String) -> bool:
+		return variant == t
+
 	# Return the base family ID so variants can share art and common metadata.
 	func family() -> String:
 		return d.t.trim_suffix("_" + variant) if variant != "" else d.t
@@ -694,7 +700,7 @@ class CombatEnemy extends Ent:
 		if on and not seen and w.view_rect().intersects(Rect2(rect)):
 			seen = true
 			w.saw_enemy(d.t)
-		if on and variant == "venom":
+		if on and has_trait("venom"):
 			update_venom(dt)
 		return on
 
@@ -778,7 +784,7 @@ class CombatEnemy extends Ent:
 	# Check whether the incoming attack reaches the protected shield side rather than an exposed angle.
 	func blocks(p) -> bool:
 		var to: Vector2 = p.center() - center()
-		return variant == "shielded" and to.dot(front()) > 0 and to.y > -rect.size.y * 0.5
+		return has_trait("shielded") and to.dot(front()) > 0 and to.y > -rect.size.y * 0.5
 
 	# Apply one sword hit, respecting shield/flash protection and triggering death or variant reactions.
 	func hit(p) -> void:
@@ -799,7 +805,7 @@ class CombatEnemy extends Ent:
 			if w != null:
 				w.killed_enemy(d.t)
 				w.burst(center(), EnemyArt.COLORS["y"], 6)
-				if variant == "brood":
+				if has_trait("brood"):
 					brood()
 
 	# Queue smaller child enemies after a brood-variant parent is defeated.
@@ -858,7 +864,7 @@ class CombatEnemy extends Ent:
 		if not collidable:
 			return
 		EnemyArt.draw(ci, d.t, center(), facing, clock, flash > 0, scale)
-		if variant == "shielded":  # bright edge on the guarded side
+		if has_trait("shielded"):  # bright edge on the guarded side
 			var f := front()
 			var edge := center() + f * (rect.size.x * 0.5 + 1)
 			ci.draw_rect(Rect2(edge - Vector2(1, rect.size.y * 0.4), Vector2(2, rect.size.y * 0.8)) if f.x != 0 else Rect2(edge - Vector2(rect.size.x * 0.4, 1), Vector2(rect.size.x * 0.8, 2)), Color("f8d89b"))
@@ -1150,6 +1156,147 @@ class HornbackEnemy extends CombatEnemy:
 					facing *= -1
 				elif walk(16 * speed_multiplier * dt):
 					facing *= -1
+
+
+# A monster assembled from the action library (scripts/monster_library.gd): one move, its attacks, its traits.
+# Placed without a build (a fresh editor placement), it rolls one, seeded by its position, and keeps it in its data.
+class ActionMonster extends CombatEnemy:
+	var orbs: Array = []  # its bolts, straight: [position, velocity, seconds left] (CombatEnemy.update_shots)
+	var bones: Array = []  # its lobbed globs, falling (named like the Ossling's so damage_boxes sees them)
+	var velocity := Vector2.ZERO
+	var on_floor := false
+	var attack := ""  # the attack under way
+	var hop_t := 0.0
+	func describe() -> String:
+		return super.describe() + " - " + MonsterLib.describe(d)
+	func setup() -> void:
+		if not d.has("move"):
+			var rng := RandomNumberGenerator.new()
+			rng.seed = hash([d.x, d.y])
+			d.merge(MonsterLib.build(rng))
+		rect.size = Vector2i(10, 10)
+		variant = ""
+		for t in d.traits:  # traits stack: multiply their speed / warning / recovery, keep the biggest size
+			var m: Array = VARIANTS[t]
+			speed_multiplier *= m[0]
+			warning_multiplier *= m[1]
+			recovery_multiplier *= m[2]
+			scale = maxf(scale, m[3])
+		hp = MonsterLib.MOVES[d.move].hp
+		for t in d.traits:
+			variant = t
+			hp = variant_hp(hp)
+		variant = ""
+		facing = -1 if int(d.get("facing", -1)) < 0 else 1
+		home = Vector2(rect.position)
+	func has_trait(t: String) -> bool:
+		return t in d.get("traits", [])
+	func ground() -> bool:
+		return MonsterLib.MOVES[d.move].ground
+	func brood() -> void:  # two small, quick copies without the brood trait
+		for side in [-1, 1]:
+			var kid: Dictionary = d.duplicate(true)
+			kid.traits = d.traits.filter(func(t): return t != "brood")
+			var at := Vector2i(center()) + Vector2i(side * 4 - 2, -2)
+			kid.merge({"x": at.x, "y": at.y, "facing": side, "brood_child": true}, true)
+			w.spawn_entity(kid)
+	func update(dt: float) -> void:
+		if w != null and w.player != null:
+			update_shots(orbs, dt, 0.0)
+			update_shots(bones, dt, 240.0)
+		if not active(dt): return
+		if ground() and not (phase == "attack" and attack == "leap"):
+			velocity.y = minf(140, velocity.y + 400 * dt)
+			on_floor = move_enemy(Vector2(0, velocity.y * dt)) and velocity.y > 0
+			if on_floor:
+				velocity.y = 0
+		timer -= dt
+		match phase:
+			"windup":
+				if timer <= 0:
+					Game.play_sfx("enemy_attack")
+					_start(attack)
+			"attack":
+				if _attack(dt):
+					phase = "rest"
+					timer = 0.9 * recovery_multiplier
+			"rest":
+				if timer <= 0:
+					phase = "return" if not ground() else "idle"
+			"return":  # flyers go back to their spot
+				var back := home - Vector2(rect.position)
+				if back.length() < 2 or move_enemy(back.limit_length(40 * speed_multiplier * dt)):
+					phase = "idle"
+			_:
+				_move(dt)
+				for a in d.attacks:
+					if sees_player(MonsterLib.ATTACKS[a].range * scale) and (a not in ["charge"] or absf(w.player.center().y - center().y) < 12 * scale):
+						facing = -1 if w.player.center().x < center().x else 1
+						Game.play_sfx("enemy_alert")
+						attack = a
+						phase = "windup"
+						timer = 0.5 * warning_multiplier
+						break
+	func _move(dt: float) -> void:
+		match d.move:
+			"patrol":
+				if not safe_step() or walk(16 * speed_multiplier * dt):
+					facing *= -1
+			"hop":
+				hop_t -= dt
+				if on_floor and hop_t <= 0:
+					if not safe_step():
+						facing *= -1
+					hop_t = 0.8 / speed_multiplier
+					velocity = Vector2(facing * 40 * speed_multiplier, -110)
+				if not on_floor and move_enemy(Vector2(velocity.x * dt, 0)):
+					facing *= -1
+					velocity.x = -velocity.x
+			"hover":
+				var goal := home + Vector2(sin(clock * 0.8) * 12, sin(clock * 1.6) * 4)
+				move_enemy((goal - Vector2(rect.position)).limit_length(30 * speed_multiplier * dt))
+	func _start(a: String) -> void:
+		phase = "attack"
+		var to: Vector2 = w.player.center() - center()
+		match a:
+			"charge": timer = 1.2
+			"leap": velocity = Vector2(clampf(to.x / 0.6, -120, 120), -170)
+			"shoot": orbs.append([center(), to.normalized() * 100, 2.5])
+			"lob": bones.append([center(), Vector2(to.x / 1.0, -120), 2.5])
+			"dive":
+				velocity = to.normalized() * 150 * speed_multiplier
+				timer = 0.6
+	func _attack(dt: float) -> bool:  # true when the attack is over
+		match attack:
+			"charge":
+				return walk(110 * speed_multiplier * dt) or timer <= 0
+			"leap":
+				velocity.y += 450 * dt
+				move_enemy(Vector2(velocity.x * dt, 0))
+				var landed := move_enemy(Vector2(0, velocity.y * dt)) and velocity.y > 0
+				if landed:
+					velocity = Vector2.ZERO
+				return landed
+			"dive":
+				return move_enemy(velocity * dt) or timer <= 0
+		return true  # shoot, lob: the shot is out
+	func vis_rect() -> Rect2i:
+		var area := body_rect()
+		for o in orbs + bones:
+			area = area.merge(Rect2i(Vector2i(o[0]) - Vector2i(2, 2), Vector2i(5, 5)))
+		return area
+	func draw(ci: CanvasItem) -> void:
+		for o in orbs + bones:
+			ci.draw_rect(Rect2(o[0] - Vector2(1.5, 1.5), Vector2(3, 3)), Color("e070b0"))
+		if not collidable:
+			super.draw(ci)
+			return
+		var keep_t: String = d.t
+		d.t = d.get("look", "enemy_mosstrot")  # wears a family's art
+		super.draw(ci)
+		d.t = keep_t
+		for i in int(d.get("tier", 0)):  # upgrades: a small mark per tier over the head
+			ci.draw_rect(Rect2(center().x - 3 + i * 4, rect.position.y - 7, 2, 2), Color("ff6060"))
 
 
 # Ground walker that turns at walls and unsafe floor edges instead of wandering into hazards.

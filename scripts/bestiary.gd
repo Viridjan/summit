@@ -76,7 +76,7 @@ func _draw() -> void:
 			var scale := 2.0 if t.ends_with("_giant") else 1.0
 			var s := minf(3.0, SPRITE_H / (maxf(b.x, b.y) + 8.0 * scale))  # sprite = body plus its overhang
 			draw_set_transform(Vector2(cx + 28, y + 28), 0, Vector2(s, s))
-			EnemyArt.draw(self, t, Vector2.ZERO, 1, clock + r * 0.3, false, scale)
+			EnemyArt.draw(self, "enemy_fuzzbob" if t == "enemy_monster" else t, Vector2.ZERO, 1, clock + r * 0.3, false, scale)
 			draw_set_transform(Vector2.ZERO)
 			var variant: String = "Original" if i == 0 else E.TYPES[t][0].get_slice(" · ", 1)
 			draw_string(font, Vector2(cx + 58, y + 26), variant, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.8, 0.8, 0.9))
