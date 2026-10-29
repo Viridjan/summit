@@ -50,7 +50,8 @@ func _ready() -> void:
 	var box := VBoxContainer.new()
 	side.add_child(box)
 	box.add_child(Game.label("World Editor", 24))
-	box.add_child(Game.button("+ Add empty room", func(): _add_index(0)))
+	box.add_child(Game.button("+ Add empty room (draft)", func(): _add_index(0)))
+	box.add_child(Game.button("Build drafts", _build_drafts))
 	add_menu = MenuButton.new()
 	add_menu.text = "+ Add copy of my level..."
 	add_menu.flat = false
@@ -155,7 +156,7 @@ func _draw() -> void:
 			named[g.name] = [g.color, named[g.name][1].merge(rect) if named.has(g.name) else rect]
 		var edge := Color.RED if bad.has(name) else (Color.WHITE if name == selected else (Color(g.color, 0.8) if not g.is_empty() else Color(1, 1, 1, 0.3)))
 		draw_rect(rect, edge, false, 2.0 if name == selected or bad.has(name) else 1.0)
-		var label: String = ("* " if name == world.start else "") + name
+		var label: String = ("* " if name == world.start else "") + name + (" (draft)" if r.level.get("draft", false) else "")
 		draw_string(font, rect.position + Vector2(4, 16), label, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 8, 14, Color.WHITE)
 	for n in named:  # region names, centred over each region
 		var at: Vector2 = named[n][1].get_center() + Vector2(-font.get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 22).x / 2.0, 8)
@@ -238,6 +239,7 @@ func _add_index(i: int) -> void:
 	var base := "room"
 	if i == 0:
 		lvl = Game.new_level("Room", 40, 23)
+		lvl.draft = true  # tools/story/build_drafts.py connects and fills it
 	else:
 		base = Game.list_levels()[i - 1]
 		lvl = Game.load_level(base)
@@ -285,6 +287,21 @@ func add_room(base: String, lvl: Dictionary, pos: Vector2i) -> String:
 	_update_info()
 	queue_redraw()
 	return name
+
+# Run tools/story/build_drafts.py on this world (maze links, gates, terrain), then reload the layout.
+func _build_drafts() -> void:
+	var dir := ProjectSettings.globalize_path(Game.world_path.get_base_dir())
+	var tool := ProjectSettings.globalize_path("res://tools/story/build_drafts.py")
+	var out := []
+	var code := OS.execute("python3", [tool, dir], out, true)
+	var text: String = "".join(out).strip_edges()
+	status.text = text.get_slice("\n", text.get_slice_count("\n") - 1) if code == 0 else "Build drafts failed: " + text.right(200)
+	if code == 0:
+		world = Adventure.load_world(Game.world_path)
+		for name in world.rooms:
+			thumbs[name] = MapView.terrain(world.rooms[name].level)
+		_recalc()
+		queue_redraw()
 
 # Remove a room from the layout while deliberately retaining its JSON file on disk.
 func _remove() -> void:
