@@ -53,21 +53,45 @@ function show(n){Object.values(boxes).forEach(b=>b.classList.remove("sel"));boxe
   ["o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].join(", ")}`:"").filter(Boolean).join("<br>")}
 const zsvg=document.getElementById("zgraph"),zcv=document.getElementById("zmap"),zcx=zcv.getContext("2d");zcv.width=cv.width;zcv.height=cv.height;
 const base=n=>n,title=n=>(D.rooms.find(r=>r.name==n)||{title:n}).title;
-let zboxes=[];
-function zones(n){zsvg.innerHTML="";zboxes=[];const Z=n.zones,rowsz={};
- document.getElementById("zhead").textContent=`With ${n.id=="start"?"no abilities":n.id}: ${Z.length} zones. Arrows: ways that don't lead back. Two arrows out: a choice. Click a zone.`;
- Z.forEach((z,i)=>{(rowsz[z.depth]=rowsz[z.depth]||[]).push(i)});
- const ZW=170,ZH=40,ZGX=14,ZGY=46,zp={};let zw=0;
- Object.keys(rowsz).forEach(d=>rowsz[d].forEach((i,k)=>{zp[i]=[12+k*(ZW+ZGX),12+d*(ZH+ZGY)];zw=Math.max(zw,24+(k+1)*(ZW+ZGX))}));
- zsvg.setAttribute("width",zw);zsvg.setAttribute("height",24+Object.keys(rowsz).length*(ZH+ZGY));
- Z.forEach((z,i)=>z.kids.forEach(j=>{const [px,py]=zp[i],[x,y]=zp[j];
-  el("path",{class:"edge",style:z.kids.length>1?"stroke:#f0d060":"",d:`M${px+ZW/2},${py+ZH} C${px+ZW/2},${py+ZH+ZGY/2} ${x+ZW/2},${y-ZGY/2} ${x+ZW/2},${y}`},zsvg)}));
- Z.forEach((z,i)=>{const [x,y]=zp[i];const g=el("g",{class:"node",transform:`translate(${x},${y})`},zsvg);
-  el("rect",{width:ZW,height:ZH,rx:6},g);const t=el("text",{x:8,y:15},g);t.textContent=(i==n.first?"> ":"")+title(z.rooms[0])+(z.rooms.length>1?" +"+(z.rooms.length-1):"");
-  const s=el("text",{x:8,y:30,style:"fill:var(--dim);font-size:11px"},g);s.textContent=z.kids.length>1?"choice: "+z.kids.length+" ways":(z.kids.length?"one way on":"end");
-  g.onclick=()=>zshow(n,i);zboxes.push(g)});
+let zboxes={};
+const tip=document.createElement("div");tip.style.cssText="position:absolute;display:none;max-width:320px;background:#0d0d12;border:1px solid #555566;border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;pointer-events:none;z-index:9";document.body.appendChild(tip);
+const LINE_COLORS=["#e8443a","#2f7fe0","#2fb35a","#f29b1d","#9b59d0","#17b3b0","#c0632d","#e05a9d","#7a8a99","#c8b400"];
+const zname=(n,i)=>{const z=n.zones[i];return title(z.rooms[0])+(z.rooms.length>1?" +"+(z.rooms.length-1):"")};
+function decision(n,i){const z=n.zones[i],k=z.kids;
+ const list=z.rooms.map(title).join(", ");
+ if(k.length>1)return `<b>Choice</b> &middot; ${list}<br>${k.length} ways on: `+k.map(j=>"<b>"+zname(n,j)+"</b>").join(" or ")+`.<br>Whichever you take, you can't come back here.`;
+ if(k.length==1)return `<b>One way on</b> &middot; ${list}<br>Next: <b>${zname(n,k[0])}</b>. Once you go, you can't return.`;
+ return `<b>End of the line</b> &middot; ${list}<br>No way on from here.`}
+function zones(n){zsvg.innerHTML="";zboxes={};const Z=n.zones;
+ // routes: every path from the start zone down to a zone with no way on (a metro line each)
+ const routes=[],walk=(i,path)=>{path=path.concat([i]);if(!Z[i].kids.length)routes.push(path);else Z[i].kids.forEach(j=>walk(j,path))};walk(n.first,[]);
+ document.getElementById("zhead").textContent=`With ${n.id=="start"?"no abilities":n.id}: ${Z.length} zones, ${routes.length} lines. A stop is a zone you can move around freely; going down a line there is no way back. Dashed: the same stop on several lines. Hover a stop.`;
+ const at={};routes.forEach((r,li)=>r.forEach(i=>(at[i]=at[i]||[]).push(li)));
+ // one row per zone (by progress, then by line), so stops of different zones never share a row
+ const order=Object.keys(at).map(Number).sort((a,b)=>Z[a].depth-Z[b].depth||at[a][0]-at[b][0]),rank={};order.forEach((i,k)=>rank[i]=k);
+ const CX=34,RY=58,X0=30,Y0=30,col=li=>X0+li*CX,row=i=>Y0+rank[i]*RY,LX=col(routes.length-1)+28;
+ const width=LX+260,height=Y0+order.length*RY+10;
+ zsvg.setAttribute("width",width);zsvg.setAttribute("height",height);
+ const lines=el("g",{},zsvg),links=el("g",{},zsvg),stops=el("g",{},zsvg),labels=el("g",{},zsvg);
+ routes.forEach((r,li)=>{const c=LINE_COLORS[li%LINE_COLORS.length],x=col(li);
+  el("line",{x1:x,y1:row(r[0]),x2:x,y2:row(r[r.length-1]),stroke:c,"stroke-width":9,"stroke-linecap":"round"},lines);
+  const end=r[r.length-1],t=el("text",{x:x,y:row(end)+24,"text-anchor":"middle",style:`fill:${c};font-size:11px;font-weight:600`},labels);t.textContent=li+1});
+ const occupied=(y,li)=>routes.some((r,k)=>k==li&&r.some(i=>row(i)==y));
+ Object.keys(at).forEach(i=>{i=+i;const ls=at[i],y=row(i);
+  for(let a=0;a<ls.length-1;a++){const l1=ls[a],l2=ls[a+1],x1=col(l1),x2=col(l2);
+   let blocked=false;for(let k=l1+1;k<l2;k++)if(occupied(y,k))blocked=true;  // another line's stop in between: go over it
+   el("path",{d:blocked?`M${x1},${y} C${x1},${y-34} ${x2},${y-34} ${x2},${y}`:`M${x1},${y} L${x2},${y}`,stroke:"#d8d8e0","stroke-width":2.5,"stroke-dasharray":"5 4",fill:"none"},links)}
+  const g=el("g",{class:"stop",style:"cursor:pointer"},stops);zboxes[i]=g;
+  ls.forEach(li=>{el("circle",{cx:col(li),cy:y,r:Z[i].kids.length>1?9:7,fill:"#fff",stroke:Z[i].kids.length>1?"#16161c":LINE_COLORS[li%LINE_COLORS.length],"stroke-width":Z[i].kids.length>1?4:3},g)});
+  el("line",{x1:col(ls[ls.length-1])+10,y1:y,x2:LX-6,y2:y,stroke:"#3a3a48","stroke-width":1},links);  // leader to the label
+  const t=el("text",{x:LX,y:y+4,style:"font-size:12px"},labels);
+  t.textContent=zname(n,i)+(Z[i].kids.length>1?"  ◆ choice":"");
+  g.onmouseenter=e=>{tip.innerHTML=decision(n,i);tip.style.display="block"};
+  g.onmousemove=e=>{tip.style.left=(e.pageX+14)+"px";tip.style.top=(e.pageY+14)+"px"};
+  g.onmouseleave=()=>tip.style.display="none";
+  g.onclick=()=>zshow(n,i)});
  zshow(n,n.first)}
-function zshow(n,i){zboxes.forEach(b=>b.classList.remove("sel"));zboxes[i].classList.add("sel");const z=n.zones[i];
+function zshow(n,i){Object.values(zboxes).forEach(b=>b.querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#fff")));if(zboxes[i])zboxes[i].querySelectorAll("circle").forEach(c=>c.setAttribute("fill","#5fa8ff"));const z=n.zones[i];
  const here=new Set(z.rooms.map(base)),ahead=new Set(z.ahead.map(base)),seen=new Set(n.zones.flatMap(q=>q.rooms).map(base));
  zcx.clearRect(0,0,zcv.width,zcv.height);
  D.rooms.forEach(r=>{const col=here.has(r.name)?"#5fa8ff":ahead.has(r.name)?C.g:seen.has(r.name)?C.r:"#44444f",ox=(r.x-minx)*S,oy=(r.y-miny)*S;
@@ -78,5 +102,5 @@ function zshow(n,i){zboxes.forEach(b=>b.classList.remove("sel"));zboxes[i].class
  document.getElementById("zinfo").innerHTML=`<b>${z.rooms.map(title).join(", ")}</b><br>`+(behind.length?`<span style="color:${C.r}">left behind:</span> ${behind.join(", ")}<br>`:"")+(partly.length?`only part of: ${partly.map(title).join(", ")} (the rest is in another zone)<br>`:"")+
   (z.kids.length?`ways on: `+z.kids.map(j=>title(n.zones[j].rooms[0])).join(" | "):"no way on")}
 const show0=show;show=function(n){show0(n);zones(n)};
-show(D.nodes[0]);
+show(D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)))||D.nodes[0]);  // e.g. progression.html#dash
 </script></body></html>
