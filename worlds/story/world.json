@@ -211,40 +211,40 @@
 			53
 		],
 		"i09_sea_cave": [
-			868,
+			740,
 			69
 		],
 		"i10_junction": [
-			828,
-			76
+			700,
+			99
 		],
 		"i11_flooded_hall": [
-			780,
-			76
+			652,
+			99
 		],
 		"i12_echo_gallery": [
-			740,
-			76
+			612,
+			99
 		],
 		"i13_lower_maze": [
-			740,
-			92
+			612,
+			115
 		],
 		"i14_vent_shaft": [
-			788,
-			92
+			660,
+			115
 		],
 		"i15_quiet_refuge": [
-			804,
-			108
+			676,
+			131
 		],
 		"i16_guardian_chamber": [
-			828,
-			92
+			700,
+			115
 		],
 		"i17_crystal_pocket": [
-			748,
-			115
+			620,
+			138
 		],
 		"j1_jungle_edge": [
 			280,
@@ -323,8 +323,8 @@
 			23
 		],
 		"x1_serpent_lair": [
-			740,
-			131
+			612,
+			154
 		]
 	},
 	"start": "hub_landing",

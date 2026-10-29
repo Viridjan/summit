@@ -5,6 +5,27 @@
 Jungle, Treetop Village, Sand Cave, Lighthouse Coast, Island Shores, Volcano, Volcanic Maze (grouped by background,
 with small rooms joined to the region they belong to in the story). Older notes below say "area" for the same idea.
 
+**Island connections (2026-10-29):** Foothills opens directly into `i09_sea_cave`,
+now named **Ash Passage**: a 46-tile-tall, climbable tunnel. Its upper shaft has
+closely spaced jump-through rungs and a rest ledge; the preserved lower chamber
+exits left into Junction. Every other Volcanic Maze room, including Serpent
+Lair, moves with the tunnel while retaining its room-to-room offsets. The
+separate `i18_ash_passage` room is removed. East Shore's old downward opening is
+sealed, since the maze entrance is now below Foothills.
+
+North Shore and South Shore retain paired wooden direction signs. Stand nearby
+and press Interact to follow the named coastal path to the opposite shore;
+walking into a sign does not travel. These reuse the existing `house_door`
+interaction with `skin: "signpost"`, destination `label`, and `direction` metadata.
+`tools/story/link_island_routes.py` reapplies the tunnel relocation and shore
+links without regenerating the maze's authored room contents.
+
+For seeded terrain shaping of authored areas, use
+[`tools/morph_terrain.py`](../tools/morph_terrain.py). Presets include `cavern`,
+`desert`, `coast`, `volcanic`, `forest` and `ruins`; it produces a before/after
+report, with explicit apply and restore.
+See [Terrain morphing](TERRAIN_MORPHING.md) for commands and research references.
+
 The former Summit world (`res://adventure/`, removed 2026-10-25; still in git history): 14 rooms in 4 areas, each borrowing from one game.
 This is a study from knowledge of the games, not from their data files; Metroid Zero Mission
 details come from the decompilation notes in `METROID_NOTES.md`.

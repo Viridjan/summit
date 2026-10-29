@@ -39,6 +39,18 @@
 			"traits": [],
 			"x": 175,
 			"y": 54
+		},
+		{
+			"t": "house_door",
+			"skin": "signpost",
+			"x": 88,
+			"y": 80,
+			"w": 16,
+			"h": 24,
+			"id": "coast_path",
+			"to": "i03_south_shore:coast_path",
+			"direction": "south",
+			"label": "South Shore"
 		}
 	],
 	"environment": "island_shore",

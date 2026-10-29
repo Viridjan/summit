@@ -96,8 +96,9 @@ class World:
 
 
 # Search reachable movement/connectivity states from the supplied starts; the model is an approximation.
-def explore(W, m, abilities, starts, goal=None, good=None):
-    """BFS over (x, y, mode, k, dash, lock, stam). Returns visited ground cells and items touched."""
+def explore(W, m, abilities, starts, goal=None, good=None, room=None, exits=None):
+    """BFS over (x, y, mode, k, dash, lock, stam). Returns visited ground cells and items touched.
+    With room: stays inside that room; where it would step into another room, (room, x, y) is added to exits."""
     has_dash, has_climb = "dash" in abilities, "climb" in abilities
     full_stam = m["stam"] if has_climb else 0
     seen = set()
@@ -110,6 +111,11 @@ def explore(W, m, abilities, starts, goal=None, good=None):
         x, y = s[0], s[1]
         if not W.free(x, y) or W.dead(x, y):
             return
+        if room is not None:
+            r = W.room_of.get((x, y))
+            if r is not None and r != room:
+                exits.add((r, x, y))
+                return
         if s in seen:
             return
         seen.add(s)

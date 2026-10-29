@@ -542,23 +542,47 @@ class HouseDoor extends Door:
 		near = maxf(0.0, near - dt)
 	# Return conservative visible bounds including HouseDoor effects so camera culling does not hide them.
 	func vis_rect() -> Rect2i:
-		return rect.grow(12) if w != null else super.vis_rect()
+		return rect.grow(48 if d.get("skin", "") == "signpost" else 12) if w != null else super.vis_rect()
 	# Draw HouseDoor at its current pose; this must also work for an editor preview with no World.
 	func draw(ci: CanvasItem) -> void:
 		var r := Rect2(rect)
-		var frame := Color("4e3422")
-		ci.draw_rect(r, frame)  # exactly its hitbox: frame, planks inside, a knob
-		var inner := r.grow(-1)
-		ci.draw_rect(inner, Color("8a5a34"))
-		for x in range(int(inner.position.x) + 4, int(inner.end.x), 4):
-			ci.draw_rect(Rect2(x, inner.position.y, 1, inner.size.y), Color("6e4628"))
-		ci.draw_rect(Rect2(inner.position.x, inner.position.y + 2, inner.size.x, 1), Color("6e4628"))
-		ci.draw_rect(Rect2(inner.end.x - 3, inner.position.y + inner.size.y / 2.0, 2, 2), Color("e0c060"))
+		if d.get("skin", "") == "signpost":
+			_draw_signpost(ci, r)
+		else:
+			var frame := Color("4e3422")
+			ci.draw_rect(r, frame)  # exactly its hitbox: frame, planks inside, a knob
+			var inner := r.grow(-1)
+			ci.draw_rect(inner, Color("8a5a34"))
+			for x in range(int(inner.position.x) + 4, int(inner.end.x), 4):
+				ci.draw_rect(Rect2(x, inner.position.y, 1, inner.size.y), Color("6e4628"))
+			ci.draw_rect(Rect2(inner.position.x, inner.position.y + 2, inner.size.x, 1), Color("6e4628"))
+			ci.draw_rect(Rect2(inner.end.x - 3, inner.position.y + inner.size.y / 2.0, 2, 2), Color("e0c060"))
 		if near > 0:  # prompt: the interact button (key or pad, whichever was used last), bobbing above the door
 			var tex: Texture2D = ButtonArt.prompt("interact")
 			ci.draw_texture(tex, Vector2(roundf(r.position.x + (r.size.x - tex.get_width()) / 2.0), r.position.y - tex.get_height() - 2 + roundf(sin(Time.get_ticks_msec() / 150.0))))
 		if w == null and d.has("to"):
 			super.draw(ci)  # editor: the link label
+	# A signed path uses the existing deliberate travel input, with a visible destination.
+	func _draw_signpost(ci: CanvasItem, r: Rect2) -> void:
+		var at := r.position
+		ci.draw_rect(Rect2(at + Vector2(7, 7), Vector2(3, r.size.y - 7)), Color("6e4628"))
+		ci.draw_rect(Rect2(at + Vector2(7, 8), Vector2(1, r.size.y - 8)), Color("b58d6b"))
+		ci.draw_rect(Rect2(at + Vector2(0, 3), Vector2(16, 9)), Color("4e3422"))
+		ci.draw_rect(Rect2(at + Vector2(1, 4), Vector2(14, 6)), Color("c8a875"))
+		var north: bool = d.get("direction", "north") == "north"
+		var tip := at + Vector2(8, 5 if north else 9)
+		var dy := 1 if north else -1
+		ci.draw_rect(Rect2(tip, Vector2(1, 1)), Color("4e3422"))
+		ci.draw_rect(Rect2(tip + Vector2(-1, dy), Vector2(3, 1)), Color("4e3422"))
+		ci.draw_rect(Rect2(tip + Vector2(-2, 2 * dy), Vector2(5, 1)), Color("4e3422"))
+		ci.draw_rect(Rect2(at + Vector2(8, 6), Vector2(1, 3)), Color("4e3422"))
+		if near > 0:
+			var label := "Follow path: " + str(d.get("label", "Coast"))
+			var font := ThemeDB.fallback_font
+			var size := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 6)
+			var origin := Vector2(roundf(r.get_center().x - size.x / 2), r.position.y - 16)
+			ci.draw_rect(Rect2(origin - Vector2(2, 7), Vector2(size.x + 4, 10)), Color(0.08, 0.08, 0.12, 0.95))
+			ci.draw_string(font, origin, label, HORIZONTAL_ALIGNMENT_LEFT, -1, 6, Color("f0dfb1"))
 
 
 # Non-solid backdrop scenery; it is drawn behind the separately placed doorway.
