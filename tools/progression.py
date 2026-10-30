@@ -308,8 +308,8 @@ h1{font-size:18px;margin:0 0 4px} p{color:var(--dim);margin:0 0 12px}
 svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2a2a38;stroke:var(--line)}
 .node.sel rect{stroke:var(--fg);stroke-width:2} .edge{stroke:var(--line);stroke-width:2;fill:none}
 .legend span{display:inline-block;margin-right:12px} .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
-#route-card{grid-column:1 / -1}
-#route-viewport{overflow:auto;max-height:80vh;margin-top:10px}
+#route-viewport{overflow:auto;max-height:78vh;margin-top:6px}
+#route-map{position:sticky;top:16px;align-self:start}
 #zgraph{display:block;max-width:none}
 .route-controls button{cursor:pointer;padding:5px 10px}
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
@@ -318,8 +318,8 @@ canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;borde
 <section class="card"><h1>Graph 1 · Unlocks <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Bosses beaten and powerups collected determine all accessible rooms. Both branches after a gate count as accessible, regardless of which route you take. Select a state to inspect its accessible rooms. This graph has its own selection and map.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
 <section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
 <canvas id="map"></canvas><div id="info"></div></section>
-<section class="card" id="route-card"><h1>Graph 2 · Route choices</h1><p id="zhead"></p><div class="route-controls"><button id="route-fit">Fit graph</button> <button id="route-in">Zoom +</button> <button id="route-out">Zoom −</button></div><div id="route-viewport"><svg id="zgraph"></svg></div></section>
-<section class="card"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
+<section class="card" id="route-card"><h1>Graph 2 · Route choices</h1><p id="zhead"></p><label style="color:var(--dim);font-size:13px;cursor:pointer"><input type="checkbox" id="route-same"> show where a stop appears twice</label><div id="route-viewport"><svg id="zgraph"></svg></div></section>
+<section class="card" id="route-map"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
 <canvas id="zmap"></canvas><div id="zinfo"></div></section></main>
 <script>
 const D=/*DATA*/;
@@ -460,56 +460,52 @@ function compactRoutes(original,start,keepRooms=[],all=false){
  Object.entries(original.aliases).forEach(([copy,real])=>{if(pos[copy]&&pos[real])links.push({from:copy,to:real,sameStation:true,direction:'same station'})});
  return {...original,names,children,parent,links,pos,width:Math.max(500,leaf*230+40)};
 }
-let routeZoom=1;
-function fitRoutes(){routeZoom=1;resizeRoutes()}
-function resizeRoutes(){
- const bounds=zsvg.getAttribute("viewBox").split(" ").map(Number);
- const availableWidth=Math.max(1,document.getElementById("route-viewport").clientWidth);
- const availableHeight=Math.max(260,Math.min(640,window.innerHeight*.65));
- const scale=Math.min(availableWidth/bounds[2],availableHeight/bounds[3])*routeZoom;
- zsvg.style.width=(bounds[2]*scale)+"px";zsvg.style.height=(bounds[3]*scale)+"px";
- zsvg.style.margin="0 auto";
-}
-document.getElementById("route-fit").onclick=fitRoutes;
-document.getElementById("route-in").onclick=()=>{routeZoom=Math.min(6,routeZoom*1.4);resizeRoutes()};
-document.getElementById("route-out").onclick=()=>{routeZoom=Math.max(1,routeZoom/1.4);resizeRoutes()};
-window.addEventListener("resize",()=>{if(zsvg.hasAttribute("viewBox"))resizeRoutes()});
+// Graph 2 layout, like a git graph: one stop per row (top to bottom in route order), the first way on continues
+// in the same column, every other way branches into a new coloured column; names in one column on the right.
 function zones(raw){zsvg.innerHTML="";
  routeGroupData=groupRoutes(D.rooms,D.regions,raw,D.start);
  const n=routeGroupData,root=n.start;
  const names=Object.keys(n.rooms).filter(r=>n.rooms[r]==="g").sort();
  const links=n.links.filter(e=>names.includes(e.from)&&names.includes(e.to));
  const choiceRooms=Object.keys(n.groups).filter(g=>n.groups[g].boss);
- const original=routeTree(names,links,root,choiceRooms);
- const tree=compactRoutes(original,root,choiceRooms,true),pos=tree.pos,width=tree.width;
- zsvg.setAttribute("width",width);zsvg.setAttribute("height",Math.max(120,...Object.values(pos).map(p=>p.y+80)));
- const lineColors={};let nextColor=1;
- function colorBranch(r,color){lineColors[r]=color;tree.children[r].forEach((child,i)=>colorBranch(child,i===0?color:LINE_COLORS[nextColor++%LINE_COLORS.length]))}
- if(pos[root])colorBranch(root,LINE_COLORS[0]);
- const defs=el("defs",{},zsvg),marker=el("marker",{id:"arrow",viewBox:"0 0 10 10",refX:9,refY:5,markerWidth:6,markerHeight:6,orient:"auto"},defs);
- el("path",{d:"M0 0 L10 5 L0 10 z",fill:"#8a8a99"},marker);
- tree.links.filter(e=>pos[e.from]&&pos[e.to]).forEach(e=>{const a=pos[e.from],b=pos[e.to],back=e.sameStation===true;
- const path=el("path",{class:back?"metro-same-station":"metro-route","data-from":tree.aliases[e.from]||e.from,"data-to":tree.aliases[e.to]||e.to,d:back?`M${a.x+90},${a.y+20} C${a.x+200},${a.y-24} ${b.x+200},${b.y-24} ${b.x+90},${b.y+20}`:`M${a.x+90},${a.y+20} V${a.y+48} L${b.x+90},${b.y-8} V${b.y+20}`,fill:"none",stroke:back?"#a0a0b0":lineColors[e.to],"stroke-width":back?1.5:8,"stroke-linecap":"round","stroke-linejoin":"round","stroke-dasharray":back?"4 5":"none",opacity:back?.4:1},zsvg);
- const t=el("title",{},path);t.textContent=back?`Same station: ${title(e.to)}`:`${title(e.from)} → ${(e.via||[]).map(title).concat([title(tree.aliases[e.to]||e.to)]).join(" → ")} (${e.direction})`});
- // a choice is irreversible: one of its ways out can't reach another afterwards (taking it loses the other)
+ const tree=compactRoutes(routeTree(names,links,root,choiceRooms),root,choiceRooms,true);
+ const real=x=>tree.aliases[x]||x;  // "same station" stubs stand for the stop they point to
  const reachOf={},reach=a=>{if(reachOf[a])return reachOf[a];const s=new Set([a]),todo=[a];
   while(todo.length){const x=todo.pop();links.filter(e=>e.from===x).forEach(e=>{if(!s.has(e.to)){s.add(e.to);todo.push(e.to)}})}return reachOf[a]=s};
- const real=x=>tree.aliases[x]||x;  // "↩ existing route" stubs stand for the room they point to
- const isChoice=(kids)=>kids.some(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to))));
- tree.names.forEach(r=>{const p=pos[r],kids=tree.links.filter(e=>e.from===r&&tree.parent[e.to]===r),g=el("g",{style:"cursor:pointer"},zsvg);
- const choice=kids.length>1&&isChoice(kids);
- el("circle",{class:"metro-station","data-room":tree.aliases[r]||r,cx:p.x+90,cy:p.y+20,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":lineColors[r],"stroke-width":choice?4:3},g);
- const t=el("text",{x:p.x+105,y:p.y+17,fill:"#eee",style:"font-size:16px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);t.textContent=title(tree.aliases[r]||r);
- const sub=el("text",{x:p.x+105,y:p.y+32,fill:"#aaa",style:"font-size:14px;paint-order:stroke;stroke:#20202a;stroke-width:3px"},g);const lost=kids.filter(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to)))).map(a=>title(real(a.to)));
- sub.textContent=tree.aliases[r]?"same station":choice?`◆ ${kids.length} irreversible choices`:kids.length>1?`${kids.length} ways`:"";
- g.onclick=()=>zshow(raw,tree.aliases[r]||r);const tt=el("title",{},g);tt.textContent="Rooms: "+n.groups[tree.aliases[r]||r].rooms.map(title).join(", ")+"\n"+kids.map(e=>e.direction+": "+title(tree.aliases[e.to]||e.to)).join("\n")});
- document.getElementById("zhead").textContent=`Rooms are grouped by connected region; bosses remain separate to preserve their choices. ${tree.names.length} metro stops. Hover a stop for its rooms. Dashed lines connect duplicate appearances of the SAME group on distant branches—not travel or return routes. Graph 1 remains independent.`;
- // Include labels and return curves, not just station coordinates, in the fitted bounds.
- const bounds=zsvg.getBBox(),pad=20;
- zsvg.setAttribute("viewBox",[bounds.x-pad,bounds.y-pad,bounds.width+pad*2,bounds.height+pad*2].join(" "));
- fitRoutes();
+ // rows (depth-first) and columns
+ const row={},col={},order=[];let ncol=1;
+ (function walk(r,c){row[r]=order.length;col[r]=c;order.push(r);
+  tree.children[r].forEach((k,i)=>walk(k,i===0?c:ncol++))})(root,0);
+ const CX=26,RY=46,X0=18,Y0=22,x=r=>X0+col[r]*CX,y=r=>Y0+row[r]*RY,LX=X0+ncol*CX+10;
+ zsvg.removeAttribute("viewBox");zsvg.style.width="";zsvg.style.height="";
+ zsvg.setAttribute("width",LX+340);zsvg.setAttribute("height",Y0+order.length*RY);
+ const colour=r=>LINE_COLORS[col[r]%LINE_COLORS.length];
+ const gl=el("g",{},zsvg),gr=el("g",{},zsvg),gs=el("g",{},zsvg);
+ order.forEach(r=>{if(tree.parent[r]===undefined)return;const p=tree.parent[r],px=x(p),py=y(p),cx=x(r),cy=y(r);
+  const d=px===cx?`M${px},${py} L${cx},${cy}`:`M${px},${py} C${px},${py+RY*.6} ${cx},${py+RY*.1} ${cx},${py+RY*.7} L${cx},${cy}`;
+  const e=tree.links.find(l=>l.from===p&&l.to===r),path=el("path",{d,fill:"none",stroke:colour(r),"stroke-width":7,"stroke-linecap":"round"},gl);
+  const t=el("title",{},path);t.textContent=`${title(real(p))} → ${(e?.via||[]).map(title).concat([title(real(r))]).join(" → ")}${e?.direction?" ("+e.direction+")":""}`});
+ const showSame=document.getElementById("route-same").checked;  // dashed: the same stop shown twice
+ if(showSame)tree.links.filter(l=>l.sameStation&&row[l.from]!==undefined&&row[l.to]!==undefined).forEach(l=>{
+  const a=[x(l.from),y(l.from)],b=[x(l.to),y(l.to)],bend=LX-6;
+  el("path",{d:`M${a[0]},${a[1]} C${bend},${a[1]} ${bend},${b[1]} ${b[0]},${b[1]}`,fill:"none",stroke:"#c8c8d0","stroke-width":1.5,"stroke-dasharray":"4 4",opacity:.6},gr)});
+ order.forEach(r=>{const kids=tree.children[r].map(k=>({to:k})),g=el("g",{style:"cursor:pointer"},gs);
+  const lost=kids.filter(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to)))).map(a=>title(real(a.to)));
+  const choice=lost.length>0,same=!!tree.aliases[r];
+  el("line",{x1:x(r)+10,y1:y(r),x2:LX-4,y2:y(r),stroke:"#34343f","stroke-width":1},g);
+  el("circle",{class:"metro-station","data-room":real(r),cx:x(r),cy:y(r),r:choice?8:6,fill:"#fff",stroke:choice?"#16161c":colour(r),"stroke-width":choice?4:3},g);
+  const t=el("text",{x:LX,y:y(r)+1,fill:same?"#9a9aaa":"#eee",style:"font-size:14px;font-weight:600"},g);t.textContent=(same?"↩ ":"")+title(real(r));
+  const sub=el("text",{x:LX,y:y(r)+17,fill:choice?"#f0d060":"#9a9aaa",style:"font-size:12px"},g);
+  sub.textContent=same?"already shown above":choice?`◆ choice: no way back from ${lost.join(" / ")}`:kids.length>1?`${kids.length} ways, you can come back`:"";
+  g.onmouseenter=()=>{tip.innerHTML=`<b>${title(real(r))}</b><br>Rooms: ${(n.groups[real(r)]?.rooms||[real(r)]).map(title).join(", ")}`+
+   (kids.length?"<br>Ways on: "+kids.map(k=>title(real(k.to))).join(", "):"")+(choice?`<br><b>Choice</b>: no way back from ${lost.join(" / ")}.`:"");tip.style.display="block"};
+  g.onmousemove=e=>{tip.style.left=(e.pageX+14)+"px";tip.style.top=(e.pageY+14)+"px"};
+  g.onmouseleave=()=>tip.style.display="none";
+  g.onclick=()=>zshow(raw,real(r))});
+ document.getElementById("zhead").textContent=`Rooms grouped by region (bosses on their own). ${order.length} stops, one per row; a new colour is a branch. ◆ choice: an irreversible decision. Hover a stop for its rooms, click it for the map.`;
  zshow(raw,root);
 }
+document.getElementById("route-same").onchange=()=>zones(D.routes);
 function zshow(n,room){
  const members=new Set(routeGroupData?.groups[room]?.rooms||[room]);
  zsvg.querySelectorAll(".metro-station").forEach(c=>c.setAttribute("fill",c.getAttribute("data-room")===room?"#5fa8ff":"#fff"));
