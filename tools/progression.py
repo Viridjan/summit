@@ -533,8 +533,7 @@ function zshow(n,room){
  zcx.strokeStyle=col;zcx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
  const info=document.getElementById("zinfo");info.replaceChildren();const head=document.createElement("b");head.textContent=title(room);info.append(head);
  const list=document.createElement("p");list.textContent=[...members].map(title).join(", ");info.append(list);
- const destinations=new Set();
- links.filter(e=>members.has(e.from)&&!members.has(e.to)).forEach(e=>{const target=routeGroupData.groupOf[e.to]||e.to;if(destinations.has(target))return;destinations.add(target);const b=document.createElement("button");b.textContent=e.direction+" → "+title(target);b.style.cssText="display:block;margin:6px 0;padding:6px;cursor:pointer";b.onclick=()=>zshow(n,target);info.append(b)})}
+}
 drawTop();
 zones(D.routes);
 const fromHash=D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)));  // e.g. progression.html#ape+dash
