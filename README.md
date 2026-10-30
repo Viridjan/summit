@@ -25,8 +25,13 @@ Arrows move · C/Space jump · X/Shift dash · Z/V grab · S interact (house doo
 Run, variable jump, coyote time, input buffering, wall jump, wall slide, climb + stamina,
 climb hop, 8-way dash, super/hyper jump, wavedash, super wall jump, corner correction, duck, fast fall.
 
+**Stamina (adventure):** a base of 32 that always regenerates, plus 20 per stamina block; a jump or wall jump costs 5,
+climbing drains it, water drains 40/s. Regeneration: 2/s empty, 9/s at half, 3/s full (`scripts/adventure.gd`).
+A fall of 10+ tiles is a hard landing: stamina to 0 and a 1 s stun (stars over the head; regeneration restarts with the
+second star). F3 shows a stamina recap.
+
 ## Objects
-Spikes (4 dirs), springs (3 dirs), dash crystal, double-dash crystal, star (collectible), jump-through,
+Spikes and springs (one editor entry each: they face away from the wall they're placed on; click again to rotate), dash crystal, double-dash crystal, star (collectible), jump-through,
 crumble block, falling block, zip mover, dream block, green/red bubble, bumper, feather, crystal heart (goal),
 dash / climb ability orbs (adventure only), note (design reminder: "Needs double jump", "Boss arena"…;
 its text shows in the editor, and in game while standing on it), door (drag a rectangle; links to another door by
@@ -36,14 +41,19 @@ Breakable Wall: solid until hit 3 times with the attack (`hp` in the level file)
 
 ## Adventure
 Title screen → Adventure → New Game / Continue. The adventure is one big world of connected rooms (Metroid style):
-walk off a room's edge into the next one. You start without dash and climb; orbs in the world unlock them.
+walk off a room's edge into the next one. You start without dash, climb and attack (ability orbs unlock them; none are
+placed in the story yet). Bosses (the Ape, the Guardian) open their gates when beaten. Rooms are grouped in regions,
+each with a zodiac sign that sets its monsters; moving into a new region plays a fade.
 M shows every room explored so far. Progress saves automatically (`user://save.cfg`, section `[adventure]`).
 The game ships one world, the story (`res://worlds/story/`, chapter 1 in progress, see `docs/STORY_DESIGN.md`); the world editor edits it (cyan lines = door links).
 
 **World editor** (main menu → World Editor, only when run from source because it writes `res://worlds/story/`):
 drag rooms on the grid; where two rooms touch and both have open tiles on the shared edge, that's a passage (green).
-"+ Add empty room" (placed right of the selected room) or "+ Add copy of my level", Edit room (opens the level editor; "World" goes back),
-Playtest from here, Set as start. Files: `res://worlds/story/world.json` (room positions) + one level file per room.
+"+ Add empty room (draft)" (placed right of the selected room) or "+ Add copy of my level", Edit room (or double-click a
+room; Esc goes back and asks to save), Playtest from here, Set as start. **Build drafts** turns draft rooms into
+connected, playable rooms (`tools/story/build_drafts.py`: a maze with one way into each, two shortcuts behind an ability
+gate, generated terrain checked to be crossable; `"attach": [room]` lets a draft open a doorway into a finished room).
+**Place respawns** places the respawn checkpoints and lists the entries where one can't go (see below). Files: `res://worlds/story/world.json` (room positions) + one level file per room.
 Background and ideas for later (doors, gates, map stations, hurt states): `docs/METROID_NOTES.md`.
 
 ## Map and tuning (in-game, also in editor playtests)
@@ -59,7 +69,10 @@ See `docs/ADDING_ENTITIES.md`.
 
 ## Level editor
 LMB paint/place (drag to size blocks; zip mover asks for a target click) · RMB erase ·
-MMB or Space+drag pan · wheel zoom · Ctrl+Z undo · Ctrl+S save · F5 playtest.
+MMB or Space+drag pan · wheel zoom · Ctrl+Z undo · Ctrl+S save · F5 playtest ·
+Shift+drag select an area, Ctrl+X / Ctrl+C cut or copy it, Ctrl+V paste at the mouse (also into another room).
+Editing a world room: yellow arrows outside the edges lead to the touching rooms (click, or Ctrl + arrow key), cyan
+arrows over doors to the rooms they lead to; both ask to save first.
 Levels save as JSON in `user://levels/` (Linux: `~/.local/share/godot/app_userdata/Summit/levels/`).
 
 ## Combat enemies
@@ -69,7 +82,13 @@ Thornmite (wall crawler), Dropwing (ceiling dive), Duskflit (swoop), Ossling (bo
 throw), Hornback (charge), Fuzzbob (bouncing flight), and the big Cragjaw (leaping
 brute) and Murkspore (spore spitter), plus the story jungle's calm Mosstrot (wanders, never chases). Attack with A; bones and orbs can be swatted
 away. Most families come in 2-4 variants (Swift, Armored, Giant, Shielded, Brood,
-Venom); all 32 types are in the editor and on the Monsters page (main menu, or the map's second tab). See [behaviour and placement notes](docs/ENEMIES.md) and the
+Venom); all 32 types are in the editor and on the Monsters page (main menu, or the map's second tab).
+
+**Library monsters** (`scripts/monster_library.gd`, entity `enemy_monster`): built from a move (walk, hop, hover),
+attacks (charge, leap, shoot, lob, dive) and traits (the variants above). An upgrade adds an attack or a trait: once
+upgraded they're 1.25x and amber, twice 1.5x and magenta. `godot --headless --path . --script tools/populate.gd`
+fills each region: 30% of the previous region's monsters as they are, 20% upgraded, 50% the region's own (its zodiac
+sign's); twice-upgraded ones stay in their region. `--dry` previews, `--clear` removes what it placed. See [behaviour and placement notes](docs/ENEMIES.md) and the
 [animated sprite gallery](assets/enemies/preview.html).
 
 ## Tests
@@ -133,9 +152,12 @@ Development-assistant setup and installed skills are documented in [the skills i
 
 ## Respawn checkpoints
 
-Use the room editor's **Respawn** tool on solid terrain. Checkpoints are invisible
-during play; suspended platforms do not count as ground. Nearby entrances can
-share a checkpoint when connected by a short, safe walk.
+One respawn per room entry (doors and other interactables don't get one), invisible in play: walking onto it makes it
+the respawn point; entering a room doesn't. Placement: a side entry gets it 1 tile in from the edge, on the floor under
+the entry's lowest row; a top or bottom entry on its middle column, on the first floor below / above. Where there's no
+floor there, no respawn: an error instead. Place them all with World Editor → **Place respawns** or
+`python3 tools/world_fixups.py --respawns worlds/story`; the room editor's **Respawn** tool places one by hand.
+Nearby entrances can share a checkpoint when connected by a short, safe walk.
 
 Preview redundant-point cleanup with:
 
@@ -149,8 +171,15 @@ merge rules, report files and validation commands.
 
 ## Progression report
 
-[The progression visualization](reports/progression.html) has two independent
-metro graphs: unlock progression and grouped route choices. The route graph
-combines connected rooms by region, retaining boss arenas as choice points.
-Hover a stop to see its rooms. Dashed lines link repeated appearances of the
-**same group**, rather than travel routes. Fit and zoom controls keep it compact.
+`python3 tools/progression.py` (about 2 minutes) writes [the progression page](reports/progression.html), each graph
+with its map on the right:
+
+- **Graph 1 · Unlocks**: a metro map of powers, i.e. abilities picked up and bosses beaten (a boss opens its gates).
+  Abilities with no pickup in the world are checkboxes ("assume"). Click a stop: the map shows what's reachable
+  normally (green), with skill (orange), not as intended (purple) or not at all (red).
+- **Graph 2 · Route choices**: rooms grouped by region (bosses on their own), drawn like a git graph: one stop per
+  row, each branch a new coloured column. **◆ choice** = an irreversible decision: taking one way loses another for
+  good (the Sand Cave's cave-in counts from its entrance). Hover a stop for its rooms; click it for the map (here,
+  ahead, left behind). "Show where a stop appears twice" adds dashed links between the two copies.
+
+`progression.html#ape+dash` opens a given set of powers. The ▶ button opens the web build.
