@@ -476,7 +476,19 @@ function zones(raw){zsvg.innerHTML="";
  const row={},col={},order=[];let ncol=1;
  (function walk(r,c){row[r]=order.length;col[r]=c;order.push(r);
   tree.children[r].forEach((k,i)=>walk(k,i===0?c:ncol++))})(root,0);
- const CX=26,RY=46,X0=18,Y0=22,x=r=>X0+col[r]*CX,y=r=>Y0+row[r]*RY,LX=X0+ncol*CX+10;
+ const showSame=document.getElementById("route-same").checked;  // dashed: the same stop shown twice
+ const same=showSame?tree.links.filter(l=>l.sameStation&&row[l.from]!==undefined&&row[l.to]!==undefined):[];
+ // where each column has a line: from its branch point down to its last stop (rows)
+ const span={};order.forEach(r=>{const c=col[r],top=tree.parent[r]!==undefined&&col[tree.parent[r]]!==c?row[tree.parent[r]]:row[r];
+  span[c]=span[c]?[Math.min(span[c][0],top),Math.max(span[c][1],row[r])]:[top,row[r]]});
+ const busy=(c,rw)=>span[c]&&span[c][0]<=rw&&rw<=span[c][1];
+ // each dashed link gets its own lane: in a gutter left of the lines or right of them (before the names),
+ // whichever crosses fewer lines on its way out and back in
+ const lanes=same.map(l=>{const a=row[l.from],b=row[l.to],ca=col[l.from],cb=col[l.to];let left=0,right=0;
+  for(let c=0;c<ncol;c++){if(c<ca&&busy(c,a))left++;if(c<cb&&busy(c,b))left++;if(c>ca&&busy(c,a))right++;if(c>cb&&busy(c,b))right++}
+  return right<left?"right":"left"});
+ const nl=lanes.filter(v=>v==="left").length,nr=lanes.filter(v=>v==="right").length,LANE=9;
+ const CX=26,RY=46,X0=18+nl*LANE,Y0=22,x=r=>X0+col[r]*CX,y=r=>Y0+row[r]*RY,LX=X0+(ncol-1)*CX+20+nr*LANE;
  zsvg.removeAttribute("viewBox");zsvg.style.width="";zsvg.style.height="";
  zsvg.setAttribute("width",LX+340);zsvg.setAttribute("height",Y0+order.length*RY);
  const colour=r=>LINE_COLORS[col[r]%LINE_COLORS.length];
@@ -485,10 +497,13 @@ function zones(raw){zsvg.innerHTML="";
   const d=px===cx?`M${px},${py} L${cx},${cy}`:`M${px},${py} C${px},${py+RY*.6} ${cx},${py+RY*.1} ${cx},${py+RY*.7} L${cx},${cy}`;
   const e=tree.links.find(l=>l.from===p&&l.to===r),path=el("path",{d,fill:"none",stroke:colour(r),"stroke-width":7,"stroke-linecap":"round"},gl);
   const t=el("title",{},path);t.textContent=`${title(real(p))} → ${(e?.via||[]).map(title).concat([title(real(r))]).join(" → ")}${e?.direction?" ("+e.direction+")":""}`});
- const showSame=document.getElementById("route-same").checked;  // dashed: the same stop shown twice
- if(showSame)tree.links.filter(l=>l.sameStation&&row[l.from]!==undefined&&row[l.to]!==undefined).forEach(l=>{
-  const a=[x(l.from),y(l.from)],b=[x(l.to),y(l.to)],bend=LX-6;
-  el("path",{d:`M${a[0]},${a[1]} C${bend},${a[1]} ${bend},${b[1]} ${b[0]},${b[1]}`,fill:"none",stroke:"#c8c8d0","stroke-width":1.5,"stroke-dasharray":"4 4",opacity:.6},gr)});
+ let li=0,ri=0;
+ same.forEach((l,k)=>{const ax=x(l.from),ay=y(l.from),bx=x(l.to),by=y(l.to),R=6;
+  const lx=lanes[k]==="left"?X0-12-(li++)*LANE:X0+(ncol-1)*CX+14+(ri++)*LANE,dy=by>ay?1:-1,sx=lx<ax?-1:1,tx=lx<bx?-1:1;
+  // out sideways, a rounded corner, along the lane, a rounded corner, back in to the other stop
+  const d=`M${ax},${ay} H${lx-sx*R} Q${lx},${ay} ${lx},${ay+dy*R} V${by-dy*R} Q${lx},${by} ${lx-tx*R},${by} H${bx}`;
+  const path=el("path",{d,fill:"none",stroke:"#c8c8d0","stroke-width":1.8,"stroke-dasharray":"5 4",opacity:.75},gr);
+  const t=el("title",{},path);t.textContent="Same stop: "+title(real(l.to))});
  order.forEach(r=>{const kids=tree.children[r].map(k=>({to:k})),g=el("g",{style:"cursor:pointer"},gs);
   const lost=kids.filter(a=>kids.some(b=>b!==a&&!reach(real(a.to)).has(real(b.to)))).map(a=>title(real(a.to)));
   const choice=lost.length>0,same=!!tree.aliases[r];
