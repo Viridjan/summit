@@ -102,6 +102,15 @@
 			"trigger": 560,
 			"end": 464,
 			"after": "a1_ape_arena:ape_144_120"
+		},
+		{
+			"t": "boss_gate",
+			"id": "early_jungle_barrier",
+			"x": 368,
+			"y": 8,
+			"w": 8,
+			"h": 112,
+			"after": "a1_ape_arena:ape_144_120"
 		}
 	],
 	"vertical_trim": 4

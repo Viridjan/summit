@@ -15,6 +15,7 @@ Clicking a node shows the whole map, each place coloured by how it can be reache
 Breakable walls count as rock until the attack is owned. The models are approximations (tools/world_check.py).
 """
 import json, os, sys
+from pathlib import Path
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -37,7 +38,7 @@ def boss_gates(W):
     for name, (ox, oy, lvl) in W.rooms.items():
         room_boss = next((e["t"][len("boss_"):] for e in lvl["entities"] if e["t"] in ("boss_ape", "boss_guardian")), None)
         for e in lvl["entities"]:
-            if e["t"] != "boss_gate" or e.get("closes_behind"):
+            if e["t"] != "boss_gate" or e.get("closes_behind") or e.get("after"):
                 continue
             b = next((b for b, flag in BOSSES.items() if str(e.get("until", "")).startswith(flag)), None) if e.get("until") else room_boss
             if b:
@@ -47,15 +48,29 @@ def boss_gates(W):
     return out
 
 
+def after_gates(W):
+    out={boss:set() for boss in BOSSES}
+    for name,(ox,oy,level) in W.rooms.items():
+        for e in level['entities']:
+            if e['t']!='boss_gate' or not e.get('after'): continue
+            boss=next((b for b,flag in BOSSES.items() if str(e['after']).startswith(flag)),None)
+            if boss:
+                out[boss].update((ox+int(e['x'])//T+x,oy+int(e['y'])//T+y) for x in range(int(e['w'])//T) for y in range(int(e['h'])//T))
+    return out
+
+
 def blocked(abilities):  # the rock for this set of powers: breakable walls without attack, gates of bosses not beaten
     extra = set() if "attack" in abilities else _WALLS
     for b, cells in _GATES.items():
         if b not in abilities:
             extra = extra | cells
+    for b, cells in _AFTER_GATES.items():
+        if b in abilities: extra = extra | cells
     return _BASE | extra
 
 
 _BASE, _WALLS, _GATES = set(), set(), {}
+_AFTER_GATES = {}
 TIERS = [("g", MODELS["cautious"]), ("o", MODELS["generous"]), ("p", EXPLOIT)]
 
 
@@ -81,14 +96,23 @@ def _pool():
 def _survey_one(job):
     abilities, tier = job
     _W.solid = blocked(abilities)
-    ground, touched = explore(_W, dict(TIERS)[tier], set(abilities), [_W.spawn])
+    starts=[_W.spawn]
+    # Once a boss is beaten, progress continues from that arena, not the now-sealed approach.
+    for boss,flag in BOSSES.items():
+        if boss in abilities:
+            name=flag.split(":")[0]
+            ox,oy,level=_W.rooms[name]
+            markers=[e for e in level['entities'] if e['t'] in ('spawn','respawn')]
+            if markers: starts=[(ox+int(e['x'])//T,oy+int(e['y'])//T) for e in markers]
+    ground, touched = explore(_W, dict(TIERS)[tier], set(abilities), starts)
     return ground, [k for k in touched if k.startswith("ability_") or k.startswith("boss_")]
 
 
 # Explore several ability sets under every model at once; per set: {cell: tier} (best tier wins), pickups per tier.
 def survey_many(W, base_solid, walls, sets):
-    global _W, _BASE, _WALLS, _GATES
+    global _W, _BASE, _WALLS, _GATES, _AFTER_GATES
     _W, _BASE, _WALLS, _GATES = W, base_solid, walls, boss_gates(W)
+    _AFTER_GATES = after_gates(W)
     jobs = [(sorted(ab), tier) for ab in sets for tier, _ in TIERS]
     with _pool() as pool:
         found = list(pool.map(_survey_one, jobs))
@@ -151,8 +175,9 @@ def room_links(W, entrances, found):
 
 
 def zones(W, base_solid, walls, abilities):
-    global _BASE, _WALLS, _GATES
+    global _BASE, _WALLS, _GATES, _AFTER_GATES
     _BASE, _WALLS, _GATES = base_solid, walls, boss_gates(W)
+    _AFTER_GATES = after_gates(W)
     W.solid = blocked(abilities)
     global _W
     _W = W
@@ -225,8 +250,9 @@ def build(world_dir):
     base, walls = set(W.solid), breakwalls(W)
     nodes, order = {}, []
     placed = {t[len("ability_"):] for items in W.items.values() for t, _, _ in items if t.startswith("ability_")}
-    unplaced = [a for a in ABILITIES if a not in placed]  # no pickup in the world yet: dashed "what if" branches
-    todo = [frozenset()]
+    starting = frozenset(json.loads(Path(world_dir, "world.json").read_text()).get("abilities", []))
+    unplaced = [a for a in ABILITIES if a not in placed and a not in starting]  # no pickup in the world yet: dashed "what if" branches
+    todo = [starting]
     while todo:
         level = sorted({ab for ab in todo if ab not in nodes}, key=sorted)  # one level of the graph at a time, in parallel
         todo = []
@@ -256,17 +282,22 @@ def _node(W, base, walls, ab, survey_result, nodes, order, unplaced):
 def route_graph(rooms, nodes):
     """Static route topology, with all modeled gates open; no selected unlock state."""
     links = {(e["from"], e["to"], e["direction"]) for node in nodes for e in node["links"]}
-    return dict(rooms={r["name"]: "g" for r in rooms},
+    requirements = {}
+    for room in rooms:
+        states = [set(node["abilities"]) & BOSSES.keys() for node in nodes if node.get("rooms", {}).get(room["name"]) == "g"]
+        requirements[room["name"]] = sorted(set.intersection(*states)) if states else []
+    return dict(rooms={r["name"]: "g" for r in rooms}, requirements=requirements,
                 links=[dict(zip(("from", "to", "direction"), edge)) for edge in sorted(links)])
 
 
 def page(W, nodes, order):
     room_list = []
     for name, (ox, oy, lvl) in W.rooms.items():
-        room_list.append(dict(name=name, title=lvl.get("name", name), x=ox, y=oy, w=lvl["w"], h=lvl["h"], tiles=lvl["tiles"], bosses=[e["t"][5:] for e in lvl["entities"] if e["t"] in ("boss_ape", "boss_guardian")]))
+        room_list.append(dict(name=name, title=lvl.get("name", name), x=ox, y=oy, w=lvl["w"], h=lvl["h"], tiles=lvl["tiles"], bosses=[e["t"][5:] for e in lvl["entities"] if e["t"] in ("boss_ape", "boss_guardian")],
+                              after_barriers=[boss for boss,flag in BOSSES.items() if any(e["t"]=="boss_gate" and str(e.get("after", "")).startswith(flag) for e in lvl["entities"])]))
     regions = {}
     try:
-        for g in json.load(open(os.path.join(W.dir, "world.json"))).get("regions", []):
+        for g in json.loads(Path(W.dir, "world.json").read_text()).get("regions", []):
             for r in g["rooms"]:
                 regions[r] = g["name"]
     except (OSError, ValueError):
@@ -293,6 +324,8 @@ def page(W, nodes, order):
                               rooms=n["rooms"], marks=marks, choices=n["choices"], skill=n["skill"], opened=opened,
                               unplaced=n["unplaced"], zones=n["zones"], first=n["first"], links=n["links"]))
     data = json.dumps(dict(rooms=room_list, regions=regions, nodes=out_nodes, routes=route_graph(room_list, out_nodes), start=W.room_of.get(W.spawn)))
+    # JSON is embedded inside an HTML script element, not a standalone JSON response.
+    data = data.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     return TEMPLATE.replace("/*DATA*/", data)
 
 
@@ -305,6 +338,8 @@ main{display:grid;grid-template-columns:minmax(300px,2fr) 3fr;gap:16px;padding:1
 @media (max-width:800px){main{grid-template-columns:1fr}}
 h1{font-size:18px;margin:0 0 4px} p{color:var(--dim);margin:0 0 12px}
 .card{background:var(--card);border-radius:8px;padding:12px;overflow:auto}
+#graph{display:block;max-width:none}
+#unlock-viewport{overflow:auto;max-height:78vh;margin-top:6px}
 svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2a2a38;stroke:var(--line)}
 .node.sel rect{stroke:var(--fg);stroke-width:2} .edge{stroke:var(--line);stroke-width:2;fill:none}
 .legend span{display:inline-block;margin-right:12px} .sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
@@ -313,18 +348,71 @@ svg text{fill:var(--fg);font-size:12px} .node{cursor:pointer} .node rect{fill:#2
 #zgraph{display:block;max-width:none}
 .route-controls button{cursor:pointer;padding:5px 10px}
 canvas{image-rendering:pixelated;width:100%;height:auto;background:#0d0d12;border-radius:4px}
+#unlock-path{margin-top:12px;padding:10px;background:#16161c;border-radius:5px;line-height:1.6}
+#unlock-path ol{margin:6px 0 0;padding-left:24px}
+#unlock-path .chosen{color:#5fa8ff;font-weight:600}
 #info{margin-top:8px;color:var(--dim)} #info b{color:var(--fg)}
-</style></head><body><main>
-<section class="card"><h1>Graph 1 · Unlocks <a href="https://viridjan.github.io/summit/" target="_blank" rel="noopener" style="float:right;font-size:13px;font-weight:600;color:#fff;background:#2f7fe0;border-radius:6px;padding:4px 10px;text-decoration:none">▶ Play the game</a></h1><p>Bosses beaten and powerups collected determine all accessible rooms. Both branches after a gate count as accessible, regardless of which route you take. Select a state to inspect its accessible rooms. This graph has its own selection and map.</p><div id="assume" style="margin:-4px 0 10px;color:var(--fg)"><span style="color:var(--dim)">Assume (no pickup in the world yet): </span></div><svg id="graph"></svg></section>
-<section class="card"><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div>
-<canvas id="map"></canvas><div id="info"></div></section>
-<section class="card" id="route-card"><h1>Graph 2 · Route choices</h1><p id="zhead"></p><label style="color:var(--dim);font-size:13px;cursor:pointer"><input type="checkbox" id="route-same"> show where a stop appears twice</label><div id="route-viewport"><svg id="zgraph"></svg></div></section>
-<section class="card" id="route-map"><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div>
-<canvas id="zmap"></canvas><div id="zinfo"></div></section></main>
+
+[hidden]{display:none!important}
+*{box-sizing:border-box}
+.page-header{max-width:1700px;margin:auto;padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.page-header h1{font-size:19px;margin:0}
+.page-header nav{display:flex;background:var(--card);padding:4px;border-radius:8px;gap:4px}
+.page-header button{border:0;background:transparent;color:var(--dim);padding:9px 18px;cursor:pointer;border-radius:5px;font:inherit}
+.page-header button[aria-selected="true"]{background:#3565b7;color:white}
+.play-link{color:var(--dim);text-decoration:none}
+main{max-width:1700px;margin:0 auto;display:grid;grid-template-columns:minmax(310px,32%) minmax(0,1fr);gap:16px;padding:0 20px 20px}
+.card{min-width:0;overflow:hidden;padding:14px}
+.graph-pane,.map-pane{height:calc(100vh - 100px);min-height:380px}
+.graph-pane{display:flex;flex-direction:column}
+.pane-head,.map-toolbar{display:flex;align-items:center;gap:10px;min-height:28px}
+h2{font-size:16px;margin:0}
+.count{color:var(--dim);font-size:12px;margin-left:auto}
+.hint{color:var(--dim);cursor:help}
+.unlock-filters{font-size:12px;margin:8px 0!important;gap:12px!important}
+.unlock-filters label,.same-toggle{cursor:pointer;color:var(--dim)}
+.same-toggle{font-size:12px;margin:8px 0}
+#unlock-viewport,#route-viewport{flex:1;min-height:0;max-height:none;overflow:auto;margin-top:8px}
+.map-pane{display:flex;flex-direction:column;overflow:auto}
+#route-map{position:static;align-self:auto}
+.map-toolbar{position:relative;justify-content:space-between;flex:none}
+.map-toolbar h2{max-width:85%;font-weight:500;overflow-wrap:anywhere}
+.legend-pop{font-size:12px;position:relative}
+.legend-pop summary{cursor:pointer;color:var(--dim);padding:5px 8px;list-style:none}
+.legend-pop[open]{z-index:5}
+.legend-pop[open]>:not(summary){background:#15151d;padding:10px;display:block;position:relative;min-width:220px}
+.legend-pop[open]{position:absolute;right:0;top:0;background:#15151d;border:1px solid #41414f;border-radius:6px;max-width:300px;box-shadow:0 8px 24px #0008}
+.legend-pop .legend span{display:block;margin:5px 0}
+#upgrade-legend{display:flex!important;flex-direction:column;gap:5px!important;margin:0!important}
+.map-frame{flex:1;min-height:260px;max-height:65vh;display:flex;align-items:center;justify-content:center;background:#0d0d12;border-radius:6px;margin-top:12px;overflow:hidden}
+.map-frame canvas{display:block;width:100%;height:100%;object-fit:contain;max-height:65vh}
+.map-details{flex:none;display:flex;gap:18px;flex-wrap:wrap;margin-top:12px}
+.map-details details{width:100%;color:var(--dim)}
+.map-details summary{cursor:pointer;font-size:12px;padding:4px 0}
+.map-details details:not([open]){width:auto}
+.selection-status{font-size:12px;color:#f0b65c;min-height:0;margin-top:8px}
+.selection-status:empty{display:none}
+#unlock-path{margin:0;padding:8px;background:transparent;font-size:12px}
+#info,#zinfo{font-size:12px;line-height:1.6}
+@media(max-width:850px){.page-header{padding:12px;flex-wrap:wrap;gap:8px}.page-header h1{font-size:16px}.page-header button{padding:8px 12px}main{padding:0 12px 12px;grid-template-columns:1fr}.map-pane{grid-row:1;height:auto;min-height:360px}.map-frame{height:38vh;flex:none;min-height:210px}.graph-pane{height:55vh;min-height:300px}.play-link{display:none}}
+</style></head><body>
+<header class="page-header"><h1>World explorer</h1><nav role="tablist" aria-label="Visualization"><button id="tab-unlocks" role="tab" aria-controls="unlock-map" aria-selected="true" data-view="unlocks">Progression</button><button id="tab-routes" role="tab" aria-controls="route-map" aria-selected="false" data-view="routes" tabindex="-1">Route choices</button></nav><a class="play-link" href="https://viridjan.github.io/summit/" target="_blank" rel="noopener">Play ↗</a></header>
+<main>
+<section class="card graph-pane view-unlocks" id="unlock-graph" aria-label="Progression graph"><header class="pane-head"><h2>Conditions</h2><span id="unlock-filter-status" class="count" role="status" aria-live="polite"></span><span class="hint" tabindex="0" title="Click a later step to move forward while keeping the route where possible. Click an earlier step once to reroute through it without moving the map, then click it again to show that state. Incoming paths preserve acquisition order. Blue is the map state; amber is the pending step.">ⓘ</span></header>
+<div class="unlock-filters" style="display:flex;flex-wrap:wrap;gap:12px;margin:10px 0"><label title="Collapse conditions with no pickup placed. Preserve boss conditions reached after those hidden steps."><input type="checkbox" role="switch" id="hide-unplaced"> Unplaced</label><label title="Hide unavailable actions while collapsing unplaced prerequisites, preserving valid Ape and Guardian progression."><input type="checkbox" role="switch" id="hide-unavailable"> Unavailable</label></div>
+<div id="unlock-viewport"><svg id="graph" aria-label="Upgrade progression"></svg></div></section>
+<section class="card map-pane view-unlocks" id="unlock-map" role="tabpanel" aria-labelledby="tab-unlocks"><header class="map-toolbar"><h2 id="map-selection">Start</h2><details class="legend-pop"><summary>Key</summary><div class="legend"><span><i class="sw" style="background:var(--g)"></i>normal</span><span><i class="sw" style="background:var(--o)"></i>with skill</span><span><i class="sw" style="background:var(--p)"></i>not intended</span><span><i class="sw" style="background:var(--r)"></i>unreachable</span></div><div id="upgrade-legend"></div><small>Dim paths: unplaced pickups. Blue station: map state. Amber: pending step.</small></details></header>
+<div class="map-frame"><canvas id="map" aria-label="Progression reachability map"></canvas></div>
+<div id="interaction-status" class="selection-status" role="status" aria-live="polite"></div>
+<div class="map-details"><details><summary>Route</summary><div id="unlock-path" role="status" aria-live="polite"></div></details><details><summary>Rooms</summary><div id="info"></div></details></div></section>
+<section class="card graph-pane view-routes" id="route-card" aria-label="Route graph"><header class="pane-head"><h2>Regions</h2><span id="zhead" class="hint" tabindex="0">ⓘ</span></header><label class="same-toggle" title="Dashed connectors identify the same group appearing on two branches; they are not travel routes."><input type="checkbox" id="route-same"> Same stops</label><div id="route-viewport"><svg id="zgraph" aria-label="Grouped route choices"></svg></div></section>
+<section class="card map-pane view-routes" id="route-map" role="tabpanel" aria-labelledby="tab-routes"><header class="map-toolbar"><h2 id="route-selection">World routes</h2><details class="legend-pop"><summary>Key</summary><div class="legend"><span><i class="sw" style="background:#5fa8ff"></i>selected room</span><span><i class="sw" style="background:var(--g)"></i>reachable from here</span><span><i class="sw" style="background:var(--r)"></i>no return route</span><span><i class="sw" style="background:#44444f"></i>not reached</span></div><small>Solid metro lines: paths. Optional dashed connectors: identical groups.</small></details></header><div class="map-frame"><canvas id="zmap" aria-label="Route map"></canvas></div><div class="map-details"><details><summary>Rooms</summary><div id="zinfo"></div></details></div></section>
+</main>
 <script>
 const D=/*DATA*/;
 const C={g:"#3fbf5f",o:"#f0a030",p:"#b060e0",r:"#c04040"};
 const svg=document.getElementById("graph"),NS="http://www.w3.org/2000/svg";
+function escapeHtml(value){const span=document.createElement('span');span.textContent=String(value);return span.innerHTML}
 function el(t,a,p){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
 const LINE_COLORS=["#e8443a","#2f7fe0","#2fb35a","#f29b1d","#9b59d0","#17b3b0","#c0632d","#e05a9d","#7a8a99","#c8b400"];
 const tip=document.createElement("div");tip.style.cssText="position:absolute;display:none;max-width:320px;background:#0d0d12;border:1px solid #555566;border-radius:6px;padding:8px 10px;font-size:13px;line-height:1.4;pointer-events:none;z-index:9";document.body.appendChild(tip);
@@ -335,19 +423,32 @@ function metro(sv,N,first,o){sv.innerHTML="";const boxes={};
  const routes=[],walk=(i,path)=>{path=path.concat([i]);if(!N[i].kids.length)routes.push(path);else N[i].kids.forEach(j=>walk(j,path))};walk(first,[]);
  const at={};routes.forEach((r,li)=>r.forEach(i=>{(at[i]=at[i]||[]);if(!at[i].includes(li))at[i].push(li)}));
  const order=Object.keys(at).map(Number).sort((a,b)=>N[a].depth-N[b].depth||at[a][0]-at[b][0]),rank={};order.forEach((i,k)=>rank[i]=k);
- const CX=34,RY=58,X0=30,Y0=30,col=li=>X0+li*CX,row=i=>Y0+rank[i]*RY,LX=col(routes.length-1)+28;
+ const CX=o.columnGap||34,RY=58,X0=30,Y0=30,col=li=>X0+li*CX,row=i=>Y0+rank[i]*RY,LX=col(routes.length-1)+28;
  sv.setAttribute("width",LX+260);sv.setAttribute("height",Y0+order.length*RY+10);
  const lines=el("g",{},sv),links=el("g",{},sv),stops=el("g",{},sv),labels=el("g",{},sv);
  routes.forEach((r,li)=>{const c=LINE_COLORS[li%LINE_COLORS.length],x=col(li);
-  for(let k=0;k<r.length-1;k++)el("line",{x1:x,y1:row(r[k]),x2:x,y2:row(r[k+1]),stroke:c,"stroke-width":9,"stroke-linecap":"round",opacity:o.faded&&o.faded(r[k],r[k+1])?0.3:1},lines);
-  const t=el("text",{x:x,y:row(r[r.length-1])+24,"text-anchor":"middle",style:`fill:${c};font-size:11px;font-weight:600`},labels);t.textContent=li+1});
+  const group=el("g",{class:"unlock-line","data-line":li},lines);
+  const choose=step=>{o.click(r[step]);if(o.route)o.route(li,r,step)};
+  for(let k=0;k<r.length-1;k++){
+   const segment=el("line",{class:"unlock-segment","data-line":li,"data-step":k+1,x1:x,y1:row(r[k]),x2:x,y2:row(r[k+1]),stroke:c,"stroke-width":9,"stroke-linecap":"round",opacity:o.faded&&o.faded(r[k],r[k+1])?0.3:1,style:"cursor:pointer"},group);
+   const hint=el("title",{},segment);hint.textContent=`Line ${li+1}: ${o.transition?o.transition(r[k],r[k+1]):o.label(r[k+1])}`;
+   segment.onclick=()=>choose(k+1);
+  }
+  const t=el("text",{x:x,y:row(r[r.length-1])+24,"text-anchor":"middle",role:"button",tabindex:0,style:`fill:${c};font-size:11px;font-weight:600;cursor:pointer`},labels);t.textContent=li+1;
+  t.onclick=()=>choose(r.length-1);t.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(r.length-1)}};
+  const hint=el("title",{},t);hint.textContent='Select line '+(li+1)+' to see its full progression order';
+ });
  const occupied=(y,li)=>routes[li].some(i=>row(i)==y);
  order.forEach(i=>{const ls=at[i].slice().sort((a,b)=>a-b),y=row(i),choice=N[i].kids.length>1;
   for(let a=0;a<ls.length-1;a++){const l1=ls[a],l2=ls[a+1],x1=col(l1),x2=col(l2);
    let blocked=false;for(let k=l1+1;k<l2;k++)if(occupied(y,k))blocked=true;
    el("path",{d:blocked?`M${x1},${y} C${x1},${y-34} ${x2},${y-34} ${x2},${y}`:`M${x1},${y} L${x2},${y}`,stroke:"#d8d8e0","stroke-width":2.5,"stroke-dasharray":"5 4",fill:"none"},links)}
   const g=el("g",{style:"cursor:pointer"},stops);boxes[i]=g;
-  ls.forEach(li=>el("circle",{cx:col(li),cy:y,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":LINE_COLORS[li%LINE_COLORS.length],"stroke-width":choice?4:3},g));
+  ls.forEach(li=>{
+   const circle=el("circle",{class:"unlock-station","data-line":li,cx:col(li),cy:y,r:choice?9:7,fill:"#fff",stroke:choice?"#16161c":LINE_COLORS[li%LINE_COLORS.length],"stroke-width":choice?4:3,role:"button",tabindex:0,"aria-label":`Line ${li+1}: ${o.label(i)}`},g);
+   const choose=()=>{o.click(i);if(o.route)o.route(li,routes[li],routes[li].indexOf(i))};
+   circle.onclick=e=>{e.stopPropagation();choose()};circle.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose()}};
+  });
   el("line",{x1:col(ls[ls.length-1])+10,y1:y,x2:LX-6,y2:y,stroke:"#3a3a48","stroke-width":1},links);
   const t=el("text",{x:LX,y:y+4,style:"font-size:12px"},labels);t.textContent=o.label(i)+(choice && o.choices!==false?"  ◆ choice":"");
   g.onmouseenter=()=>{tip.innerHTML=o.tip(i);tip.style.display="block"};
@@ -360,29 +461,142 @@ const mark=(boxes,i)=>{Object.values(boxes).forEach(b=>b.querySelectorAll("circl
 const AN=D.nodes.map(n=>({kids:D.nodes.map((q,k)=>q.parents.includes(n.id)?k:-1).filter(k=>k>=0),depth:n.depth}));
 const BOSS={ape:"the Ape",guardian:"the Guardian"},nm=a=>BOSS[a]?BOSS[a].replace("the ","")+" beaten":a,act=a=>BOSS[a]?"beat "+BOSS[a]:"pick up "+a;
 const greenOf=n=>Object.values(n.rooms).filter(v=>v=="g").length;
-const gainOf=(a,b)=>D.nodes[b].abilities.filter(x=>!D.nodes[a].abilities.includes(x));
-function atip(i){const n=D.nodes[i],k=AN[i].kids;
- let s=`<b>${n.id=="start"?"Start: no abilities":"With "+n.abilities.map(nm).join(" + ")}</b><br>${greenOf(n)}/${D.rooms.length} rooms reachable normally.`;
+let unlockHiddenPowers=new Set();
+const gainOf=(a,b)=>D.nodes[b].abilities.filter(x=>!unlockHiddenPowers.has(x)&&!D.nodes[a].abilities.includes(x));
+function atip(i){const n=D.nodes[i],k=activeUnlockGraph?(activeUnlockGraph.children[String(i)]||[]).map(Number):AN[i].kids;
+ let s=`<b>${n.id=="start"?"Start: no abilities":"With "+n.abilities.filter(p=>!unlockHiddenPowers.has(p)).map(nm).join(" + ")}</b><br>${greenOf(n)}/${D.rooms.length} rooms reachable normally.`;
  if(k.length)s+=`<br>${k.length>1?"<b>Choice</b>: ":"Next: "}`+k.map(j=>{const g=gainOf(i,j)[0],d=greenOf(D.nodes[j])-greenOf(n);
   return `<b>${act(g)}</b> (${d>0?"+"+d+" rooms":"no new rooms"}${n.unplaced.includes(g)?", no pickup placed yet":""})`}).join(k.length>1?" or ":"");
  else s+="<br>All abilities.";return s}
-// abilities with no pickup in the world can't be a real choice yet: they're assumed with the checkboxes, and the
-// lines show only real choices (placed pickups, bosses) on top of them
-const FREE=D.nodes[0].unplaced,ASSUME=new Set();
-const part=n=>n.abilities.filter(a=>FREE.includes(a)).sort().join("+");
-let boxes={},shown=[];
-function drawTop(){const want=[...ASSUME].sort().join("+");
- shown=D.nodes.map((n,k)=>k).filter(k=>part(D.nodes[k])==want);
- const N=D.nodes.map((n,k)=>({kids:AN[k].kids.filter(j=>shown.includes(j)),depth:n.abilities.filter(a=>!FREE.includes(a)).length}));
- const first=shown.find(k=>N[k].depth==0);
- [boxes]=metro(svg,N,first,{choices:false,label:i=>{const n=D.nodes[i],real=n.abilities.filter(a=>!FREE.includes(a));
-   return (real.length?real.map(nm).join(" + "):"start")+" · "+greenOf(n)+" rooms"},tip:atip,click:i=>show(D.nodes[i])});
- show(D.nodes[first])}
-const box=document.getElementById("assume");
-FREE.forEach(a=>{const l=document.createElement("label");l.style.cssText="margin-right:12px;cursor:pointer";
- const c=document.createElement("input");c.type="checkbox";c.checked=false;c.onchange=()=>{c.checked?ASSUME.add(a):ASSUME.delete(a);drawTop()};
- l.append(c," "+a);box.append(l)});
-if(!FREE.length)box.style.display="none";
+function unlockSteps(nodes,path,hidden=[]){
+ return path.slice(1).map((node,i)=>nodes[node].abilities.find(power=>!hidden.includes(power)&&!nodes[path[i]].abilities.includes(power)));
+}
+function showUnlockPath(line,path,step,heading="Line"){
+ svg.querySelectorAll('.unlock-line,.unlock-station').forEach(e=>e.setAttribute('opacity',Number(e.dataset.line)===line?1:.2));
+ const panel=document.getElementById('unlock-path');panel.replaceChildren();
+ const head=document.createElement('b'),steps=unlockSteps(D.nodes,path,[...unlockHiddenPowers]),action=step?act(steps[step-1]):'start with '+(D.nodes[path[0]].abilities.filter(p=>!unlockHiddenPowers.has(p)).map(nm).join(' + ')||'no abilities');
+ head.textContent=(heading?`${heading} ${line+1} · `:"")+`Choice made: ${action}`;head.style.color=LINE_COLORS[line%LINE_COLORS.length];panel.append(head);
+ const list=document.createElement('ol');
+ steps.forEach((power,i)=>{const item=document.createElement('li');item.textContent=act(power)+(D.nodes[path[i]].unplaced.includes(power)?' (pickup not placed yet)':'');
+  if(i===step-1)item.className='chosen';if(i>=step)item.style.opacity='.45';list.append(item)});
+ panel.append(list);
+}
+// Show every ability/boss state, like the original metro chart. Unplaced pickups are explicit hypothetical segments.
+let boxes={};
+function mergedUnlocks(nodes){
+ const byKey={},canonical={},names=[],parents={},children={},links=[],seen=new Set();
+ nodes.forEach((n,i)=>{const key=n.abilities.slice().sort().join('+');if(byKey[key]===undefined){byKey[key]=String(i);names.push(String(i))}canonical[i]=byKey[key]});
+ names.forEach(id=>{parents[id]=[];children[id]=[]});
+ nodes.forEach((n,i)=>n.parents.forEach(id=>{const index=nodes.findIndex(q=>q.id===id);if(index<0)return;
+  const from=canonical[index],to=canonical[i],key=from+'|'+to;
+  if(from===to||seen.has(key))return;seen.add(key);links.push({from,to});parents[to].push(from);children[from].push(to);
+ }));
+ return {names,parents,children,links,canonical};
+}
+function filteredUnlocks(nodes,hideUnplaced=false,hideUnavailable=false){
+ const collapseUnplaced=hideUnplaced||hideUnavailable;
+ const missing=new Set(nodes.flatMap(n=>n.unplaced||[])),byKey={},canonical={},names=[],display={},parents={},children={},links=[],seen=new Set();
+ nodes.forEach((node,i)=>{const visible=node.abilities.filter(p=>!collapseUnplaced||!missing.has(p)),key=visible.slice().sort().join('+');
+  if(byKey[key]===undefined){byKey[key]=String(i);names.push(String(i));display[i]=visible;parents[i]=[];children[i]=[]}canonical[i]=byKey[key];
+ });
+ nodes.forEach((node,i)=>node.parents.forEach(id=>{const index=nodes.findIndex(n=>n.id===id);if(index<0)return;
+  const before=nodes[index],added=node.abilities.filter(p=>!before.abilities.includes(p));
+  if(hideUnavailable&&added.some(p=>!(collapseUnplaced&&missing.has(p))&&!(before.choices||[]).includes(p)))return;
+  const from=canonical[index],to=canonical[i],key=from+'|'+to;
+  if(from===to||seen.has(key))return;seen.add(key);links.push({from,to});
+ }));
+ const root=canonical[nodes.findIndex(n=>!n.parents.length)],reached=new Set([root]),todo=[root];
+ while(todo.length){const from=todo.pop();links.filter(e=>e.from===from).forEach(e=>{if(!reached.has(e.to)){reached.add(e.to);todo.push(e.to)}})}
+ const keptLinks=links.filter(e=>reached.has(e.from)&&reached.has(e.to));
+ keptLinks.forEach(e=>{parents[e.to].push(e.from);children[e.from].push(e.to)});
+ return {names:names.filter(id=>reached.has(id)),parents,children,links:keptLinks,canonical,display};
+}
+function planUnlockRoute(graph,route,target,via){
+ target=Number(target);const root=Number(graph.names.find(id=>!graph.parents[id].length));
+ const path=(from,to)=>{from=Number(from);to=Number(to);const todo=[[from]],seen=new Set([from]);
+  for(let i=0;i<todo.length;i++){const current=todo[i],last=current[current.length-1];if(last===to)return current;
+   for(const child of graph.children[String(last)]||[]){const next=Number(child);if(!seen.has(next)){seen.add(next);todo.push(current.concat([next]))}}
+  }return null;
+ };
+ const waypoint=via===undefined?target:Number(via),old=route.length?route:[root];
+ let prefix=null;
+ for(let i=old.length-1;i>=0;i--){const tail=path(old[i],waypoint);if(tail){prefix=old.slice(0,i+1).concat(tail.slice(1));break}}
+ if(!prefix)prefix=path(root,waypoint)||[root];
+ if(via!==undefined&&prefix[prefix.length-1]!==target){const tail=path(waypoint,target);if(tail)prefix=prefix.concat(tail.slice(1))}
+ const end=old[old.length-1];let result=prefix,current=result[result.length-1];
+ if(path(current,end))for(const stop of old){const tail=path(current,stop);if(tail&&path(stop,end)){result=result.concat(tail.slice(1));current=stop}}
+ return result;
+}
+function selectUnlockStep(graph,route,mapState,pending,target,via){
+ target=Number(target);const nextRoute=planUnlockRoute(graph,route,target,via);
+ const previous=graph.display[String(target)].length<graph.display[String(mapState)].length;
+ const waiting=previous&&(pending===null||Number(pending)!==target);
+ return {route:nextRoute,mapState:waiting?Number(mapState):target,pending:waiting?target:null,mapChanged:!waiting};
+}
+let unlockSelectedPath=[],activeUnlockGraph,unlockMapState=0,unlockPendingStep=null;
+function drawTop(){
+ svg.innerHTML='';boxes={};unlockSelectedPath=[];
+ const hideUnplaced=document.getElementById('hide-unplaced').checked,hideUnavailable=document.getElementById('hide-unavailable').checked;
+ unlockHiddenPowers=new Set((hideUnplaced||hideUnavailable)?D.nodes.flatMap(n=>n.unplaced):[]);
+ const graph=filteredUnlocks(D.nodes,hideUnplaced,hideUnavailable),root=graph.canonical[String(D.nodes.findIndex(n=>!n.parents.length))];
+ activeUnlockGraph=graph;
+ const allStates=mergedUnlocks(D.nodes).names.length;
+ const filterStatus=document.getElementById('unlock-filter-status');filterStatus.textContent=`${graph.names.length} / ${allStates}`;
+ filterStatus.title=(hideUnplaced||hideUnavailable)?'Unplaced prerequisites are collapsed; reachable Ape and Guardian conditions remain visible.':'Visible upgrade states / total states';
+ const powers=[...new Set(D.nodes.flatMap(n=>n.abilities))],colorOf=power=>LINE_COLORS[Math.max(0,powers.indexOf(power))%LINE_COLORS.length];
+ const legend=document.getElementById('upgrade-legend');legend.replaceChildren();
+ powers.filter(power=>graph.links.some(e=>gainOf(Number(e.from),Number(e.to)).includes(power))).forEach(power=>{const label=document.createElement('span');label.style.color=colorOf(power);label.textContent='● '+act(power);legend.append(label)});
+ const layers={},pos={},order=[];
+ graph.names.forEach(id=>{const depth=graph.display[id].length;(layers[depth]??=[]).push(id)});
+ const maxLayer=Math.max(1,...Object.values(layers).map(a=>a.length));
+ Object.keys(layers).map(Number).sort((a,b)=>a-b).forEach(depth=>{
+  const members=layers[depth];
+  const average=id=>graph.parents[id].length?graph.parents[id].reduce((sum,p)=>sum+(pos[p]?.x||0),0)/graph.parents[id].length:0;
+  members.sort((a,b)=>average(a)-average(b)||Number(a)-Number(b));
+  members.forEach((id,index)=>{pos[id]={x:28+((maxLayer-members.length)/2+index)*36,y:26+order.length*62};order.push(id)});
+ });
+ const LX=28+maxLayer*36+24;
+ svg.removeAttribute('viewBox');svg.setAttribute('width',LX+430);svg.setAttribute('height',order.length*62+35);
+ const gl=el('g',{},svg),gs=el('g',{},svg);
+ const choose=(id,parent)=>{
+  const selection=selectUnlockStep(graph,unlockSelectedPath,unlockMapState,unlockPendingStep,id,parent);
+  unlockSelectedPath=selection.route;unlockMapState=selection.mapState;unlockPendingStep=selection.pending;
+  const path=unlockSelectedPath,selected=path.indexOf(Number(id));
+  if(selection.mapChanged)show(D.nodes[unlockMapState]);
+  const steps=unlockSteps(D.nodes,path,[...unlockHiddenPowers]),last=steps[Math.max(0,selected-1)];
+  showUnlockPath(Math.max(0,powers.indexOf(last)),path,Math.max(0,selected),'');
+  const pairs=new Set(path.slice(1).map((to,i)=>path[i]+'|'+to));
+  svg.querySelectorAll('.unlock-segment').forEach(e=>e.setAttribute('opacity',pairs.has(e.dataset.from+'|'+e.dataset.to)?1:.2));
+  gs.querySelectorAll('circle').forEach(e=>{const stop=Number(e.dataset.stop);e.setAttribute('fill',stop===unlockMapState?'#5fa8ff':stop===unlockPendingStep?'#f0a030':'#fff');e.setAttribute('opacity',path.includes(stop)||stop===unlockMapState?1:.45)});
+  const status=document.getElementById('interaction-status');if(status)status.textContent=unlockPendingStep!==null?'Route updated. Click the same step again to show it on the map.':'';
+  const panel=document.getElementById('unlock-path');
+  if(graph.parents[id].length>1){const hint=document.createElement('p');hint.textContent='Same upgrades, different orders. Choose an arrival:';panel.append(hint);
+   graph.parents[id].forEach(from=>{const button=document.createElement('button');button.textContent=act(gainOf(Number(from),Number(id))[0])+' after '+(D.nodes[Number(from)].abilities.map(nm).join(' + ')||'start');button.style.cssText='display:block;margin:4px 0';button.onclick=()=>choose(id,from);panel.append(button)});
+  }
+ };
+ graph.links.forEach(e=>{const a=pos[e.from],b=pos[e.to],power=gainOf(Number(e.from),Number(e.to))[0],hypothetical=D.nodes[Number(e.from)].unplaced.includes(power);
+  const middle=a.y+Math.min(18,(b.y-a.y)/3),d=`M${a.x},${a.y} V${middle} C${a.x},${middle+10} ${b.x},${middle+10} ${b.x},${middle+24} V${b.y}`;
+  const path=el('path',{class:'unlock-line unlock-segment','data-from':e.from,'data-to':e.to,d,fill:'none',stroke:colorOf(power),'stroke-width':6,'stroke-linecap':'round',opacity:hypothetical?.35:1,style:'cursor:pointer'},gl);
+  el('title',{},path).textContent=act(power)+' → '+D.nodes[Number(e.to)].abilities.map(nm).join(' + ');path.onclick=()=>choose(e.to,e.from);
+ });
+ order.forEach(id=>{const n=D.nodes[Number(id)],point=pos[id],merges=graph.parents[id].length>1,splits=graph.children[id].length>1;
+  const label=(id===root?'Start · ':'')+(graph.display[id].length?graph.display[id].map(nm).join(' + '):'no abilities');
+  const g=el('g',{class:'unlock-stop','data-node':id,role:'button',tabindex:0,'aria-label':label,style:'cursor:pointer'},gs);boxes[id]=g;
+  el('line',{x1:point.x+10,y1:point.y,x2:LX-6,y2:point.y,stroke:'#34343f','stroke-width':1},g);
+  el('circle',{class:'unlock-station','data-stop':id,cx:point.x,cy:point.y,r:merges||splits?8:6,fill:'#fff',stroke:merges?'#5fa8ff':'#16161c','stroke-width':merges||splits?4:3},g);
+  el('text',{x:LX,y:point.y+1,style:'font-size:14px;font-weight:600'},g).textContent=label.length>32?label.slice(0,31)+'…':label;
+  el('text',{x:LX,y:point.y+19,style:'font-size:11px;fill:#9a9aaa'},g).textContent=greenOf(n)+' rooms'+(merges?' · '+graph.parents[id].length+' arrivals':'')+(splits?' · '+graph.children[id].length+' next':'');
+  g.onclick=()=>choose(id);g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();choose(id)}};
+  g.onmouseenter=()=>{tip.innerHTML=atip(Number(id));tip.style.display='block'};g.onmousemove=e=>{tip.style.left=(e.pageX+14)+'px';tip.style.top=(e.pageY+14)+'px'};g.onmouseleave=()=>tip.style.display='none';
+ });
+ const bounds=svg.getBBox();svg.setAttribute('width',Math.ceil(bounds.x+bounds.width+20));
+ unlockMapState=Number(root);unlockPendingStep=null;unlockSelectedPath=[Number(root)];
+ show(D.nodes[Number(root)]);
+ const status=document.getElementById('interaction-status');if(status)status.textContent='';
+ document.getElementById('unlock-path').replaceChildren();
+}
+document.getElementById('hide-unplaced').onchange=drawTop;
+document.getElementById('hide-unavailable').onchange=drawTop;
 const cv=document.getElementById("map"),cx=cv.getContext("2d");
 let minx=1e9,miny=1e9,maxx=-1e9,maxy=-1e9;D.rooms.forEach(r=>{minx=Math.min(minx,r.x);miny=Math.min(miny,r.y);maxx=Math.max(maxx,r.x+r.w);maxy=Math.max(maxy,r.y+r.h)});
 const S=3;cv.width=(maxx-minx)*S;cv.height=(maxy-miny)*S;
@@ -394,8 +608,15 @@ function show(n){mark(boxes,D.nodes.indexOf(n));
    const k=m[y*r.w+x];if(k!="."){cx.fillStyle=C[k];cx.fillRect(ox+x*S,oy+y*S,S,S)}}
   cx.strokeStyle=C[tier];cx.lineWidth=1;cx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
  const by={g:[],o:[],p:[],r:[]};D.rooms.forEach(r=>by[n.rooms[r.name]||"r"].push(r.title));
- document.getElementById("info").innerHTML=`<b>${n.id}</b> &middot; available bosses / powerups: ${n.choices.map(act).join(", ")||"none"}${n.skill.length?" &middot; only with skill: "+n.skill.join(", "):""}<br>`+
-  ["g","o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{g:"accessible rooms",o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].join(", ")}`:"").filter(Boolean).join("<br>")}
+ const index=D.nodes.indexOf(n),visible=activeUnlockGraph?.display[String(index)]||n.abilities;
+ const options=activeUnlockGraph?(activeUnlockGraph.children[String(index)]||[]).flatMap(to=>gainOf(index,Number(to))):n.choices;
+ const hidden=n.abilities.filter(p=>unlockHiddenPowers.has(p));
+ const summary=visible.length?visible.map(nm).join(' + '):'Start';
+ document.getElementById("map-selection").textContent=summary;
+ document.getElementById("info").innerHTML=`<b>${escapeHtml(summary)}</b> &middot; available bosses / powerups: ${[...new Set(options)].map(act).map(escapeHtml).join(", ")||"none"}`+
+  (hidden.length?`<br>Underlying reachability assumes hidden upgrades: ${hidden.map(escapeHtml).join(", ")}`:"")+"<br>"+
+  ["g","o","p","r"].map(k=>by[k].length?`<span style="color:${C[k]}">${{g:"accessible rooms",o:"with skill",p:"not intended",r:"unreachable"}[k]}:</span> ${by[k].map(escapeHtml).join(", ")}`:"").filter(Boolean).join("<br>")}
+
 const zsvg=document.getElementById("zgraph"),zcv=document.getElementById("zmap"),zcx=zcv.getContext("2d");zcv.width=cv.width;zcv.height=cv.height;
 let routeGroupData;
 const title=n=>routeGroupData?.groups[n]?.title||(D.rooms.find(r=>r.name==n)||{title:n}).title;
@@ -425,17 +646,29 @@ function routeTree(names,links,start,choiceRooms=[]){
 }
 function groupRoutes(roomData,regions,n,start){
  const names=Object.keys(n.rooms),bosses=new Set(roomData.filter(r=>r.bosses?.length).map(r=>r.name));
+ const required=r=>n.requirements?.[r]||[],signature=r=>required(r).join(',');
  const groupOf={},groups={},neighbors=Object.fromEntries(names.map(r=>[r,[]]));
  n.links.forEach(e=>{if(neighbors[e.from]&&neighbors[e.to]){neighbors[e.from].push(e.to);neighbors[e.to].push(e.from)}});
  names.forEach(seed=>{if(groupOf[seed])return;const id='group:'+seed,region=regions[seed]||seed,members=[],todo=[seed];groupOf[seed]=id;
   while(todo.length){const r=todo.pop();members.push(r);
-   if(!bosses.has(seed))neighbors[r].forEach(next=>{if(!groupOf[next]&&!bosses.has(next)&&(regions[next]||next)===region){groupOf[next]=id;todo.push(next)}})
+   if(!bosses.has(seed))neighbors[r].forEach(next=>{if(!groupOf[next]&&!bosses.has(next)&&(regions[next]||next)===region&&signature(next)===signature(seed)){groupOf[next]=id;todo.push(next)}})
   }
   const boss=roomData.find(r=>r.name===seed);
-  groups[id]={title:bosses.has(seed)?boss.title||seed:region,rooms:members,boss:bosses.has(seed)};
+  const splitRegion=names.some(other=>(regions[other]||other)===region&&!bosses.has(other)&&signature(other)!==signature(seed));
+  const label=required(seed).length&&splitRegion&&boss?.title?boss.title:region+(required(seed).length?' · after '+required(seed).map(b=>b[0].toUpperCase()+b.slice(1)).join(' + '):'');
+  groups[id]={title:bosses.has(seed)?boss.title||seed:label,rooms:members,boss:bosses.has(seed)};
  });
  const seen=new Set(),links=[];
- n.links.forEach(e=>{const from=groupOf[e.from],to=groupOf[e.to],key=from+'|'+to;
+ n.links.forEach(e=>{let from=groupOf[e.from],to=groupOf[e.to];
+  const sourceBosses=roomData.find(r=>r.name===e.from)?.bosses||[];
+  const closing=(roomData.find(r=>r.name===e.to)?.after_barriers||[]).filter(b=>sourceBosses.includes(b)||required(e.from).includes(b));
+  if(closing.length){
+   const continuation=n.links.find(next=>next.from===e.to&&closing.every(b=>required(next.to).includes(b))&&!roomData.find(r=>r.name===next.to)?.bosses?.length);
+   if(continuation)to=groupOf[continuation.to];
+  }
+  const added=required(e.to).filter(b=>!required(e.from).includes(b)&&!sourceBosses.includes(b));
+  if(added.length){const gate=roomData.find(r=>r.bosses?.includes(added[added.length-1]));if(gate)from=groupOf[gate.name]}
+  const key=from+'|'+to;
   if(from&&to&&from!==to&&!seen.has(key)){seen.add(key);links.push({...e,from,to})}
  });
  return {groups,groupOf,rooms:Object.fromEntries(Object.keys(groups).map(g=>[g,'g'])),links,start:groupOf[start]};
@@ -512,12 +745,12 @@ function zones(raw){zsvg.innerHTML="";
   const t=el("text",{x:LX,y:y(r)+1,fill:same?"#9a9aaa":"#eee",style:"font-size:14px;font-weight:600"},g);t.textContent=(same?"↩ ":"")+title(real(r));
   const sub=el("text",{x:LX,y:y(r)+17,fill:choice?"#f0d060":"#9a9aaa",style:"font-size:12px"},g);
   sub.textContent=same?"already shown above":choice?`◆ choice: no way back from ${lost.join(" / ")}`:kids.length>1?`${kids.length} ways, you can come back`:"";
-  g.onmouseenter=()=>{tip.innerHTML=`<b>${title(real(r))}</b><br>Rooms: ${(n.groups[real(r)]?.rooms||[real(r)]).map(title).join(", ")}`+
+  g.onmouseenter=()=>{tip.innerHTML=`<b>${escapeHtml(title(real(r)))}</b><br>Rooms: ${(n.groups[real(r)]?.rooms||[real(r)]).map(title).map(escapeHtml).join(", ")}`+
    (kids.length?"<br>Ways on: "+kids.map(k=>title(real(k.to))).join(", "):"")+(choice?`<br><b>Choice</b>: no way back from ${lost.join(" / ")}.`:"");tip.style.display="block"};
   g.onmousemove=e=>{tip.style.left=(e.pageX+14)+"px";tip.style.top=(e.pageY+14)+"px"};
   g.onmouseleave=()=>tip.style.display="none";
   g.onclick=()=>zshow(raw,real(r))});
- document.getElementById("zhead").textContent=`Rooms grouped by region (bosses on their own). ${order.length} stops, one per row; a new colour is a branch. ◆ choice: an irreversible decision. Hover a stop for its rooms, click it for the map.`;
+ document.getElementById("zhead").title=`Rooms grouped by region (bosses on their own). ${order.length} stops, one per row; a new colour is a branch. ◆ choice: an irreversible decision. Hover a stop for its rooms, click it for the map.`;
  zshow(raw,root);
 }
 document.getElementById("route-same").onchange=()=>zones(D.routes);
@@ -531,13 +764,26 @@ function zshow(n,room){
  zcx.globalAlpha=.35;zcx.fillStyle=col;zcx.fillRect(ox,oy,r.w*S,r.h*S);zcx.globalAlpha=1;
  for(let y=0;y<r.h;y++)for(let x=0;x<r.w;x++)if(r.tiles[y][x]==="1"){zcx.fillStyle="#2c2c36";zcx.fillRect(ox+x*S,oy+y*S,S,S)}
  zcx.strokeStyle=col;zcx.strokeRect(ox+.5,oy+.5,r.w*S-1,r.h*S-1)});
+ document.getElementById("route-selection").textContent=title(room);
  const info=document.getElementById("zinfo");info.replaceChildren();const head=document.createElement("b");head.textContent=title(room);info.append(head);
  const list=document.createElement("p");list.textContent=[...members].map(title).join(", ");info.append(list);
 }
+function selectVisualization(view){
+ document.querySelectorAll('[role="tab"]').forEach(button=>{const active=button.dataset.view===view;button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1});
+ document.querySelectorAll('.view-unlocks').forEach(card=>card.hidden=view!=='unlocks');
+ document.querySelectorAll('.view-routes').forEach(card=>card.hidden=view!=='routes');
+ document.querySelector('main').dataset.view=view;
+}
+document.querySelectorAll('[role="tab"]').forEach(button=>{
+ button.onclick=()=>selectVisualization(button.dataset.view);
+ button.onkeydown=event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?'unlocks':event.key==='End'?'routes':button.dataset.view==='unlocks'?'routes':'unlocks';selectVisualization(next);document.getElementById('tab-'+next).focus()}};
+});
 drawTop();
 zones(D.routes);
-const fromHash=D.nodes.find(q=>q.id==decodeURIComponent(location.hash.slice(1)));  // e.g. progression.html#ape+dash
-if(fromHash){ASSUME.clear();fromHash.abilities.filter(a=>FREE.includes(a)).forEach(a=>ASSUME.add(a));box.querySelectorAll("input").forEach((c,k)=>c.checked=ASSUME.has(FREE[k]));drawTop();show(fromHash)}
+let hashState="";try{hashState=decodeURIComponent(location.hash.slice(1))}catch(error){hashState=""}
+const fromHash=D.nodes.find(q=>q.id===hashState);  // e.g. progression.html#ape+dash
+if(fromHash){unlockMapState=D.nodes.indexOf(fromHash);unlockSelectedPath=planUnlockRoute(activeUnlockGraph,unlockSelectedPath,unlockMapState);show(fromHash)}
+selectVisualization("unlocks");
 </script></body></html>"""
 
 

@@ -24,12 +24,15 @@ run() {  # run <success regex> <godot args...>
 }
 run '^0 failure\(s\)' res://tests/test.tscn
 run '^SMOKE OK' res://tests/smoke.tscn
+run '^WEB MENU OK' res://tests/web_menu.tscn
 run '^SFX OK' --script tests/sfx.gd
 run '^ROAR OK' --script tests/roar.gd
 run '^MUSIC OK' --script tests/music.gd
 run '^ENVIRONMENT MUSIC OK' --script tests/environment_music.gd
 run '^APE ART OK' --script tests/ape_art.gd
 run '^DISCOVERIES OK' --script tests/discoveries.gd
+run '^PROGRESSION EDITOR OK' res://tests/progression_editor.tscn
+run '^APE RETURN BARRIER OK' res://tests/ape_return_barrier.tscn
 run '^EDITOR PLAYTEST OK' res://tests/editor_playtest.tscn
 run '^EDITOR SCROLL OK' res://tests/editor_scroll.tscn
 run '^EDITOR NAVIGATION OK' res://tests/editor_navigation.tscn

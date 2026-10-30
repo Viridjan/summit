@@ -65,7 +65,8 @@ Culling means skipping drawing when nothing from an object is visible. A large v
 | `entities.gd` | Placed object registry and individual object/enemy behavior |
 | `adventure.gd` | World-layout queries, progress normalization and stamina rules |
 | `editor.gd` | Editing the tiles and objects in one room |
-| `world_editor.gd` | Positioning room files and displaying their connections |
+| `world_editor.gd` | Positioning room files, displaying connections, and launching progression analysis |
+| `progression_job.gd` | Launching the background Python process and polling its status |
 | `options.gd`, `menu.gd` | Settings and navigation interfaces |
 | `debug_panel.gd`, `tuning.gd` | Live movement inspection, configurable values and presets |
 | `map_view.gd`, `bestiary.gd` | Read-only map and enemy catalogue |
@@ -164,3 +165,6 @@ Comments explain purpose, units, ownership and surprising rules. They are not a 
 ## Assistant development skills
 
 See [the development skills installation report](DEVELOPMENT_SKILLS.md) for the seven new skills, their exact source revisions, verification results and how to reproduce the Codex/Claude setup.
+
+Progression analysis uses `tools/progression.py`; `tools/progression_job.py` snapshots
+the selected world and writes atomic report/status files. See [the guide](PROGRESSION_REPORT.md).

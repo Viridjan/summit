@@ -497,3 +497,11 @@ original icon. Both activate checkpoints invisibly without particle bursts.
 - 2026-10-30: Progression Graph 2: a ◆ choice is an irreversible decision (taking one way out loses another for good), with the lost way named. Room links from a cave-in room's near side are dropped (its chase starts on entry). Entrances for the room searches: respawn slabs and door arrivals (the old entrance spawns are gone). Irreversible decisions found: Ape Arena (Sand Cave loses Jungle Hills), Jungle Hills (Jungle Depths loses the Ape side), Jungle Edge (the drop to Jungle Falls loses Cove Town), The Big Jump (the drop to the Lake Cave loses the Meadow).
 - 2026-10-30: Progression Graph 2 drawn like a git graph (one stop per row, branches in new coloured columns, names at full size on the right, no zoom); 'same stop twice' links behind a checkbox; its map back on the right and pinned while scrolling.
 - 2026-10-30: Graph 2 'same stop' links are square paths with rounded corners, each in its own lane (left gutter or right of the lines, whichever crosses fewer lines).
+
+2026-10-30 — After the Ape fight, a thorn barrier left of the Jungle Depths
+shaft blocks return to early Jungle. The Depths and Sand Cave choices remain
+open. Gates support after-boss activation; progression reports honor it.
+
+2026-10-30 — World Editor Progression runs snapshot analysis in a separate Python
+process and opens the browser explorer. Added independent tabs, compact help,
+route-preserving navigation, and tests for editor/job/report behavior.

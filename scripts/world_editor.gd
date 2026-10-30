@@ -30,6 +30,10 @@ var info: Label
 var add_menu: MenuButton
 var room_buttons: Array[Button] = []
 var status: Label
+var progression_button: Button
+var progression_open_button: Button
+var progression_poll_time := 0.0
+var progression_result_seen := ""
 var cache_bad := {}  # room -> true when its open space overlaps another room
 var cache_ways := []  # Adventure.doorways(world)
 var cache_links := []  # [from, to] world-pixel centres of linked doors
@@ -45,43 +49,84 @@ func _ready() -> void:
 	selected = world.start
 	var side := PanelContainer.new()
 	side.mouse_force_pass_scroll_events = false
-	side.set_anchors_and_offsets_preset(Control.PRESET_RIGHT_WIDE)
-	side.offset_left = -260
+	side.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+	side.offset_right = 260
 	add_child(side)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.mouse_force_pass_scroll_events = false
+	side.add_child(scroll)
 	var box := VBoxContainer.new()
-	side.add_child(box)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.add_child(box)
 	box.add_child(Game.label("World Editor", 24))
+	box.add_child(Game.label("Rooms", 16))
 	box.add_child(Game.button("+ Add empty room (draft)", func(): _add_index(0)))
-	box.add_child(Game.button("Build drafts", _build_drafts))
-	box.add_child(Game.button("Place respawns", _place_respawns))
 	add_menu = MenuButton.new()
 	add_menu.text = "+ Add copy of my level..."
 	add_menu.flat = false
 	add_menu.about_to_popup.connect(_fill_add_menu)
 	add_menu.get_popup().index_pressed.connect(func(i: int): _add_index(i + 1))
 	box.add_child(add_menu)
+	box.add_child(Game.button("Build drafts", _build_drafts))
 	box.add_child(HSeparator.new())
-	info = Game.label("", 16)
-	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(info)
+	box.add_child(Game.label("Selected room", 16))
 	for b in [["Edit room", _edit], ["Playtest from here", _playtest], ["Set as start", _set_start], ["Remove from world", _remove]]:
 		var btn := Game.button(b[0], b[1])
 		box.add_child(btn)
 		room_buttons.append(btn)
 	box.add_child(HSeparator.new())
-	box.add_child(Game.button("Menu", func(): Game.goto("menu")))
+	var tools_popup := PopupPanel.new()
+	add_child(tools_popup)
+	var tools_box := VBoxContainer.new()
+	tools_popup.add_child(tools_box)
+	box.add_child(Game.button("Tools", func():
+		tools_popup.popup(Rect2i(Vector2i(270, 100), Vector2i(280, 0)))))
+	for action in [["Place respawns", _place_respawns], ["Progression", _start_progression], ["Open progression report", func(): _open_progression_report(Game.last_progression_report)]]:
+		var btn := Game.button(action[0], func():
+			tools_popup.hide()
+			action[1].call())
+		tools_box.add_child(btn)
+		if action[0] == "Progression":
+			progression_button = btn
+			btn.tooltip_text = "Analyze a snapshot in the background and open the browser viewer. Requires Python 3."
+			btn.disabled = OS.has_feature("web")
+		elif action[0] == "Open progression report":
+			progression_open_button = btn
 	status = Game.label("", 14)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(status)
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(spacer)
+	box.add_child(Game.button("Back", func(): Game.goto("menu")))
+	var details := PanelContainer.new()
+	details.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	details.offset_left = -310
+	details.offset_right = -16
+	details.offset_top = 16
+	add_child(details)
+	info = Game.label("", 16)
+	info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	details.add_child(info)
+	var legend := PanelContainer.new()
+	legend.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	legend.offset_left = -350
+	legend.offset_right = -16
+	legend.offset_top = -120
+	legend.offset_bottom = -16
+	add_child(legend)
 	var help := Game.label("LMB drag room · RMB/MMB pan · wheel zoom\nGreen: passage between rooms · cyan: door link · red: overlap", 13)
 	help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	help.modulate = Color(1, 1, 1, 0.6)
-	box.add_child(help)
+	legend.add_child(help)
 	_recalc()
 	_update_info()
 	_fit.call_deferred()  # needs the laid-out size
+	_poll_progression()
 
-# Zoom and pan so every room fits the canvas (left of the side panel).
+# Zoom and pan so every room fits the canvas (right of the side panel).
 # Choose zoom and pan so all rooms fit beside the side panel.
 func _fit() -> void:
 	if world.rooms.is_empty():
@@ -93,7 +138,7 @@ func _fit() -> void:
 		area = rr if area.size == Vector2.ZERO else area.merge(rr)
 	var canvas := Vector2(size.x - 260, size.y)
 	zoom = clampf(minf((canvas.x - 80) / area.size.x, (canvas.y - 80) / area.size.y), 0.1, 8.0)
-	pan = (canvas - area.size * zoom) / 2.0 - area.position * zoom
+	pan = Vector2(260, 0) + (canvas - area.size * zoom) / 2.0 - area.position * zoom
 	queue_redraw()
 
 # Overlaps, passages and door links are slow on big worlds: computed after changes, not every frame.
@@ -360,3 +405,60 @@ func _playtest() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		Game.goto("menu")
+
+# The external job writes a snapshot and status file; no Python work blocks Godot's main thread.
+func _new_progression_job():
+	return load("res://scripts/progression_job.gd").new()
+
+func _start_progression() -> bool:
+	if Game.progression_job != null and Game.progression_job.state == "running": return false
+	if world.rooms.is_empty():
+		status.text = "Add a room before analyzing progression."
+		return false
+	if not Adventure.save_world(Game.world_path, world):
+		status.text = "Could not save the world layout for progression analysis."
+		return false
+	var source := ProjectSettings.globalize_path(Game.world_path.get_base_dir())
+	var destination := ProjectSettings.globalize_path("user://progression/%s-%s" % [str(Time.get_unix_time_from_system()).replace(".", "-"), str(Time.get_ticks_usec())])
+	Game.progression_job = _new_progression_job()
+	var started: bool = Game.progression_job.start(source, destination)
+	progression_result_seen = ""
+	_poll_progression()
+	return started
+
+func _process(dt: float) -> void:
+	progression_poll_time -= dt
+	if progression_poll_time <= 0:
+		progression_poll_time = 0.5
+		_poll_progression()
+
+func _open_progression_report(path: String) -> Error:
+	if path.is_empty() or not FileAccess.file_exists(path):
+		status.text = "No completed progression report is available yet."
+		return ERR_FILE_NOT_FOUND
+	var result := OS.shell_open(path)
+	status.text = "Progression report opened in your browser." if result == OK else "Report ready, but the browser could not be opened: " + path
+	return result
+
+func _poll_progression() -> void:
+	progression_open_button.visible = not Game.last_progression_report.is_empty()
+	if Game.progression_job == null: return
+	var job = Game.progression_job
+	var state: String = job.poll()
+	progression_button.disabled = state == "running" or OS.has_feature("web")
+	progression_button.text = "Analyzing progression…" if state == "running" else "Progression"
+	if state == "running":
+		status.text = "Analyzing %s… You can keep editing." % job.world_dir.get_file()
+		return
+	var result_key: String = job.output_dir + ":" + state
+	if result_key == progression_result_seen: return
+	progression_result_seen = result_key
+	if state == "complete":
+		Game.last_progression_report = job.report
+		progression_open_button.visible = true
+		if not job.opened:
+			job.opened = true
+			if job.world_dir == ProjectSettings.globalize_path(Game.world_path.get_base_dir()): _open_progression_report(job.report)
+			else: status.text = "Progression report ready for " + job.world_dir.get_file()
+	elif state == "failed":
+		status.text = "Progression analysis failed: " + job.error

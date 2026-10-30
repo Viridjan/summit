@@ -2138,6 +2138,7 @@ class ApeTrunk extends Ent:
 # Arena barrier that follows the living boss state and can close behind the entering player.
 class BossGate extends Ent:
 	func describe() -> String:
+		if d.has("after"): return "Thorn barrier: the way back closes after the boss is beaten"
 		return "Boss gate: %s" % ("shut (opens when the boss is beaten)" if collidable else "open")
 	var passed := false
 	# Initialize BossGate dimensions, collision flags and starting data before World uses the object.
@@ -2145,8 +2146,12 @@ class BossGate extends Ent:
 		solid = true
 		fixed = true
 		collidable = w == null or not d.get("closes_behind", false)
+		if w != null and d.has("after"): collidable = w.broken.has(str(d.after))
 	# Advance BossGate timers and behavior for dt seconds; this is called by World, not by Godot automatically.
 	func update(_dt: float) -> void:
+		if d.has("after"):
+			collidable = w.broken.has(str(d.after))
+			return
 		if d.has("until"):  # shut until that boss is beaten (in any room), e.g. a way on that opens after the fight
 			collidable = not w.broken.has(str(d.until))
 			return

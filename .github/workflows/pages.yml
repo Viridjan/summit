@@ -54,6 +54,7 @@ jobs:
         run: |
           ~/godot/godot --headless --path . res://tests/test.tscn
           ~/godot/godot --headless --path . res://tests/smoke.tscn
+          ~/godot/godot --headless --path . res://tests/web_menu.tscn
           python3 -m unittest tests/test_world_accessibility.py tests/test_story_entrances.py
 
       - name: Export
@@ -61,6 +62,7 @@ jobs:
           mkdir -p build/web
           ~/godot/godot --headless --path . --export-release "Web" build/web/index.html
           test -f build/web/index.pck
+          ~/godot/godot --headless --path build/web --main-pack "$PWD/build/web/index.pck" --script "$PWD/tests/web_pack.gd"
 
       - uses: actions/upload-pages-artifact@v3
         with:

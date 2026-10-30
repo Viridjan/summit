@@ -228,6 +228,7 @@ a1.ents.append({"t": "boss_gate", "x": (AW - 1) * T, "y": 12 * T, "w": T, "h": 4
 APE_ID = "a1_ape_arena:ape_%d_%d" % (18 * T, 15 * T)
 # Jungle Hills after the fight: the roots over the hole down to Jungle Depths give way, and leaving the arena on the
 # left, the Ape follows you (right to left) until the big trunk's low hollow stops it, just short of the hole.
+j3.ents.append({"t":"boss_gate", "id":"early_jungle_barrier", "x":46*T, "y":T, "w":T, "h":14*T, "after":APE_ID})
 j3.ents.append({"t": "boss_gate", "x": 48 * T, "y": G * T, "w": 4 * T, "h": T, "until": APE_ID})
 j3.ents.append({"t": "ape_chase", "x": 77 * T, "y": G * T - 32, "dir": -1, "trigger": 70 * T, "end": 58 * T, "after": APE_ID})
 a1b = Room("a1_ape_arena_after", "Ape Arena", AW, 23, "forest", fill="1")

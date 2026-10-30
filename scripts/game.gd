@@ -118,6 +118,8 @@ var adv_world: Dictionary = {}  # Adventure.load_world() result for that run
 var using_pad := false  # last input came from a gamepad: button prompts show pad buttons, else keys
 var pad_ps := false  # that pad is a PlayStation one: prompts show its symbols
 var adv_temp := false  # world-editor playtest: never saved, exits back to the world editor
+var progression_job = null  # background analysis survives screen navigation
+var last_progression_report := ""
 var world_path := STORY_WORLD  # tests point this at a scratch file
 
 # Prepare user storage, shared interface styling, saved options, tuning and the chosen adventure world.
@@ -155,6 +157,8 @@ func get_music_engine() -> Node:
 # Schedule the old screen for deletion and create the requested screen under the main root.
 # queue_free() deletes at the end of the frame; a newly added screen can briefly coexist with the old one.
 func goto(screen: String) -> void:
+	if OS.has_feature("web") and screen in ["world_editor", "music_studio", "art_gallery"]:
+		screen = "menu"
 	if is_instance_valid(music_engine):
 		music_engine.stop()
 	for c in main.get_children():

@@ -7,7 +7,6 @@ extends ColorRect
 # Title screen, level select, options, credits.
 
 const OptionsPanel := preload("res://scripts/options.gd")
-const Bestiary := preload("res://scripts/bestiary.gd")
 
 var body: VBoxContainer
 var hint: Label
@@ -45,15 +44,19 @@ func _main() -> void:
 	body.add_child(HSeparator.new())
 	var play := Game.button("Adventure", _adventure)
 	body.add_child(play)
-	if OS.has_feature("editor"):  # the world files live in res://, writable only from source
-		body.add_child(Game.button("World Editor", func(): Game.goto("world_editor")))
-	body.add_child(Game.button("Monsters", _monsters))
-	body.add_child(Game.button("Art", _art))
-	body.add_child(Game.button("Music Studio", func(): Game.goto("music_studio")))
+	if not _is_web():
+		if OS.has_feature("editor"):  # world files are writable only from source
+			body.add_child(Game.button("World Editor", func(): Game.goto("world_editor")))
+		body.add_child(Game.button("Monsters", _monsters))
+		body.add_child(Game.button("Art", _art))
+		body.add_child(Game.button("Music Studio", func(): Game.goto("music_studio")))
 	body.add_child(Game.button("Options", _options))
 	body.add_child(Game.button("Credits", _credits))
 	body.add_child(Game.button("Quit", func(): Game.quit_game()))
 	play.grab_focus()
+
+func _is_web() -> bool:
+	return OS.has_feature("web")
 
 # Open the adventure start/continue choices.
 func _adventure() -> void:
@@ -79,7 +82,7 @@ func _options() -> void:
 func _monsters() -> void:
 	_clear()
 	body.add_child(Game.label("Monsters", 44))
-	var b := Bestiary.new()
+	var b = load("res://scripts/bestiary.gd").new()
 	b.custom_minimum_size = Vector2(860, 505)
 	body.add_child(b)
 	var back := Game.button("Back", _main)

@@ -327,3 +327,67 @@ and fits both width and height. Dashed lines ONLY join repeated appearances of
 the same group; they are identity links, never travel/return routes. Both
 graphs remain independent. This supersedes the earlier per-room rendering and
 return-link dash notation.
+
+**Boss-aware region grouping:** Metro groups never mix rooms with different
+mandatory boss requirements. Post-Ape Jungle Depths and Net Trap are separated
+from the early Jungle, keeping Treetop Village downstream of the Ape. Graph 2
+remains a static, independent diagram; boss-gated branches attach at the boss
+stop instead of appearing as ungated shortcuts from an aggregated region.
+
+**Ape return barrier (2026-10-30):** Beating the Ape grows a permanent thorn
+barrier at Jungle Hills x368, from the roof to the floor immediately left of
+the Depths shaft. The approach is open before the fight. Afterwards the early
+Jungle cannot be reached from the arena, while Jungle Depths (and Treetop Village)
+and Sand Cave remain available. The barrier persists through saves and room
+reloads using the existing boss flag; dash, climb and attack cannot bypass it.
+`boss_gate` supports `after` as the inverse of `until`. Progression searches
+continue from defeated-boss arenas and include post-fight barriers, rather than
+restarting behind a sealed route. The graph labels the post-fight Jungle group
+Jungle Depths and treats the right-hand Hills corridor as its connector.
+
+**Graph 1 original metro layout restored:** All ability combinations and
+reachable boss-defeated states appear together as stations on colored order
+lines. Repeated states are joined by dashed identity connectors. Blocking
+events such as Ape beaten and Guardian beaten are explicit stops. Hypothetical
+unplaced powerups have faint segments; Graph 2 remains independent and unchanged.
+
+**Explicit Graph 1 choices:** Hovering a colored segment names its action.
+Clicking a segment, station on a particular line, or line number selects that
+route and displays its ordered powerup/boss steps below the chart. “Choice made”
+names the clicked transition; later steps are dimmed. Paths that reach the same
+ability set through different orders remain distinct. Graph 2 is unchanged.
+
+**Rooted Graph 1 (2026-10-30):** The unlock chart now uses Graph 2’s branching
+metro style: one shared start, continuous colored lines, and a new branch for
+each ability/boss choice. Stops name the action and resulting state. Selecting
+a stop displays the actual order along its branch. Optional dashed connectors
+join identical states reached by different orders; they are not transitions.
+Graph 2’s layout and selection remain independent.
+
+**Merged upgrade stations:** Graph 1 now has exactly one station per sorted
+set of owned abilities and defeated bosses. Different acquisition orders
+converge at that shared station instead of creating duplicate stops or dashed
+identity connectors. Each upgrade/boss action has a consistent line color.
+Incoming paths retain their action and order; shared stations offer arrival
+buttons to select the order explicitly. This reduces 24 displayed stops to 14
+unique states while retaining one root and all branches. Graph 2 is unchanged.
+
+**Graph 1 condition switches:** Hide unplaced conditions removes transitions
+for missing pickups and states that depend on them. Hide unavailable steps
+keeps only conditions normally reachable from the immediately preceding state;
+blocked prerequisites and skill/exploit-only steps are excluded. Later boss
+steps remain when a valid prerequisite path reaches them. Both switches default
+to off, compose independently, retain the root, and affect only Graph 1. A status
+line explains when no achievable next step remains under the active filters.
+
+**Unplaced-filter correction:** Hide unplaced now collapses those pickup
+steps and merges the resulting visible states; it does not delete later boss
+conditions. Reachability checks still use the underlying states, so an Ape
+condition reachable after a hidden dash step remains visible. This supersedes
+the earlier rule that removed entire dependent paths. The unavailable-step
+filter still checks each actual boss transition against its prerequisite state.
+
+**World Editor progression integration (2026-10-30):** Progression saves the layout
+and launches background snapshot analysis. The browser viewer has independent tabs
+and a dominant map, with explanations in hover hints and compact details. See
+[the current guide](PROGRESSION_REPORT.md) for navigation and filter semantics.

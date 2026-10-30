@@ -55,8 +55,8 @@ func _ready() -> void:
 	var map = get_child(get_child_count()-1)
 	var map_zoom: float = map.zoom
 	var pan: Vector2 = map.pan
-	await wheel(Vector2(map.size.x-100,300), MOUSE_BUTTON_WHEEL_UP)
-	await wheel(Vector2(map.size.x-100,300), MOUSE_BUTTON_WHEEL_DOWN)
+	await wheel(Vector2(100,300), MOUSE_BUTTON_WHEEL_UP)
+	await wheel(Vector2(100,300), MOUSE_BUTTON_WHEEL_DOWN)
 	check(map.zoom == map_zoom and map.pan == pan, "Map menu scrolling never moves or zooms the map")
 	await wheel(Vector2(300,300), MOUSE_BUTTON_WHEEL_UP)
 	check(map.zoom != map_zoom, "Map canvas still accepts wheel zoom")
